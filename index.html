@@ -1817,22 +1817,12 @@ async function applyRotation(){
       const maxW=courtSorted[0].wins;
       const topGroup=courtSorted.filter(s=>s.wins===maxW);
       if(topGroup.length>1){
-        // Multi-way tie at the top — prompt once for who moves up
-        const names=topGroup.map((s,i)=>{
+        // Multi-way tie at the top — show toss modal and await admin's choice
+        const tiedPlayers=topGroup.map(s=>{
           const p=S.players.find(pp=>pp.id===s.id);
-          return `${i+1}. ${p?p.name:'?'}`;
-        }).join('\n');
-        let pick=null;
-        const msg=`🪙 COURT ${c} — TIE AT THE TOP\n\nThese players tied on wins:\n${names}\n\nWho WON the toss and moves UP to Court ${c-1}?\n\nEnter the number (1-${topGroup.length}):`;
-        try{
-          while(true){
-            const resp=prompt(msg);
-            if(resp===null){pick=1;break;} // canceled = first player by default
-            const n=parseInt(resp);
-            if(n>=1&&n<=topGroup.length){pick=n;break;}
-          }
-        }catch(e){pick=1;}
-        const winnerId=topGroup[pick-1].id;
+          return {id:s.id,name:p?p.name:'?'};
+        });
+        const winnerId=await tossPrompt({court:c,direction:'up',players:tiedPlayers});
         // Record toss: winnerId beats every other tied player at the top
         topGroup.forEach(s=>{
           if(s.id!==winnerId){
@@ -1850,21 +1840,11 @@ async function applyRotation(){
       // Skip if bottom group overlaps with top group (everyone tied — no movement at either end)
       const maxW=courtSorted[0].wins;
       if(botGroup.length>1&&minW!==maxW){
-        const names=botGroup.map((s,i)=>{
+        const tiedPlayers=botGroup.map(s=>{
           const p=S.players.find(pp=>pp.id===s.id);
-          return `${i+1}. ${p?p.name:'?'}`;
-        }).join('\n');
-        let pick=null;
-        const msg=`🪙 COURT ${c} — TIE AT THE BOTTOM\n\nThese players tied on wins:\n${names}\n\nWho LOST the toss and moves DOWN to Court ${c+1}?\n\nEnter the number (1-${botGroup.length}):`;
-        try{
-          while(true){
-            const resp=prompt(msg);
-            if(resp===null){pick=1;break;}
-            const n=parseInt(resp);
-            if(n>=1&&n<=botGroup.length){pick=n;break;}
-          }
-        }catch(e){pick=1;}
-        const loserId=botGroup[pick-1].id;
+          return {id:s.id,name:p?p.name:'?'};
+        });
+        const loserId=await tossPrompt({court:c,direction:'down',players:tiedPlayers});
         // Record toss: every other tied player beats loserId at the bottom
         botGroup.forEach(s=>{
           if(s.id!==loserId){
@@ -4183,6 +4163,48 @@ function openModal(title,body){document.getElementById('modal-title').textConten
 function closeModal(){document.getElementById('modal').classList.remove('open');}
 
 // ══════════════════════════════════════════════
+// TOSS MODAL — returns a Promise that resolves with the chosen player ID.
+// Used by applyRotation() when two or more players are tied on wins and a
+// court movement decision is required. Replaces the old prompt() dialog
+// (which was silently auto-dismissing on iOS Safari PWA).
+// ══════════════════════════════════════════════
+function tossPrompt({court,direction,players}){
+  return new Promise(resolve=>{
+    const isTop=direction==='up';
+    const title=`🪙 Court ${court} — Tie at the ${isTop?'TOP':'BOTTOM'}`;
+    const question=isTop
+      ? `Who <strong>WON</strong> the toss and moves <span style="color:var(--green2);">UP to Court ${court-1}</span>?`
+      : `Who <strong>LOST</strong> the toss and moves <span style="color:var(--red2);">DOWN to Court ${court+1}</span>?`;
+    const colorClass=isTop?'btn-primary':'btn-warn';
+    const body=`
+      <div style="margin-bottom:12px;padding:10px;background:rgba(241,196,15,0.12);border:1px solid var(--yellow2);border-radius:8px;font-size:13px;line-height:1.4;">
+        These <strong>${players.length} players</strong> are tied on wins. ${question}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${players.map(p=>`<button class="btn ${colorClass}" data-tid="${p.id}" style="text-align:left;padding:14px 16px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:10px;">${avatar(p.name)}<span>${esc(p.name)}</span></button>`).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">Tap the player chosen by the coin toss. This cannot be undone from this dialog.</div>
+    `;
+    openModal(title,body);
+    const modalEl=document.getElementById('modal');
+    const closeBtn=modalEl.querySelector('.btn-ghost');
+    if(closeBtn)closeBtn.style.display='none';
+    const ov=modalEl;
+    const prevOnclick=ov.onclick;
+    ov.onclick=null;
+    modalEl.querySelectorAll('[data-tid]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const id=parseInt(btn.dataset.tid);
+        if(closeBtn)closeBtn.style.display='';
+        ov.onclick=prevOnclick;
+        closeModal();
+        resolve(id);
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════
 // RENDER ALL
 // ══════════════════════════════════════════════
 function renderAll(){
@@ -4581,21 +4603,115 @@ init();
 if(window.location.hash==='#run-tests'){
   window.addEventListener('load',()=>{
     setTimeout(async()=>{
+      // ══════════════════════════════════════════════════════════════
+      // PRODUCTION GUARD — refuse to run tests on the live production site.
+      // Tests mutate session state and player stats. Even with the sandbox
+      // below, running on production is a policy violation: only the test
+      // site (dcbadmintonclub-test) may be used to exercise the test suite.
+      // ══════════════════════════════════════════════════════════════
+      const _isProdUrl=window.location.pathname.startsWith('/dcbadmintonclub/')&&!window.location.pathname.startsWith('/dcbadmintonclub-test/');
+      const _isTestUrl=window.location.pathname.startsWith('/dcbadmintonclub-test/');
+      const _isLocalhost=window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1';
+      if(_isProdUrl&&!_isTestUrl&&!_isLocalhost){
+        document.body.innerHTML='<div style="background:#0a0e14;color:#e74c3c;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;flex-direction:column;padding:20px;text-align:center;"><div style="font-size:60px;margin-bottom:20px;">🛑</div><h1 style="margin:0 0 16px;">Tests disabled on production</h1><p style="max-width:560px;line-height:1.5;color:#6a8ba8;">Running the ~3000 assertion test suite on the production site would mutate live session data. Use the test site instead — it has an isolated Supabase backend and the test suite runs in an in-memory sandbox so it cannot corrupt real data.</p><a href="https://chriz93.github.io/dcbadmintonclub-test/#run-tests" style="margin-top:24px;display:inline-block;padding:12px 24px;background:#0099cc;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Run tests on test site →</a></div>';
+        return;
+      }
+
       localStorage.setItem('test-dcbc-invite','MAPLE2026');
+      localStorage.setItem('dcbc-invite','MAPLE2026');
       await new Promise(r=>setTimeout(r,3000)); // wait for init
       adminUnlocked=true;_autoAdvancing=false;_roundSnapshots=[];updateNavVisibility();
       const R=[];
       const P=(n)=>R.push({n,s:'P'});
       const F=(n,r)=>R.push({n,s:'F',r});
       const ap=()=>activePlayers();
-      // ═══ SAVE ALL REAL DATA before tests (CRITICAL — never lose production data) ═══
-      const _savedSession=JSON.parse(JSON.stringify(await getKV('current_session')||null));
-      const _savedCompleted=JSON.parse(JSON.stringify(await getKV('completed_sessions')||[]));
-      const _savedPlayerStats=S.players.map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed,hc:p.highestCourt,cc:p.currentCourt,nc:p.noShowCount}));
-      const _savedSnapshots=JSON.parse(JSON.stringify(await getKV('round_snapshots')||[]));
-      const _savedPreAtt=JSON.parse(JSON.stringify(await getKV('pre_session_attendance')||{}));
-      const _savedApprovals=JSON.parse(JSON.stringify(await getKV('player_approvals')||{}));
-      const _savedOverrides=JSON.parse(JSON.stringify(await getKV('membership_overrides')||{}));
+
+      // ══════════════════════════════════════════════════════════════
+      // IN-MEMORY SANDBOX — intercept ALL Supabase writes during tests
+      // ══════════════════════════════════════════════════════════════
+      // At start: snapshot the current Supabase state into a local KV map +
+      // local copy of the players table. All subsequent sbU/sbP/sbD/sbUps/
+      // setKV calls route to this in-memory sandbox instead of the real
+      // database. getKV and sbG read from the sandbox too, so loadAll()
+      // sees a consistent world. No matter what happens — passes, failures,
+      // uncaught exceptions, page-hang, network failure — the real Supabase
+      // is untouched. After tests, we restore the originals and reload().
+      const _origSbG=sbG,_origSbP=sbP,_origSbU=sbU,_origSbD=sbD,_origSbUps=sbUps;
+      const _origSetKV=setKV,_origGetKV=getKV;
+      // Snapshot the real players table + all relevant KV keys
+      const _sbPlayers=JSON.parse(JSON.stringify(await _origSbG('players')||[]));
+      const _sbAnnouncements=JSON.parse(JSON.stringify(await _origSbG('announcements','order=created_at.desc')||[]));
+      const _sbKVKeys=['current_session','completed_sessions','player_approvals','membership_overrides','round_snapshots','pre_session_attendance','qa_questions','rsvp_session_1','rsvp_session_2','votes_session_1','votes_session_2'];
+      const _sbKV={};
+      for(const k of _sbKVKeys){_sbKV[k]=JSON.parse(JSON.stringify(await _origGetKV(k)||null));}
+      let _sbNextFakeId=9000; // fake IDs for any players created during tests
+
+      // Override writes to mutate sandbox only
+      window.sbG=async(t,f='')=>{
+        if(t==='players'){
+          const idMatch=f.match(/id=eq\.(\d+)/);
+          if(idMatch)return _sbPlayers.filter(p=>p.id===parseInt(idMatch[1]));
+          return JSON.parse(JSON.stringify(_sbPlayers));
+        }
+        if(t==='announcements')return JSON.parse(JSON.stringify(_sbAnnouncements));
+        if(t==='app_state'){
+          const keyMatch=f.match(/key=eq\.([^&]+)/);
+          if(keyMatch){
+            const k=decodeURIComponent(keyMatch[1]);
+            return _sbKV[k]!=null?[{key:k,value:JSON.stringify(_sbKV[k])}]:[];
+          }
+          return Object.entries(_sbKV).filter(([k,v])=>v!=null).map(([k,v])=>({key:k,value:JSON.stringify(v)}));
+        }
+        return [];
+      };
+      window.sbP=async(t,d)=>{
+        if(t==='players'){
+          const newP={...d,id:_sbNextFakeId++,created_at:new Date().toISOString()};
+          _sbPlayers.push(newP);
+          return [newP];
+        }
+        if(t==='announcements'){
+          const newA={...d,id:_sbNextFakeId++,created_at:new Date().toISOString()};
+          _sbAnnouncements.unshift(newA);
+          return [newA];
+        }
+        return [{}];
+      };
+      window.sbU=async(t,id,fields)=>{
+        if(t==='players'){
+          const p=_sbPlayers.find(x=>x.id===id);
+          if(p)Object.assign(p,fields);
+          return [p||{}];
+        }
+        return [{}];
+      };
+      window.sbD=async(t,id)=>{
+        if(t==='players'){
+          const i=_sbPlayers.findIndex(p=>p.id===id);
+          if(i>=0)_sbPlayers.splice(i,1);
+        }else if(t==='announcements'){
+          const i=_sbAnnouncements.findIndex(a=>a.id===id);
+          if(i>=0)_sbAnnouncements.splice(i,1);
+        }
+      };
+      window.sbUps=async(t,d)=>{
+        if(t==='app_state'){
+          const k=d.key;
+          _sbKV[k]=d.value?JSON.parse(d.value):null;
+          return [{key:k,value:d.value}];
+        }
+        return [{}];
+      };
+      window.setKV=async(k,v)=>{_sbKV[k]=v!=null?JSON.parse(JSON.stringify(v)):null;};
+      window.getKV=async(k)=>_sbKV[k]!=null?JSON.parse(JSON.stringify(_sbKV[k])):null;
+
+      // Deep clone S for a last-ditch in-memory restore if needed
+      const _origSIn=JSON.parse(JSON.stringify(S));
+
+      // Legacy names still referenced in test code (kept for compat even though
+      // they no longer point at real Supabase data)
+      const _savedSession=null,_savedCompleted=[],_savedPlayerStats=[],_savedSnapshots=[],_savedPreAtt={},_savedApprovals={},_savedOverrides={};
+
       try{
       // ═══ CAT 1: CORE FUNCTIONS (10) ═══
       typeof activePlayers==='function'?P('Fn:activePlayers'):F('Fn:activePlayers','undef');
@@ -8202,31 +8318,21 @@ if(window.location.hash==='#run-tests'){
       try{renderAll();P('INT2:renderAll');}catch(e){F('INT2:renderAll',e.message);}
       P('INT2:noConsoleErrors');P('INT2:noStaleData');P('INT2:productionReady');
 
-      // CLEANUP
+      // CLEANUP (sandbox only — no real Supabase writes)
       await Promise.all(ap().map(p=>sbU('players',p.id,{season_wins:0,season_losses:0,games_played:0,highest_court:p.currentCourt})));
-      await setKV('current_session',null);await setKV('completed_sessions',[]);await loadAll();
-
-      // FINAL CLEANUP
+      await setKV('current_session',null);await setKV('completed_sessions',[]);
 
       }catch(e){F('CRASH:'+e.message,e.stack?.substring(0,200));}
 
-      // ═══ RESTORE ALL REAL DATA after tests (CRITICAL) ═══
+      // ═══ RESTORE REAL SUPABASE FUNCTIONS ═══
+      // The sandbox is simply discarded — since all writes went to the sandbox,
+      // the real database was never touched. Restore the originals and reload
+      // real data from Supabase into S.
       try{
-        await setKV('current_session',_savedSession);
-        await setKV('completed_sessions',_savedCompleted);
-        await setKV('round_snapshots',_savedSnapshots);
-        await setKV('pre_session_attendance',_savedPreAtt);
-        await setKV('player_approvals',_savedApprovals);
-        await setKV('membership_overrides',_savedOverrides);
-        // Restore ALL player stats including court, no_show_count
-        if(_savedPlayerStats&&_savedPlayerStats.length){
-          await Promise.all(_savedPlayerStats.map(ps=>sbU('players',ps.id,{
-            season_wins:ps.w,season_losses:ps.l,games_played:ps.gp,
-            highest_court:ps.hc,current_court:ps.cc,no_show_count:ps.nc||0
-          })));
-        }
+        window.sbG=_origSbG;window.sbP=_origSbP;window.sbU=_origSbU;window.sbD=_origSbD;window.sbUps=_origSbUps;
+        window.setKV=_origSetKV;window.getKV=_origGetKV;
         await loadAll();
-      }catch(restoreErr){console.error('CRITICAL: Failed to restore data after tests:',restoreErr);toast('⚠️ Test restore failed — check data!','error');}
+      }catch(restoreErr){console.error('CRITICAL: Failed to restore real Supabase after tests:',restoreErr);toast('⚠️ Test restore failed — reload page','error');}
 
       // Store results and redirect
       localStorage.setItem('test-dcbc-test-results',JSON.stringify({results:R,ts:Date.now()}));
