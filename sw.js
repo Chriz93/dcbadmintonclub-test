@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dcbc-test-v1';
+const CACHE_NAME = 'dcbc-test-v2';
 const ASSETS = [
   '/dcbadmintonclub-test/',
   '/dcbadmintonclub-test/index.html'

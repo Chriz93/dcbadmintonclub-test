@@ -809,6 +809,7 @@ async function setKV(k,v){try{await sbUps('app_state',{key:k,value:JSON.stringif
 const DATES=['Apr 7','Apr 14','Apr 21','Apr 28','May 5','May 12','May 19','May 26'];
 const FD=[new Date('2026-04-07T20:15:00'),new Date('2026-04-14T20:15:00'),new Date('2026-04-21T20:15:00'),new Date('2026-04-28T20:15:00'),new Date('2026-05-05T20:15:00'),new Date('2026-05-12T20:15:00'),new Date('2026-05-19T20:15:00'),new Date('2026-05-26T20:15:00')];
 const NC=6,NCYC=99,NG=3; // NCYC=99: no hard cap on rounds, admin ends session when ready
+const MAX_ROUNDS_PER_SESSION=2; // Soft policy: each Tuesday session = 2 rounds. Auto-advance stops, prompts admin to end.
 let S={players:[],sessions:[],current:null,announcements:[],lastUndo:null,votes:{},rsvp:{},qaQuestions:[]};
 let adminUnlocked=false;
 let courtView='gym';
@@ -1705,16 +1706,28 @@ function allCourtsDone(){
 let _autoAdvancing=false;
 async function autoAdvanceCheck(){
   if(!S.current||_autoAdvancing)return;
+  if(S.current.completed)return; // session already complete, no further advances
   const cy=S.current.cycle;
   if(cy>=NCYC)return;
   if(!allCourtsDone())return;
   _autoAdvancing=true;
-  toast('All courts done! Advancing to Round '+(cy+1)+'...','success');
+  // Hard cap: after MAX_ROUNDS_PER_SESSION, run final rotation but mark complete instead of opening a new round
+  const isFinalRound=cy>=MAX_ROUNDS_PER_SESSION;
+  toast(isFinalRound?'Round '+cy+' complete! Session ready to end.':'All courts done! Advancing to Round '+(cy+1)+'...','success');
   try{
     // Snapshot before rotation for undo (save async, don't block)
     _roundSnapshots.push({cycle:S.current.cycle,assignments:JSON.parse(JSON.stringify(S.current.assignments)),scores:JSON.parse(JSON.stringify(S.current.scores)),movements:JSON.parse(JSON.stringify(S.current.movements)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
     setKV('round_snapshots',_roundSnapshots).catch(()=>{});
-    await applyRotation();S.current.cycle++;await setKV('current_session',S.current);await loadAll();renderAll();}
+    await applyRotation();
+    if(isFinalRound){
+      // Don't increment cycle past MAX. Mark session complete so UI prompts to end it.
+      S.current.completed=true;
+    }else{
+      S.current.cycle++;
+    }
+    await setKV('current_session',S.current);await loadAll();renderAll();
+    if(isFinalRound)toast('🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds. Click "End Session" to finalize standings.','success');
+  }
   catch(e){toast('Advance error','error');}
   finally{_autoAdvancing=false;}
 }
@@ -1727,6 +1740,8 @@ async function undoRound(){
   S.current.assignments=snap.assignments;
   S.current.scores=snap.scores;
   S.current.movements=snap.movements;
+  // If the session was marked complete by the final round, undo that too — admin can re-enter scores
+  if(S.current.completed)delete S.current.completed;
   // Revert player DB stats
   const reverts=snap.playerStats.map(ps=>sbU('players',ps.id,{season_wins:ps.w,season_losses:ps.l,games_played:ps.gp}));
   if(reverts.length)await Promise.all(reverts);
@@ -1745,13 +1760,14 @@ async function resetSession(){
   if(resets.length)await Promise.all(resets);
   S.current.cycle=1;S.current.scores={};S.current.movements=[];S.current.courtCycles=null;
   S.current.attendance={};S.current.latePlayers=[];S.current.birdDistribution={};
+  delete S.current.completed; // clear session-complete flag on reset
   await setKV('current_session',S.current);await loadAll();renderAll();
   _autoAdvancing=false;
   toast('Session reset — all scores and stats cleared','success');
 }
 async function nextCycle(){
   if(!S.current)return toast('No active session','warn');
-  // No hard round cap — admin ends session when ready
+  if(S.current.completed){toast('Session already complete — click End Session to finalize','warn');return;}
   const missing=[];
   for(let c=1;c<=NC;c++){
     const courtPlayers=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id)).length;
@@ -1760,11 +1776,19 @@ async function nextCycle(){
     for(let g=1;g<=numGames;g++)if(!S.current.scores[`c${c}_y${S.current.cycle}_g${g}`])missing.push(`C${c}G${g}`);
   }
   if(missing.length){toast(`Cannot advance — ${missing.length} scores missing: ${missing.slice(0,6).join(', ')}${missing.length>6?'...':''}`,'error');return;}
+  const cy=S.current.cycle;
+  const isFinalRound=cy>=MAX_ROUNDS_PER_SESSION;
   // Snapshot before rotation for undo
-  _roundSnapshots.push({cycle:S.current.cycle,assignments:JSON.parse(JSON.stringify(S.current.assignments)),scores:JSON.parse(JSON.stringify(S.current.scores)),movements:JSON.parse(JSON.stringify(S.current.movements)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
+  _roundSnapshots.push({cycle:cy,assignments:JSON.parse(JSON.stringify(S.current.assignments)),scores:JSON.parse(JSON.stringify(S.current.scores)),movements:JSON.parse(JSON.stringify(S.current.movements)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
   setKV('round_snapshots',_roundSnapshots).catch(()=>{});
-  await applyRotation();S.current.cycle++;
-  await setKV('current_session',S.current);await loadAll();renderAll();toast('Round '+S.current.cycle+'!','success');
+  await applyRotation();
+  if(isFinalRound){
+    S.current.completed=true;
+  }else{
+    S.current.cycle++;
+  }
+  await setKV('current_session',S.current);await loadAll();renderAll();
+  toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
 }
 async function applyRotation(){
   const cy=S.current.cycle,a=S.current.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
@@ -2783,6 +2807,18 @@ function renderScoreEntry(){
   const court=parseInt(document.getElementById('sc-sel').value);
   const el=document.getElementById('score-area');if(!court){el.innerHTML='';return;}
   if(!S.current){el.innerHTML='<div class="alert alert-warn">No active session. Ask admin to start one.</div>';return;}
+  // Hard cap: session is complete after MAX_ROUNDS_PER_SESSION rounds — no more score entry
+  if(S.current.completed){
+    el.innerHTML=`<div class="card" style="border-color:var(--green2);background:linear-gradient(135deg,rgba(46,204,113,0.15),rgba(0,194,255,0.08));">
+      <div style="font-size:48px;text-align:center;margin-bottom:8px;">🏁</div>
+      <div style="font-size:16px;font-weight:900;text-align:center;color:var(--green2);margin-bottom:6px;">Session Complete</div>
+      <div style="font-size:12px;text-align:center;color:var(--text);margin-bottom:14px;">All ${MAX_ROUNDS_PER_SESSION} rounds finished. Score entry is locked to protect the standings.</div>
+      <div style="font-size:11px;text-align:center;color:var(--muted);margin-bottom:14px;">Click below to finalize the session and lock in next week's court assignments.</div>
+      <button class="btn btn-primary" style="width:100%;font-size:14px;" onclick="endSession()">🏁 End Session — Finalize Standings</button>
+      <div style="font-size:10px;text-align:center;color:var(--muted);margin-top:10px;">Need to fix a score? Use Admin → Tools → Undo Last Round to reopen Round ${MAX_ROUNDS_PER_SESSION}.</div>
+    </div>`;
+    return;
+  }
   const cy=S.current.cycle;
   // ── Preserve unsaved score values before re-render ──
   const _unsaved={};
