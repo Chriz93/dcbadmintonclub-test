@@ -1800,6 +1800,7 @@ async function resetSession(){
 }
 async function nextCycle(){
   if(!S.current)return toast('No active session','warn');
+  if(_autoAdvancing)return toast('Round advance already in progress — finish the toss prompt first','warn');
   if(S.current.completed){toast('Session already complete — click End Session to finalize','warn');return;}
   const missing=[];
   for(let c=1;c<=NC;c++){
@@ -1814,24 +1815,28 @@ async function nextCycle(){
   // Snapshot before rotation for undo — full deep clone of S.current (future-proof)
   _roundSnapshots.push({sessionState:JSON.parse(JSON.stringify(S.current)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
   setKV('round_snapshots',_roundSnapshots).catch(()=>{});
+  // Hold the advance lock for the entire rotation so autoAdvanceCheck can't race us
+  _autoAdvancing=true;
   try{
-    await applyRotation();
-  }catch(e){
-    if(e&&e.message==='TOSS_CANCELLED'){
-      _roundSnapshots.pop();
-      setKV('round_snapshots',_roundSnapshots).catch(()=>{});
-      toast('Round advance cancelled — scores unchanged','warn');
-      return;
+    try{
+      await applyRotation();
+    }catch(e){
+      if(e&&e.message==='TOSS_CANCELLED'){
+        _roundSnapshots.pop();
+        setKV('round_snapshots',_roundSnapshots).catch(()=>{});
+        toast('Round advance cancelled — scores unchanged','warn');
+        return;
+      }
+      throw e;
     }
-    throw e;
-  }
-  if(isFinalRound){
-    S.current.completed=true;
-  }else{
-    S.current.cycle++;
-  }
-  await setKV('current_session',S.current);await loadAll();renderAll();
-  toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
+    if(isFinalRound){
+      S.current.completed=true;
+    }else{
+      S.current.cycle++;
+    }
+    await setKV('current_session',S.current);await loadAll();renderAll();
+    toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
+  }finally{_autoAdvancing=false;}
 }
 async function applyRotation(){
   const cy=S.current.cycle,a=S.current.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
@@ -3031,6 +3036,7 @@ function liveW(c,g){
 }
 async function saveGameScore(court,gameNum){
   if(!S.current)return toast('No session','warn');
+  if(_autoAdvancing)return toast('Round is advancing — resolve the toss prompt before saving new scores','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2)return toast('Need at least 2 players on this court','warn');
@@ -3052,6 +3058,7 @@ async function saveGameScore(court,gameNum){
 
 async function saveScores(court){
   if(!S.current)return toast('No session','warn');
+  if(_autoAdvancing)return toast('Round is advancing — resolve the toss prompt before saving new scores','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2)return toast('Need at least 2 players','warn');
@@ -3179,6 +3186,7 @@ function renderCourtTally(court){
 // ══════════════════════════════════════════════
 async function recordCourtToss(court,direction){
   if(!S.current)return;
+  if(_autoAdvancing)return toast('Round is advancing — finish the current toss prompt first','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   const numGames=players.length===3?3:NG;
@@ -4488,7 +4496,19 @@ function closeModal(){document.getElementById('modal').classList.remove('open');
 // court movement decision is required. Replaces the old prompt() dialog
 // (which was silently auto-dismissing on iOS Safari PWA).
 // ══════════════════════════════════════════════
-function tossPrompt({court,direction,players}){
+// Serialize tossPrompt: if one modal is already open, chain onto it so the
+// second call only runs after the first resolves. Prevents openModal from
+// overwriting an in-flight toss modal, orphaning its click handlers, and
+// silently hanging the first promise while a second applyRotation races.
+let _tossPromptChain=Promise.resolve();
+function tossPrompt(opts){
+  const run=()=>_tossPromptRun(opts);
+  const p=_tossPromptChain.then(run,run);
+  // Keep the chain alive even if this link throws/cancels
+  _tossPromptChain=p.catch(()=>{});
+  return p;
+}
+function _tossPromptRun({court,direction,players}){
   return new Promise(resolve=>{
     const isTop=direction==='up';
     const title=`🪙 Court ${court} — Tie at the ${isTop?'TOP':'BOTTOM'}`;
