@@ -2581,6 +2581,41 @@ function buildCombos(players){
   }
   return[];
 }
+// Sort a court's players by wins > pts > diff > id, then apply preTosses overrides:
+// - If admin pre-recorded a top-tie toss, force the chosen winnerId to index 0.
+// - If admin pre-recorded a bottom-tie toss, force the chosen loserId to the last index.
+// Used by computeRoundStatus and by the per-court standings display so the visible
+// movement arrows match what applyRotation will actually do on round advance.
+function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
+  const sorted=[...pids].sort((x,y)=>{
+    const wc=(wins[y]||0)-(wins[x]||0);if(wc)return wc;
+    const pc=(pts[y]||0)-(pts[x]||0);if(pc)return pc;
+    const dx=(ptFor[x]||0)-(ptAgainst[x]||0);
+    const dy=(ptFor[y]||0)-(ptAgainst[y]||0);
+    if(dx!==dy)return dy-dx;
+    return x-y;
+  });
+  const pT=preTosses||{};
+  const topT=pT[`${cy}_c${c}_top`];
+  const botT=pT[`${cy}_c${c}_bot`];
+  if(topT&&topT.winnerId){
+    const maxW=wins[sorted[0]]||0;
+    const topTied=sorted.filter(id=>(wins[id]||0)===maxW);
+    if(topTied.length>1&&topTied.includes(topT.winnerId)){
+      const rest=sorted.filter(id=>id!==topT.winnerId);
+      sorted.length=0;sorted.push(topT.winnerId,...rest);
+    }
+  }
+  if(botT&&botT.loserId){
+    const minW=wins[sorted[sorted.length-1]]||0;
+    const botTied=sorted.filter(id=>(wins[id]||0)===minW);
+    if(botTied.length>1&&botTied.includes(botT.loserId)){
+      const rest=sorted.filter(id=>id!==botT.loserId);
+      sorted.length=0;sorted.push(...rest,botT.loserId);
+    }
+  }
+  return sorted;
+}
 function computeRoundStatus(){
   if(!S.current)return{courts:{},projectedMv:{},projectedAssignments:null,allScored:false,totalScored:0,totalCourts:0,wins:{},pts:{}};
   const a=S.current.assignments;
@@ -2609,32 +2644,22 @@ function computeRoundStatus(){
     }
     const allDone=gamesScored===numGames;
     if(allDone)totalScored++;
-    // Compute court winner/loser
+    // Compute court winner/loser (respects preTosses)
     let courtWinner=null,courtLoser=null;
     if(allDone){
-      const sorted=[...pids].sort((x,y)=>{
-        const pd_x=ptFor[x]-ptAgainst[x],pd_y=ptFor[y]-ptAgainst[y];
-        if(pts[y]!==pts[x])return pts[y]-pts[x];
-        if(pd_x!==pd_y)return pd_y-pd_x;
-        return x - y;
-      });
+      const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
       courtWinner=sorted[0];
       courtLoser=sorted[sorted.length-1];
     }
     courts[c]={scored:allDone,gamesScored,numGames,players:pids.length,winner:courtWinner,loser:courtLoser,pids,courtCycle:cy};
   }
-  // Compute projected movements
+  // Compute projected movements (respects preTosses)
   const projectedMv={};
   for(let c=1;c<=NC;c++){
     if(!courts[c]||courts[c].skip)continue;
     if(!courts[c].scored)continue;
     const pids=courts[c].pids;
-    const sorted=[...pids].sort((x,y)=>{
-      if(pts[y]!==pts[x])return pts[y]-pts[x];
-      const pd_x=ptFor[x]-ptAgainst[x],pd_y=ptFor[y]-ptAgainst[y];
-      if(pd_x!==pd_y)return pd_y-pd_x;
-      return x - y;
-    });
+    const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
     sorted.forEach((id,i)=>{
       if(i===0&&c>1)projectedMv[id]='up';
       else if(i===sorted.length-1&&c<NC)projectedMv[id]='down';
@@ -2665,7 +2690,7 @@ function computeRoundStatus(){
     for(let c=1;c<=NC;c++)while(na[c].length>4){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
     projectedAssignments=na;
   }
-  return{courts,projectedMv,projectedAssignments,allScored:totalScored===totalCourts&&totalCourts>0,totalScored,totalCourts,wins,pts};
+  return{courts,projectedMv,projectedAssignments,allScored:totalScored===totalCourts&&totalCourts>0,totalScored,totalCourts,wins,pts,ptFor,ptAgainst};
 }
 function renderRoundTracker(){
   const el=document.getElementById('round-tracker');if(!el)return;
@@ -2797,13 +2822,9 @@ function renderRoundTracker(){
       if(!cs||cs.skip||!cs.pids||cs.pids.length<2)continue;
       if(cs.gamesScored===0)continue;
       const pids=cs.pids;
-      const courtPlayers=pids.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
-      const sorted=[...courtPlayers].sort((a,b)=>{
-        const wa=status.wins[a.id]||0,wb=status.wins[b.id]||0;
-        if(wb!==wa)return wb-wa;
-        const pa=status.pts[a.id]||0,pb=status.pts[b.id]||0;
-        return pb-pa;
-      });
+      // Sort respecting preTosses so the ↓ arrow lands on the player the admin picked via toss
+      const sortedIds=sortCourtRanking(pids,status.wins,status.pts,status.ptFor||{},status.ptAgainst||{},cy,c,S.current.preTosses);
+      const sorted=sortedIds.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
       const cls=c===1?'var(--gold)':c===2?'var(--silver)':c===3?'var(--bronze)':'var(--teal2)';
       html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px;">
         <div style="font-size:10px;font-weight:800;color:${cls};margin-bottom:4px;">Court ${c} ${cs.scored?'✅':''}</div>`;
