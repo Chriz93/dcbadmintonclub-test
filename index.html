@@ -725,6 +725,15 @@ textarea.inp{resize:vertical;min-height:80px;}
         <button class="btn btn-ghost" onclick="exportData()">📤 Export JSON Backup</button>
       </div>
       <div class="card">
+        <div class="card-title">📸 Snapshots — Save &amp; Restore</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4;">Save a full backup of all players, sessions, scores, standings and settings to Supabase. One-click restore any snapshot — the current state is auto-saved first so nothing is ever lost.</div>
+        <label class="lbl">Optional Label</label>
+        <input class="inp" id="snap-label" placeholder="e.g. Before Session 2" maxlength="80">
+        <button class="btn btn-primary" onclick="promptSaveSnapshot()" style="width:100%;">📸 Save Snapshot Now</button>
+        <div style="font-weight:800;font-size:12px;color:var(--teal2);margin:14px 0 8px;letter-spacing:1px;">SAVED SNAPSHOTS</div>
+        <div id="snap-list"><div style="color:var(--muted);font-size:12px;padding:8px;">Loading…</div></div>
+      </div>
+      <div class="card">
         <div class="card-title">📄 Season Report</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Generate a printable/shareable season summary PDF with final standings, awards, and session history.</div>
         <button class="btn btn-primary" onclick="generateSeasonPDF()">📄 Generate Season Summary PDF</button>
@@ -3761,6 +3770,122 @@ function exportData(){
   const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='dcbc-backup.json';a.click();
 }
+
+// ══════════════════════════════════════════════
+// SNAPSHOTS — full Supabase-backed backups you can restore in one click.
+// Stored in app_state with keys `snapshot_<ISO>`. Each value contains the
+// full players table, announcements, and every KV key the app uses.
+// Restore auto-creates a pre-restore snapshot first so you can always
+// undo a restore. Nothing is ever lost.
+// ══════════════════════════════════════════════
+const SNAPSHOT_KV_KEYS=['current_session','completed_sessions','player_approvals','membership_overrides','round_snapshots','pre_session_attendance','qa_questions','rsvp_session_1','rsvp_session_2','rsvp_session_3','rsvp_session_4','rsvp_session_5','rsvp_session_6','rsvp_session_7','rsvp_session_8','votes_session_1','votes_session_2','votes_session_3','votes_session_4','votes_session_5','votes_session_6','votes_session_7','votes_session_8','pin'];
+
+async function saveSnapshot(label,silent){
+  try{
+    const ts=new Date().toISOString();
+    const key='snapshot_'+ts;
+    const [players,anns]=await Promise.all([sbG('players'),sbG('announcements','order=created_at.desc')]);
+    const kv={};
+    for(const k of SNAPSHOT_KV_KEYS){kv[k]=await getKV(k);}
+    const niceLabel=(label&&label.trim())||('Snapshot — '+new Date(ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));
+    const blob={label:niceLabel,ts,players:players||[],announcements:anns||[],kv};
+    await setKV(key,blob);
+    if(!silent)toast('📸 Snapshot saved','success');
+    renderSnapshots();
+    return key;
+  }catch(e){
+    console.error('saveSnapshot failed',e);
+    toast('Snapshot failed: '+e.message,'error');
+    return null;
+  }
+}
+
+async function listSnapshots(){
+  const rows=await sbG('app_state');
+  return (rows||[]).filter(r=>r.key&&r.key.startsWith('snapshot_')).map(r=>{
+    try{return {id:r.id,key:r.key,value:JSON.parse(r.value)};}catch(e){return null;}
+  }).filter(Boolean).sort((a,b)=>(b.value.ts||'').localeCompare(a.value.ts||''));
+}
+
+async function restoreSnapshot(key){
+  const snap=await getKV(key);
+  if(!snap){toast('Snapshot not found','error');return;}
+  if(!confirm(`Restore "${snap.label}"?\n\nThe current state will first be auto-saved as a new snapshot, so nothing will be lost and you can always restore back.\n\nContinue?`))return;
+  try{
+    toast('📸 Saving current state first…','info');
+    await saveSnapshot('Auto-saved before restoring "'+snap.label+'"',true);
+    toast('🔄 Restoring snapshot…','info');
+    const currentPlayers=(await sbG('players'))||[];
+    const snapPlayerIds=new Set(snap.players.map(p=>p.id));
+    const curIds=new Set(currentPlayers.map(p=>p.id));
+    for(const p of currentPlayers){if(!snapPlayerIds.has(p.id)){await sbD('players',p.id);}}
+    for(const p of snap.players){
+      const {id,created_at,...fields}=p;
+      if(curIds.has(id)){
+        await sbU('players',id,fields);
+      }else{
+        await sbP('players',p);
+      }
+    }
+    for(const[k,v]of Object.entries(snap.kv||{})){
+      await setKV(k,v);
+    }
+    const currentAnns=(await sbG('announcements','order=created_at.desc'))||[];
+    for(const a of currentAnns){await sbD('announcements',a.id);}
+    for(const a of (snap.announcements||[])){
+      const {id,created_at,...fields}=a;
+      if(fields.content)await sbP('announcements',fields);
+    }
+    await loadAll();renderAll();renderSnapshots();
+    toast('✅ Snapshot restored — "'+snap.label+'"','success');
+  }catch(e){
+    console.error('restoreSnapshot failed',e);
+    toast('Restore failed: '+e.message+' — check data!','error');
+  }
+}
+
+async function deleteSnapshot(key,label){
+  if(!confirm(`Delete snapshot "${label}"?\n\nThis cannot be undone.`))return;
+  const rows=await sbG('app_state');
+  const row=(rows||[]).find(r=>r.key===key);
+  if(row){await sbD('app_state',row.id);}
+  toast('Snapshot deleted','warn');
+  renderSnapshots();
+}
+
+async function renderSnapshots(){
+  const el=document.getElementById('snap-list');if(!el)return;
+  el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px;">Loading…</div>';
+  try{
+    const snaps=await listSnapshots();
+    if(!snaps.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center;">No snapshots yet. Click "📸 Save Snapshot" above to create one.</div>';return;}
+    el.innerHTML=snaps.map(s=>{
+      const d=new Date(s.value.ts||0);
+      const dateStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
+      const timeStr=d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const nPlayers=(s.value.players||[]).length;
+      const hasSession=s.value.kv&&s.value.kv.current_session?' · 🏸 Active session':'';
+      const nCompleted=(s.value.kv&&s.value.kv.completed_sessions||[]).length;
+      return `<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-weight:800;font-size:13px;color:var(--teal2);margin-bottom:4px;">${esc(s.value.label||'(unnamed)')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">📅 ${dateStr} · ⏰ ${timeStr}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">👥 ${nPlayers} players · ✅ ${nCompleted} completed sessions${hasSession}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-success btn-sm" style="flex:1;margin:0;" onclick="restoreSnapshot('${s.key}')">↩ Restore</button>
+          <button class="btn btn-danger btn-sm" style="margin:0;" onclick="deleteSnapshot('${s.key}',${JSON.stringify(s.value.label||'').replace(/"/g,'&quot;')})">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML='<div style="color:var(--red2);font-size:12px;padding:8px;">Failed to load snapshots: '+esc(e.message)+'</div>';
+  }
+}
+
+async function promptSaveSnapshot(){
+  const label=document.getElementById('snap-label')?.value||'';
+  await saveSnapshot(label);
+  const inp=document.getElementById('snap-label');if(inp)inp.value='';
+}
 async function hardReset(){
   if(!confirm('⚠️ Wipe ALL data?'))return;if(!confirm('Last chance!'))return;
   await Promise.all([setKV('current_session',null),setKV('completed_sessions',[])]);
@@ -4212,7 +4337,7 @@ function renderAll(){
   renderHome();renderRegPage();renderCourts();renderRoundTracker();renderSchedule();
   renderLeaderboard();renderRankings();renderPlayerStats();renderHeatmap();renderSessionStandings();renderHistory();renderRSVP();renderQA();
   renderPOS('pos-standings');
-  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();}
+  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();}
   // Skip score re-render during background sync to preserve unsaved input values
   if(!_isSyncing){const sel=document.getElementById('sc-sel');if(sel&&sel.value)renderScoreEntry();}
   // Check if all courts scored — trigger notification
