@@ -3128,24 +3128,26 @@ function renderCourtTally(court){
       const isTopTied=isTrueTopTie(p)&&topTiedCount>1;
       const isBotTied=isTrueBotTie(p)&&bottomTiedCount>1&&!allTied;
       const movementTag=(()=>{
-        if(i===0){
-          if(court===1)return '<span class="tag tg-gold" style="margin-left:4px;font-size:11px;">👑 Top court</span>';
-          if(isTopTied){
-            if(topTossRecord&&topTossRecord.winnerId===p.id)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">🪙 Won toss — ⬆️ C'+(court-1)+'</span>';
-            if(topTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Lost toss — Stays C'+court+'</span>';
-            return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↑ C'+(court-1)+'</span>';
-          }
-          return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to C'+(court-1)+'</span>';
+        // Top-court top player — no up-movement possible
+        if(i===0&&court===1)return '<span class="tag tg-gold" style="margin-left:4px;font-size:11px;">👑 Top court</span>';
+        // Top-tie: every player in the tie group shows toss state (any could win)
+        if(court>1&&isTopTied){
+          if(topTossRecord&&topTossRecord.winnerId===p.id)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">🪙 Won toss — ⬆️ C'+(court-1)+'</span>';
+          if(topTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Lost toss — Stays C'+court+'</span>';
+          return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↑ C'+(court-1)+'</span>';
         }
-        if(i===sorted.length-1&&!allTied){
-          if(court===NC)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
-          if(isBotTied){
-            if(botTossRecord&&botTossRecord.loserId===p.id)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">🪙 Lost toss — ⬇️ C'+(court+1)+'</span>';
-            if(botTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Won toss — Stays C'+court+'</span>';
-            return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↓ C'+(court+1)+'</span>';
-          }
-          return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
+        // Clean top (no tie) — only i===0 moves up
+        if(i===0&&court>1)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to C'+(court-1)+'</span>';
+        // Bottom-court bottom player — no down-movement possible
+        if(i===sorted.length-1&&court===NC&&!allTied)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
+        // Bottom-tie: every player in the tie group shows toss state (any could lose)
+        if(court<NC&&isBotTied){
+          if(botTossRecord&&botTossRecord.loserId===p.id)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">🪙 Lost toss — ⬇️ C'+(court+1)+'</span>';
+          if(botTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Won toss — Stays C'+court+'</span>';
+          return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↓ C'+(court+1)+'</span>';
         }
+        // Clean bottom (no tie) — only i===sorted.length-1 moves down
+        if(i===sorted.length-1&&court<NC&&!allTied)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
         return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">Stays C'+court+'</span>';
       })();
       return `<div class="lbrow"><div class="lbrank ${i===0?'r1':''}">${i+1}</div>
