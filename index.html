@@ -3121,7 +3121,13 @@ async function recordCourtToss(court,direction){
     S.current.preTosses[`${cy}_c${court}_bot`]={loserId:chosenId,group:tiedPlayers.map(p=>p.id)};
   }
   await setKV('current_session',S.current);
+  // Belt-and-suspenders: full rerender of score entry (which also calls renderCourtTally at its
+  // end) so the updated standings with the red ⬇ arrow always appear, even if the res-X div got
+  // replaced by some intervening render. Then scroll the tally into view.
+  renderScoreEntry();
   renderCourtTally(court);
+  renderRoundTracker();
+  setTimeout(()=>document.getElementById(`res-${court}`)?.scrollIntoView({behavior:'smooth',block:'center'}),120);
   const chosenName=tiedPlayers.find(p=>p.id===chosenId)?.name||'?';
   toast(`🪙 Toss recorded: ${chosenName} ${direction==='up'?'moves up':'moves down'}`,'success');
 }
@@ -3133,7 +3139,9 @@ async function clearCourtToss(court){
   delete S.current.preTosses[`${cy}_c${court}_top`];
   delete S.current.preTosses[`${cy}_c${court}_bot`];
   await setKV('current_session',S.current);
+  renderScoreEntry();
   renderCourtTally(court);
+  renderRoundTracker();
   toast('Toss cleared — record again','warn');
 }
 
