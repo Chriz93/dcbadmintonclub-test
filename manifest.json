@@ -1,0 +1,18 @@
+{
+  "name": "DC Badminton Club — TEST",
+  "short_name": "DCB Test",
+  "description": "TEST environment - safe to break. Maplewood Advanced League",
+  "start_url": "/dcbadmintonclub-test/",
+  "display": "standalone",
+  "background_color": "#080e17",
+  "theme_color": "#0d2137",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%230d2137' width='512' height='512' rx='80'/><text y='340' x='256' text-anchor='middle' font-size='280'>🏸</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
