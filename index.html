@@ -1725,7 +1725,10 @@ async function autoAdvanceCheck(){
   toast(isFinalRound?'Round '+cy+' complete! Session ready to end.':'All courts done! Advancing to Round '+(cy+1)+'...','success');
   try{
     // Snapshot before rotation for undo (save async, don't block)
-    _roundSnapshots.push({cycle:S.current.cycle,assignments:JSON.parse(JSON.stringify(S.current.assignments)),scores:JSON.parse(JSON.stringify(S.current.scores)),movements:JSON.parse(JSON.stringify(S.current.movements)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
+    // Full deep clone of S.current — captures assignments, scores, movements, preTosses,
+    // attendance, latePlayers, birdDistribution, courtCycles, completed, cycle, etc.
+    // Future-proof: any new field on S.current is automatically included.
+    _roundSnapshots.push({sessionState:JSON.parse(JSON.stringify(S.current)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
     setKV('round_snapshots',_roundSnapshots).catch(()=>{});
     await applyRotation();
     if(isFinalRound){
@@ -1758,12 +1761,18 @@ async function autoAdvanceCheck(){
 async function undoRound(){
   if(!_roundSnapshots.length)return toast('No rounds to undo','warn');
   if(!S.current)return toast('No active session','warn');
-  if(!confirm('Undo last round advancement? This reverts court assignments, movements, and player stats.'))return;
+  if(!confirm('Undo last round advancement? This reverts court assignments, scores, movements, toss decisions, and player stats.'))return;
   const snap=_roundSnapshots.pop();
-  S.current.cycle=snap.cycle;
-  S.current.assignments=snap.assignments;
-  S.current.scores=snap.scores;
-  S.current.movements=snap.movements;
+  // Support both legacy snapshots (cherry-picked fields) and new full-state snapshots
+  if(snap.sessionState){
+    S.current=snap.sessionState;
+  }else{
+    // Legacy shape — restore individual fields onto existing S.current
+    S.current.cycle=snap.cycle;
+    S.current.assignments=snap.assignments;
+    S.current.scores=snap.scores;
+    S.current.movements=snap.movements;
+  }
   // If the session was marked complete by the final round, undo that too — admin can re-enter scores
   if(S.current.completed)delete S.current.completed;
   // Revert player DB stats
@@ -1772,7 +1781,7 @@ async function undoRound(){
   await setKV('current_session',S.current);
   await setKV('round_snapshots',_roundSnapshots);
   await loadAll();renderAll();
-  toast('Reverted to Round '+S.current.cycle+' — scores and stats restored','success');
+  toast('Reverted to Round '+S.current.cycle+' — scores, tosses, and stats restored','success');
 }
 async function resetSession(){
   if(!S.current)return toast('No active session','warn');
@@ -1802,8 +1811,8 @@ async function nextCycle(){
   if(missing.length){toast(`Cannot advance — ${missing.length} scores missing: ${missing.slice(0,6).join(', ')}${missing.length>6?'...':''}`,'error');return;}
   const cy=S.current.cycle;
   const isFinalRound=cy>=MAX_ROUNDS_PER_SESSION;
-  // Snapshot before rotation for undo
-  _roundSnapshots.push({cycle:cy,assignments:JSON.parse(JSON.stringify(S.current.assignments)),scores:JSON.parse(JSON.stringify(S.current.scores)),movements:JSON.parse(JSON.stringify(S.current.movements)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
+  // Snapshot before rotation for undo — full deep clone of S.current (future-proof)
+  _roundSnapshots.push({sessionState:JSON.parse(JSON.stringify(S.current)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
   setKV('round_snapshots',_roundSnapshots).catch(()=>{});
   try{
     await applyRotation();
