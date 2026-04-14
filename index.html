@@ -1786,17 +1786,34 @@ async function undoRound(){
 async function resetSession(){
   if(!S.current)return toast('No active session','warn');
   if(_autoAdvancing)return toast('Wait — round advancing in progress','warn');
-  if(!confirm('RESET this session? All scores, movements, and season stats from this session will be cleared.'))return;
-  _autoAdvancing=true; // Prevent auto-advance during reset
-  // Reset all player season stats and highest_court to 0
-  const resets=activePlayers().map(p=>sbU('players',p.id,{season_wins:0,season_losses:0,games_played:0,highest_court:p.currentCourt}));
-  if(resets.length)await Promise.all(resets);
-  S.current.cycle=1;S.current.scores={};S.current.movements=[];S.current.courtCycles=null;
-  S.current.attendance={};S.current.latePlayers=[];S.current.birdDistribution={};
-  delete S.current.completed; // clear session-complete flag on reset
-  await setKV('current_session',S.current);await loadAll();renderAll();
-  _autoAdvancing=false;
-  toast('Session reset — all scores and stats cleared','success');
+  if(!confirm('RESET this session?\n\n• Current session scores, movements, and attendance will be cleared\n• Season stats from COMPLETED sessions will be PRESERVED (rebuilt from history)'))return;
+  _autoAdvancing=true;
+  try{
+    // Rebuild season stats from completed sessions ONLY. This correctly removes
+    // any wins/losses that nextCycle/endSession wrote for the CURRENT session,
+    // while preserving everything earned in prior completed sessions.
+    // The original code zeroed these — that was a footgun that wiped legitimate
+    // Session-N stats whenever someone reset Session N+1.
+    const rebuilt={};
+    activePlayers().forEach(p=>{rebuilt[p.id]={w:0,l:0,gp:0};});
+    (S.sessions||[]).filter(s=>s&&s.scores).forEach(sess=>{
+      Object.values(sess.scores).forEach(sc=>{
+        if(!sc||!sc.w)return;
+        const sa=[sc.a1,sc.a2].filter(x=>x!=null);
+        const sb=[sc.b1,sc.b2].filter(x=>x!=null);
+        const aWin=sc.w==='A',bWin=sc.w==='B';
+        sa.forEach(id=>{if(!rebuilt[id])return;rebuilt[id].gp++;if(aWin)rebuilt[id].w++;else if(bWin)rebuilt[id].l++;});
+        sb.forEach(id=>{if(!rebuilt[id])return;rebuilt[id].gp++;if(bWin)rebuilt[id].w++;else if(aWin)rebuilt[id].l++;});
+      });
+    });
+    const resets=activePlayers().map(p=>sbU('players',p.id,{season_wins:rebuilt[p.id].w,season_losses:rebuilt[p.id].l,games_played:rebuilt[p.id].gp}));
+    if(resets.length)await Promise.all(resets);
+    S.current.cycle=1;S.current.scores={};S.current.movements=[];S.current.courtCycles=null;
+    S.current.attendance={};S.current.latePlayers=[];S.current.birdDistribution={};
+    delete S.current.completed;
+    await setKV('current_session',S.current);await loadAll();renderAll();
+    toast('Session reset — current session cleared, completed session stats preserved','success');
+  }finally{_autoAdvancing=false;}
 }
 async function nextCycle(){
   if(!S.current)return toast('No active session','warn');
