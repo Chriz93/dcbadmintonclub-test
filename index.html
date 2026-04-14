@@ -785,14 +785,9 @@ textarea.inp{resize:vertical;min-height:80px;}
 // ══════════════════════════════════════════════
 // SUPABASE (TEST ENVIRONMENT)
 // ══════════════════════════════════════════════
-// ⚠️ PLACEHOLDER CREDENTIALS — replace with your new TEST Supabase project before use.
-// Create a new Supabase project at https://supabase.com, then paste its
-// Project URL and anon key below. See README for full setup instructions.
-const SB='__REPLACE_WITH_YOUR_TEST_SUPABASE_URL__';
-const SK='__REPLACE_WITH_YOUR_TEST_SUPABASE_ANON_KEY__';
-if(SB.includes('__REPLACE_')||SK.includes('__REPLACE_')){
-  console.warn('⚠️ TEST SITE: Supabase credentials are placeholders. App will fail to load data. Update index.html with your test Supabase project credentials.');
-}
+// Test-only Supabase project — isolated from production bwepvxelvwgwxrnaglrx
+const SB='https://wgolevihkvmosajumzvl.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indnb2xldmloa3Ztb3NhanVtenZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjg2OTEsImV4cCI6MjA5MTcwNDY5MX0.6JWugLfPGpr3IeujipQlsV7EjOVzjQQ3xDWTMbNvYIA';
 const H={'Content-Type':'application/json','apikey':SK,'Authorization':'Bearer '+SK};
 
 async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});return r.json();}
