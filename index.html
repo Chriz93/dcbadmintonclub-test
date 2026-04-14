@@ -1734,6 +1734,12 @@ async function autoAdvanceCheck(){
     }else{
       S.current.cycle++;
     }
+    // Reset the Score-Entry court selector BEFORE re-render so stale R{cy} inputs
+    // can't bleed into the new round's form. Forces the user to pick their court fresh.
+    const _scSel=document.getElementById('sc-sel');
+    if(_scSel)_scSel.value='';
+    const _scArea=document.getElementById('score-area');
+    if(_scArea)_scArea.innerHTML='';
     await setKV('current_session',S.current);await loadAll();renderAll();
     if(isFinalRound)toast('🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds. Click "End Session" to finalize standings.','success');
   }
