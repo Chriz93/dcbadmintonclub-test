@@ -1798,34 +1798,81 @@ async function applyRotation(){
     side_a.forEach(id=>{pts[id]=(pts[id]||0)+sc.sA;ptFor[id]=(ptFor[id]||0)+sc.sA;ptAgainst[id]=(ptAgainst[id]||0)+sc.sB;gamesPlayedCycle[id]=(gamesPlayedCycle[id]||0)+1;});
     side_b.forEach(id=>{pts[id]=(pts[id]||0)+sc.sB;ptFor[id]=(ptFor[id]||0)+sc.sB;ptAgainst[id]=(ptAgainst[id]||0)+sc.sA;gamesPlayedCycle[id]=(gamesPlayedCycle[id]||0)+1;});
   }
-  // Detect ties and resolve via toss before sorting
+  // Detect ties (by WINS first, then points as secondary) and resolve via toss before sorting.
+  // Valid win distributions in 4p round-robin doubles are {3,1,1,1} or {2,2,2,0} — so ties
+  // happen frequently and MUST be tossed. Ordered rotation by wins matches real badminton ladder rules.
   const tossResults={};
+  const tossChoices={}; // {c: {group, direction, winnerId, loserIds}} — for audit/display later
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2)continue;
-    // Check if top or bottom positions have ties
-    const scores=pids.map(id=>({id,pts:pts[id]||0,diff:(ptFor[id]||0)-(ptAgainst[id]||0)}));
-    scores.sort((x,y)=>y.pts!==x.pts?y.pts-x.pts:y.diff!==x.diff?y.diff-x.diff:0);
-    // Check if position 0 and 1 are tied (affects who moves up)
-    if(scores.length>=2&&scores[0].pts===scores[1].pts&&(ptFor[scores[0].id]-ptAgainst[scores[0].id])===(ptFor[scores[1].id]-ptAgainst[scores[1].id])){
-      const p0=S.players.find(p=>p.id===scores[0].id);
-      const p1=S.players.find(p=>p.id===scores[1].id);
-      if(p0&&p1){
-        let winner=null;
-        try{while(winner!=='1'&&winner!=='2'){winner=prompt(`Court ${c} TIE at the top!\n${p0.name} and ${p1.name} have the same score.\n\nWho won the toss? Enter 1 for ${p0.name} or 2 for ${p1.name}:`);if(winner===null){winner='1';break;}}}catch(e){winner='1';}
-        if(winner==='2')tossResults[scores[0].id+'_'+scores[1].id]=scores[1].id;
-        else tossResults[scores[0].id+'_'+scores[1].id]=scores[0].id;
+    // Sort the court's players by wins DESC, then pts DESC, then diff DESC, then id ASC
+    const courtSorted=[...pids].map(id=>({
+      id,
+      wins:wins[id]||0,
+      pts:pts[id]||0,
+      diff:(ptFor[id]||0)-(ptAgainst[id]||0)
+    })).sort((x,y)=>y.wins-x.wins||y.pts-x.pts||y.diff-x.diff||x.id-y.id);
+    // TOP TIE: players tied on the max wins (only matters if court > 1, top moves up)
+    if(c>1){
+      const maxW=courtSorted[0].wins;
+      const topGroup=courtSorted.filter(s=>s.wins===maxW);
+      if(topGroup.length>1){
+        // Multi-way tie at the top — prompt once for who moves up
+        const names=topGroup.map((s,i)=>{
+          const p=S.players.find(pp=>pp.id===s.id);
+          return `${i+1}. ${p?p.name:'?'}`;
+        }).join('\n');
+        let pick=null;
+        const msg=`🪙 COURT ${c} — TIE AT THE TOP\n\nThese players tied on wins:\n${names}\n\nWho WON the toss and moves UP to Court ${c-1}?\n\nEnter the number (1-${topGroup.length}):`;
+        try{
+          while(true){
+            const resp=prompt(msg);
+            if(resp===null){pick=1;break;} // canceled = first player by default
+            const n=parseInt(resp);
+            if(n>=1&&n<=topGroup.length){pick=n;break;}
+          }
+        }catch(e){pick=1;}
+        const winnerId=topGroup[pick-1].id;
+        // Record toss: winnerId beats every other tied player at the top
+        topGroup.forEach(s=>{
+          if(s.id!==winnerId){
+            tossResults[winnerId+'_'+s.id]=winnerId;
+            tossResults[s.id+'_'+winnerId]=winnerId;
+          }
+        });
+        tossChoices['top_'+c]={group:topGroup.map(s=>s.id),direction:'up',winnerId,loserIds:topGroup.filter(s=>s.id!==winnerId).map(s=>s.id)};
       }
     }
-    // Check if last two are tied (affects who moves down)
-    const last=scores.length-1;const prev=scores.length-2;
-    if(prev>=0&&scores[last].pts===scores[prev].pts&&(ptFor[scores[last].id]-ptAgainst[scores[last].id])===(ptFor[scores[prev].id]-ptAgainst[scores[prev].id])&&(scores[last].id!==scores[0].id)){
-      const pL=S.players.find(p=>p.id===scores[last].id);
-      const pP=S.players.find(p=>p.id===scores[prev].id);
-      if(pL&&pP&&!tossResults[scores[prev].id+'_'+scores[last].id]){
-        let winner2=null;
-        try{while(winner2!=='1'&&winner2!=='2'){winner2=prompt(`Court ${c} TIE at the bottom!\n${pP.name} and ${pL.name} have the same score.\n\nWho WON the toss (stays)? Enter 1 for ${pP.name} or 2 for ${pL.name}:`);if(winner2===null){winner2='1';break;}}}catch(e){winner2='1';}
-        if(winner2==='2')tossResults[scores[prev].id+'_'+scores[last].id]=scores[last].id;
-        else tossResults[scores[prev].id+'_'+scores[last].id]=scores[prev].id;
+    // BOTTOM TIE: players tied on the min wins (only matters if court < NC, bottom moves down)
+    if(c<NC){
+      const minW=courtSorted[courtSorted.length-1].wins;
+      const botGroup=courtSorted.filter(s=>s.wins===minW);
+      // Skip if bottom group overlaps with top group (everyone tied — no movement at either end)
+      const maxW=courtSorted[0].wins;
+      if(botGroup.length>1&&minW!==maxW){
+        const names=botGroup.map((s,i)=>{
+          const p=S.players.find(pp=>pp.id===s.id);
+          return `${i+1}. ${p?p.name:'?'}`;
+        }).join('\n');
+        let pick=null;
+        const msg=`🪙 COURT ${c} — TIE AT THE BOTTOM\n\nThese players tied on wins:\n${names}\n\nWho LOST the toss and moves DOWN to Court ${c+1}?\n\nEnter the number (1-${botGroup.length}):`;
+        try{
+          while(true){
+            const resp=prompt(msg);
+            if(resp===null){pick=1;break;}
+            const n=parseInt(resp);
+            if(n>=1&&n<=botGroup.length){pick=n;break;}
+          }
+        }catch(e){pick=1;}
+        const loserId=botGroup[pick-1].id;
+        // Record toss: every other tied player beats loserId at the bottom
+        botGroup.forEach(s=>{
+          if(s.id!==loserId){
+            tossResults[loserId+'_'+s.id]=s.id;
+            tossResults[s.id+'_'+loserId]=s.id;
+          }
+        });
+        tossChoices['bot_'+c]={group:botGroup.map(s=>s.id),direction:'down',loserId,winnerIds:botGroup.filter(s=>s.id!==loserId).map(s=>s.id)};
       }
     }
   }
@@ -1833,16 +1880,21 @@ async function applyRotation(){
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>mv[id]='stay');continue;}
     const sorted=[...pids].sort((a,b)=>{
-      const ptDiff_a = ptFor[a]-ptAgainst[a];
-      const ptDiff_b = ptFor[b]-ptAgainst[b];
-      const ptCmp = pts[b]-pts[a];
-      if(ptCmp !== 0) return ptCmp;
-      if(ptDiff_a !== ptDiff_b) return ptDiff_b - ptDiff_a;
-      // Toss resolution: check if we have a result for this pair
+      // PRIMARY: wins (more wins = higher rank)
+      const winsCmp=(wins[b]||0)-(wins[a]||0);
+      if(winsCmp!==0)return winsCmp;
+      // Toss resolution: if wins are tied, check toss result first
       const tKey1=a+'_'+b,tKey2=b+'_'+a;
       if(tossResults[tKey1])return tossResults[tKey1]===a?-1:1;
       if(tossResults[tKey2])return tossResults[tKey2]===a?-1:1;
-      return a - b; // fallback to ID if no toss
+      // SECONDARY: total points scored (higher = better)
+      const ptCmp=(pts[b]||0)-(pts[a]||0);
+      if(ptCmp!==0)return ptCmp;
+      // TERTIARY: point differential (points for minus points against)
+      const ptDiff_a=(ptFor[a]||0)-(ptAgainst[a]||0);
+      const ptDiff_b=(ptFor[b]||0)-(ptAgainst[b]||0);
+      if(ptDiff_a!==ptDiff_b)return ptDiff_b-ptDiff_a;
+      return a-b; // fallback to ID if all tied and no toss (shouldn't happen in practice)
     });
     sorted.forEach((id,i)=>{if(i===0&&c>1)mv[id]='up';else if(i===sorted.length-1&&c<NC)mv[id]='down';else mv[id]='stay';});
   }
@@ -1855,7 +1907,7 @@ async function applyRotation(){
   });
   for(let c=1;c<=NC;c++)while(na[c].length>4){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
   S.current.assignments=na;
-  S.current.movements.push({cycle:cy,mv,wins:{...wins},pts:{...pts},tosses:tossResults});
+  S.current.movements.push({cycle:cy,mv,wins:{...wins},pts:{...pts},tosses:tossResults,tossChoices});
   // Update DB with actual games played this cycle per player
   const rotationStatUpdates=[];
   Object.entries(wins).forEach(([id,w])=>{
@@ -2952,17 +3004,46 @@ async function saveScores(court){
   const sorted=[...players].sort((a,b)=>wins[b.id]-wins[a.id]);
   // Each player's max possible wins depends on mode (4p doubles=3 games, 3p rr=2 games, 2p=3 games)
   const maxWins=players.length===3?2:3;
-  const re=document.getElementById(`res-${court}`);
-  if(re)re.innerHTML=`<div class="card"><div class="card-title">✅ Court ${court} Tally${players.length<4?' (Singles)':''}</div>
-    ${sorted.map((p,i)=>`<div class="lbrow"><div class="lbrank ${i===0?'r1':''}">${i+1}</div>
-      <div class="lbinfo"><div class="lbname">${esc(p.name)}</div></div>
-      <span class="tag ${wins[p.id]===maxWins?'tg-green':wins[p.id]===0?'tg-red':'tg-teal'}">${wins[p.id]}W · ${maxWins-wins[p.id]}L</span>
-      ${i===0?(court>1?'<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to Court '+(court-1)+'</span>':'<span class="tag tg-gold" style="margin-left:4px;font-size:11px;">👑 Stays on Top</span>'):''}
-      ${i===sorted.length-1?(court<NC?'<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to Court '+(court+1)+'</span>':'<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Stays (Bottom Court)</span>'):''}
-    </div>`).join('')}</div>`;
-  // Update round tracker after saving
+  // Build tally HTML as a string — inject AFTER renderScoreEntry so it survives the re-render
+  // Group players by win count to detect ties (for proper tie indication)
+  const topWins=Math.max(...Object.values(wins));
+  const bottomWins=Math.min(...Object.values(wins));
+  const topTiedCount=Object.values(wins).filter(w=>w===topWins).length;
+  const bottomTiedCount=Object.values(wins).filter(w=>w===bottomWins).length;
+  const tallyHtml=`<div class="card" style="border-color:var(--teal2);"><div class="card-title">✅ Court ${court} Tally${players.length<4?' (Singles)':''}</div>
+    ${sorted.map((p,i)=>{
+      const pw=wins[p.id];
+      const isTopTied=pw===topWins&&topTiedCount>1;
+      const isBotTied=pw===bottomWins&&bottomTiedCount>1&&topWins!==bottomWins;
+      const movementTag=(()=>{
+        // Top player → moves up (if court > 1 and not tied)
+        if(pw===topWins&&i<topTiedCount){
+          if(court===1)return '<span class="tag tg-gold" style="margin-left:4px;font-size:11px;">👑 Top court</span>';
+          if(isTopTied)return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↑ C'+(court-1)+'</span>';
+          return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to C'+(court-1)+'</span>';
+        }
+        // Bottom player → moves down (if court < NC and not tied)
+        if(pw===bottomWins&&i>=sorted.length-bottomTiedCount){
+          if(court===NC)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
+          if(isBotTied)return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↓ C'+(court+1)+'</span>';
+          return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
+        }
+        return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">Stays C'+court+'</span>';
+      })();
+      return `<div class="lbrow"><div class="lbrank ${i===0?'r1':''}">${i+1}</div>
+        <div class="lbinfo"><div class="lbname">${esc(p.name)}</div></div>
+        <span class="tag ${pw===maxWins?'tg-green':pw===0?'tg-red':'tg-teal'}">${pw}W · ${maxWins-pw}L</span>
+        ${movementTag}
+      </div>`;
+    }).join('')}
+    ${(topTiedCount>1&&court>1)||(bottomTiedCount>1&&court<NC&&topWins!==bottomWins)?'<div style="margin-top:8px;padding:6px 8px;background:rgba(241,196,15,0.15);border:1px solid var(--yellow2);border-radius:6px;font-size:11px;"><strong>🪙 Tie detected.</strong> When all courts finish scoring, the app will prompt for a toss to decide who moves.</div>':''}
+  </div>`;
+  // Update round tracker after saving, then re-render scores (wipes old res-X), then re-inject tally
   renderRoundTracker();
-  renderScoreEntry();renderRoundTracker();renderLeaderboard();renderCourts();toast('Court '+court+' saved!','success');
+  renderScoreEntry();
+  const reFresh=document.getElementById(`res-${court}`);
+  if(reFresh)reFresh.innerHTML=tallyHtml;
+  renderRoundTracker();renderLeaderboard();renderCourts();toast('Court '+court+' saved!','success');
   // Auto-advance: if this court is fully scored, try to advance automatically
   setTimeout(()=>autoAdvanceCheck(),500);
 }
