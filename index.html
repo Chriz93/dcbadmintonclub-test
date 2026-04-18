@@ -3656,21 +3656,26 @@ function renderSessionStandings(){
         courtPerRound[id][cy]=c;
       });
     });
-    // For each player: startCourt = first round played, finalCourt = apply all movements
-    // (that fire at/after their first played cycle) forward from that starting court.
+    // startCourt = court played in the LAST round they appeared in; finalCourt =
+    // that court with just the last-cycle movement applied. This gives each player
+    // a unique, unambiguous arrow for the final-rotation → next-session transition.
+    // (Walking every cycle's movement was the source of "2 players show same arrow"
+    // — two players can validly end up on the same court via movements in different
+    // rounds, and the composite arrow hid that distinction.)
     const startCourt={},finalCourt={};
     Object.entries(courtPerRound).forEach(([idStr,perCy])=>{
       const id=parseInt(idStr);
       const cycles=Object.keys(perCy).map(Number).sort((a,b)=>a-b);
       if(!cycles.length)return;
-      startCourt[id]=perCy[cycles[0]];
-      let cc=perCy[cycles[0]];
-      (s.movements||[]).forEach(m=>{
-        if((m.cycle||0)<cycles[0])return;
-        const dir=m.mv?.[id];
+      const lastCy=cycles[cycles.length-1];
+      startCourt[id]=perCy[lastCy];
+      let cc=perCy[lastCy];
+      const lastM=(s.movements||[]).find(m=>(m.cycle||0)===lastCy);
+      if(lastM){
+        const dir=lastM.mv?.[id];
         if(dir==='up')cc=Math.max(1,cc-1);
         else if(dir==='down')cc=Math.min(NC,cc+1);
-      });
+      }
       finalCourt[id]=cc;
     });
     // Group players by final court for display
