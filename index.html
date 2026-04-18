@@ -3642,43 +3642,62 @@ function renderSessionStandings(){
       if(sc.w==='A'){sa.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sb.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
       else if(sc.w==='B'){sb.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sa.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
     });
-    // Derive each player's court per round from scores. This is reliable regardless of
-    // whether applyRotation mutated s.assignments on the final round — if it did (via
-    // autoAdvance in the MAX_ROUNDS path), s.assignments already reflects post-final-
-    // rotation positions, and the old code would double-apply the last movement.
-    const courtPerRound={}; // id → {cycle: court}
+    // Derive each player's last-played court from scores (reliable source of truth).
+    const lastPlayedCourt={}; // id → {cy, court}
     Object.entries(s.scores||{}).forEach(([k,sc])=>{
       const mk=k.match(/^c(\d+)_y(\d+)_g/);if(!mk)return;
       const c=parseInt(mk[1]),cy=parseInt(mk[2]);
       [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{
         if(id==null)return;
-        if(!courtPerRound[id])courtPerRound[id]={};
-        courtPerRound[id][cy]=c;
+        if(!lastPlayedCourt[id]||lastPlayedCourt[id].cy<cy)lastPlayedCourt[id]={cy,court:c};
       });
     });
-    // startCourt = court played in the LAST round they appeared in; finalCourt =
-    // that court with just the last-cycle movement applied. This gives each player
-    // a unique, unambiguous arrow for the final-rotation → next-session transition.
-    // (Walking every cycle's movement was the source of "2 players show same arrow"
-    // — two players can validly end up on the same court via movements in different
-    // rounds, and the composite arrow hid that distinction.)
-    const startCourt={},finalCourt={};
-    Object.entries(courtPerRound).forEach(([idStr,perCy])=>{
-      const id=parseInt(idStr);
-      const cycles=Object.keys(perCy).map(Number).sort((a,b)=>a-b);
-      if(!cycles.length)return;
-      const lastCy=cycles[cycles.length-1];
-      startCourt[id]=perCy[lastCy];
-      let cc=perCy[lastCy];
-      const lastM=(s.movements||[]).find(m=>(m.cycle||0)===lastCy);
-      if(lastM){
-        const dir=lastM.mv?.[id];
+    // Find each player's court in s.assignments
+    const assignCourt={};
+    for(let c=1;c<=NC;c++)(s.assignments?.[c]||[]).forEach(id=>{assignCourt[id]=c;});
+    const lastMv=s.movements?.length?s.movements[s.movements.length-1]:null;
+    // Detect: is s.assignments already post-last-rotation (autoAdvance path) or
+    // pre-last-rotation (endSession path)? Compare assignCourt against what we'd
+    // expect from applying lastMv to lastPlayedCourt. Majority rule.
+    let postMatch=0,preMatch=0;
+    Object.entries(lastPlayedCourt).forEach(([idStr,info])=>{
+      const p=parseInt(idStr);
+      if(!assignCourt[p])return;
+      if(assignCourt[p]===info.court)preMatch++;
+      if(lastMv?.mv?.[p]){
+        const dir=lastMv.mv[p];
+        let expected=info.court;
+        if(dir==='up')expected=Math.max(1,info.court-1);
+        else if(dir==='down')expected=Math.min(NC,info.court+1);
+        if(assignCourt[p]===expected)postMatch++;
+      }
+    });
+    const isPostRot=postMatch>preMatch;
+    // finalCourt: s.assignments if post-rotation, else assignCourt + lastMv
+    const finalCourt={},startCourt={};
+    Object.keys(assignCourt).forEach(idStr=>{
+      const p=parseInt(idStr);
+      if(isPostRot){
+        finalCourt[p]=assignCourt[p];
+      }else{
+        let cc=assignCourt[p];const dir=lastMv?.mv?.[p];
         if(dir==='up')cc=Math.max(1,cc-1);
         else if(dir==='down')cc=Math.min(NC,cc+1);
+        finalCourt[p]=cc;
       }
-      finalCourt[id]=cc;
+      // startCourt = last-played court (for arrow "from"), fallback to finalCourt
+      // reversed if they didn't play (rare: ghost assignment with no scores)
+      if(lastPlayedCourt[p])startCourt[p]=lastPlayedCourt[p].court;
+      else{
+        if(isPostRot){
+          let cc=assignCourt[p];const dir=lastMv?.mv?.[p];
+          if(dir==='up')cc=Math.min(NC,cc+1);
+          else if(dir==='down')cc=Math.max(1,cc-1);
+          startCourt[p]=cc;
+        }else startCourt[p]=assignCourt[p];
+      }
     });
-    // Group players by final court for display
+    // Group by finalCourt
     const postRotation={};for(let c=1;c<=NC;c++)postRotation[c]=[];
     Object.entries(finalCourt).forEach(([id,c])=>{if(c>0)postRotation[c].push(parseInt(id));});
     const rndCount=new Set(Object.keys(s.scores||{}).map(k=>{const m=k.match(/_y(\d+)_/);return m?parseInt(m[1]):0;})).size;
