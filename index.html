@@ -1947,21 +1947,23 @@ async function applyRotation(){
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>mv[id]='stay');continue;}
     const sorted=[...pids].sort((a,b)=>{
-      // PRIMARY: wins (more wins = higher rank)
+      // Tiebreaker order must match sortCourtRanking (display) and recordCourtToss
+      // (which only allows a toss when wins+pts+diff all match). Previously tossResults
+      // was checked after wins only — causing rotation to override pts/diff even though
+      // the display and recording flow treated toss as a last resort. Now: wins → pts →
+      // diff → toss → id. Toss is only applied when the "real" stats are fully tied.
       const winsCmp=(wins[b]||0)-(wins[a]||0);
       if(winsCmp!==0)return winsCmp;
-      // Toss resolution: if wins are tied, check toss result first
-      const tKey1=a+'_'+b,tKey2=b+'_'+a;
-      if(tossResults[tKey1])return tossResults[tKey1]===a?-1:1;
-      if(tossResults[tKey2])return tossResults[tKey2]===a?-1:1;
-      // SECONDARY: total points scored (higher = better)
       const ptCmp=(pts[b]||0)-(pts[a]||0);
       if(ptCmp!==0)return ptCmp;
-      // TERTIARY: point differential (points for minus points against)
       const ptDiff_a=(ptFor[a]||0)-(ptAgainst[a]||0);
       const ptDiff_b=(ptFor[b]||0)-(ptAgainst[b]||0);
       if(ptDiff_a!==ptDiff_b)return ptDiff_b-ptDiff_a;
-      return a-b; // fallback to ID if all tied and no toss (shouldn't happen in practice)
+      // Fully tied on wins+pts+diff — use toss if admin recorded/prompted one
+      const tKey1=a+'_'+b,tKey2=b+'_'+a;
+      if(tossResults[tKey1])return tossResults[tKey1]===a?-1:1;
+      if(tossResults[tKey2])return tossResults[tKey2]===a?-1:1;
+      return a-b; // final fallback (shouldn't happen once toss is resolved)
     });
     sorted.forEach((id,i)=>{if(i===0&&c>1)mv[id]='up';else if(i===sorted.length-1&&c<NC)mv[id]='down';else mv[id]='stay';});
   }
@@ -2670,10 +2672,17 @@ function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
   }
   if(botT&&botT.loserId){
     const bot=sorted[sorted.length-1];
-    const botTied=sorted.filter(id=>(wins[id]||0)===(wins[bot]||0)&&(pts[id]||0)===(pts[bot]||0)&&_diff(id)===_diff(bot));
-    if(botTied.length>1&&botTied.includes(botT.loserId)){
-      const rest=sorted.filter(id=>id!==botT.loserId);
-      sorted.length=0;sorted.push(...rest,botT.loserId);
+    const topForTie=sorted[0];
+    // If the WHOLE court is tied on wins+pts+diff, applyRotation skips the bot toss
+    // (only the top toss decides who moves up; everyone else stays). Mirror that
+    // here so the display never shows a "↓" arrow that won't actually happen.
+    const allTiedCourt=(wins[topForTie]||0)===(wins[bot]||0)&&(pts[topForTie]||0)===(pts[bot]||0)&&_diff(topForTie)===_diff(bot);
+    if(!allTiedCourt){
+      const botTied=sorted.filter(id=>(wins[id]||0)===(wins[bot]||0)&&(pts[id]||0)===(pts[bot]||0)&&_diff(id)===_diff(bot));
+      if(botTied.length>1&&botTied.includes(botT.loserId)){
+        const rest=sorted.filter(id=>id!==botT.loserId);
+        sorted.length=0;sorted.push(...rest,botT.loserId);
+      }
     }
   }
   return sorted;
@@ -3067,6 +3076,13 @@ async function saveGameScore(court,gameNum){
   if(sa===sb&&!confirm(`Game ${gameNum}: tied ${sa}–${sb}. Save anyway?`)){return;}
   const key=`c${court}_y${cy}_g${gameNum}`;
   S.current.scores[key]={a1:combo.a1,a2:combo.a2,b1:combo.b1,b2:combo.b2,sA:sa,sB:sb,w:sa>sb?'A':sb>sa?'B':'T'};
+  // Invalidate any previously-recorded toss for this court/round — the score change
+  // may have resolved the tie differently or shifted which players are tied, making
+  // the recorded toss stale. Mirrors the behavior in saveScores (bulk save).
+  if(S.current.preTosses){
+    delete S.current.preTosses[`${cy}_c${court}_top`];
+    delete S.current.preTosses[`${cy}_c${court}_bot`];
+  }
   await setKV('current_session',S.current);
   renderScoreEntry();renderRoundTracker();renderLeaderboard();toast(`Game ${gameNum} saved!`,'success');
   // Auto-advance if all games for this court are done
@@ -3224,6 +3240,15 @@ async function recordCourtToss(court,direction){
   const ref=direction==='up'?sortedStats[0]:sortedStats[sortedStats.length-1];
   const tiedPlayers=stats.filter(s=>s.wins===ref.wins&&s.pts===ref.pts&&s.diff===ref.diff);
   if(tiedPlayers.length<2){toast('No tie to resolve — points/differential already decide movement','warn');return;}
+  // If the whole court is tied on wins+pts+diff, applyRotation skips the bottom toss
+  // (only the top toss picks who moves up; everyone else stays). Refuse to record a
+  // bot toss in that case so display never diverges from rotation.
+  if(direction==='down'){
+    const top=sortedStats[0],bot=sortedStats[sortedStats.length-1];
+    if(top.wins===bot.wins&&top.pts===bot.pts&&top.diff===bot.diff){
+      toast('Whole court is tied — only the top toss matters here. Bottom toss is skipped by rotation.','warn');return;
+    }
+  }
   const chosenId=await tossPrompt({court,direction,players:tiedPlayers.map(p=>({id:p.id,name:p.name}))});
   if(chosenId==null){toast('Toss cancelled','warn');return;}
   if(!S.current.preTosses)S.current.preTosses={};
