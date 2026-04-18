@@ -2024,16 +2024,14 @@ async function endSession(){
     if(statUpdates.length) await Promise.all(statUpdates);
   }
   // ── Compute movement map for last cycle (so arrows display correctly) ──
+  // Delegate to sortCourtRanking so the sort order matches applyRotation exactly
+  // (wins → pts → diff → toss → id). The previous local sort used pts/diff only,
+  // silently disagreeing with rotation whenever wins didn't match pts ordering.
   const a=S.current.assignments;
   const finalMv={};
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>finalMv[id]='stay');continue;}
-    const sorted=[...pids].sort((x,y)=>{
-      const ptCmp=finalPts[y]-finalPts[x];if(ptCmp!==0)return ptCmp;
-      const pd_x=finalPtFor[x]-finalPtAgainst[x],pd_y=finalPtFor[y]-finalPtAgainst[y];
-      if(pd_x!==pd_y)return pd_y-pd_x;
-      return x-y;
-    });
+    const sorted=sortCourtRanking(pids,finalWins,finalPts,finalPtFor,finalPtAgainst,cy,c,S.current.preTosses);
     sorted.forEach((id,i)=>{if(i===0&&c>1)finalMv[id]='up';else if(i===sorted.length-1&&c<NC)finalMv[id]='down';else finalMv[id]='stay';});
   }
   // ── Process attendance — determine absent players FIRST ──
@@ -3644,28 +3642,40 @@ function renderSessionStandings(){
       if(sc.w==='A'){sa.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sb.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
       else if(sc.w==='B'){sb.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sa.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
     });
-    // Find the court they played on in the LAST round (before final rotation)
-    // This is s.assignments — the last round's playing positions
-    const startCourt={};
-    for(let c=1;c<=NC;c++){(s.assignments[c]||[]).forEach(id=>startCourt[id]=c);}
-    // Compute post-rotation courts (where they END UP after all rotations)
-    const postRotation={};for(let c=1;c<=NC;c++)postRotation[c]=[];
-    const lastMv=s.movements?.length>0?s.movements[s.movements.length-1]:null;
-    if(lastMv&&lastMv.mv){
-      Object.values(s.assignments).flat().forEach(id=>{
-        let from=0;for(let c2=1;c2<=NC;c2++){if((s.assignments[c2]||[]).includes(id)){from=c2;break;}}
-        const dir=lastMv.mv[id];
-        let to=from;
-        if(dir==='up')to=Math.max(1,from-1);
-        if(dir==='down')to=Math.min(NC,from+1);
-        postRotation[to].push(id);
+    // Derive each player's court per round from scores. This is reliable regardless of
+    // whether applyRotation mutated s.assignments on the final round — if it did (via
+    // autoAdvance in the MAX_ROUNDS path), s.assignments already reflects post-final-
+    // rotation positions, and the old code would double-apply the last movement.
+    const courtPerRound={}; // id → {cycle: court}
+    Object.entries(s.scores||{}).forEach(([k,sc])=>{
+      const mk=k.match(/^c(\d+)_y(\d+)_g/);if(!mk)return;
+      const c=parseInt(mk[1]),cy=parseInt(mk[2]);
+      [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{
+        if(id==null)return;
+        if(!courtPerRound[id])courtPerRound[id]={};
+        courtPerRound[id][cy]=c;
       });
-    }else{
-      // No movements — use assignments as-is
-      for(let c=1;c<=NC;c++)postRotation[c]=[...(s.assignments[c]||[])];
-    }
-    // Handle overflow after rotation
-    for(let c=1;c<=NC;c++){while(postRotation[c].length>4){const ov=postRotation[c].pop();const t=c<NC?c+1:c-1;postRotation[t].unshift(ov);}}
+    });
+    // For each player: startCourt = first round played, finalCourt = apply all movements
+    // (that fire at/after their first played cycle) forward from that starting court.
+    const startCourt={},finalCourt={};
+    Object.entries(courtPerRound).forEach(([idStr,perCy])=>{
+      const id=parseInt(idStr);
+      const cycles=Object.keys(perCy).map(Number).sort((a,b)=>a-b);
+      if(!cycles.length)return;
+      startCourt[id]=perCy[cycles[0]];
+      let cc=perCy[cycles[0]];
+      (s.movements||[]).forEach(m=>{
+        if((m.cycle||0)<cycles[0])return;
+        const dir=m.mv?.[id];
+        if(dir==='up')cc=Math.max(1,cc-1);
+        else if(dir==='down')cc=Math.min(NC,cc+1);
+      });
+      finalCourt[id]=cc;
+    });
+    // Group players by final court for display
+    const postRotation={};for(let c=1;c<=NC;c++)postRotation[c]=[];
+    Object.entries(finalCourt).forEach(([id,c])=>{if(c>0)postRotation[c].push(parseInt(id));});
     const rndCount=new Set(Object.keys(s.scores||{}).map(k=>{const m=k.match(/_y(\d+)_/);return m?parseInt(m[1]):0;})).size;
     html+=`<div class="card">
       <div class="card-title">Session ${s.number} — ${s.date}, 2026 · ${rndCount} Rounds · Final Standings</div>`;
