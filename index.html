@@ -2064,6 +2064,16 @@ async function endSession(){
   if(demotionUpdates.length) await Promise.all(demotionUpdates);
   // ── Save session record ──
   S.current.completed=true;
+  // Cache player names in the session so history renders correctly even if a player
+  // is later deleted or filtered out of S.players (e.g., after marking a spare
+  // inactive for a future session). Without this, old session cards show "?" for
+  // any player not currently in S.players.
+  const _playerNames={};
+  const _seen=new Set();
+  for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>_seen.add(id));
+  Object.values(S.current.scores||{}).forEach(sc=>{[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)_seen.add(id);});});
+  _seen.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p)_playerNames[id]=p.name;});
+  S.current.playerNames=_playerNames;
   // Store last cycle movement data (include mv and pts so arrows display correctly)
   if(!alreadyProcessed) S.current.movements.push({cycle:cy,mv:finalMv,wins:{...finalWins},pts:{...finalPts}});
   // Build session summary BEFORE saving
@@ -3630,9 +3640,16 @@ let _expandedHist={};// Track which sessions are expanded
 function renderSessionStandings(){
   const el=document.getElementById('sec-sessstand');if(!el)return;
   if(!S.sessions.length){el.innerHTML='<div class="empty-state"><div class="ei">📋</div><div class="em">No completed sessions yet</div></div>';return;}
-  const pm=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'?';};
   let html='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Final court placements after each session — shows where players ended up after all rotations.</div>';
   [...S.sessions].reverse().forEach(s=>{
+    // Name resolution: session-cached snapshot first (future sessions), then current
+    // S.players (live data), then fallback to "#id" so admins can still identify a
+    // player whose record was later removed or filtered out.
+    const pm=id=>{
+      if(s.playerNames&&s.playerNames[id])return s.playerNames[id];
+      const p=S.players.find(x=>x.id===id);
+      return p?p.name:'#'+id;
+    };
     // Calculate per-player wins for this session
     const playerWins={},playerLosses={},playerGP={};
     Object.values(s.scores||{}).forEach(sc=>{
