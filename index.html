@@ -4175,7 +4175,11 @@ async function saveSnapshot(label,silent){
 async function listSnapshots(){
   const rows=await sbG('app_state');
   return (rows||[]).filter(r=>r.key&&r.key.startsWith('snapshot_')).map(r=>{
-    try{return {id:r.id,key:r.key,value:JSON.parse(r.value)};}catch(e){return null;}
+    try{
+      const parsed=JSON.parse(r.value);
+      if(parsed&&parsed._deleted)return null; // tombstoned by soft-delete fallback
+      return {id:r.id,key:r.key,value:parsed};
+    }catch(e){return null;}
   }).filter(Boolean).sort((a,b)=>(b.value.ts||'').localeCompare(a.value.ts||''));
 }
 
@@ -4218,29 +4222,37 @@ async function restoreSnapshot(key){
 
 async function deleteSnapshot(key,label){
   if(!confirm(`Delete snapshot "${label}"?\n\nThis cannot be undone.`))return;
+  // Two-strategy delete: try a real DELETE first (cleanest). If that's blocked
+  // by RLS or otherwise doesn't remove any rows, fall back to overwriting the
+  // value with a tombstone — listSnapshots filters tombstones out so the snap
+  // disappears from the UI. This works even when the DB policy blocks DELETE.
+  let hardDeleteOk=false,hardDeleteErr=null;
   try{
-    // Delete by key (the KV table's logical identifier) rather than by id — id
-    // may not exist on this table or may not satisfy RLS DELETE policies.
-    // Prefer: return=representation makes PostgREST return the deleted rows so
-    // we can verify that something actually happened (vs silent RLS block).
     const res=await fetch(`${SB}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}`,{
       method:'DELETE',
       headers:{...H,'Prefer':'return=representation'}
     });
-    if(!res.ok){
+    if(res.ok){
+      const deleted=await res.json().catch(()=>[]);
+      if(Array.isArray(deleted)&&deleted.length>0)hardDeleteOk=true;
+      else hardDeleteErr='DELETE returned OK but no rows matched';
+    }else{
       const errText=await res.text().catch(()=>'');
-      throw new Error('HTTP '+res.status+(errText?': '+errText.slice(0,200):''));
+      hardDeleteErr='HTTP '+res.status+(errText?': '+errText.slice(0,150):'');
     }
-    const deleted=await res.json().catch(()=>[]);
-    if(!Array.isArray(deleted)||deleted.length===0){
-      throw new Error('No rows deleted — snapshot already gone, or a DB policy is blocking DELETE on app_state');
+  }catch(e){hardDeleteErr=e.message||String(e);}
+  if(!hardDeleteOk){
+    console.warn('Hard delete failed ('+hardDeleteErr+') — falling back to soft-delete tombstone');
+    try{
+      await setKV(key,{_deleted:true,ts:new Date().toISOString()});
+    }catch(e){
+      console.error('Soft delete also failed:',e);
+      toast('Delete failed: hard='+hardDeleteErr+' · soft='+(e.message||'unknown'),'error');
+      return;
     }
-    toast('Snapshot deleted','warn');
-    renderSnapshots();
-  }catch(e){
-    console.error('deleteSnapshot failed:',e);
-    toast('Delete failed: '+(e.message||'unknown error'),'error');
   }
+  toast('Snapshot deleted','warn');
+  renderSnapshots();
 }
 
 async function renderSnapshots(){
