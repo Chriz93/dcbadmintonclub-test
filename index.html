@@ -2064,18 +2064,53 @@ async function endSession(){
   if(demotionUpdates.length) await Promise.all(demotionUpdates);
   // ── Save session record ──
   S.current.completed=true;
-  // Cache player names in the session so history renders correctly even if a player
-  // is later deleted or filtered out of S.players (e.g., after marking a spare
-  // inactive for a future session). Without this, old session cards show "?" for
-  // any player not currently in S.players.
+  // Store last cycle movement data FIRST (downstream helpers read movements)
+  if(!alreadyProcessed) S.current.movements.push({cycle:cy,mv:finalMv,wins:{...finalWins},pts:{...finalPts}});
+  // ── Canonical snapshots — frozen at session end so history renders are
+  //    robust to schema evolution and later player-record changes. ──
+  // 1. playerNames: all participating/assigned players (history survives player delete)
   const _playerNames={};
   const _seen=new Set();
   for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>_seen.add(id));
   Object.values(S.current.scores||{}).forEach(sc=>{[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)_seen.add(id);});});
   _seen.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p)_playerNames[id]=p.name;});
   S.current.playerNames=_playerNames;
-  // Store last cycle movement data (include mv and pts so arrows display correctly)
-  if(!alreadyProcessed) S.current.movements.push({cycle:cy,mv:finalMv,wins:{...finalWins},pts:{...finalPts}});
+  // 2. finalAssignments: unambiguous post-all-rotation state.
+  // If autoAdvance already mutated assignments on the final round, that's already
+  // the final state; otherwise apply finalMv to the current (pre-rotation) lineup.
+  const _finalA={};for(let c=1;c<=NC;c++)_finalA[c]=[];
+  if(alreadyProcessed){
+    for(let c=1;c<=NC;c++)_finalA[c]=[...(S.current.assignments[c]||[])];
+  }else{
+    for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>{
+      const dir=finalMv[id];let to=c;
+      if(dir==='up')to=Math.max(1,c-1);
+      else if(dir==='down')to=Math.min(NC,c+1);
+      _finalA[to].push(id);
+    });
+    for(let c=1;c<=NC;c++)while(_finalA[c].length>4){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
+  }
+  S.current.finalAssignments=_finalA;
+  // 3. perRoundAssignments: each round's actual court lineup (derived from scores).
+  //    R1 falls back to initialAssignments when scores are empty (e.g., players
+  //    assigned but absent). Later rounds derive purely from scores (ghost-player safe).
+  const _perRound=[];
+  const _roundCycles=new Set();
+  Object.keys(S.current.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)_roundCycles.add(parseInt(m[1]));});
+  Array.from(_roundCycles).sort((a,b)=>a-b).forEach(_cy=>{
+    const _ra={};for(let c=1;c<=NC;c++)_ra[c]=[];
+    if(_cy===1&&S.current.initialAssignments){
+      for(let c=1;c<=NC;c++)_ra[c]=[...(S.current.initialAssignments[c]||[])];
+    }else{
+      Object.entries(S.current.scores||{}).forEach(([k,sc])=>{
+        const mk=k.match(new RegExp('^c(\\d+)_y'+_cy+'_g'));if(!mk)return;
+        const c=parseInt(mk[1]);
+        [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&!_ra[c].includes(id))_ra[c].push(id);});
+      });
+    }
+    _perRound.push({cycle:_cy,assignments:_ra});
+  });
+  S.current.perRoundAssignments=_perRound;
   // Build session summary BEFORE saving
   const summary=buildSessionSummary(S.current);
   await setKV('completed_sessions',[...S.sessions,JSON.parse(JSON.stringify(S.current))]);
@@ -3625,8 +3660,11 @@ function renderHeatmap(){
       <div class="heatmap-name">${esc(p.name.split(' ')[0])}</div>
       <div class="heatmap-cells">
         ${S.sessions.map(s=>{
+          // Use canonical final court (post-all-rotations = next session start) for
+          // consistent progression heatmap, regardless of how the session was ended.
           let court=null;
-          for(let c=1;c<=NC;c++)if((s.assignments[c]||[]).includes(p.id)){court=c;break;}
+          const fa=sessFinalAssignments(s);
+          for(let c=1;c<=NC;c++)if((fa[c]||[]).includes(p.id)){court=c;break;}
           return `<div class="hm-cell" style="background:${court?colors[court]:'var(--s3)'};">${court?court:'—'}</div>`;
         }).join('')}
       </div>
@@ -3637,20 +3675,116 @@ function renderHeatmap(){
   </div>`;
 }
 let _expandedHist={};// Track which sessions are expanded
+
+// ══════════════════════════════════════════════════════════════════════
+// SESSION DATA HELPERS — canonical access to historical session data.
+//
+// Sessions have evolved schema over time. These helpers are the SINGLE
+// SOURCE OF TRUTH for reading session fields. All history renderers
+// should use them — never read s.assignments / s.scores / s.playerNames
+// directly (doing so reintroduces the pre-vs-post-rotation ambiguity
+// and the "name shows ?" class of bugs).
+//
+// Canonical fields populated at session end (new in v32+):
+//   s.initialAssignments — captured at session start (court lineup R1)
+//   s.finalAssignments   — captured at endSession (post-all-rotations)
+//   s.perRoundAssignments — [{cycle, assignments:{1:[...],...}}, ...]
+//   s.playerNames         — {id: "name"} frozen at session end
+//
+// For legacy sessions (saved before these fields existed), the helpers
+// derive the equivalent data from available information (scores +
+// movements). The callers never see the difference.
+// ══════════════════════════════════════════════════════════════════════
+
+// Initial lineup — R1 starting courts
+function sessInitialAssignments(s){
+  if(s.initialAssignments)return s.initialAssignments;
+  // Derive from R1 scores (all-time reliable)
+  const a={};for(let c=1;c<=NC;c++)a[c]=[];
+  Object.entries(s.scores||{}).forEach(([k,sc])=>{
+    const m=k.match(/^c(\d+)_y1_g/);if(!m)return;
+    const c=parseInt(m[1]);
+    [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&!a[c].includes(id))a[c].push(id);});
+  });
+  return a;
+}
+
+// Per-round lineup — each round's actual court compositions
+function sessRoundAssignments(s,cy){
+  if(Array.isArray(s.perRoundAssignments)){
+    const entry=s.perRoundAssignments.find(e=>e.cycle===cy);
+    if(entry)return entry.assignments;
+  }
+  if(cy===1)return sessInitialAssignments(s);
+  const a={};for(let c=1;c<=NC;c++)a[c]=[];
+  Object.entries(s.scores||{}).forEach(([k,sc])=>{
+    const m=k.match(new RegExp('^c(\\d+)_y'+cy+'_g'));if(!m)return;
+    const c=parseInt(m[1]);
+    [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&!a[c].includes(id))a[c].push(id);});
+  });
+  return a;
+}
+
+// Final lineup — post-all-rotation courts (what you'd start next session with)
+function sessFinalAssignments(s){
+  if(s.finalAssignments)return s.finalAssignments;
+  // Derive: apply lastMv to last-round's assignments
+  const movements=s.movements||[];
+  if(!movements.length)return s.assignments||sessInitialAssignments(s);
+  const lastMv=movements[movements.length-1];
+  const lastCy=lastMv.cycle||movements.length;
+  const ra=sessRoundAssignments(s,lastCy);
+  const computed={};for(let c=1;c<=NC;c++)computed[c]=[];
+  for(let c=1;c<=NC;c++){
+    (ra[c]||[]).forEach(id=>{
+      const dir=lastMv.mv?.[id];
+      let to=c;
+      if(dir==='up')to=Math.max(1,c-1);
+      else if(dir==='down')to=Math.min(NC,c+1);
+      computed[to].push(id);
+    });
+  }
+  for(let c=1;c<=NC;c++)while(computed[c].length>4){const ov=computed[c].pop();const t=c<NC?c+1:c-1;computed[t].unshift(ov);}
+  // If s.assignments matches the computed result, prefer s.assignments (preserves intended order)
+  const keySer=o=>Object.entries(o).map(([k,v])=>k+':'+[...v].sort().join(',')).sort().join('|');
+  if(s.assignments&&keySer(s.assignments)===keySer(computed))return s.assignments;
+  return computed;
+}
+
+// Name resolution with fallback chain: session cache → live S.players → #id
+function sessPlayerName(s,id){
+  if(s.playerNames&&s.playerNames[id])return s.playerNames[id];
+  const p=S.players.find(x=>x.id===id);
+  return p?p.name:'#'+id;
+}
+
+// Map of player → {cy, court} for their last-played round (for arrow display)
+function sessLastPlayedCourt(s){
+  const result={};
+  Object.entries(s.scores||{}).forEach(([k,sc])=>{
+    const m=k.match(/^c(\d+)_y(\d+)_g/);if(!m)return;
+    const c=parseInt(m[1]),cy=parseInt(m[2]);
+    [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{
+      if(id==null)return;
+      if(!result[id]||result[id].cy<cy)result[id]={cy,court:c};
+    });
+  });
+  return result;
+}
+
+// Count rounds in a session (by unique cycle numbers in scores)
+function sessRoundCount(s){
+  const cys=new Set();
+  Object.keys(s.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)cys.add(parseInt(m[1]));});
+  return cys.size;
+}
+
 function renderSessionStandings(){
   const el=document.getElementById('sec-sessstand');if(!el)return;
   if(!S.sessions.length){el.innerHTML='<div class="empty-state"><div class="ei">📋</div><div class="em">No completed sessions yet</div></div>';return;}
   let html='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Final court placements after each session — shows where players ended up after all rotations.</div>';
   [...S.sessions].reverse().forEach(s=>{
-    // Name resolution: session-cached snapshot first (future sessions), then current
-    // S.players (live data), then fallback to "#id" so admins can still identify a
-    // player whose record was later removed or filtered out.
-    const pm=id=>{
-      if(s.playerNames&&s.playerNames[id])return s.playerNames[id];
-      const p=S.players.find(x=>x.id===id);
-      return p?p.name:'#'+id;
-    };
-    // Calculate per-player wins for this session
+    // Per-player W/L/GP for this session
     const playerWins={},playerLosses={},playerGP={};
     Object.values(s.scores||{}).forEach(sc=>{
       const sa=[sc.a1,sc.a2].filter(x=>x!=null);
@@ -3659,86 +3793,27 @@ function renderSessionStandings(){
       if(sc.w==='A'){sa.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sb.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
       else if(sc.w==='B'){sb.forEach(id=>{playerWins[id]=(playerWins[id]||0)+1;});sa.forEach(id=>{playerLosses[id]=(playerLosses[id]||0)+1;});}
     });
-    // Derive each player's last-played court from scores (reliable source of truth).
-    const lastPlayedCourt={}; // id → {cy, court}
-    Object.entries(s.scores||{}).forEach(([k,sc])=>{
-      const mk=k.match(/^c(\d+)_y(\d+)_g/);if(!mk)return;
-      const c=parseInt(mk[1]),cy=parseInt(mk[2]);
-      [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{
-        if(id==null)return;
-        if(!lastPlayedCourt[id]||lastPlayedCourt[id].cy<cy)lastPlayedCourt[id]={cy,court:c};
-      });
-    });
-    // Find each player's court in s.assignments
-    const assignCourt={};
-    for(let c=1;c<=NC;c++)(s.assignments?.[c]||[]).forEach(id=>{assignCourt[id]=c;});
-    const lastMv=s.movements?.length?s.movements[s.movements.length-1]:null;
-    // Detect: is s.assignments already post-last-rotation (autoAdvance path) or
-    // pre-last-rotation (endSession path)? Compare assignCourt against what we'd
-    // expect from applying lastMv to lastPlayedCourt. Majority rule.
-    let postMatch=0,preMatch=0;
-    Object.entries(lastPlayedCourt).forEach(([idStr,info])=>{
-      const p=parseInt(idStr);
-      if(!assignCourt[p])return;
-      if(assignCourt[p]===info.court)preMatch++;
-      if(lastMv?.mv?.[p]){
-        const dir=lastMv.mv[p];
-        let expected=info.court;
-        if(dir==='up')expected=Math.max(1,info.court-1);
-        else if(dir==='down')expected=Math.min(NC,info.court+1);
-        if(assignCourt[p]===expected)postMatch++;
-      }
-    });
-    const isPostRot=postMatch>preMatch;
-    // finalCourt: s.assignments if post-rotation, else assignCourt + lastMv
-    const finalCourt={},startCourt={};
-    Object.keys(assignCourt).forEach(idStr=>{
-      const p=parseInt(idStr);
-      if(isPostRot){
-        finalCourt[p]=assignCourt[p];
-      }else{
-        let cc=assignCourt[p];const dir=lastMv?.mv?.[p];
-        if(dir==='up')cc=Math.max(1,cc-1);
-        else if(dir==='down')cc=Math.min(NC,cc+1);
-        finalCourt[p]=cc;
-      }
-      // startCourt = last-played court (for arrow "from"), fallback to finalCourt
-      // reversed if they didn't play (rare: ghost assignment with no scores)
-      if(lastPlayedCourt[p])startCourt[p]=lastPlayedCourt[p].court;
-      else{
-        if(isPostRot){
-          let cc=assignCourt[p];const dir=lastMv?.mv?.[p];
-          if(dir==='up')cc=Math.min(NC,cc+1);
-          else if(dir==='down')cc=Math.max(1,cc-1);
-          startCourt[p]=cc;
-        }else startCourt[p]=assignCourt[p];
-      }
-    });
-    // Group by finalCourt
-    const postRotation={};for(let c=1;c<=NC;c++)postRotation[c]=[];
-    Object.entries(finalCourt).forEach(([id,c])=>{if(c>0)postRotation[c].push(parseInt(id));});
-    const rndCount=new Set(Object.keys(s.scores||{}).map(k=>{const m=k.match(/_y(\d+)_/);return m?parseInt(m[1]):0;})).size;
+    // Canonical helpers do all the schema-version handling — no ad-hoc detection here.
+    const finalA=sessFinalAssignments(s);
+    const lastPlayed=sessLastPlayedCourt(s);
+    const rndCount=sessRoundCount(s);
     html+=`<div class="card">
       <div class="card-title">Session ${s.number} — ${s.date}, 2026 · ${rndCount} Rounds · Final Standings</div>`;
-    // Show courts based on POST-ROTATION position (next week's starting courts)
     for(let c=1;c<=NC;c++){
-      const pids=postRotation[c]||[];
+      const pids=finalA[c]||[];
       if(!pids.length)continue;
       const cls=c===1?'var(--gold)':c===2?'var(--silver)':c===3?'var(--bronze)':'var(--teal2)';
-      const sorted=[...pids].sort((a,b)=>(playerWins[b]||0)-(playerWins[a]||0));
+      const sorted=[...pids].sort((a,b)=>(playerWins[b]||0)-(playerWins[a]||0)||sessPlayerName(s,a).localeCompare(sessPlayerName(s,b)));
       html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px;">
         <div style="font-size:11px;font-weight:800;color:${cls};margin-bottom:4px;">Court ${c}</div>`;
       sorted.forEach((id,i)=>{
-        const name=pm(id);
-        const w=playerWins[id]||0;
-        const l=playerLosses[id]||0;
-        const gp=playerGP[id]||0;
+        const name=sessPlayerName(s,id);
+        const w=playerWins[id]||0,l=playerLosses[id]||0,gp=playerGP[id]||0;
         const wr=gp>0?Math.round(w/gp*100):0;
-        const sc=startCourt[id]||c;
-        const ec=c; // c is the post-rotation court
+        const sc=lastPlayed[id]?.court||c;
         let mvText='';
-        if(sc<ec)mvText=`<span style="color:var(--red2);font-size:9px;"> (↓ C${sc}→C${ec})</span>`;
-        else if(sc>ec)mvText=`<span style="color:var(--green2);font-size:9px;"> (↑ C${sc}→C${ec})</span>`;
+        if(sc<c)mvText=`<span style="color:var(--red2);font-size:9px;"> (↓ C${sc}→C${c})</span>`;
+        else if(sc>c)mvText=`<span style="color:var(--green2);font-size:9px;"> (↑ C${sc}→C${c})</span>`;
         else mvText=`<span style="color:var(--muted);font-size:9px;"> (stayed C${c})</span>`;
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;">
           <span>${i+1}. ${esc(name.split(' ')[0])}${mvText}</span>
@@ -3769,7 +3844,8 @@ function renderHistory(){
 }
 function renderSessionScores(s){
   let html='';
-  const pm=id=>{const p=S.players.find(x=>x.id===id);return p?p.name.split(' ')[0]:'?';};
+  // Use canonical helper so session-cached names survive player deletion
+  const pm=id=>sessPlayerName(s,id).split(' ')[0];
   const roundNums2=new Set(Object.keys(s.scores||{}).map(k=>{const m=k.match(/_y(\d+)_/);return m?parseInt(m[1]):0;}));
   const maxCy=Math.max(...roundNums2,1);
   for(let cy=1;cy<=maxCy;cy++){
