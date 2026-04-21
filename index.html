@@ -4218,11 +4218,29 @@ async function restoreSnapshot(key){
 
 async function deleteSnapshot(key,label){
   if(!confirm(`Delete snapshot "${label}"?\n\nThis cannot be undone.`))return;
-  const rows=await sbG('app_state');
-  const row=(rows||[]).find(r=>r.key===key);
-  if(row){await sbD('app_state',row.id);}
-  toast('Snapshot deleted','warn');
-  renderSnapshots();
+  try{
+    // Delete by key (the KV table's logical identifier) rather than by id — id
+    // may not exist on this table or may not satisfy RLS DELETE policies.
+    // Prefer: return=representation makes PostgREST return the deleted rows so
+    // we can verify that something actually happened (vs silent RLS block).
+    const res=await fetch(`${SB}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}`,{
+      method:'DELETE',
+      headers:{...H,'Prefer':'return=representation'}
+    });
+    if(!res.ok){
+      const errText=await res.text().catch(()=>'');
+      throw new Error('HTTP '+res.status+(errText?': '+errText.slice(0,200):''));
+    }
+    const deleted=await res.json().catch(()=>[]);
+    if(!Array.isArray(deleted)||deleted.length===0){
+      throw new Error('No rows deleted — snapshot already gone, or a DB policy is blocking DELETE on app_state');
+    }
+    toast('Snapshot deleted','warn');
+    renderSnapshots();
+  }catch(e){
+    console.error('deleteSnapshot failed:',e);
+    toast('Delete failed: '+(e.message||'unknown error'),'error');
+  }
 }
 
 async function renderSnapshots(){
