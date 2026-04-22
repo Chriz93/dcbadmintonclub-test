@@ -3440,10 +3440,17 @@ function renderLeaderboard(){
 function computeEloRatings(){
   // Performance-weighted ELO: winning on higher courts earns more, losing on lower costs more
   const elo={};
-  // Starting ELO based on initial court: C1=1500, C2=1400, ..., C6=1000
+  // Starting ELO reflects the player's PEAK achieved court, not their current
+  // absence status. A C1 player who misses a session shouldn't get a C6 baseline
+  // (1000) and have every historical W/L re-applied from there — that caused
+  // reports of "my ELO went down too low". highestCourt is preserved across
+  // sessions and tracks the best (lowest-numbered) court the player has reached.
   leaderboardPlayers().forEach(p=>{
-    const court=p.currentCourt>0?p.currentCourt:NC; // inactive players start at lowest
-    elo[p.id]=1500-((court-1)*100);
+    let startCourt;
+    if(p.highestCourt&&p.highestCourt>0&&p.highestCourt<=NC)startCourt=p.highestCourt;
+    else if(p.currentCourt>0)startCourt=p.currentCourt;
+    else startCourt=NC;
+    elo[p.id]=1500-((startCourt-1)*100);
   });
   // Process all completed sessions
   const allSess=[...S.sessions].filter(Boolean);
