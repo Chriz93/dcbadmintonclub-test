@@ -1851,6 +1851,15 @@ async function nextCycle(){
     }else{
       S.current.cycle++;
     }
+    // Reset the Score-Entry court selector and clear the score-area BEFORE re-render
+    // so stale R{cy} inputs can't bleed into the new round's form. Matches the
+    // same clearing autoAdvanceCheck does — otherwise renderScoreEntry's
+    // "preserve unsaved values" logic reads R1 DOM values and writes them into
+    // the freshly-rendered R2 inputs (reported as "R1 scores moved to R2").
+    const _scSel=document.getElementById('sc-sel');
+    if(_scSel)_scSel.value='';
+    const _scArea=document.getElementById('score-area');
+    if(_scArea)_scArea.innerHTML='';
     await setKV('current_session',S.current);await loadAll();renderAll();
     toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
   }finally{_autoAdvancing=false;}
@@ -3012,13 +3021,21 @@ function renderScoreEntry(){
     return;
   }
   const cy=S.current.cycle;
-  // ── Preserve unsaved score values before re-render ──
+  // ── Preserve unsaved score values before re-render — ONLY if the DOM's
+  //    previous render was for the same cycle + court. If the cycle changed
+  //    (e.g., R1→R2 advance), any values in the inputs are stale R1 data and
+  //    MUST NOT bleed into the R2 form. The data-cy / data-court attributes
+  //    stamped at the bottom of this function identify what's currently in DOM.
   const _unsaved={};
-  for(let g=1;g<=3;g++){
-    const aEl=document.getElementById(`si_${court}_${g}_a`);
-    const bEl=document.getElementById(`si_${court}_${g}_b`);
-    if(aEl&&aEl.value!=='')_unsaved[`${g}_a`]=aEl.value;
-    if(bEl&&bEl.value!=='')_unsaved[`${g}_b`]=bEl.value;
+  const _prevCy=parseInt(el.dataset.cy||0);
+  const _prevCourt=parseInt(el.dataset.court||0);
+  if(_prevCy===cy&&_prevCourt===court){
+    for(let g=1;g<=3;g++){
+      const aEl=document.getElementById(`si_${court}_${g}_a`);
+      const bEl=document.getElementById(`si_${court}_${g}_b`);
+      if(aEl&&aEl.value!=='')_unsaved[`${g}_a`]=aEl.value;
+      if(bEl&&bEl.value!=='')_unsaved[`${g}_b`]=bEl.value;
+    }
   }
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2){
@@ -3090,6 +3107,10 @@ function renderScoreEntry(){
     }
   }
   combos.forEach(({g})=>liveW(court,g));
+  // Stamp cycle+court on the score-area so the next render can detect a
+  // cross-cycle transition and refuse to preserve cross-cycle DOM values.
+  el.dataset.cy=String(cy);
+  el.dataset.court=String(court);
   // Populate the tally card (shows the Record Toss button if a tie exists)
   renderCourtTally(court);
 }
