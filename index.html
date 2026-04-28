@@ -2043,6 +2043,25 @@ async function endSession(){
     const sorted=sortCourtRanking(pids,finalWins,finalPts,finalPtFor,finalPtAgainst,cy,c,S.current.preTosses);
     sorted.forEach((id,i)=>{if(i===0&&c>1)finalMv[id]='up';else if(i===sorted.length-1&&c<NC)finalMv[id]='down';else finalMv[id]='stay';});
   }
+  // ── Compute finalAssignments EARLY: post-all-rotation state. We use this
+  //    both for the player.current_court DB updates (so next session starts
+  //    with players already on their earned courts) AND for the canonical
+  //    snapshot stored on the session record. Single source of truth.
+  //    - alreadyProcessed = autoAdvance ran applyRotation on final round, so
+  //      S.current.assignments is already post-rotation.
+  //    - else: apply finalMv to current (pre-rotation) lineup.
+  const _finalA={};for(let c=1;c<=NC;c++)_finalA[c]=[];
+  if(alreadyProcessed){
+    for(let c=1;c<=NC;c++)_finalA[c]=[...(S.current.assignments[c]||[])];
+  }else{
+    for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>{
+      const dir=finalMv[id];let to=c;
+      if(dir==='up')to=Math.max(1,c-1);
+      else if(dir==='down')to=Math.min(NC,c+1);
+      _finalA[to].push(id);
+    });
+    for(let c=1;c<=NC;c++)while(_finalA[c].length>4){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
+  }
   // ── Process attendance — determine absent players FIRST ──
   const att=S.current.attendance||{};
   const absentIds=new Set();
@@ -2051,10 +2070,15 @@ async function endSession(){
   assignedIds.forEach(id=>{
     if(att[id]==='absent') absentIds.add(id);
   });
-  // ── Update court positions (skip absent players — they get demoted separately) ──
+  // ── Update court positions to POST-ROTATION (=_finalA): the next session
+  //    should start with each player already on the court they earned. The
+  //    courts tab, leaderboard, admin player listings, and every other place
+  //    that reads p.current_court will then show the correct upcoming court
+  //    without admin having to manually re-place anyone. (Skip absent — they
+  //    get demoted from their pre-rotation position separately below.)
   const courtUpdates=[];
-  for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>{
-    if(absentIds.has(id)) return; // skip — handled below with demotion
+  for(let c=1;c<=NC;c++)(_finalA[c]||[]).forEach(id=>{
+    if(absentIds.has(id)) return;
     const p=S.players.find(x=>x.id===id);
     if(p){const hc=c<p.highestCourt?c:p.highestCourt;courtUpdates.push(sbU('players',p.id,{current_court:c,highest_court:hc}));}
   });
@@ -2084,21 +2108,8 @@ async function endSession(){
   Object.values(S.current.scores||{}).forEach(sc=>{[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)_seen.add(id);});});
   _seen.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p)_playerNames[id]=p.name;});
   S.current.playerNames=_playerNames;
-  // 2. finalAssignments: unambiguous post-all-rotation state.
-  // If autoAdvance already mutated assignments on the final round, that's already
-  // the final state; otherwise apply finalMv to the current (pre-rotation) lineup.
-  const _finalA={};for(let c=1;c<=NC;c++)_finalA[c]=[];
-  if(alreadyProcessed){
-    for(let c=1;c<=NC;c++)_finalA[c]=[...(S.current.assignments[c]||[])];
-  }else{
-    for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>{
-      const dir=finalMv[id];let to=c;
-      if(dir==='up')to=Math.max(1,c-1);
-      else if(dir==='down')to=Math.min(NC,c+1);
-      _finalA[to].push(id);
-    });
-    for(let c=1;c<=NC;c++)while(_finalA[c].length>4){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
-  }
+  // 2. finalAssignments: already computed earlier (used for current_court DB
+  //    updates). Same object freezes onto the session record.
   S.current.finalAssignments=_finalA;
   // 3. perRoundAssignments: each round's actual court lineup (derived from scores).
   //    R1 falls back to initialAssignments when scores are empty (e.g., players
