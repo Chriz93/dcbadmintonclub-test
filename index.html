@@ -1407,7 +1407,30 @@ function renderAdminPlayers(){
   if(csEl&&S.players.length){
     const courtCounts={};for(let c=1;c<=NC;c++)courtCounts[c]=S.players.filter(p=>p.currentCourt===c).length;
     const hasGaps=Object.values(courtCounts).some((n,i,arr)=>i>0&&n>0&&arr[i-1]===0)||Object.values(courtCounts).some(n=>n>4);
-    csEl.innerHTML=`<div class="card" style="border-color:var(--teal);margin-bottom:12px;">
+    // Detect mismatch between player.current_court and last completed session's
+    // finalAssignments. Shown as a banner so admin can one-click sync.
+    let _mismatchBanner='';
+    if(!S.current&&S.sessions?.length){
+      const _lastSess=S.sessions[S.sessions.length-1];
+      const _finalA=sessFinalAssignments(_lastSess);
+      const _expected={};
+      for(let c=1;c<=NC;c++)(_finalA[c]||[]).forEach(id=>{_expected[id]=c;});
+      const _mismatches=[];
+      Object.entries(_expected).forEach(([idStr,expectedC])=>{
+        const id=parseInt(idStr);
+        const p=S.players.find(x=>x.id===id);
+        if(!p)return;
+        if(p.currentCourt!==expectedC)_mismatches.push({id,name:p.name,current:p.currentCourt,expected:expectedC});
+      });
+      if(_mismatches.length){
+        _mismatchBanner=`<div class="alert alert-warn" style="margin-bottom:10px;font-size:12px;">
+          <strong>🔄 Court positions don't match Session ${_lastSess.number}'s final standings.</strong>
+          <div style="font-size:11px;margin-top:4px;color:var(--muted);">${_mismatches.length} player${_mismatches.length>1?'s':''} need updating. After syncing, courts/players/standings everywhere will show the post-rotation lineup.</div>
+          <button class="btn btn-success btn-sm" style="margin-top:8px;" onclick="syncCourtsFromLastSession()">↳ Sync to Session ${_lastSess.number} Final Standings</button>
+        </div>`;
+      }
+    }
+    csEl.innerHTML=_mismatchBanner+`<div class="card" style="border-color:var(--teal);margin-bottom:12px;">
       <div class="card-title">🏟️ Court Distribution</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;">
         ${[1,2,3,4,5,6].map(c=>{const n=courtCounts[c];const color=n===4?'var(--green2)':n===0?'var(--muted)':'var(--yellow2)';
@@ -2270,6 +2293,40 @@ async function cascadeFillCourt(fromCourt){
   await setKV('current_session',S.current);
   await loadAll();renderAll();
   toast(`${p?p.name:'Player'} promoted from Court ${fromCourt} → Court ${targetCourt}`,'success');
+}
+// One-shot sync: applies the latest completed session's finalAssignments to
+// every player's current_court in the DB. Idempotent — safe to re-run; if
+// values already match, no writes happen. After this, every UI surface that
+// displays a player's court (Courts tab, Admin → Players, Standings, Stats,
+// Heatmap, Schedule) will show the correct post-rotation lineup.
+//
+// Use case: a session was ended on a code version that didn't auto-write
+// post-rotation courts (pre-v37). v37+ endSession does this automatically;
+// this button is the migration path for sessions saved before that.
+async function syncCourtsFromLastSession(){
+  if(S.current)return toast('End the active session first before syncing','warn');
+  if(!S.sessions?.length)return toast('No completed sessions yet','warn');
+  const lastSess=S.sessions[S.sessions.length-1];
+  const finalA=sessFinalAssignments(lastSess);
+  if(!finalA)return toast('Last session has no final assignments — cannot sync','error');
+  const expected={};
+  for(let c=1;c<=NC;c++)(finalA[c]||[]).forEach(id=>{expected[id]=c;});
+  const updates=[];
+  Object.entries(expected).forEach(([idStr,expectedC])=>{
+    const id=parseInt(idStr);
+    const p=S.players.find(x=>x.id===id);
+    if(!p)return;
+    if(p.currentCourt===expectedC)return; // already in sync
+    const hc=expectedC<p.highestCourt?expectedC:p.highestCourt;
+    updates.push({id,name:p.name,from:p.currentCourt,to:expectedC,promise:sbU('players',id,{current_court:expectedC,highest_court:hc})});
+  });
+  if(!updates.length){toast('Already in sync — no changes needed','success');return;}
+  if(!confirm(`Sync ${updates.length} player${updates.length>1?'s':''} to Session ${lastSess.number}'s final court positions?\n\n`+
+    updates.slice(0,8).map(u=>`• ${u.name}: C${u.from||'?'} → C${u.to}`).join('\n')+
+    (updates.length>8?`\n…and ${updates.length-8} more`:''))){return;}
+  await Promise.all(updates.map(u=>u.promise));
+  await loadAll();renderAll();
+  toast(`✓ Synced ${updates.length} player court${updates.length>1?'s':''} to Session ${lastSess.number}`,'success');
 }
 async function rebalancePlayerCourts(){
   // Works with or without an active session — updates DB current_court values directly
