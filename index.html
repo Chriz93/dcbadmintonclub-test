@@ -2168,21 +2168,28 @@ function buildSessionSummary(sess){
   const roundNums=new Set(Object.keys(sess.scores).map(k=>{const m=k.match(/_y(\d+)_/);return m?parseInt(m[1]):0;}));
   const sm={number:sess.number,date:sess.date,rounds:roundNums.size,totalScores:Object.keys(sess.scores).length};
   // Players who participated
-  const playerIds=new Set(Object.values(sess.assignments).flat());
+  const playerIds=new Set(Object.values(sess.assignments||{}).flat());
   sm.players=S.players.filter(p=>playerIds.has(p.id)).map(p=>({id:p.id,name:p.name,court:0,wins:p.seasonWins,losses:p.seasonLosses,gp:p.gamesPlayed}));
-  // Final court assignments
+  // Final court assignments — use canonical sessFinalAssignments helper so the
+  // summary always shows POST-all-rotation lineup (the courts where players
+  // start NEXT session). Reading sess.assignments directly was wrong: it's
+  // the R2 played lineup when endSession ran without autoAdvance on the
+  // final round, so movers like "Jagjot ↓ C1→C2" still showed under C1.
+  const finalA=sessFinalAssignments(sess);
   sm.courts={};
   for(let c=1;c<=NC;c++){
-    sm.courts[c]=(sess.assignments[c]||[]).map(id=>{
+    sm.courts[c]=(finalA[c]||[]).map(id=>{
       const p=S.players.find(x=>x.id===id);
-      return p?{name:p.name,wins:p.seasonWins,losses:p.seasonLosses}:{name:'?',wins:0,losses:0};
+      const name=sessPlayerName(sess,id);
+      return p?{name,wins:p.seasonWins,losses:p.seasonLosses}:{name,wins:0,losses:0};
     });
   }
-  // Round-by-round movements
+  // Round-by-round movements (use sessPlayerName so deleted players still show
+  // a stable identifier instead of "?")
   sm.movements=(sess.movements||[]).map(m=>({
     cycle:m.cycle,
-    up:Object.entries(m.mv||{}).filter(([,d])=>d==='up').map(([id])=>S.players.find(p=>p.id===parseInt(id))?.name.split(' ')[0]||'?'),
-    down:Object.entries(m.mv||{}).filter(([,d])=>d==='down').map(([id])=>S.players.find(p=>p.id===parseInt(id))?.name.split(' ')[0]||'?')
+    up:Object.entries(m.mv||{}).filter(([,d])=>d==='up').map(([id])=>sessPlayerName(sess,parseInt(id)).split(' ')[0]),
+    down:Object.entries(m.mv||{}).filter(([,d])=>d==='down').map(([id])=>sessPlayerName(sess,parseInt(id)).split(' ')[0])
   }));
   // Bird distribution
   sm.birds=sess.birdDistribution||{};
