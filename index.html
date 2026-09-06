@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🧪 DC Badminton Club — TEST</title>
 <link rel="manifest" href="manifest.json">
@@ -795,11 +796,11 @@ textarea.inp{resize:vertical;min-height:80px;}
 // SUPABASE (TEST ENVIRONMENT)
 // ══════════════════════════════════════════════
 // Test-only Supabase project — isolated from production bwepvxelvwgwxrnaglrx
-const SB='https://wgolevihkvmosajumzvl.supabase.co';
+const SB=''; // Legacy network access disabled; use the isolated platform build.
 const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indnb2xldmloa3Ztb3NhanVtenZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjg2OTEsImV4cCI6MjA5MTcwNDY5MX0.6JWugLfPGpr3IeujipQlsV7EjOVzjQQ3xDWTMbNvYIA';
 const H={'Content-Type':'application/json','apikey':SK,'Authorization':'Bearer '+SK};
 
-async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});return r.json();}
+async function sbG(t,f=''){throw new Error('Legacy database access disabled. Use platform/.');const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});return r.json();}
 async function sbP(t,d){const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();}
 async function sbU(t,id,d){const r=await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();}
 async function sbD(t,id){await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:H});}
