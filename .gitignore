@@ -1,0 +1,11 @@
+node_modules/
+platform/dist/
+platform/coverage/
+platform/test-results/
+platform/playwright-report/
+.env
+.env.*
+!.env.example
+*.dump
+*.backup
+*.age
