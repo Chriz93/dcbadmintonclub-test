@@ -19,3 +19,9 @@ Planning estimates (USD, excluding tax/domain/SMS, checked 2026-09-06): Supabase
 Sources: https://supabase.com/pricing ; https://supabase.com/docs/guides/platform/billing-faq ; https://supabase.com/docs/guides/platform/your-monthly-invoice ; https://developers.cloudflare.com/workers/platform/pricing/ .
 
 Domain boundaries: branding/venues/seasons/schedule; identity/membership/waivers; attendance/RSVP; assignment/rotation/matches/rankings; transactional outbox; audit/retention. Public schedule contains no member records. Private responses never enter a public cache. Mutations use bearer access tokens, not ambient cookies, so cross-site cookie CSRF is not applicable; retain origin checks and CSP. User identity comes from verified Auth tokens, never request body IDs alone.
+
+## Invoice evidence supplied by owner
+
+Invoice dated August 21, 2026: $25 Pro + $10 Micro compute = $35 subtotal; Ontario 13% tax $4.55; paid $39.55 (currency not explicitly shown in pasted invoice). Egress production 0.001225 GB and test 0.000097 GB, both fully discounted; realtime one connection fully discounted. Therefore this invoice shows fixed subscription/compute costs, not excess traffic. The pasted compute section is not split by project and does not show the compute credit; obtain its usage detail before concluding whether the test project explains the extra $10. A second Micro project is a plausible explanation, not yet verified. Do not store billing address or email in this repository.
+
+If the $10 is avoidable test compute, potential reduction is $11.30 per invoice including the shown tax; $39.55 becomes $28.25, subject to credit allocation, project configuration and billing currency. No downgrade or deletion performed. The earlier ~$60 figure could reflect currency conversion or a different invoice; this invoice alone cannot establish that.
