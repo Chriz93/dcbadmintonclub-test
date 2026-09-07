@@ -1,3 +1,4 @@
+import { SeasonAgreementRules } from "./SeasonAgreementRules";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "../services/auth";
@@ -39,6 +40,7 @@ export function Registration() {
   return (
     <section>
       <h3>Accept your participant waiver</h3>
+      <SeasonAgreementRules />
       {!choice ? (
         <p>
           You can save your details above now. Waiver signing becomes available

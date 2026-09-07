@@ -1,14 +1,14 @@
 # Maplewood Advanced League — confirmed rules and remaining launch work
 
-Updated September 6, 2026. All changes are in the isolated TEST project. The local link is not a shareable public launch URL.
+Updated September 7, 2026. All changes are in the isolated TEST project. The local link is not a shareable public launch URL.
 
 ## Confirmed by Christy
 
 - 25 regular players; advanced ladder play. Regular registration is closed. Accepted regular players and spare applicants enter their own details after email verification; Christy reviews their status.
 - Regular fee $400 for the season; spare fee $20 per session. E-transfer payment references are claims until checked against the bank record. No bank credentials are collected.
-- A player must give at least three days' notice for an absence refund. Implementation assumption: at least 72 elapsed hours before the booking starts; this is independent of the existing attendance RSVP deadline.
-- Facility cancellations receive no cash refund. Two shuttlecocks per affected player are returned/credited. Whether this is a physical credit remains to be explicitly confirmed; no automated ledger entries have been created.
-- No-shows move down the ladder. The size of the penalty remains to be confirmed; one court was proposed, not applied.
+- A player must give at least three days' notice for an absence refund. Confirmed: at least 72 elapsed hours before the booking starts; this is independent of the existing attendance RSVP deadline.
+- Facility cancellations receive no cash refund. Two shuttlecocks per affected player are returned/credited. Confirmed as two physical shuttlecocks; no automated ledger entries have been created.
+- No-shows move down the ladder. Confirmed penalty: one court down. Apply only to verified no-shows, not missing votes. Automatic enforcement is not yet implemented.
 - Christy chooses initial seeding. Automated movement and tie decisions must be previewable and administrator-correctable.
 
 ## Original documents verified
@@ -20,7 +20,7 @@ Facility rules SHA-256: `637909d16d1b700c0e3c9ec3661c090571ce0197b589ffb9f6a59ac
 
 The fixture contains only the 34 extracted booking rows, without private contact, insurance or billing details. A regression test compares every date, time and cancellation with the app's schedule. The original PDFs stay outside the repository and public assets.
 
-**The supplied Rules and Regulations PDF is a facility-use document, not a signed participant waiver or a club liability release.** Participant waiver wording, named legal parties, adult/minor eligibility and insurer/counsel review remain outstanding. No waiver has been published or accepted on a player's behalf. The application cannot promise absolute immunity or zero defects.
+**The supplied Rules and Regulations PDF is a facility-use document, not a signed participant waiver or a club liability release.** Minors participate. Participant waiver wording, named legal parties, minimum age, guardian verification and insurer/counsel review remain outstanding. No waiver has been published or accepted on a player's behalf. The application cannot promise absolute immunity or zero defects.
 
 ## Available in TEST
 
@@ -32,10 +32,12 @@ The fixture contains only the 34 extracted booking rows, without private contact
 
 ## Still required before inviting players
 
-1. Reviewed participant waiver and adult/minor decision; versioned legal-name signing workflow with downloadable acceptance receipt, separate optional photo/notification consent.
+1. Reviewed participant/guardian agreement for a mixed-age league; versioned legal-name signing workflow with downloadable acceptance receipt, separate optional photo/notification consent.
 2. Attendance reminder scheduler and delivery service, spare offers with expiry, reservation/payment checks, and a clear no-response escalation. Proposed flow: open weekly response → remind nonresponders before the 72-hour deadline → release vacancies → offer spares → publish final courts. Facebook can carry the website link; the app should own attendance records.
 3. Refund and physical-shuttle credit ledger with idempotent accounting, administrator review and correction. Define refund amount/rounding (400/28 is not an exact cent amount), treatment of rejoining after cancellation and repeated absence changes. Existing RSVP notifications are not refund accounting.
 4. Persisted initial seeding, automatic round movement, audited tie decisions, no-show penalty and simple movement correction/undo.
 5. Full new-member and multi-user live rehearsal; independent-connection concurrency tests; encrypted external backup/remote restore; production email/domain and launch approval.
 
 No new member emails, real payment verifications or live match results were created during this phase.
+
+September 7: confirmed rules now appear in the waiver-area review copy. No signature, guardian consent or legally finalized waiver has been created. ELO-based automatic court assignment is requested; the existing performance percentages must not be relabelled ELO.
