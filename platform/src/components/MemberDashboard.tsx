@@ -1,3 +1,4 @@
+import { PersonalRecords } from "./PersonalRecords";
 import { Registration } from "./Registration";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -7,6 +8,7 @@ const membershipSchema = z.object({
   club_id: z.string(),
   role: z.string(),
   status: z.string(),
+  club: z.object({ name: z.string() }).nullable().optional(),
 });
 const sessionSchema = z.object({
   id: z.string(),
@@ -51,7 +53,7 @@ export function MemberDashboard() {
       if (!user) return;
       const { data, error } = await supabase!
         .from("memberships")
-        .select("club_id,role,status")
+        .select("club_id,role,status,club:clubs(name)")
         .eq("user_id", user.id);
       if (error) throw error;
       const rows = z.array(membershipSchema).parse(data);
@@ -145,10 +147,14 @@ export function MemberDashboard() {
         <>
           <label>
             Club
-            <select value={club} onChange={(e) => setClub(e.target.value)}>
+            <select
+              value={club}
+              disabled={busy}
+              onChange={(e) => setClub(e.target.value)}
+            >
               {clubs.map((c) => (
                 <option key={c.club_id} value={c.club_id}>
-                  {c.club_id} · {c.status}
+                  {c.club?.name ?? "Club membership"} · {c.status}
                 </option>
               ))}
             </select>
@@ -157,6 +163,7 @@ export function MemberDashboard() {
             Session
             <select
               value={selected}
+              disabled={busy}
               onChange={(e) => setSelected(e.target.value)}
             >
               {sessions.map((s) => (
@@ -294,6 +301,7 @@ export function MemberDashboard() {
         </>
       )}
       <Registration />
+      <PersonalRecords />
       <h3>Your personal data</h3>
       <button
         className="button"

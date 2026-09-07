@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 let db: PGlite;
 const c = "10000000-0000-0000-0000-000000000001",
   other = "10000000-0000-0000-0000-000000000002",
@@ -32,42 +32,10 @@ beforeAll(async () => {
   await db.exec(
     `create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;grant usage on schema auth to authenticated;grant execute on all functions in schema auth to authenticated;`,
   );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/001_platform.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/002_operations.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/003_session_engine.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/004_permit_import.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/005_privacy.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    readFileSync(
-      new URL("../migrations/006_registration_options.sql", import.meta.url),
-      "utf8",
-    ),
-  );
+  for (const migration of readdirSync("migrations")
+    .filter((f) => f.endsWith(".sql"))
+    .sort())
+    await db.exec(readFileSync("migrations/" + migration, "utf8"));
   await db.exec(
     `insert into auth.users(id) values('${u}'),('${v}'),('${admin}');insert into club_app.clubs(id,slug,name) values('${c}','a','Club A'),('${other}','b','Club B');insert into club_app.members(id,display_name,email) values('${u}','A','a@example.invalid'),('${v}','B','b@example.invalid'),('${admin}','Admin','admin@example.invalid');insert into club_app.memberships(club_id,user_id,role,status) values('${c}','${u}','member','active'),('${c}','${v}','member','active'),('${c}','${admin}','club_admin','active');insert into club_app.venues(id,club_id,name,address,rooms) values('${venueId}','${c}','Gym','Street','A');insert into club_app.seasons(id,club_id,name,regular_capacity) values('${seasonId}','${c}','Test',25);insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${s}','${c}','${seasonId}','${venueId}',now()+interval '2 days',now()+interval '2 days 2 hours',now()+interval '1 day',1);`,
   );
@@ -497,4 +465,67 @@ it("verified registration records versioned waiver and requires admin approval",
       )
     ).rows[0].status,
   ).toBe("active");
+});
+
+describe("minimal club roster", () => {
+  it("exposes names only within the authorized club", async () => {
+    const rows = await as(u, `select * from club_app.club_roster('${c}')`);
+    expect(rows[0].rows.length).toBeGreaterThan(0);
+    expect(Object.keys(rows[0].rows[0]).sort()).toEqual([
+      "display_name",
+      "kind",
+      "user_id",
+    ]);
+    await expect(
+      as(u, `select * from club_app.club_roster('${other}')`),
+    ).rejects.toThrow("Forbidden");
+    await db.exec("set role anon");
+    try {
+      await expect(
+        db.exec(`select * from club_app.club_roster('${c}')`),
+      ).rejects.toThrow();
+    } finally {
+      await db.exec("reset role");
+    }
+  });
+});
+
+describe("nullable RPC concurrency guards", () => {
+  it("rejects null revisions and keeps implementations private", async () => {
+    for (const sql of [
+      `select club_app.submit_score('${c}','${s}',15,12,null)`,
+      `select club_app.assign_courts('${c}','${s}',1,'[]',null,'test reason')`,
+      `select club_app.complete_session('${c}','${s}',null)`,
+      `select club_app.cancel_session('${c}','${s}',null)`,
+    ])
+      await expect(as(admin, sql, "aal2")).rejects.toThrow(
+        "Valid revision required",
+      );
+    await expect(
+      as(
+        admin,
+        `select club_app.submit_score_impl('${c}','${s}',15,12,0)`,
+        "aal2",
+      ),
+    ).rejects.toThrow("permission denied");
+  });
+  it("requires non-null permit preview totals", async () => {
+    await expect(
+      as(
+        admin,
+        `select club_app.import_permit('${c}','${seasonId}','${venueId}','p','file.pdf',repeat('a',64),'[]',null,null,true)`,
+        "aal2",
+      ),
+    ).rejects.toThrow("Confirmed totals required");
+  });
+});
+
+it("rejects permit rows with an omitted booking status", async () => {
+  await expect(
+    as(
+      admin,
+      `select club_app.import_permit('${c}','${seasonId}','${venueId}','p','file.pdf',repeat('b',64),'[{"starts_at":"2030-01-02T20:00:00Z","ends_at":"2030-01-02T22:00:00Z"}]',0,0,true)`,
+      "aal2",
+    ),
+  ).rejects.toThrow("Invalid booking");
 });
