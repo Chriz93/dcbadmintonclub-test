@@ -408,15 +408,30 @@ it("accepts 30 writes per minute and rejects the 31st without changing the count
     ).rows,
   ).toEqual([{ hits: 30 }]);
 });
-it('refunds at exactly 72 elapsed hours but not one millisecond late',async()=>{
- await db.exec('begin;');
- try {
- for(const [i,offset] of ['72 hours 0.001 seconds','72 hours','71 hours 59 minutes 59.999 seconds'].entries()){
- const id=fixtureId(3,i+10);
- await db.exec(`insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${id}','${club}','${seasonId}','${fixtureId(4)}',now()+interval '${offset}',now()+interval '${offset}'+interval '2 hours',now(),25);`);
- await db.exec(identity(players[24],'aal1')+`set local role authenticated;select club_app.submit_rsvp('${club}','${id}','${players[24]}','not_attending','Synthetic boundary notice',0,gen_random_uuid());reset role;`);
- const rows=(await db.query(`select cents from club_app.session_accounts where session_id='${id}' and kind='absence_refund' and status='pending'`)).rows;
- expect(rows).toEqual(i<2?[{cents:1400}]:[]);
- }
- }finally{await db.exec('rollback');}
+it("refunds at exactly 72 elapsed hours but not one millisecond late", async () => {
+  await db.exec("begin;");
+  try {
+    for (const [i, offset] of [
+      "72 hours 0.001 seconds",
+      "72 hours",
+      "71 hours 59 minutes 59.999 seconds",
+    ].entries()) {
+      const id = fixtureId(3, i + 10);
+      await db.exec(
+        `insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${id}','${club}','${seasonId}','${fixtureId(4)}',now()+interval '${offset}',now()+interval '${offset}'+interval '2 hours',now(),25);`,
+      );
+      await db.exec(
+        identity(players[24], "aal1") +
+          `set local role authenticated;select club_app.submit_rsvp('${club}','${id}','${players[24]}','not_attending','Synthetic boundary notice',0,gen_random_uuid());reset role;`,
+      );
+      const rows = (
+        await db.query(
+          `select cents from club_app.session_accounts where session_id='${id}' and kind='absence_refund' and status='pending'`,
+        )
+      ).rows;
+      expect(rows).toEqual(i < 2 ? [{ cents: 1400 }] : []);
+    }
+  } finally {
+    await db.exec("rollback");
+  }
 });

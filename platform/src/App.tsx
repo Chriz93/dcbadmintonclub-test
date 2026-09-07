@@ -98,10 +98,10 @@ export default function App() {
       <aside className="sidebar">
         <a className="brand" href="#home" onClick={() => setRoute("home")}>
           <span className="brand-mark">
-            DC<span>↗</span>
+            ML<span>↗</span>
           </span>
           <span>
-            DC Badminton<small>STITTSVILLE · TUESDAY NIGHTS</small>
+            Maplewood League<small>STITTSVILLE · TUESDAY NIGHTS</small>
           </span>
         </a>
         <div className="season-label">2026 / 2027 SEASON</div>
@@ -330,7 +330,7 @@ export default function App() {
           {route === "admin" && <Admin />}
         </main>
         <footer>
-          DC Badminton Club{" "}
+          Maplewood Advanced Badminton League{" "}
           <span>
             Made for the love of the game. <span aria-hidden="true">↗</span>
           </span>

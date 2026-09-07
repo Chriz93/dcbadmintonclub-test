@@ -1,3 +1,4 @@
+import { LegacyHistory } from "./LegacyHistory";
 import { ClubNews } from "./ClubNews";
 import { MyMatches } from "./MyMatches";
 import { SessionAccounts } from "./SessionAccounts";
@@ -325,6 +326,7 @@ export function MemberDashboard() {
         </>
       )}
       <MyMatches />
+      <LegacyHistory />
       {club && selected && (
         <SessionAccounts club={club} session={selected} isSpare={isSpare} />
       )}

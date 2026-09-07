@@ -510,3 +510,74 @@ it("allows a younger participant but still requires their separate verified guar
     await db.exec("rollback");
   }
 });
+it("archives old games without granting membership and exposes only explicitly linked history", async () => {
+  const { createHash } = await import("node:crypto");
+  const source = JSON.stringify({
+    players: [
+      {
+        id: 10,
+        name: "Legacy Adult",
+        email: "person1@example.invalid",
+        medical: "DO NOT EXPOSE",
+      },
+      { id: 11, name: "Legacy Opponent", email: "person2@example.invalid" },
+    ],
+    sessions: [
+      {
+        date: "April 2026",
+        scores: {
+          c1_y1_g1: { a1: 10, a2: null, b1: 11, b2: null, sA: 21, sB: 15 },
+          c1_y1_g2: { a1: 10, a2: null, b1: 11, b2: null, sA: 15, sB: 15 },
+        },
+      },
+    ],
+  });
+  const digest = createHash("sha256").update(source).digest("hex");
+  const quote = (s: string) => "'" + s.replaceAll("'", "''") + "'";
+  await expect(
+    as(
+      adult,
+      `select club_app.archive_legacy_history('${c}','Legacy season',${quote(source)},'${digest}')`,
+    ),
+  ).rejects.toThrow("MFA");
+  const result = await as(
+    admin,
+    `select club_app.archive_legacy_history('${c}','Legacy season',${quote(source)},'${digest}') id`,
+    "aal2",
+  );
+  const archive = result[0].rows[0].id;
+  expect(
+    (await as(adult, "select * from club_app.my_legacy_matches()"))[0].rows,
+  ).toHaveLength(0);
+  await expect(
+    as(
+      admin,
+      `select club_app.link_legacy_identity('${c}','${se}','${archive}','10','${other}','Synthetic identity review')`,
+      "aal2",
+    ),
+  ).rejects.toThrow("matching verified email");
+  await as(
+    admin,
+    `select club_app.link_legacy_identity('${c}','${se}','${archive}','10','${adult}','Synthetic reviewed email match')`,
+    "aal2",
+  );
+  const history = (
+    await as(adult, "select * from club_app.my_legacy_matches()")
+  )[0].rows;
+  expect(history).toHaveLength(2);
+  expect(JSON.stringify(history)).not.toContain("DO NOT EXPOSE");
+  expect(JSON.stringify(history)).not.toContain("person1@");
+  expect(history.map((x) => x.needs_review)).toEqual([false, true]);
+  expect(
+    (await as(other, "select * from club_app.my_legacy_matches()"))[0].rows,
+  ).toHaveLength(0);
+  expect(
+    (await as(adult, "select * from club_app.legacy_archives"))[0].rows,
+  ).toHaveLength(0);
+  const replay = await as(
+    admin,
+    `select club_app.archive_legacy_history('${c}','Legacy season',${quote(source)},'${digest}') id`,
+    "aal2",
+  );
+  expect(replay[0].rows[0].id).toBe(archive);
+});

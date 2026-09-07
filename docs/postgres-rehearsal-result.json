@@ -1,0 +1,21 @@
+{
+  "remoteDatabaseUsed": false,
+  "syntheticOnly": true,
+  "independentConnections": true,
+  "scoreRace": "one success, one stale conflict",
+  "spareRace": "one confirmed, one payment reconciliation",
+  "emailRace": "90 unique leases across six connections",
+  "restore": {
+    "milliseconds": 681,
+    "privateReadDenied": true,
+    "encryptedBytes": 408271,
+    "archiveSha256": "ddf220b561ad9c2a97b90b71e0f77bf4253fce3851be2325865bc5b3bccc19df",
+    "checksCompared": 42
+  },
+  "matchday": {
+    "players": 25,
+    "games": 80
+  },
+  "result": "PASS",
+  "scope": "Synthetic local PostgreSQL only; not remote Supabase restore or issued Auth token verification."
+}

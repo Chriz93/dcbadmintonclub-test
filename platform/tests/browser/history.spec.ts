@@ -53,6 +53,7 @@ test("player sees previous matches without login clutter, and can retry a failed
             club: { name: "Synthetic club" },
           },
         ];
+      else if (path.endsWith("/rpc/my_legacy_matches")) data=[{id:"legacy-1",archive_label:"Previous league season",session_label:"April 2026",court:1,round:2,game:3,score_a:15,score_b:15,on_a:true,partner:"Original partner",opponents:"Original opponent",needs_review:true}];
       else if (path.endsWith("/rpc/my_match_history")) {
         if (fail) {
           await route.fulfill({
@@ -117,6 +118,12 @@ test("player sees previous matches without login clutter, and can retry a failed
         .analyze()
     ).violations,
   ).toEqual([]);
+  await page.getByText("Previous seasons",{exact:true}).click();
+  await page.getByRole("button",{name:"Load previous seasons"}).click();
+  const archived=page.getByRole("region",{name:"Archived match history"});
+  await expect(archived).toContainText("April 2026 · 15–15");
+  await expect(archived).toContainText("Original score needs review");
+  expect((await new AxeBuilder({page}).include('[aria-label="Archived match history"]').analyze()).violations).toEqual([]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
