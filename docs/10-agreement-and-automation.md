@@ -1,10 +1,10 @@
 # Agreement and attendance automation — September 7, 2026
 
-Confirmed: minors participate; verified no-show means one court down; school cancellation means two physical shuttlecocks and no cash refund; absence notice is 72 hours. The waiver-area review copy now displays these policies. It is not a signed or finalized agreement.
+Confirmed: organizer Christy George acts personally, with no registered club entity. Youngest current participant is 16; ages 16–17 use the guardian signing path and adults sign for themselves. verified no-show means one court down; school cancellation means two physical shuttlecocks and no cash refund; absence notice is 72 hours. The waiver-area review copy now displays these policies. It is not a signed or finalized agreement.
 
 ## Signing
 
-Incorporate the fee, refund, cancellation, no-show and facility clauses into the immutable published agreement text/hash. Retain verified signer identity, participant identity, signer capacity, version and timestamp; provide a receipt. A minor must not use adult self-signing. Build a separate verified guardian flow; guardian consent does not guarantee all claims of the minor are waived. Youngest age, named legal organizer, counsel/insurer review and exact absence-refund rounding remain outstanding. Keep optional messaging/photo consent separate.
+Incorporate the fee, refund, cancellation, no-show and facility clauses into the immutable published agreement text/hash. Retain verified signer identity, participant identity, signer capacity, version and timestamp; provide a receipt. A minor must not use adult self-signing. Build a separate verified guardian flow; guardian consent does not guarantee all claims of the minor are waived. Counsel/insurer review and exact absence-refund rounding remain outstanding. Do not describe the league as an incorporated or separately registered legal entity. The reported youngest age establishes the current roster age; an exclusion policy for future younger applicants has not separately been agreed. Keep optional messaging/photo consent separate.
 
 ## Attendance flow — proposed, not deployed
 

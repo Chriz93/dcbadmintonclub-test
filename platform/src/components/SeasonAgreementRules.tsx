@@ -7,6 +7,10 @@ export function SeasonAgreementRules() {
         Review copy — signing is not available until the participant and
         guardian agreement is ready.
       </p>
+      <p>
+        Organizer: Christy George, acting personally. Maplewood Advanced
+        Badminton League is the league name, not a separately registered club.
+      </p>
       <ul>
         <li>
           Advanced league: 25 regular players, $400 for the season and $20 per
@@ -38,10 +42,11 @@ export function SeasonAgreementRules() {
         </li>
       </ul>
       <p>
-        Players under 18 need a separate parent/legal-guardian flow. The
-        guardian must review the agreement and provide their own verified
-        consent; a child’s checkbox is not a substitute. Liability wording and
-        the guardian process are still under review.
+        The youngest current participants are 16. Players aged 16–17 need a
+        separate parent/legal-guardian signing flow; players aged 18 or older
+        sign for themselves. The guardian must review the agreement and provide
+        their own verified consent; a child’s checkbox is not a substitute.
+        Liability wording and the guardian process are still under review.
       </p>
     </section>
   );
