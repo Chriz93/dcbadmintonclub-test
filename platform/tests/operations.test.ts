@@ -477,3 +477,36 @@ it("live rollback rehearsal leaves no synthetic accounts or league records", asy
     ).rows,
   ).toEqual([{ n: 0 }]);
 });
+it("allows a younger participant but still requires their separate verified guardian", async () => {
+  await db.exec("begin");
+  try {
+    const young = "22000000-0000-0000-0000-000000000099";
+    await db.exec(
+      `insert into auth.users values('${young}','young@example.invalid',now());insert into club_app.members(id,display_name,email) values('${young}','Synthetic child','young@example.invalid');insert into club_app.memberships(club_id,user_id,role,status) values('${c}','${young}','member','pending');insert into club_app.member_intake(club_id,season_id,user_id,legal_name,kind,emergency_contact) values('${c}','${se}','${young}','Synthetic child','regular','Synthetic contact');`,
+    );
+    await as(
+      young,
+      `select club_app.save_eligibility('${c}','${se}',(current_date-interval '12 years')::date,'person3@example.invalid',0,true)`,
+    );
+    expect(
+      (await as(young, "select * from club_app.signing_options()"))[0].rows,
+    ).toHaveLength(0);
+    expect(
+      (
+        await as(
+          guardian,
+          `select * from club_app.signing_options() where participant_id='${young}'`,
+        )
+      )[0].rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await db.query<{ terms: string }>(
+          "select club_app.agreement_terms() terms",
+        )
+      ).rows[0].terms,
+    ).toContain("no minimum participant age");
+  } finally {
+    await db.exec("rollback");
+  }
+});

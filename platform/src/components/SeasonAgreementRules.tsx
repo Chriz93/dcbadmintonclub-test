@@ -46,11 +46,11 @@ export function SeasonAgreementRules() {
         previous signed agreements.
       </p>
       <p>
-        The youngest current participants are 16. Players aged 16–17 need a
-        separate parent/legal-guardian signing flow; players aged 18 or older
-        sign for themselves. The guardian must review the agreement and provide
-        their own verified consent; a child’s checkbox is not a substitute.
-        Liability wording and the guardian process are still under review.
+        There is no minimum age. All players under 18 need a separate
+        parent/legal-guardian signing flow; players aged 18 or older sign for
+        themselves. The guardian must review the agreement and provide their own
+        verified consent; a child’s checkbox is not a substitute. Liability
+        wording and the guardian process are still under review.
       </p>
     </section>
   );

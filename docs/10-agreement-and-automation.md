@@ -11,7 +11,7 @@ Organizer: **Christy**, acting personally. Maplewood Advanced Badminton League i
 
 ## Participant and guardian signing
 
-Member hub provides details, date of birth, rule acknowledgment, separate guardian email for minors, complete agreement text, explicit electronic acceptance, and an exact downloadable receipt. Ages 16–17 use the separately signed-in guardian account. Guardian declares adult status and authority; verified email does not independently prove legal identity or authority.
+Member hub provides details, date of birth, rule acknowledgment, separate guardian email for minors, complete agreement text, explicit electronic acceptance, and an exact downloadable receipt. There is no minimum participant age. All participants under 18 use the separately signed-in guardian account. Guardian declares adult status and authority; verified email does not independently prove legal identity or authority.
 
 Administration publishes the reviewed liability text with the fixed league rules, version, hash and review reference. No legal text has been published or signed automatically. Each receipt preserves participant name, signer, capacity, relationship, complete body, hash and timestamp. Publishing a replacement agreement requires renewed approval for that season. Optional messaging consent remains separate.
 
