@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write src tests scripts",
     "test:e2e": "playwright test",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "calendar:dev": "node --env-file=.env.test.local --experimental-strip-types scripts/calendar-server.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { PermitCommit } from "./components/PermitCommit";
 import type { PermitText } from "./services/pdf";
 import { PermitUpload } from "./components/PermitUpload";
 import { AdminTools } from "./components/AdminTools";
+import { SessionWorkspace } from "./components/SessionWorkspace";
 import { MemberDashboard } from "./components/MemberDashboard";
 import {
   ArrowUpRight,
@@ -281,7 +283,9 @@ export default function App() {
                   </p>
                   <button
                     className="text-button"
-                    onClick={() => download(season)}
+                    onClick={() =>
+                      supabase ? setRoute("schedule") : download(season)
+                    }
                   >
                     Download season calendar <Download size={17} />
                   </button>
@@ -302,7 +306,12 @@ export default function App() {
             </>
           )}
           {route === "schedule" && <Schedule />}
-          {route === "courts" && <Courts online={online} />}
+          {route === "courts" &&
+            (supabase ? (
+              <SessionWorkspace online={online} />
+            ) : (
+              <Courts online={online} />
+            ))}
           {route === "member" && (
             <Member online={online} message={message} setMessage={setMessage} />
           )}
@@ -320,20 +329,107 @@ export default function App() {
 }
 function Schedule() {
   const [filter, setFilter] = useState("all");
-  const rows = season.filter((s) => filter === "all" || s.status === filter);
+  const [bookings, setBookings] = useState<Session[]>(supabase ? [] : season);
+  const [status, setStatus] = useState(
+    supabase ? "Loading current schedule…" : "",
+  );
+  useEffect(() => {
+    if (!supabase) return;
+    let alive = true;
+    void supabase
+      .rpc("public_schedule", { club_slug: "dc-badminton" })
+      .then(({ data, error }) => {
+        if (!alive) return;
+        try {
+          if (error) throw error;
+          const rows = z
+            .array(
+              z.object({
+                calendar_uid: z.string(),
+                starts_at: z.string(),
+                ends_at: z.string(),
+                venue_name: z.string(),
+                status: z.string(),
+                revision: z.number(),
+              }),
+            )
+            .parse(data);
+          const local = (iso: string) => {
+            const values = Object.fromEntries(
+              new Intl.DateTimeFormat("en-CA", {
+                timeZone: "America/Toronto",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+              })
+                .formatToParts(new Date(iso))
+                .map((p) => [p.type, p.value]),
+            );
+            return {
+              date: `${values.year}-${values.month}-${values.day}`,
+              time: `${values.hour}:${values.minute}`,
+            };
+          };
+          setBookings(
+            rows.map((r) => ({
+              id: r.calendar_uid,
+              date: local(r.starts_at).date,
+              start: local(r.starts_at).time,
+              end: local(r.ends_at).time,
+              venue: r.venue_name,
+              room: "127C & 127D",
+              permit: "2026-07-21-0001",
+              status: r.status === "cancelled" ? "cancelled" : "active",
+              revision: r.revision,
+            })),
+          );
+          setStatus("Current test schedule loaded.");
+        } catch {
+          setStatus(
+            "The current schedule could not be loaded. Try reopening Schedule when your connection returns.",
+          );
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const rows = bookings.filter((s) => filter === "all" || s.status === filter);
+  const active = bookings.filter((s) => s.status === "active");
+  const hours = active.reduce(
+    (n, s) =>
+      n +
+      (Number(s.end.slice(0, 2)) * 60 +
+        Number(s.end.slice(3)) -
+        Number(s.start.slice(0, 2)) * 60 -
+        Number(s.start.slice(3))) /
+        60,
+    0,
+  );
+  const feed =
+    supabase && ["127.0.0.1", "localhost"].includes(window.location.hostname)
+      ? "http://127.0.0.1:8787/calendar/dc-badminton.ics"
+      : null;
   return (
     <>
       <Heading
         eyebrow="MAPLEWOOD · AMERICA/TORONTO"
         title="Your season, planned."
       >
-        <button className="button primary" onClick={() => download(season)}>
+        <button
+          className="button primary"
+          onClick={() => download(bookings)}
+          disabled={!bookings.length}
+        >
           <Download size={18} /> Download ICS
         </button>
       </Heading>
       <div className="summary-strip">
-        <strong>28 club nights</strong>
-        <span>56 approved hours</span>
+        <strong>{active.length} club nights</strong>
+        <span>{hours} approved hours</span>
         <span>Tuesdays · 8:15–10:15 PM</span>
         <span>Permit #2026-07-21-0001</span>
       </div>
@@ -347,13 +443,17 @@ function Schedule() {
           </select>
         </label>
         <p>
-          ICS imports into Apple Calendar. Live subscription requires a deployed
-          feed.
+          {feed ? (
+            <a href={feed}>Subscribe to the live test calendar</a>
+          ) : (
+            "ICS imports into Apple Calendar. Live subscriptions will be available after hosting is configured."
+          )}
         </p>
       </div>
+      <p role="status">{status}</p>
       <Card className="schedule-list">
         {rows.map((s) => (
-          <div className={`schedule-row ${s.status}`} key={s.date}>
+          <div className={`schedule-row ${s.status}`} key={s.id}>
             <div className="date-tile">
               <strong>{s.date.slice(8)}</strong>
               <span>
@@ -373,7 +473,7 @@ function Schedule() {
               </h3>
               <p>
                 {s.status === "active"
-                  ? "8:15–10:15 PM · Rooms 127C & 127D"
+                  ? `${s.start}–${s.end} · Rooms ${s.room}`
                   : "No play · Permit cancellation"}
               </p>
             </div>
@@ -619,6 +719,21 @@ function Member({
   const [email, setEmail] = useState(""),
     [requested, setRequested] = useState(false),
     [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    if (!supabase) return;
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) setSignedIn(Boolean(data.session));
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(Boolean(session));
+    });
+    return () => {
+      alive = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <>
       <Heading eyebrow="YOUR CLUB, IN ONE PLACE" title="Member hub." />
