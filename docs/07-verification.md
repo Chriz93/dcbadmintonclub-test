@@ -66,3 +66,7 @@ Renew administrator MFA and exercise new flows with distinct real test identitie
 ### Observed backup availability
 
 The TEST dashboard lists daily physical database backups; the latest observed was September 7, 2026 at 05:24:02 UTC, before this upgrade. The dashboard states Storage objects are excluded. No restore was triggered and no new paid project was created. This confirms backup availability, not an external encrypted export or verified recovery.
+
+### Renewed administrator browser verification
+
+The user completed TOTP successfully. The real connected app displayed “Second factor verified,” then loaded club records, attendance/accounts (“Operations refreshed”), and club setup (“Settings loaded”) from TEST. These were read-only verification actions; no season, payment, agreement or announcement was changed.
