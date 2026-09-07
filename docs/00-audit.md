@@ -1,6 +1,6 @@
 # Product and security audit — 2026-09-06
 
-Scope: local production and test source, git differences, setup, manifest, worker and embedded tests. No requests made to either Supabase project. Actual deployed policies, billing, data volume and production records remain unverified.
+Scope: local production and test source, git differences, setup, manifest, worker and embedded tests. The initial audit was local-only. The authorized TEST dashboard inspection and containment below were completed later on 2026-09-06. Production database policy state remains unverified.
 
 ## Evidence and existing behavior
 
@@ -40,3 +40,13 @@ Tests: embedded test runner stubs network and mutates global state, hundreds of 
 ## Production boundary
 
 No production changes or publication are authorized. Local test containment cannot revoke policies on a remote database. Current production exposure remains until an explicitly authorized coordinated cutover. The legacy app is preserved as migration evidence, not considered safe for continued public access.
+
+## Authorized TEST verification — 2026-09-06
+
+Confirmed dashboard project `dcbadmintonclub-test` (`wgolevihkvmosajumzvl`), Canada Central, healthy, currently labelled nano. Initial live audit found three public legacy tables with RLS enabled but twelve unconditional anonymous policies, and zero Auth users. Exact counts: 32 players, 0 announcements, 26 app_state records.
+
+Created `upgrade_backup_20260906`, copied all three tables and policy definitions under a table lock, compared deterministic logical content hashes, and revoked all schema/table access for public/anon/authenticated/service_role on the snapshot. Revoked public/anon/authenticated grants on the three legacy tables. Verified anonymous player SELECT, state UPDATE and snapshot schema USAGE all false. No individual player records were displayed or exported. This protected internal snapshot is not an offsite backup or a complete remote restore rehearsal. Dashboard also showed seven daily physical backups; storage objects are excluded.
+
+Applied additive migrations 001–006 through the dashboard. The dashboard RLS protection was used for migration 001; actual verification found 24 new tables, zero without RLS, zero anonymous table grants and zero authenticated non-SELECT grants. Only `public_schedule` and `registration_options` are executable by anon. Seeded 28 scheduled / 6 cancelled sessions / 56 hours and six courts, preserving all 32 legacy players; no new member identities were created. No production or billing changes. One user-authorized Auth test email was subsequently requested; delivery and sign-in await user verification.
+
+Follow-up: migrations 007–008 were applied for minimal tenant roster reads and explicit revision/totals validation. The user completed one authorized OTP email sign-in and TOTP administrator verification. One test owner membership was added after checking the verified Auth UUID; none of the 32 legacy players were migrated. Actual RSVP revision/audit, private profile, admin reads and attendance were verified without notification consent/jobs. A read-only local calendar endpoint serves the public schedule. Production remains unchanged.
