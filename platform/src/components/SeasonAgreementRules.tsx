@@ -8,7 +8,7 @@ export function SeasonAgreementRules() {
         guardian agreement is ready.
       </p>
       <p>
-        Organizer: Christy George, acting personally. Maplewood Advanced
+        Organizer: Christy, acting personally. Maplewood Advanced
         Badminton League is the league name, not a separately registered club.
       </p>
       <ul>

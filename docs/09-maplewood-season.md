@@ -4,7 +4,7 @@ Updated September 7, 2026. All changes are in the isolated TEST project. The loc
 
 ## Confirmed by Christy
 
-- Legal organizer: Christy George personally. No separately registered club/entity. Maplewood Advanced Badminton League is the league name. Youngest current participant is 16; ages 16–17 require the guardian signing path, adults sign for themselves.
+- Legal organizer: Christy personally. No separately registered club/entity. Maplewood Advanced Badminton League is the league name. Youngest current participant is 16; ages 16–17 require the guardian signing path, adults sign for themselves.
 
 - 25 regular players; advanced ladder play. Regular registration is closed. Accepted regular players and spare applicants enter their own details after email verification; Christy reviews their status.
 - Regular fee $400 for the season; spare fee $20 per session. E-transfer payment references are claims until checked against the bank record. No bank credentials are collected.

@@ -1,6 +1,6 @@
 # Agreement and attendance automation — September 7, 2026
 
-Confirmed: organizer Christy George acts personally, with no registered club entity. Youngest current participant is 16; ages 16–17 use the guardian signing path and adults sign for themselves. verified no-show means one court down; school cancellation means two physical shuttlecocks and no cash refund; absence notice is 72 hours. The waiver-area review copy now displays these policies. It is not a signed or finalized agreement.
+Confirmed: organizer Christy acts personally, with no registered club entity. Youngest current participant is 16; ages 16–17 use the guardian signing path and adults sign for themselves. verified no-show means one court down; school cancellation means two physical shuttlecocks and no cash refund; absence notice is 72 hours. The waiver-area review copy now displays these policies. It is not a signed or finalized agreement.
 
 ## Signing
 
