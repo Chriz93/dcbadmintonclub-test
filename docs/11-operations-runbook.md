@@ -2,9 +2,9 @@
 
 ## Deployment status
 
-The local implementation includes migrations 001–021. The remote TEST project was previously verified through 011. Applying 012–021 is blocked while the Mac is locked and the authenticated dashboard is inaccessible. Do not turn on operations against an older schema or share the localhost link as a public website.
+Migrations **001–021 are applied to TEST wgolevihkvmosajumzvl**. The ten new migrations were applied together transactionally after the Mac was unlocked. The live permission audit passed and Maplewood operations are enabled with the confirmed $14/72-hour/physical-shuttle policies. Do not replay these migrations. Production has not been upgraded.
 
-Apply each new numbered migration once, in order, in project **wgolevihkvmosajumzvl**. Each file is transactional. If one fails, resolve it before advancing. Never apply these files to production without a reviewed cutover. Then run `scripts/verify-operations.sql`, apply `scripts/enable-maplewood-operations.sql`, and verify again. Keep legal publication empty until reviewed text is supplied.
+The live rollback rehearsal passed refund, spare, guardian, scoring, ELO and restart/undo checks; all synthetic accounts and records were rolled back. Member agreement and session-account screens loaded in the real signed-in app. Administrator browser verification needs a renewed authenticator code; the form is prepared.
 
 Validate with separate adult, guardian and administrator accounts in TEST: intake, agreement, payment approval, RSVP/refund, spare booking, attendance, first and subsequent rounds, score conflict, completion, correction, restart/undo. Local synthetic tests are not a substitute for this live acceptance pass.
 
@@ -32,7 +32,7 @@ Refresh before editing. Use Courtside for scores and court plans; use Administra
 
 ## Remaining launch dependencies
 
-- Unlocked Mac and authenticated TEST dashboard for migration/live verification.
+- Renewed administrator MFA and remaining distinct-account browser acceptance checks.
 - Reviewed agreement from Christy; initial seed order after players onboard.
 - Public hosting/domain and an approved production cutover.
 - Sender/provider credentials, consent/unsubscribe setup and authorized delivery test.

@@ -1,6 +1,6 @@
 # Maplewood agreement and automation — September 7, 2026
 
-## Implemented locally; migrations 012–021 await TEST application
+## Implemented and applied to TEST
 
 Organizer: **Christy**, acting personally. Maplewood Advanced Badminton League is the league name. No registered legal entity or surname is asserted.
 

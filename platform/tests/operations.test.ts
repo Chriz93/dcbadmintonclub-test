@@ -462,3 +462,18 @@ it("club-scoped privacy review never erases member or signed records", async () 
     ).rows[0].status,
   ).toBe("pending");
 });
+it("live rollback rehearsal leaves no synthetic accounts or league records", async () => {
+  const before = (await db.query("select count(*)::int n from auth.users"))
+    .rows;
+  await db.exec(readFileSync("scripts/live-test-rollback.sql", "utf8"));
+  expect(
+    (await db.query("select count(*)::int n from auth.users")).rows,
+  ).toEqual(before);
+  expect(
+    (
+      await db.query(
+        "select count(*)::int n from club_app.clubs where slug like 'rollback-%'",
+      )
+    ).rows,
+  ).toEqual([{ n: 0 }]);
+});
