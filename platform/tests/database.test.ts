@@ -38,7 +38,36 @@ beforeAll(async () => {
       "utf8",
     ),
   );
-  await db.exec(readFileSync(new URL("../migrations/002_operations.sql", import.meta.url), "utf8"));
+  await db.exec(
+    readFileSync(
+      new URL("../migrations/002_operations.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    readFileSync(
+      new URL("../migrations/003_session_engine.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    readFileSync(
+      new URL("../migrations/004_permit_import.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    readFileSync(
+      new URL("../migrations/005_privacy.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    readFileSync(
+      new URL("../migrations/006_registration_options.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   await db.exec(
     `insert into auth.users(id) values('${u}'),('${v}'),('${admin}');insert into club_app.clubs(id,slug,name) values('${c}','a','Club A'),('${other}','b','Club B');insert into club_app.members(id,display_name,email) values('${u}','A','a@example.invalid'),('${v}','B','b@example.invalid'),('${admin}','Admin','admin@example.invalid');insert into club_app.memberships(club_id,user_id,role,status) values('${c}','${u}','member','active'),('${c}','${v}','member','active'),('${c}','${admin}','club_admin','active');insert into club_app.venues(id,club_id,name,address,rooms) values('${venueId}','${c}','Gym','Street','A');insert into club_app.seasons(id,club_id,name,regular_capacity) values('${seasonId}','${c}','Test',25);insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${s}','${c}','${seasonId}','${venueId}',now()+interval '2 days',now()+interval '2 days 2 hours',now()+interval '1 day',1);`,
   );
@@ -153,19 +182,319 @@ describe.sequential("actual PostgreSQL policies and transactions", () => {
   });
 });
 
-describe.sequential('operations, queue and rate limits',()=>{
- it('public schedule contains no member fields',async()=>{await db.exec('set role anon');try{const rows=await db.query("select * from club_app.public_schedule('a')");expect(Object.keys(rows.rows[0])).not.toContain('email');expect(rows.rows).toHaveLength(1);}finally{await db.exec('reset role');}});
- it('member cannot cancel or claim delivery jobs',async()=>{await expect(as(u,`select club_app.cancel_session('${c}','${s}',0)`)).rejects.toThrow();await expect(as(u,'select * from club_app.claim_deliveries(10)')).rejects.toThrow();});
- it('score validation and competing stale submissions',async()=>{
-  const court='80000000-0000-0000-0000-000000000001',match='90000000-0000-0000-0000-000000000001';
-  await db.exec(`insert into club_app.courts(id,club_id,venue_id,number) values('${court}','${c}','${venueId}',1);update club_app.sessions set status='active' where id='${s}';insert into club_app.matches(id,club_id,session_id,court_id,round,game,target,side_a,side_b) values('${match}','${c}','${s}','${court}',1,1,15,array['${u}']::uuid[],array['${v}']::uuid[]);`);
-  await expect(as(u,`select club_app.submit_score('${c}','${match}',15,12,0)`)).rejects.toThrow('Forbidden');
-  await expect(as(admin,`select club_app.submit_score('${c}','${match}',14,12,0)`,'aal2')).rejects.toThrow('Invalid completed score');
-  await as(admin,`select club_app.submit_score('${c}','${match}',15,12,0)`,'aal2');
-  await expect(as(admin,`select club_app.submit_score('${c}','${match}',15,10,0)`,'aal2')).rejects.toThrow('Revision conflict');
- });
- it('cancellation requires MFA, audits and queues consented notices',async()=>{await as(admin,`select club_app.cancel_session('${c}','${s}',0)`,'aal2');expect((await db.query<{status:string}>(`select status from club_app.sessions where id='${s}'`)).rows[0].status).toBe('cancelled');await expect(as(u,request(u,'attending',2,50))).rejects.toThrow('RSVP closed');});
- it('queue leases do not claim same jobs twice; failure retries',async()=>{await db.exec('set role service_role');try{const jobs=await db.query<{id:string;attempts:number}>('select * from club_app.claim_deliveries(10)');expect(jobs.rows.length).toBeGreaterThan(0);expect((await db.query('select * from club_app.claim_deliveries(10)')).rows).toHaveLength(0);const job=jobs.rows[0];await db.query('select club_app.finish_delivery($1,$2,$3,$4)',[job.id,job.attempts,'pending',null]);await expect(db.query('select club_app.finish_delivery($1,$2,$3,$4)',[job.id,job.attempts,'delivered','x'])).rejects.toThrow('Stale delivery lease');}finally{await db.exec('reset role');}});
- it('unsubscribe suppresses future notification enqueue',async()=>{await as(u,`select club_app.set_preference('${c}',false)`);expect((await db.query<{enabled:boolean}>(`select enabled from club_app.notification_preferences where user_id='${u}'`)).rows[0].enabled).toBe(false);});
- it('rate limits successful mutation attempts',async()=>{await db.exec(`delete from club_app.rate_limits where user_id='${u}'`);for(let i=0;i<30;i++)await as(u,`select club_app.set_preference('${c}',false)`);await expect(as(u,`select club_app.set_preference('${c}',false)`)).rejects.toThrow('Rate limit');});
+describe.sequential("operations, queue and rate limits", () => {
+  it("public schedule contains no member fields", async () => {
+    await db.exec("set role anon");
+    try {
+      const rows = await db.query(
+        "select * from club_app.public_schedule('a')",
+      );
+      expect(
+        Object.keys(rows.rows[0] as Record<string, unknown>),
+      ).not.toContain("email");
+      expect(rows.rows).toHaveLength(1);
+    } finally {
+      await db.exec("reset role");
+    }
+  });
+  it("member cannot cancel or claim delivery jobs", async () => {
+    await expect(
+      as(u, `select club_app.cancel_session('${c}','${s}',0)`),
+    ).rejects.toThrow();
+    await expect(
+      as(u, "select * from club_app.claim_deliveries(10)"),
+    ).rejects.toThrow();
+  });
+  it("score validation and competing stale submissions", async () => {
+    const court = "80000000-0000-0000-0000-000000000001",
+      match = "90000000-0000-0000-0000-000000000001";
+    await db.exec(
+      `insert into club_app.courts(id,club_id,venue_id,number) values('${court}','${c}','${venueId}',1);update club_app.sessions set status='active' where id='${s}';insert into club_app.matches(id,club_id,session_id,court_id,round,game,target,side_a,side_b) values('${match}','${c}','${s}','${court}',1,1,15,array['${u}']::uuid[],array['${v}']::uuid[]);`,
+    );
+    await expect(
+      as(u, `select club_app.submit_score('${c}','${match}',15,12,0)`),
+    ).rejects.toThrow("Forbidden");
+    await expect(
+      as(
+        admin,
+        `select club_app.submit_score('${c}','${match}',14,12,0)`,
+        "aal2",
+      ),
+    ).rejects.toThrow("Invalid completed score");
+    await as(
+      admin,
+      `select club_app.submit_score('${c}','${match}',15,12,0)`,
+      "aal2",
+    );
+    await expect(
+      as(
+        admin,
+        `select club_app.submit_score('${c}','${match}',15,10,0)`,
+        "aal2",
+      ),
+    ).rejects.toThrow("Revision conflict");
+  });
+  it("cancellation requires MFA, audits and queues consented notices", async () => {
+    await as(admin, `select club_app.cancel_session('${c}','${s}',0)`, "aal2");
+    expect(
+      (
+        await db.query<{ status: string }>(
+          `select status from club_app.sessions where id='${s}'`,
+        )
+      ).rows[0].status,
+    ).toBe("cancelled");
+    await expect(as(u, request(u, "attending", 2, 50))).rejects.toThrow(
+      "RSVP closed",
+    );
+  });
+  it("queue leases do not claim same jobs twice; failure retries", async () => {
+    await db.exec("set role service_role");
+    try {
+      const jobs = await db.query<{ id: string; attempts: number }>(
+        "select * from club_app.claim_deliveries(10)",
+      );
+      expect(jobs.rows.length).toBeGreaterThan(0);
+      expect(
+        (await db.query("select * from club_app.claim_deliveries(10)")).rows,
+      ).toHaveLength(0);
+      const job = jobs.rows[0];
+      await db.query("select club_app.finish_delivery($1,$2,$3,$4)", [
+        job.id,
+        job.attempts,
+        "pending",
+        null,
+      ]);
+      await expect(
+        db.query("select club_app.finish_delivery($1,$2,$3,$4)", [
+          job.id,
+          job.attempts,
+          "delivered",
+          "x",
+        ]),
+      ).rejects.toThrow("Stale delivery lease");
+    } finally {
+      await db.exec("reset role");
+    }
+  });
+  it("unsubscribe suppresses future notification enqueue", async () => {
+    await as(u, `select club_app.set_preference('${c}',false)`);
+    expect(
+      (
+        await db.query<{ enabled: boolean }>(
+          `select enabled from club_app.notification_preferences where user_id='${u}'`,
+        )
+      ).rows[0].enabled,
+    ).toBe(false);
+  });
+  it("rate limits successful mutation attempts", async () => {
+    await db.exec(`delete from club_app.rate_limits where user_id='${u}'`);
+    for (let i = 0; i < 30; i++)
+      await as(u, `select club_app.set_preference('${c}',false)`);
+    await expect(
+      as(u, `select club_app.set_preference('${c}',false)`),
+    ).rejects.toThrow("Rate limit");
+  });
+});
+
+describe.sequential("court session lifecycle and permit import", () => {
+  const s2 = "30000000-0000-0000-0000-000000000002";
+  const memberIds = Array.from(
+    { length: 25 },
+    (_, i) => `21000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`,
+  );
+  const courtIds = Array.from(
+    { length: 6 },
+    (_, i) => `81000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`,
+  );
+  const plan = courtIds.map((court_id, i) => ({
+    court_id,
+    players: memberIds.slice(i * 4, i === 5 ? 25 : (i + 1) * 4),
+  }));
+  it("atomically assigns 25 players and generates the five-player games", async () => {
+    await db.exec(
+      `delete from club_app.rate_limits;update club_app.sessions set status='scheduled' where id='${s}';insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${s2}','${c}','${seasonId}','${venueId}',now()+interval '5 days',now()+interval '5 days 2 hours',now()+interval '4 days',25);`,
+    );
+    for (const id of memberIds)
+      await db.exec(
+        `insert into auth.users(id) values('${id}');insert into club_app.members(id,display_name,email) values('${id}','Synthetic','synthetic@example.invalid');insert into club_app.memberships(club_id,user_id,role,status) values('${c}','${id}','member','active');`,
+      );
+    for (let i = 0; i < 6; i++)
+      await db.exec(
+        `insert into club_app.courts(id,club_id,venue_id,number) values('${courtIds[i]}','${c}','${venueId}',${i + 2});`,
+      );
+    await as(
+      admin,
+      `select club_app.assign_courts('${c}','${s2}',1,'${JSON.stringify(plan)}',0,'Initial synthetic assignment')`,
+      "aal2",
+    );
+    const games = await db.query<{
+      target: number;
+      side_a: string[];
+      side_b: string[];
+    }>(
+      `select target,side_a,side_b from club_app.matches where session_id='${s2}' and court_id='${courtIds[5]}'`,
+    );
+    expect(games.rows).toHaveLength(5);
+    expect(games.rows.every((g) => g.target === 15)).toBe(true);
+    for (const id of memberIds.slice(20))
+      expect(
+        games.rows.filter((g) => [...g.side_a, ...g.side_b].includes(id)),
+      ).toHaveLength(4);
+  });
+  it("rejects impossible duplicate assignment with rollback", async () => {
+    const broken = structuredClone(plan);
+    broken[0].players[0] = broken[1].players[0];
+    await expect(
+      as(
+        admin,
+        `select club_app.assign_courts('${c}','${s2}',1,'${JSON.stringify(broken)}',1,'Invalid duplicate override')`,
+        "aal2",
+      ),
+    ).rejects.toThrow("Duplicate players");
+    expect(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from club_app.assignments where session_id='${s2}'`,
+        )
+      ).rows[0].n,
+    ).toBe(25);
+  });
+  it("checks attendance and rejects incomplete session completion", async () => {
+    await as(
+      admin,
+      `select club_app.check_in('${c}','${s2}','${memberIds[0]}','present')`,
+      "aal2",
+    );
+    await expect(
+      as(admin, `select club_app.complete_session('${c}','${s2}',1)`, "aal2"),
+    ).rejects.toThrow("All scheduled games");
+  });
+  it("completes games and normalizes season statistics without repeated completion", async () => {
+    const games = await db.query<{ id: string; target: number }>(
+      `select id,target from club_app.matches where session_id='${s2}'`,
+    );
+    for (const game of games.rows)
+      await as(
+        admin,
+        `select club_app.submit_score('${c}','${game.id}',${game.target},0,0)`,
+        "aal2",
+      );
+    await as(
+      admin,
+      `select club_app.complete_session('${c}','${s2}',1)`,
+      "aal2",
+    );
+    expect(
+      (
+        await db.query(
+          `select * from club_app.rankings where season_id='${seasonId}'`,
+        )
+      ).rows,
+    ).toHaveLength(25);
+    await expect(
+      as(admin, `select club_app.complete_session('${c}','${s2}',1)`, "aal2"),
+    ).rejects.toThrow();
+  });
+  it("requires explicit confirmation and imports idempotently", async () => {
+    await db.exec("delete from club_app.rate_limits");
+    const rows = JSON.stringify([
+      {
+        starts_at: "2028-09-05T00:15:00Z",
+        ends_at: "2028-09-05T02:15:00Z",
+        status: "active",
+      },
+    ]);
+    const sql = (confirm: boolean) =>
+      `select club_app.import_permit('${c}','${seasonId}','${venueId}','test-permit','synthetic.pdf','${"a".repeat(64)}','${rows}',1,2,${confirm})`;
+    await expect(as(admin, sql(false), "aal2")).rejects.toThrow("Confirmed");
+    await as(admin, sql(true), "aal2");
+    await as(admin, sql(true), "aal2");
+    expect(
+      (
+        await db.query(
+          `select * from club_app.sessions where starts_at='2028-09-05T00:15:00Z'`,
+        )
+      ).rows,
+    ).toHaveLength(1);
+  });
+  it("restores an isolated Postgres database archive with data and policies intact", async () => {
+    const dump = await db.dumpDataDir();
+    const restored = new PGlite({ loadDataDir: dump });
+    try {
+      const before = await db.query(
+        "select club_id,user_id,played,wins,points from club_app.rankings order by user_id",
+      );
+      const after = await restored.query(
+        "select club_id,user_id,played,wins,points from club_app.rankings order by user_id",
+      );
+      expect(after.rows).toEqual(before.rows);
+      await restored.exec("set role anon");
+      await expect(
+        restored.query("select * from club_app.members"),
+      ).rejects.toThrow();
+    } finally {
+      await restored.close();
+    }
+  }, 60000);
+});
+
+it("private export and deletion request are limited to the authenticated person", async () => {
+  await db.exec("delete from club_app.rate_limits");
+  const result = await as(u, "select club_app.export_my_data() as export");
+  const exported = (
+    result[0].rows[0] as { export: { profile: { id: string } } }
+  ).export;
+  expect(exported.profile.id).toBe(u);
+  await as(u, "select club_app.request_my_deletion()");
+  expect(
+    (
+      await db.query<{ user_id: string }>(
+        "select user_id from club_app.deletion_requests",
+      )
+    ).rows,
+  ).toEqual([{ user_id: u }]);
+});
+
+it("verified registration records versioned waiver and requires admin approval", async () => {
+  const newUser = "22000000-0000-0000-0000-000000000001",
+    waiver = "23000000-0000-0000-0000-000000000001";
+  await db.exec(
+    `insert into auth.users values('${newUser}','new@example.invalid',now());insert into club_app.waiver_versions(id,club_id,version,body,sha256) values('${waiver}','${c}',1,'Synthetic test waiver only','test-hash');delete from club_app.rate_limits;`,
+  );
+  await as(
+    newUser,
+    `select club_app.register_member('${c}','${seasonId}','Synthetic member','${waiver}')`,
+  );
+  expect(
+    (
+      await db.query<{ status: string }>(
+        `select status from club_app.memberships where user_id='${newUser}'`,
+      )
+    ).rows[0].status,
+  ).toBe("pending");
+  expect(
+    (
+      await db.query(
+        `select * from club_app.waiver_acceptances where user_id='${newUser}'`,
+      )
+    ).rows,
+  ).toHaveLength(1);
+  await expect(
+    as(
+      newUser,
+      `select club_app.approve_member('${c}','${seasonId}','${newUser}')`,
+    ),
+  ).rejects.toThrow();
+  await as(
+    admin,
+    `select club_app.approve_member('${c}','${seasonId}','${newUser}')`,
+    "aal2",
+  );
+  expect(
+    (
+      await db.query<{ status: string }>(
+        `select status from club_app.memberships where user_id='${newUser}'`,
+      )
+    ).rows[0].status,
+  ).toBe("active");
 });
