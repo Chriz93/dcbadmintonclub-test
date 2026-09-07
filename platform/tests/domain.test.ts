@@ -131,7 +131,9 @@ describe("permit and calendar", () => {
   });
   it("keeps event IDs stable for cancellation updates", () => {
     const original = calendar([season[0]]),
-      changed = calendar([{ ...season[0], status: "cancelled", revision: 1 }]);
+      changed = calendar([
+        { ...season[0], status: "cancelled", date: "2026-09-16", revision: 1 },
+      ]);
     expect(original.match(/UID:.+/)?.[0]).toBe(changed.match(/UID:.+/)?.[0]);
     expect(changed).toContain("STATUS:CANCELLED");
     expect(changed).toContain("SEQUENCE:1");

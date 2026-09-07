@@ -9,3 +9,5 @@ platform/playwright-report/
 *.dump
 *.backup
 *.age
+
+*.tsbuildinfo

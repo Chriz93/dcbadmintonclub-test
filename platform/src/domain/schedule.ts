@@ -1,5 +1,6 @@
 import { z } from "zod";
 export const sessionSchema = z.object({
+  id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   status: z.enum(["active", "cancelled"]),
   start: z
@@ -62,6 +63,7 @@ export const season: Session[] = [
   .map((s) =>
     sessionSchema.parse({
       ...s,
+      id: `2026-07-21-0001/${s.date}/127C-127D`,
       venue,
       room: "127C & 127D",
       permit: "2026-07-21-0001",
@@ -163,7 +165,7 @@ export function calendar(
   for (const s of rows)
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${encodeURIComponent(clubId)}-${encodeURIComponent(s.permit)}-${s.date}-${encodeURIComponent(s.room)}@clubcourt`,
+      `UID:${encodeURIComponent(clubId)}-${encodeURIComponent(s.id)}@clubcourt`,
       `DTSTAMP:${stamp(generatedAt)}`,
       `SEQUENCE:${s.revision}`,
       `DTSTART:${stamp(zonedUTC(s.date, s.start))}`,
@@ -225,6 +227,7 @@ export function parseScheduleText(
           "Use YYYY-MM-DD HH:MM HH:MM active|cancelled, one booking per line.",
         );
       return sessionSchema.parse({
+        id: `${permit}/${m[1]}/${room}`,
         date: m[1],
         start: m[2],
         end: m[3],
