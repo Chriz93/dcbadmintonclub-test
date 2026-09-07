@@ -62,3 +62,7 @@ No production files/database were modified, no public deployment was performed, 
 ### Outstanding acceptance work
 
 Renew administrator MFA and exercise new flows with distinct real test identities; connect an approved delivery provider and scheduler, finish unsubscribe/contact setup and delivery verification; verify external encrypted backup and isolated restore; obtain reviewed agreement and initial seeding; rehearse legacy identity migration if historical records are required; complete public hosting/production approval. Club display/contact/accent settings, empty season/venue/court creation, public/member announcement editing and club-scoped privacy review are implemented locally. Domain/logo provisioning, existing-season policy changes and final legal-retention erasure remain operator work; this is not a fully generalized self-service platform.
+
+### Observed backup availability
+
+The TEST dashboard lists daily physical database backups; the latest observed was September 7, 2026 at 05:24:02 UTC, before this upgrade. The dashboard states Storage objects are excluded. No restore was triggered and no new paid project was created. This confirms backup availability, not an external encrypted export or verified recovery.
