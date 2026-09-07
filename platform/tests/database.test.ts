@@ -686,3 +686,78 @@ it("requires the current participant waiver before approving paid intake", async
     (result[0].rows[0] as { data: { intake: unknown[] } }).data.intake,
   ).toHaveLength(1);
 });
+
+it("rebuilds doubles ELO with equal round weight and reverses a score correction", async () => {
+  const sid = "33000000-0000-0000-0000-000000000001";
+  const court = "81000000-0000-0000-0000-000000000001";
+  const players = Array.from(
+    { length: 4 },
+    (_, i) => `21000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`,
+  );
+  await db.exec(
+    `delete from club_app.rate_limits;insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${sid}','${c}','${seasonId}','${venueId}',now()+interval '15 days',now()+interval '15 days 2 hours',now()+interval '14 days',4);`,
+  );
+  await as(
+    admin,
+    `select club_app.assign_courts('${c}','${sid}',1,'${JSON.stringify([{ court_id: court, players }])}',0,'Synthetic ELO rehearsal')`,
+    "aal2",
+  );
+  await db.exec(
+    `update club_app.matches set score_a=21,score_b=0 where session_id='${sid}'`,
+  );
+  await as(
+    admin,
+    `select club_app.complete_session('${c}','${sid}',1)`,
+    "aal2",
+  );
+  let rating = await db.query<{ rating: string }>(
+    `select rating from club_app.elo_ratings where club_id='${c}' and season_id='${seasonId}' and user_id='${players[0]}'`,
+  );
+  expect(Number(rating.rows[0].rating)).toBeCloseTo(1016);
+  const game = await db.query<{ id: string }>(
+    `select id from club_app.matches where session_id='${sid}' and game=1`,
+  );
+  await as(
+    admin,
+    `select club_app.correct_score('${c}','${game.rows[0].id}',0,21,0,'Correct synthetic result')`,
+    "aal2",
+  );
+  rating = await db.query<{ rating: string }>(
+    `select rating from club_app.elo_ratings where club_id='${c}' and season_id='${seasonId}' and user_id='${players[0]}'`,
+  );
+  expect(Number(rating.rows[0].rating)).toBeCloseTo(1005.33333);
+  const versions = await db.query<{ value: unknown }>(
+    `select jsonb_object_agg(id::text,revision) value from club_app.matches where session_id='${sid}'`,
+  );
+  await as(
+    admin,
+    `select club_app.restart_round('${c}','${sid}',1,2,'${JSON.stringify(versions.rows[0].value)}','Synthetic recovery test')`,
+    "aal2",
+  );
+  const event = await db.query<{ id: number }>(
+    `select max(id)::int id from club_app.audit_events where action='round.restarted'`,
+  );
+  await as(
+    admin,
+    `select club_app.undo_round_restart('${c}',${event.rows[0].id},3,'Restore synthetic snapshot')`,
+    "aal2",
+  );
+  expect(
+    (await db.query(`select * from club_app.matches where session_id='${sid}'`))
+      .rows,
+  ).toHaveLength(3);
+  expect(
+    (
+      await db.query<{ status: string }>(
+        `select status from club_app.sessions where id='${sid}'`,
+      )
+    ).rows[0].status,
+  ).toBe("completed");
+  await expect(
+    as(
+      admin,
+      `select club_app.undo_round_restart('${c}',${event.rows[0].id},4,'Repeat forbidden restore')`,
+      "aal2",
+    ),
+  ).rejects.toThrow();
+});

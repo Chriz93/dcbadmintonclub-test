@@ -1,69 +1,137 @@
-/** Server-only, deliberately not imported by browser code. Run only with a sandbox mail
- * provider until real recipients and delivery are explicitly authorized. */
+import { signUnsubscribe } from "./unsubscribe-token.ts";
+/** Run each minute with server-only secrets. Never imported by the browser. */
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { sendProvider } from "./delivery-provider.ts";
 const env = z
   .object({
     TEST_SUPABASE_URL: z.url(),
-    TEST_PROJECT_REF: z.string().min(1),
+    TEST_PROJECT_REF: z.literal("wgolevihkvmosajumzvl"),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-    MAIL_API_KEY: z.string().min(1),
-    MAIL_FROM: z.email(),
     APP_URL: z.url(),
-    DELIVERY_MODE: z.literal("provider-sandbox"),
+    DELIVERY_MODE: z
+      .enum(["provider-sandbox", "live"])
+      .default("provider-sandbox"),
+    ALLOW_REAL_RECIPIENTS: z.enum(["true", "false"]).default("false"),
+    MAIL_API_KEY: z.string().optional(),
+    MAIL_FROM: z.string().optional(),
+    TWILIO_ACCOUNT_SID: z.string().optional(),
+    TWILIO_AUTH_TOKEN: z.string().optional(),
+    SMS_FROM: z.string().optional(),
+    UNSUBSCRIBE_URL: z.url(),
+    UNSUBSCRIBE_SIGNING_KEY: z.string().min(32),
+    SENDER_CONTACT: z.string().min(5),
   })
   .parse(process.env);
 const url = new URL(env.TEST_SUPABASE_URL);
 if (
   url.protocol !== "https:" ||
   url.hostname !== `${env.TEST_PROJECT_REF}.supabase.co` ||
-  env.TEST_PROJECT_REF === "bwepvxelvwgwxrnaglrx"
+  url.username ||
+  url.password ||
+  url.search ||
+  url.pathname !== "/"
 )
   throw new Error("Unapproved database");
+if (env.DELIVERY_MODE === "live" && env.ALLOW_REAL_RECIPIENTS !== "true")
+  throw new Error("Real recipients require explicit operator enablement");
 const db = createClient(env.TEST_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   db: { schema: "club_app" },
   auth: { persistSession: false },
 });
-const { data: jobs, error } = await db.rpc("claim_deliveries", {
-  batch_size: 10,
+const { error: queueError } = await db.rpc("queue_due_reminders");
+if (queueError) throw new Error("Reminder scheduler failed");
+const channels: string[] = [];
+if (env.MAIL_API_KEY && env.MAIL_FROM) channels.push("email");
+if (
+  env.DELIVERY_MODE === "live" &&
+  env.TWILIO_ACCOUNT_SID &&
+  env.TWILIO_AUTH_TOKEN &&
+  env.SMS_FROM
+)
+  channels.push("sms");
+if (!channels.length)
+  throw new Error(
+    "No delivery provider configured; queued notifications remain pending",
+  );
+const { data, error } = await db.rpc("claim_delivery_batch", {
+  batch_size: 20,
+  channels,
 });
-if (error) throw error;
-for (const job of jobs ?? []) {
-  const { data, error: recipientError } = await db.rpc("delivery_recipient", {
-    delivery_id: job.id,
-  });
-  let outcome = "pending",
-    providerId: string | null = null;
-  if (!recipientError && data?.[0]) {
-    if (!data[0].enabled) outcome = "suppressed";
-    else
-      try {
-        // Sandbox destination only. Never send personal payload or the membership list.
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          signal: AbortSignal.timeout(15000),
-          headers: {
-            Authorization: `Bearer ${env.MAIL_API_KEY}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": job.idempotency_key,
-          },
-          body: JSON.stringify({
-            from: env.MAIL_FROM,
-            to: ["delivered@resend.dev"],
-            subject: "Badminton club update",
-            text: `Your club activity has changed (${job.template}). Sign in to review details and notification preferences: ${env.APP_URL}`,
-          }),
-        });
-        if (response.ok) {
-          const receipt = (await response.json()) as { id?: string };
-          if (receipt.id) {
-            outcome = "delivered";
-            providerId = receipt.id;
-          }
-        }
-      } catch {
-        /* Leave retry state, no PII in logs. */
-      }
+if (error) throw new Error("Unable to lease notifications");
+const jobs = z
+  .array(
+    z.object({
+      id: z.string(),
+      club_id: z
+        .string()
+        .regex(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        ),
+      user_id: z
+        .string()
+        .regex(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        ),
+      idempotency_key: z.string(),
+      template: z.string(),
+      channel: z.enum(["email", "sms"]),
+      attempts: z.number(),
+    }),
+  )
+  .parse(data);
+for (const job of jobs) {
+  let outcome: string;
+  let providerId: string | null = null;
+  try {
+    const { data: recipient, error: targetError } = await db.rpc(
+      "delivery_target",
+      { delivery_id: job.id },
+    );
+    if (targetError) throw targetError;
+    const target = z
+      .object({
+        email: z.string().nullable(),
+        phone: z.string().nullable(),
+        enabled: z.boolean().nullable(),
+      })
+      .parse(recipient);
+    const sent = await sendProvider(
+      job,
+      {
+        email: target.email ?? undefined,
+        phone: target.phone ?? undefined,
+        enabled: target.enabled === true,
+      },
+      {
+        mode: env.DELIVERY_MODE,
+        allowRealRecipients: env.ALLOW_REAL_RECIPIENTS === "true",
+        mailKey: env.MAIL_API_KEY,
+        mailFrom: env.MAIL_FROM,
+        twilioSid: env.TWILIO_ACCOUNT_SID,
+        twilioToken: env.TWILIO_AUTH_TOKEN,
+        smsFrom: env.SMS_FROM,
+        appUrl: env.APP_URL,
+        senderContact: env.SENDER_CONTACT,
+        unsubscribeUrl: (() => {
+          const link = new URL(env.UNSUBSCRIBE_URL);
+          if (link.protocol !== "https:" || link.pathname !== "/unsubscribe")
+            throw new Error("HTTPS unsubscribe endpoint required");
+          link.searchParams.set(
+            "token",
+            signUnsubscribe(
+              { club: job.club_id, user: job.user_id, channel: job.channel },
+              env.UNSUBSCRIBE_SIGNING_KEY,
+            ),
+          );
+          return link.toString();
+        })(),
+      },
+    );
+    outcome = sent.status;
+    providerId = "id" in sent ? (sent.id ?? null) : null;
+  } catch {
+    outcome = job.channel === "sms" ? "failed" : "pending";
   }
   const { error: finishError } = await db.rpc("finish_delivery", {
     delivery_id: job.id,
@@ -72,5 +140,10 @@ for (const job of jobs ?? []) {
     provider_id: providerId,
   });
   if (finishError)
-    throw new Error("Delivery state persistence failed; stop this batch.");
+    throw new Error(
+      "Unable to persist delivery state; stop and reconcile provider before retrying",
+    );
 }
+console.log(
+  JSON.stringify({ processed: jobs.length, mode: env.DELIVERY_MODE }),
+);

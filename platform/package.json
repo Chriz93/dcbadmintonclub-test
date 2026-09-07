@@ -13,7 +13,10 @@
     "format": "prettier --write src tests scripts",
     "test:e2e": "playwright test",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "calendar:dev": "node --env-file=.env.test.local --experimental-strip-types scripts/calendar-server.ts"
+    "calendar:dev": "node --env-file=.env.test.local --experimental-strip-types scripts/calendar-server.ts",
+    "notifications:once": "node --experimental-strip-types scripts/notification-worker.ts",
+    "backup:test": "node --experimental-strip-types scripts/backup-database.ts",
+    "unsubscribe:serve": "node --experimental-strip-types scripts/unsubscribe-server.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
