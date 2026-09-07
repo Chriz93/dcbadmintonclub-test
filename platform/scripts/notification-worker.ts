@@ -15,9 +15,6 @@ const env = z
     ALLOW_REAL_RECIPIENTS: z.enum(["true", "false"]).default("false"),
     MAIL_API_KEY: z.string().optional(),
     MAIL_FROM: z.string().optional(),
-    TWILIO_ACCOUNT_SID: z.string().optional(),
-    TWILIO_AUTH_TOKEN: z.string().optional(),
-    SMS_FROM: z.string().optional(),
     UNSUBSCRIBE_URL: z.url(),
     UNSUBSCRIBE_SIGNING_KEY: z.string().min(32),
     SENDER_CONTACT: z.string().min(5),
@@ -41,22 +38,12 @@ const db = createClient(env.TEST_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 const { error: queueError } = await db.rpc("queue_due_reminders");
 if (queueError) throw new Error("Reminder scheduler failed");
-const channels: string[] = [];
-if (env.MAIL_API_KEY && env.MAIL_FROM) channels.push("email");
-if (
-  env.DELIVERY_MODE === "live" &&
-  env.TWILIO_ACCOUNT_SID &&
-  env.TWILIO_AUTH_TOKEN &&
-  env.SMS_FROM
-)
-  channels.push("sms");
-if (!channels.length)
+if (!env.MAIL_API_KEY || !env.MAIL_FROM)
   throw new Error(
-    "No delivery provider configured; queued notifications remain pending",
+    "Configure the free email sender; notifications remain pending",
   );
-const { data, error } = await db.rpc("claim_delivery_batch", {
+const { data, error } = await db.rpc("claim_free_email_batch", {
   batch_size: 20,
-  channels,
 });
 if (error) throw new Error("Unable to lease notifications");
 const jobs = z
@@ -108,9 +95,6 @@ for (const job of jobs) {
         allowRealRecipients: env.ALLOW_REAL_RECIPIENTS === "true",
         mailKey: env.MAIL_API_KEY,
         mailFrom: env.MAIL_FROM,
-        twilioSid: env.TWILIO_ACCOUNT_SID,
-        twilioToken: env.TWILIO_AUTH_TOKEN,
-        smsFrom: env.SMS_FROM,
         appUrl: env.APP_URL,
         senderContact: env.SENDER_CONTACT,
         unsubscribeUrl: (() => {

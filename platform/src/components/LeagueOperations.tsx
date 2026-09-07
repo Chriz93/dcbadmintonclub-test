@@ -113,7 +113,7 @@ export function LeagueOperations({ club }: { club: string }) {
     let alive = true;
     setLoaded("");
     void (async () => {
-      const [s, seeds] = await Promise.all([
+      const [s, seeds, candidates] = await Promise.all([
         supabase!
           .from("sessions")
           .select("id,starts_at,status")
@@ -126,8 +126,9 @@ export function LeagueOperations({ club }: { club: string }) {
           .eq("club_id", club)
           .eq("season_id", season)
           .order("seed"),
+        supabase!.rpc("seed_candidates", { c: club, se: season }),
       ]);
-      if (s.error || seeds.error) throw new Error();
+      if (s.error || seeds.error || candidates.error) throw new Error();
       if (alive) {
         const rows = z.array(sessionSchema).parse(s.data);
         setSessions(rows);
@@ -140,9 +141,13 @@ export function LeagueOperations({ club }: { club: string }) {
           .array(z.object({ user_id: z.string(), seed: z.number() }))
           .parse(seeds.data)
           .map((x) => x.user_id);
+        const eligible = z
+          .array(z.object({ user_id: z.string(), display_name: z.string() }))
+          .parse(candidates.data)
+          .map((p) => p.user_id);
         setOrder([
-          ...ids,
-          ...people.map((p) => p.user_id).filter((id) => !ids.includes(id)),
+          ...ids.filter((id) => eligible.includes(id)),
+          ...eligible.filter((id) => !ids.includes(id)),
         ]);
       }
     })().catch(() => {
@@ -231,6 +236,12 @@ export function LeagueOperations({ club }: { club: string }) {
           seed. Corrections rebuild all completed-session ELO chronologically.
           No-show penalties do not change ELO.
         </p>
+        {!order.length && (
+          <p>
+            Players appear here after registering, signing this season’s
+            agreement and receiving approval.
+          </p>
+        )}
         {order.map((id, index) => (
           <div className="admin-record" key={id}>
             <span>

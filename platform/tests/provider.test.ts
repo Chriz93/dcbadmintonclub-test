@@ -60,3 +60,22 @@ it("SMS is suppressed in sandbox and never reaches a real phone", async () => {
   ).toEqual({ status: "suppressed" });
   expect(f).not.toHaveBeenCalled();
 });
+
+it("zero-cost policy blocks live SMS even with recipient authorization", async () => {
+  const f = vi.fn();
+  expect(
+    await sendProvider(
+      { ...job, channel: "sms" },
+      { enabled: true, phone: "+16135550123" },
+      {
+        ...config,
+        mode: "live",
+        allowRealRecipients: true,
+        unsubscribeUrl: "https://example.invalid/unsubscribe",
+        senderContact: "Synthetic organizer",
+      },
+      f,
+    ),
+  ).toEqual({ status: "suppressed" });
+  expect(f).not.toHaveBeenCalled();
+});

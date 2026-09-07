@@ -1,5 +1,5 @@
 import { ClubNews } from "./ClubNews";
-import { SmsPreferences } from "./SmsPreferences";
+import { MyMatches } from "./MyMatches";
 import { SessionAccounts } from "./SessionAccounts";
 import { SeasonIntake } from "./SeasonIntake";
 import { PersonalRecords } from "./PersonalRecords";
@@ -287,94 +287,109 @@ export function MemberDashboard() {
           ) : (
             <p>No upcoming sessions.</p>
           )}
-          <h3>Email preferences</h3>
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            I opt in to transactional club email. I can unsubscribe here
-            anytime.
-          </label>
-          <button
-            className="button"
-            disabled={busy || !navigator.onLine}
-            onClick={async () => {
-              if (!supabase) return;
-              const { error } = await supabase.rpc("set_preference", {
-                c: club,
-                enabled: consent,
-              });
-              setMessage(
-                error
-                  ? "Preference not saved. Please retry."
-                  : "Email preference saved.",
-              );
-            }}
-          >
-            Save email preference
-          </button>
+          <details>
+            <summary>Reminder preferences</summary>
+            <h3>Email preferences</h3>
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              I opt in to transactional club email. I can unsubscribe here
+              anytime.
+            </label>
+            <button
+              className="button"
+              disabled={busy || !navigator.onLine}
+              onClick={async () => {
+                if (!supabase) return;
+                const { error } = await supabase.rpc("set_preference", {
+                  c: club,
+                  enabled: consent,
+                });
+                setMessage(
+                  error
+                    ? "Preference not saved. Please retry."
+                    : "Email preference saved.",
+                );
+              }}
+            >
+              Save email preference
+            </button>
+            <p>
+              SMS is unavailable on the no-cost plan. Check this app for
+              updates.
+            </p>
+          </details>
         </>
       )}
-      {club && <SmsPreferences club={club} />}
+      <MyMatches />
       {club && selected && (
         <SessionAccounts club={club} session={selected} isSpare={isSpare} />
       )}
-      <p>
-        Signing for a child?{" "}
-        <a href="#participant-signing">Go to guardian signing</a>; you do not
-        need to register yourself as a player.
-      </p>
-      <SeasonIntake />
-      <AgreementSigning />
-      <PersonalRecords />
-      <h3>Your personal data</h3>
-      <button
-        className="button"
-        disabled={busy || !navigator.onLine}
-        onClick={async () => {
-          if (!supabase) return;
-          const { data, error } = await supabase.rpc("export_my_data");
-          if (error) {
-            setMessage("Export failed. Please retry.");
-            return;
-          }
-          const url = URL.createObjectURL(
-            new Blob([JSON.stringify(data, null, 2)], {
-              type: "application/json",
-            }),
-          );
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = "my-club-data.json";
-          link.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }}
+      <details
+        open={clubs.length === 0 || clubs.some((c) => c.status !== "active")}
       >
-        Download my data
-      </button>
-      <button
-        className="button"
-        disabled={busy || !navigator.onLine}
-        onClick={async () => {
-          if (
-            !supabase ||
-            !window.confirm(
-              "Request data deletion and turn off your club email and SMS notices? An administrator will review retained records before erasure.",
+        <summary>Registration and season agreement</summary>
+        <p>
+          Signing for a child?{" "}
+          <a href="#participant-signing">Go to guardian signing</a>; you do not
+          need to register yourself as a player.
+        </p>
+        <SeasonIntake />
+        <AgreementSigning />
+      </details>
+      <details>
+        <summary>Profile, privacy and downloads</summary>
+        <PersonalRecords />
+        <h3>Your personal data</h3>
+        <button
+          className="button"
+          disabled={busy || !navigator.onLine}
+          onClick={async () => {
+            if (!supabase) return;
+            const { data, error } = await supabase.rpc("export_my_data");
+            if (error) {
+              setMessage("Export failed. Please retry.");
+              return;
+            }
+            const url = URL.createObjectURL(
+              new Blob([JSON.stringify(data, null, 2)], {
+                type: "application/json",
+              }),
+            );
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "my-club-data.json";
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }}
+        >
+          Download my data
+        </button>
+        <button
+          className="button"
+          disabled={busy || !navigator.onLine}
+          onClick={async () => {
+            if (
+              !supabase ||
+              !window.confirm(
+                "Request data deletion and turn off your club email and SMS notices? An administrator will review retained records before erasure.",
+              )
             )
-          )
-            return;
-          const { error } = await supabase.rpc("request_my_deletion");
-          setMessage(
-            error
-              ? "Request failed. Please retry."
-              : "Deletion review requested; email and SMS notices disabled.",
-          );
-        }}
-      >
-        Request data deletion
-      </button>
+              return;
+            const { error } = await supabase.rpc("request_my_deletion");
+            setMessage(
+              error
+                ? "Request failed. Please retry."
+                : "Deletion review requested; email and SMS notices disabled.",
+            );
+          }}
+        >
+          Request data deletion
+        </button>
+      </details>
       <p role="status">{message}</p>
       <button
         className="text-button"

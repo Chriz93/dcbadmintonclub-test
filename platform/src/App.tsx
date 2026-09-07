@@ -754,61 +754,65 @@ function Member({
           <span className="icon-tile">
             <ShieldCheck />
           </span>
-          <h2>Sign in securely</h2>
-          <p>
-            Use the email associated with your approved membership. We’ll send
-            you a one-time code.
-          </p>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                if (requested) {
-                  await verifyCode(
-                    email,
-                    String(new FormData(e.currentTarget).get("code")),
-                  );
-                  setSignedIn(true);
-                  setMessage("Signed in to the isolated test project.");
-                } else {
-                  await requestCode(email);
-                  setRequested(true);
-                  setMessage(
-                    "If your account is eligible, a code is on its way.",
-                  );
-                }
-              } catch (e) {
-                setMessage((e as Error).message);
-              }
-            }}
-          >
-            <label>
-              Email address
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </label>
-            {requested && (
-              <label>
-                One-time code
-                <input
-                  name="code"
-                  required
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                />
-              </label>
-            )}
-            <button className="button primary" disabled={!online}>
-              {requested ? "Verify code" : "Send sign-in code"}{" "}
-              <ArrowUpRight size={17} />
-            </button>
-          </form>
-          <p role="status">{message}</p>
+          {!signedIn && (
+            <>
+              <h2>Sign in securely</h2>
+              <p>
+                Use the email associated with your approved membership. We’ll
+                send you a one-time code.
+              </p>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    if (requested) {
+                      await verifyCode(
+                        email,
+                        String(new FormData(e.currentTarget).get("code")),
+                      );
+                      setSignedIn(true);
+                      setMessage("Signed in to the isolated test project.");
+                    } else {
+                      await requestCode(email);
+                      setRequested(true);
+                      setMessage(
+                        "If your account is eligible, a code is on its way.",
+                      );
+                    }
+                  } catch (e) {
+                    setMessage((e as Error).message);
+                  }
+                }}
+              >
+                <label>
+                  Email address
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </label>
+                {requested && (
+                  <label>
+                    One-time code
+                    <input
+                      name="code"
+                      required
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
+                    />
+                  </label>
+                )}
+                <button className="button primary" disabled={!online}>
+                  {requested ? "Verify code" : "Send sign-in code"}{" "}
+                  <ArrowUpRight size={17} />
+                </button>
+              </form>
+              <p role="status">{message}</p>
+            </>
+          )}
           {signedIn && <MemberDashboard />}
         </Card>
         <Card>

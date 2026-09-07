@@ -3,9 +3,6 @@ export interface ProviderConfig {
   mode: "provider-sandbox" | "live";
   mailKey?: string;
   mailFrom?: string;
-  twilioSid?: string;
-  twilioToken?: string;
-  smsFrom?: string;
   appUrl: string;
   allowRealRecipients: boolean;
   unsubscribeUrl?: string;
@@ -39,7 +36,7 @@ export function notificationText(template: string, appUrl: string) {
     "session.cancelled":
       "The school session has been cancelled. Check the app for your physical shuttlecock credit.",
   };
-  return `${messages[template] ?? "Your league record has changed. Open the app for details."}\n${appUrl}\nManage reminders in Member hub. Reply STOP to stop texts.`;
+  return `${messages[template] ?? "Your league record has changed. Open the app for details."}\n${appUrl}\nManage reminders in Member hub.`;
 }
 export async function sendProvider(
   job: ProviderJob,
@@ -61,36 +58,7 @@ export async function sendProvider(
     (job.channel === "email" && config.unsubscribeUrl
       ? `\nUnsubscribe without signing in: ${config.unsubscribeUrl}`
       : "");
-  if (job.channel === "sms") {
-    if (config.mode !== "live") return { status: "suppressed" as const };
-    if (
-      !config.twilioSid ||
-      !config.twilioToken ||
-      !config.smsFrom ||
-      !target.phone
-    )
-      throw new Error("SMS configuration missing");
-    const response = await fetcher(
-      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.twilioSid)}/Messages.json`,
-      {
-        method: "POST",
-        signal: AbortSignal.timeout(15000),
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${config.twilioSid}:${config.twilioToken}`).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          To: target.phone.startsWith("+") ? target.phone : `+${target.phone}`,
-          From: config.smsFrom,
-          Body: text,
-        }),
-      },
-    );
-    if (!response.ok) throw new Error("SMS provider did not accept message");
-    const receipt = (await response.json()) as { sid?: string };
-    if (!receipt.sid) throw new Error("Missing provider ID");
-    return { status: "accepted" as const, id: receipt.sid };
-  }
+  if (job.channel === "sms") return { status: "suppressed" as const };
   if (!config.mailKey || !config.mailFrom)
     throw new Error("Email configuration missing");
   const to =

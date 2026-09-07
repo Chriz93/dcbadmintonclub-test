@@ -42,6 +42,10 @@ export function SeasonAgreementRules() {
         </li>
       </ul>
       <p>
+        A fresh agreement is required for each season. You can download your
+        previous signed agreements.
+      </p>
+      <p>
         The youngest current participants are 16. Players aged 16–17 need a
         separate parent/legal-guardian signing flow; players aged 18 or older
         sign for themselves. The guardian must review the agreement and provide

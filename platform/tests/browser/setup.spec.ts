@@ -96,7 +96,9 @@ test("administrator edits public settings with a reason and safely renders annou
   await page.getByRole("button", { name: "Send sign-in code" }).click();
   await page.getByLabel("One-time code").fill("123456");
   await page.getByRole("button", { name: "Verify code", exact: true }).click();
-  await expect(page.getByRole("heading", {name:"Your upcoming sessions"})).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your upcoming sessions" }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Administration", exact: true })
     .click();

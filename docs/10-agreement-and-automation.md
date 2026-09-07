@@ -25,13 +25,13 @@ Spare claims are not reservations. They expire after 24 hours or at session star
 
 ## Ratings and courts
 
-Administration accepts Christy's seed order. Initial rating is 1000 plus 15 points for each lower seed. Starting placement sorts rating, seed, then stable member ID. Doubles ELO uses team average ratings, expected score with a 400-point scale, and K=32 averaged per played round, keeping 3-game and 4-game rounds equally weighted. Rest does not create a result. Completed-session scores drive ELO; correcting/reopening history rebuilds it chronologically.
+Administration accepts Christy's seed order only for approved players with this season’s signed agreement. Each new season requires its own acceptance; previous receipts remain intact. Initial rating is 1000 plus 15 points for each lower seed. Starting placement sorts rating, seed, then stable member ID. Doubles ELO uses team average ratings, expected score with a 400-point scale, and K=32 averaged per played round, keeping 3-game and 4-game rounds equally weighted. Rest does not create a result. Completed-session scores drive ELO; correcting/reopening history rebuilds it chronologically.
 
 Subsequent rounds use ladder movement. Administrators preview, move players, sit a player out, add checked-in players, correct scores, restart a round and safely undo a restart before replacement work exists. Every saved correction requires MFA, revision checks and a reason. Standings contains performance ranking plus the separate ELO table.
 
 ## External delivery setup
 
-The server worker supports Resend email and Twilio SMS, with consent checks, leases and bounded retry. Provider acceptance is recorded as **accepted**, not delivered. SMS with an uncertain outcome is held for manual provider reconciliation. No provider was enabled, no club notices were sent, and no paid service was activated. See `11-operations-runbook.md` for setup and remaining delivery gates.
+The server worker supports free-tier Resend email with consent checks, leases, bounded retry and a 90/day, 2,500/month application budget. SMS is disabled and its billable adapter removed. Court changes stay in the app. Provider acceptance is recorded as **accepted**, not delivered. SMS with an uncertain outcome is held for manual provider reconciliation. No provider was enabled, no club notices were sent, and no paid service was activated. See `11-operations-runbook.md` for setup and remaining delivery gates.
 
 Personal Messenger group poll automation is not implemented. Earlier research did not identify a supported API for reading those polls or messaging personal group nonvoters. The app is the attendance record; chat groups distribute its link.
 

@@ -2,19 +2,19 @@
 
 ## Deployment status
 
-Migrations **001–021 are applied to TEST wgolevihkvmosajumzvl**. The ten new migrations were applied together transactionally after the Mac was unlocked. The live permission audit passed and Maplewood operations are enabled with the confirmed $14/72-hour/physical-shuttle policies. Do not replay these migrations. Production has not been upgraded.
+Migrations **001–023 are applied to TEST wgolevihkvmosajumzvl**. Migrations 022–023 add season-scoped seeding, personal match history, free-email budgets and rehearsal fixes. The live permission audit passed and Maplewood operations are enabled with the confirmed $14/72-hour/physical-shuttle policies. Do not replay these migrations. Production has not been upgraded.
 
-The live rollback rehearsal passed refund, spare, guardian, scoring, ELO and restart/undo checks; all synthetic accounts and records were rolled back. Member agreement and session-account screens loaded in the real signed-in app. The user renewed administrator verification successfully; club records, attendance/accounts and club setup loaded against TEST.
+The live rollback rehearsal passed refund, spare, guardian, scoring, ELO and restart/undo checks; that earlier rehearsal rolled back its data. A separate 25-player, 80-game rehearsal now remains in TEST for review; see `12-matchday-review.md`. Member agreement and session-account screens loaded in the real signed-in app. The user renewed administrator verification successfully; club records, attendance/accounts and club setup loaded against TEST.
 
 Validate with separate adult, guardian and administrator accounts in TEST: intake, agreement, payment approval, RSVP/refund, spare booking, attendance, first and subsequent rounds, score conflict, completion, correction, restart/undo. Local synthetic tests are not a substitute for this live acceptance pass.
 
 ## Scheduled reminders
 
-Install Node 24 and project dependencies on a private server. Copy `platform/scripts/operations.env.example` outside the repository, restrict permissions to 0600, and populate secrets through the host's secret manager. The browser must never receive the service-role, mail, Twilio, or database keys.
+Install Node 24 and project dependencies on a private server. Copy `platform/scripts/operations.env.example` outside the repository, restrict permissions to 0600, and populate secrets through the host's secret manager. The browser must never receive the service-role, mail or database keys.
 
 Invoke `node --env-file=/PRIVATE/PATH/operations.env --experimental-strip-types scripts/notification-worker.ts` from `platform/` once per minute using the host scheduler. Do not activate this schedule until sender/provider setup and an authorized test are complete. Multiple invocations use database leases, but monitor abnormal overlaps.
 
-Start with `DELIVERY_MODE=provider-sandbox` and `ALLOW_REAL_RECIPIENTS=false`. Only the Resend sandbox recipient is used; SMS is suppressed. Live delivery requires explicit operator enablement, a verified sender, verified phone provider configuration for Auth, per-member channel consent, and an authorized test recipient. Configure Twilio STOP handling and the operational contact/unsubscribe process before real use. The signed no-login unsubscribe endpoint is implemented in `scripts/unsubscribe-server.ts`: host it behind HTTPS, set the same signing key in worker/server, and configure `UNSUBSCRIBE_URL` plus the organizer contact in `SENDER_CONTACT`. GET shows confirmation; POST disables only the signed club/person/channel. Never log token-bearing URLs. Test public routing before delivery enablement. Complete delivery-policy review before enabling bulk notices.
+Start with `DELIVERY_MODE=provider-sandbox` and `ALLOW_REAL_RECIPIENTS=false`. Only the Resend sandbox recipient is used; SMS is suppressed. Live delivery requires explicit operator enablement, a verified free-tier email sender, per-member email consent, and an authorized test recipient. SMS is disabled under the zero-cost policy. The worker reserves at most 90 emails per UTC day and 2,500 per UTC month, leaving headroom within Resend Free (100/day, 3,000/month). These are application limits, not visibility into other senders sharing the account. Court changes are in-app only, avoiding 100 emails across four rounds. The signed no-login unsubscribe endpoint is implemented in `scripts/unsubscribe-server.ts`: host it behind HTTPS, set the same signing key in worker/server, and configure `UNSUBSCRIBE_URL` plus the organizer contact in `SENDER_CONTACT`. GET shows confirmation; POST disables only the signed club/person/channel. Never log token-bearing URLs. Test public routing before delivery enablement. Complete delivery-policy review before enabling bulk notices.
 
 The worker is deliberately guarded to this TEST reference. A future production worker needs a separate reviewed deployment configuration. The supplied code does not silently enable production.
 
@@ -34,7 +34,7 @@ Refresh before editing. Use Courtside for scores and court plans; use Administra
 
 - Remaining distinct-account browser acceptance checks.
 - Reviewed agreement from Christy; initial seed order after players onboard.
-- Public hosting/domain and an approved production cutover.
+- Public hosting/domain and completion of the user’s conditionally approved production cutover gates.
 - Sender/provider credentials, consent/unsubscribe setup and authorized delivery test.
 - Verified encrypted external database backup and isolated restore.
 - Legacy member identity mapping if historical production records are to be migrated.

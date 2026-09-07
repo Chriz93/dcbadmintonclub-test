@@ -1,6 +1,6 @@
 # Verification report — staging work in progress
 
-Date: 2026-09-06. Production launch is not approved. This is evidence for the current test implementation, not a completed acceptance sign-off.
+Latest review: 2026-09-07. The user conditionally approved launch after all checks pass; agreement review and remaining operational gates are outstanding. **Current evidence: 124 automated tests, 24 desktop/mobile browser checks, build and lint passed; migrations 001–023 applied to TEST; a live 25-player/80-game rehearsal is saved.** See `12-matchday-review.md` for the current report. The dated phase records below are historical and are superseded where noted; they are not a completed release sign-off.
 
 ## Automated evidence
 
