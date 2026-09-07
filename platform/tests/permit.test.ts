@@ -25,3 +25,25 @@ it("manual corrections remain schema validated", () => {
   ).toHaveLength(1);
   expect(() => validatePermitRows("bad date", "P", "Gym", "A")).toThrow();
 });
+
+it("reads the actual OCDSB printed format without turning cancellations into bookings", () => {
+  const result = proposeBookings(
+    "Permit 2026-07-21-0001\nApproved Tue, Sep 15, 2026 8:15pm 10:15pm Maplewood Secondary School\nCancelled Tue, Apr 06, 2027 8:15pm 10:15pm Maplewood Secondary School\nTue, May 25, 2027 8:15pm 10:15pm",
+  );
+  expect(result.proposals).toEqual([
+    "2026-09-15 20:15 22:15 active",
+    "2027-04-06 20:15 22:15 cancelled",
+  ]);
+  expect(result.unresolved).toHaveLength(1);
+});
+
+it("matches all 34 original permit rows to the seeded dates and statuses", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { season } = await import("../src/domain/schedule");
+  const text = readFileSync("tests/fixtures/maplewood-permit-rows.txt", "utf8");
+  const proposed = proposeBookings(text);
+  expect(proposed.unresolved).toHaveLength(0);
+  expect(proposed.proposals).toEqual(
+    season.map((s) => `${s.date} ${s.start} ${s.end} ${s.status}`),
+  );
+});

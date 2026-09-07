@@ -529,3 +529,160 @@ it("rejects permit rows with an omitted booking status", async () => {
     ),
   ).rejects.toThrow("Invalid booking");
 });
+
+describe.sequential("league recovery and intake", () => {
+  const completed = "30000000-0000-0000-0000-000000000002";
+  it("restricts standings to club members", async () => {
+    const r = await as(
+      u,
+      `select * from club_app.league_standings('${c}','${seasonId}')`,
+    );
+    expect(r[0].rows.length).toBeGreaterThan(0);
+    expect(Object.keys(r[0].rows[0])).not.toContain("email");
+    await expect(
+      as(
+        u,
+        `select * from club_app.league_standings('${other}','${seasonId}')`,
+      ),
+    ).rejects.toThrow("Club membership required");
+  });
+  it("corrects completed scores only with MFA and current revision", async () => {
+    await db.exec("delete from club_app.rate_limits");
+    const {
+      rows: [m],
+    } = await db.query<{ id: string; revision: number; target: number }>(
+      `select id,revision,target from club_app.matches where session_id='${completed}' limit 1`,
+    );
+    const sql = `select club_app.correct_score('${c}','${m.id}',0,${m.target},${m.revision},'Correct transposed score')`;
+    await expect(as(u, sql)).rejects.toThrow("Administrator MFA required");
+    await expect(as(admin, sql)).rejects.toThrow("Administrator MFA required");
+    await as(admin, sql, "aal2");
+    await expect(as(admin, sql, "aal2")).rejects.toThrow("Revision conflict");
+    expect(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from club_app.audit_events where action='score.corrected'`,
+        )
+      ).rows[0].n,
+    ).toBe(1);
+  });
+  it("rejects stale restart previews and retains old rounds in audit", async () => {
+    const {
+      rows: [ss],
+    } = await db.query<{ revision: number }>(
+      `select revision from club_app.sessions where id='${completed}'`,
+    );
+    const {
+      rows: [snapshot],
+    } = await db.query<{ versions: unknown }>(
+      `select jsonb_object_agg(id::text,revision) versions from club_app.matches where session_id='${completed}'`,
+    );
+    await expect(
+      as(
+        admin,
+        `select club_app.restart_round('${c}','${completed}',1,${ss.revision},'{}','Fix wrong initial seeding')`,
+        "aal2",
+      ),
+    ).rejects.toThrow("Match revision conflict");
+    await as(
+      admin,
+      `select club_app.restart_round('${c}','${completed}',1,${ss.revision},'${JSON.stringify(snapshot.versions)}','Fix wrong initial seeding')`,
+      "aal2",
+    );
+    expect(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from club_app.matches where session_id='${completed}'`,
+        )
+      ).rows[0].n,
+    ).toBe(0);
+    expect(
+      (
+        await db.query<{ status: string }>(
+          `select status from club_app.sessions where id='${completed}'`,
+        )
+      ).rows[0].status,
+    ).toBe("active");
+    expect(
+      (
+        await db.query<{ n: number }>(
+          `select jsonb_array_length(before_value->'matches') n from club_app.audit_events where action='round.restarted'`,
+        )
+      ).rows[0].n,
+    ).toBe(20);
+  });
+  it("keeps payment claims unverified, private and protected by revisions", async () => {
+    await db.exec(
+      `update auth.users set email='a@example.invalid',email_confirmed_at=now() where id='${u}'`,
+    );
+    const sql = `select club_app.submit_intake('${c}','${seasonId}','Legal Name','Display Name','555-0100','Emergency 555-0101','regular','TEST-REFERENCE',40000,0)`;
+    await as(u, sql);
+    expect(
+      (
+        await as(
+          u,
+          `select payment_status,revision from club_app.member_intake`,
+        )
+      )[0].rows,
+    ).toEqual([{ payment_status: "unverified", revision: 1 }]);
+    expect(
+      (await as(v, `select * from club_app.member_intake`))[0].rows,
+    ).toHaveLength(0);
+    await expect(
+      as(u, `update club_app.member_intake set payment_status='verified'`),
+    ).rejects.toThrow("permission denied");
+    await expect(as(u, sql)).rejects.toThrow("Revision conflict");
+    await expect(
+      as(
+        u,
+        `select club_app.verify_intake_payment('${c}','${seasonId}','${u}',1,'Bank payment checked')`,
+      ),
+    ).rejects.toThrow("Administrator MFA required");
+    await as(
+      admin,
+      `select club_app.verify_intake_payment('${c}','${seasonId}','${u}',1,'Bank payment checked')`,
+      "aal2",
+    );
+    await expect(as(u, sql.replace("40000,0", "40000,2"))).rejects.toThrow(
+      "Ask administrator",
+    );
+  });
+});
+
+it("requires the current participant waiver before approving paid intake", async () => {
+  await db.exec(
+    `delete from club_app.rate_limits;update club_app.seasons set rules=rules||'{"requireIntake":true,"regularFeeCents":40000}' where id='${seasonId}'`,
+  );
+  await expect(
+    as(
+      admin,
+      `select club_app.approve_member('${c}','${seasonId}','${u}')`,
+      "aal2",
+    ),
+  ).rejects.toThrow("Latest participant waiver acceptance required");
+  const {
+    rows: [w],
+  } = await db.query<{ id: string }>(
+    `select id from club_app.waiver_versions where club_id='${c}' order by version desc limit 1`,
+  );
+  await as(
+    u,
+    `select club_app.register_member('${c}','${seasonId}','Display Name','${w.id}')`,
+  );
+  await as(
+    admin,
+    `select club_app.approve_member('${c}','${seasonId}','${u}')`,
+    "aal2",
+  );
+  expect(
+    (
+      await db.query<{ status: string }>(
+        `select status from club_app.registrations where season_id='${seasonId}' and user_id='${u}'`,
+      )
+    ).rows[0].status,
+  ).toBe("approved");
+  const result = await as(u, "select club_app.export_my_data() data");
+  expect(
+    (result[0].rows[0] as { data: { intake: unknown[] } }).data.intake,
+  ).toHaveLength(1);
+});

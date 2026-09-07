@@ -11,3 +11,7 @@ Opt in to transactional email using Email preferences. Clear the checkbox and sa
 The courtside screen currently demonstrates rotation with synthetic players. Games on five-player courts target 15 points; each of five games rests one player. Do not use practice scores as official results. Offline mode is read-only. Full profile/waiver/results and registration screens are still being integrated.
 
 In connected test mode, use **Load my profile and results** to read your own display name, phone, completed-season statistics and waiver acceptance timestamps. **Save my profile** only updates your own record. Connected Schedule reads current database bookings; its subscription link currently points to the local test feed and is not a publicly hosted calendar.
+
+## Maplewood Advanced League 2026–27
+
+Member hub now accepts legal/display names, phone, emergency contact, regular/spare request and e-transfer claim after sign-in. Regular registration is closed; this form is for accepted players and spare applicants. Saving is not approval or payment confirmation. Waiver acceptance remains a separate step and is unavailable until a reviewed participant waiver is published. Open **Standings** for completed-session performance; use **Member hub → Your profile and results** for your own records.

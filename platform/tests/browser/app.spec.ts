@@ -60,6 +60,7 @@ test("public pages have no serious accessibility violations", async ({
     "Season schedule",
     "Courtside",
     "Member hub",
+    "Standings",
     "Administration",
   ]) {
     await page.getByRole("button", { name: route, exact: true }).click();

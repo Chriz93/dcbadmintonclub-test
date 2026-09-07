@@ -38,9 +38,13 @@ export function Registration() {
   const choice = options.find((o) => o.season_id === selected);
   return (
     <section>
-      <h3>Apply for a season</h3>
+      <h3>Accept your participant waiver</h3>
       {!choice ? (
-        <p>Registration opens after the club publishes its season waiver.</p>
+        <p>
+          You can save your details above now. Waiver signing becomes available
+          after the club publishes its reviewed participant waiver. Facility
+          rules are not a substitute.
+        </p>
       ) : (
         <form
           onSubmit={async (e) => {

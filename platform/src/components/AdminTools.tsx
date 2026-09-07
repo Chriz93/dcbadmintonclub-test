@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../services/auth";
 import { Card } from "./ui";
 import { z } from "zod";
@@ -13,6 +13,16 @@ const registration = z.object({
   season_id: z.string(),
   status: z.string(),
 });
+const intakeSchema = z.object({
+  user_id: z.string(),
+  season_id: z.string(),
+  legal_name: z.string(),
+  kind: z.string(),
+  payment_reference: z.string(),
+  claimed_amount_cents: z.number(),
+  payment_status: z.string(),
+  revision: z.number(),
+});
 const audit = z.object({ action: z.string(), created_at: z.string() });
 const delivery = z.object({
   status: z.string(),
@@ -20,6 +30,8 @@ const delivery = z.object({
   attempts: z.number(),
 });
 export function AdminTools() {
+  const [intakes, setIntakes] = useState<z.infer<typeof intakeSchema>[]>([]);
+  const [paymentReason, setPaymentReason] = useState("");
   const [club, setClub] = useState(""),
     [clubs, setClubs] = useState<{ id: string; name: string }[]>([]),
     [sessions, setSessions] = useState<z.infer<typeof session>[]>([]),
@@ -32,6 +44,38 @@ export function AdminTools() {
     [code, setCode] = useState(""),
     [isAdmin, setIsAdmin] = useState(false),
     [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      if (!supabase) return;
+      const assurance =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assurance.error || assurance.data.currentLevel !== "aal2") return;
+      const result = await supabase.from("clubs").select("id,name");
+      if (result.error) return;
+      const candidates = z
+        .array(z.object({ id: z.string(), name: z.string() }))
+        .parse(result.data);
+      const allowed = await Promise.all(
+        candidates.map(async (c) => ({
+          club: c,
+          access: await supabase!.rpc("is_admin", { c: c.id }),
+        })),
+      );
+      const rows = allowed
+        .filter((r) => !r.access.error && r.access.data === true)
+        .map((r) => r.club);
+      if (alive && rows.length) {
+        setClubs(rows);
+        setClub(rows[0].id);
+        setIsAdmin(true);
+        setMessage("Your existing verified administrator session is ready.");
+      }
+    })().catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   async function verify() {
     if (!supabase) return;
     try {
@@ -109,8 +153,15 @@ export function AdminTools() {
           .eq("club_id", club)
           .order("created_at", { ascending: false })
           .limit(30),
+        supabase
+          .from("member_intake")
+          .select(
+            "user_id,season_id,legal_name,kind,payment_reference,claimed_amount_cents,payment_status,revision",
+          )
+          .eq("club_id", club),
       ]);
       if (results.some((r) => r.error)) throw new Error();
+      setIntakes(z.array(intakeSchema).parse(results[4].data));
       setSessions(z.array(session).parse(results[0].data));
       setPending(z.array(registration).parse(results[1].data));
       setEvents(z.array(audit).parse(results[2].data));
@@ -179,13 +230,92 @@ export function AdminTools() {
           >
             Load club records
           </button>
+          <h3>Payment review</h3>
+          <p>
+            Check your bank record before verifying. A payment claim does not
+            prove receipt or approve membership.
+          </p>
+          <label>
+            Verification note
+            <input
+              value={paymentReason}
+              minLength={5}
+              maxLength={500}
+              disabled={busy}
+              onChange={(e) => setPaymentReason(e.target.value)}
+            />
+          </label>
+          {intakes.map((i) => (
+            <div className="admin-record" key={`${i.season_id}/${i.user_id}`}>
+              <p>
+                {i.legal_name} · {i.kind} · $
+                {(i.claimed_amount_cents / 100).toFixed(2)} claimed ·{" "}
+                {i.payment_status}
+                <br />
+                Reference: {i.payment_reference || "Not supplied"}
+              </p>
+              <button
+                className="button"
+                disabled={
+                  busy ||
+                  i.payment_status === "verified" ||
+                  paymentReason.trim().length < 5 ||
+                  !navigator.onLine
+                }
+                onClick={async () => {
+                  if (!supabase) return;
+                  setBusy(true);
+                  try {
+                    const { error } = await supabase.rpc(
+                      "verify_intake_payment",
+                      {
+                        c: club,
+                        s: i.season_id,
+                        u: i.user_id,
+                        expected_revision: i.revision,
+                        reason: paymentReason.trim(),
+                      },
+                    );
+                    if (error) throw error;
+                    setIntakes((rows) =>
+                      rows.map((r) =>
+                        r === i
+                          ? {
+                              ...r,
+                              payment_status: "verified",
+                              revision: r.revision + 1,
+                            }
+                          : r,
+                      ),
+                    );
+                    setMessage(
+                      "Payment verified. Review the waiver and membership separately.",
+                    );
+                  } catch {
+                    setMessage(
+                      "Verification not confirmed. Reload records before retrying.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Confirm bank payment received
+              </button>
+            </div>
+          ))}
           <h3>Pending registrations</h3>
           {pending.length === 0 ? (
             <p>No pending registrations loaded.</p>
           ) : (
             pending.map((p) => (
               <div key={`${p.season_id}/${p.user_id}`} className="admin-record">
-                <span>Member {p.user_id}</span>
+                <span>
+                  {intakes.find(
+                    (i) =>
+                      i.user_id === p.user_id && i.season_id === p.season_id,
+                  )?.legal_name ?? `Member ${p.user_id}`}
+                </span>
                 <button
                   className="button"
                   disabled={busy}

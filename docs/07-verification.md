@@ -4,16 +4,16 @@ Date: 2026-09-06. Production launch is not approved. This is evidence for the cu
 
 ## Automated evidence
 
-- 74 tests passed: 34 domain/config, 3 PDF parsing, 3 live-calendar handler tests, 1 repeatable seed, 33 PostgreSQL/RLS behavior tests.
-- 14 browser tests passed in the final run, including connected courtside target sizing and live-schedule rendering: desktop and mobile home/schedule, Court 6 practice rotation/scoring, all five public-route accessibility scans, local PDF preview, dark appearance/overflow and compiled offline read-only shell. Axe found zero violations in the scanned states; this is not a complete manual WCAG conformance audit.
-- Coverage: 97.51% statements/lines, 88.75% branches, 94.73% functions for domain services and configuration only. UI and SQL are not included in this percentage.
-- ESLint and TypeScript production build passed. Initial JS/CSS gzip: 161.3 KiB against 220 KiB budget. PDF parser/worker load separately. Build checks found no server-secret markers.
+- 81 tests passed: 34 domain/config, 5 PDF parsing (including all original permit rows), 3 live-calendar handler tests, 1 repeatable seed, 38 PostgreSQL/RLS behavior tests.
+- 16 browser tests passed in the final run, including connected courtside target sizing and live-schedule rendering: desktop and mobile home/schedule, Court 6 practice rotation/scoring, all six public-route accessibility scans, editable court previews and member standings, local PDF preview, dark appearance/overflow and compiled offline read-only shell. Axe found zero violations in the scanned states; this is not a complete manual WCAG conformance audit.
+- Prior-phase coverage (not rerun for this phase): 97.51% statements/lines, 88.75% branches, 94.73% functions for domain services and configuration only. UI and SQL are not included in this percentage.
+- ESLint and TypeScript production build passed. Initial JS/CSS gzip: 165.1 KiB against 220 KiB budget. PDF parser/worker load separately. Build checks found no server-secret markers.
 - Dependency audit after upgrades reported no known vulnerabilities. CI configuration contains the checks but has not run on GitHub; nothing was pushed.
 - Local PostgreSQL archive restore preserved synthetic rankings and anonymous denial. This does not establish remote RTO/RPO or backup completeness.
 
 ## Live TEST evidence
 
-`wgolevihkvmosajumzvl`: 32 legacy players, 26 state records, 0 announcements preserved in protected internal snapshot and original tables. Anonymous legacy reads/writes and snapshot access denied. New schema: 24 tables, all RLS enabled, zero anonymous table grants, zero authenticated direct write grants. Anonymous function access limited to two safe public read RPCs. Season: 28 scheduled, 6 cancelled, 56 hours, 6 courts, 25 regular capacity, zero seeded real members. Dates derive from user transcription; original permit PDF verification remains outstanding.
+`wgolevihkvmosajumzvl`: 32 legacy players, 26 state records, 0 announcements preserved in protected internal snapshot and original tables. Anonymous legacy reads/writes and snapshot access denied. New schema: 24 tables, all RLS enabled, zero anonymous table grants, zero authenticated direct write grants. Anonymous function access limited to two safe public read RPCs. Season: 28 scheduled, 6 cancelled, 56 hours, 6 courts, 25 regular capacity, zero seeded real members. The original permit PDF is now verified against all 34 stored dates/statuses; provenance and source hash are recorded.
 
 ## Release blockers and remaining work
 
@@ -31,3 +31,9 @@ Production files and database were not modified. No production deployment, paid 
 Migrations 007–008 add a tenant-limited display-name roster and reject null revisions/permit totals and omitted booking statuses. Private implementation functions have no browser EXECUTE grants. Local adversarial regression tests pass. The migration is applied to TEST only.
 
 Final live guard verification: 4 guarded revision RPCs, 0 browser-callable private implementations, 0 new tables without RLS, 32 preserved legacy players, 26 preserved state records and 0 club notification jobs.
+
+## Maplewood intake and correction phase
+
+Migrations 009–011 and `scripts/maplewood-policy.sql` applied to TEST only. New private intake table has RLS; browser writes occur only through RPCs. Completed scores and round restart have MFA, stale-revision checks and audit records; restart snapshots every removed match and assignment. A minimal member-only standings RPC exposes no private profile fields. Actual signed-in standings and intake screens loaded against TEST. No actual intake, payment verification, waiver or match was created in TEST. See `09-maplewood-season.md` for precise remaining work.
+
+Final phase permission audit: 0 tables without RLS; anonymous intake SELECT false; member direct intake UPDATE false; private aggregate helper EXECUTE false; 6 new public RPC definitions present; intake requirement enabled; 28 scheduled and 6 cancelled sessions; 0 intakes, 0 waivers and 0 notification jobs.

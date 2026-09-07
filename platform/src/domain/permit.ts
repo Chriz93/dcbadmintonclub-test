@@ -3,13 +3,40 @@ export function proposeBookings(text: string) {
   const permit = text.match(/\b20\d{2}-\d{2}-\d{2}-\d{4}\b/)?.[0] ?? "";
   const proposals: string[] = [];
   const unresolved: string[] = [];
-  // Only unambiguous machine-readable rows are auto-proposed. No inferred cancellations.
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  // Explicit row status is required, including for struck-through cancellations.
   for (const line of text.split(/\r?\n/)) {
-    const date = line.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1];
-    if (!date || (line.includes(permit) && permit)) continue;
-    const times = [...line.matchAll(/\b([01]\d|2[0-3]):([0-5]\d)\b/g)].map(
-      (m) => m[0],
+    const printed = line.match(
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(20\d{2})\b/,
     );
+    const date =
+      line.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1] ??
+      (printed
+        ? `${printed[3]}-${String(months.indexOf(printed[1]) + 1).padStart(2, "0")}-${printed[2].padStart(2, "0")}`
+        : undefined);
+    if (!date || (line.includes(permit) && permit)) continue;
+    const clock12 = [
+      ...line.matchAll(/\b(1[0-2]|0?[1-9]):([0-5]\d)\s*(am|pm)\b/gi),
+    ];
+    const times = clock12.length
+      ? clock12.map(
+          (m) =>
+            `${String((Number(m[1]) % 12) + (m[3].toLowerCase() === "pm" ? 12 : 0)).padStart(2, "0")}:${m[2]}`,
+        )
+      : [...line.matchAll(/\b([01]\d|2[0-3]):([0-5]\d)\b/g)].map((m) => m[0]);
     const state = /\bcancelled\b/i.test(line)
       ? "cancelled"
       : /\b(approved|active|confirmed)\b/i.test(line)

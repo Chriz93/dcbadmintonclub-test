@@ -1,3 +1,4 @@
+import { Standings } from "./components/Standings";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { PermitCommit } from "./components/PermitCommit";
@@ -50,6 +51,7 @@ const links = [
   ["schedule", "Season schedule", CalendarDays],
   ["courts", "Courtside", LayoutGrid],
   ["member", "Member hub", Users],
+  ["standings", "Standings", Activity],
   ["admin", "Administration", Settings],
 ] as const;
 type Route = (typeof links)[number][0];
@@ -142,13 +144,16 @@ export default function App() {
           </span>
           <Badge tone="test">ISOLATED TEST</Badge>
         </header>
-        <div className="preview-banner">
+        <div
+          className="preview-banner"
+          role="region"
+          aria-label="Test environment status"
+        >
           <ShieldCheck size={17} />
           <span>
-            Local preview · Synthetic players ·{" "}
             {supabase
-              ? "Test authentication configured"
-              : "No database connected"}
+              ? "Connected TEST · Private member records"
+              : "Local preview · Synthetic players · No database connected"}
           </span>
           <span className="online">
             {online ? "Online" : "Offline · Read only"}
@@ -205,7 +210,7 @@ export default function App() {
                   <h2>
                     One club.
                     <br />
-                    All levels welcome.
+                    Advanced ladder league.
                   </h2>
                   <div className="stat-grid">
                     <div>
@@ -222,12 +227,13 @@ export default function App() {
                     </div>
                     <div>
                       <strong>56</strong>
-                      <span>hours of play</span>
+                      <span>booked hours</span>
                     </div>
                   </div>
                   <p>
-                    Friendly competition, rotating partners and a place to make
-                    Tuesday your favourite night.
+                    Registration is closed. Confirmed players can complete their
+                    details in Member hub. Regular season: $400. Spares: $20 per
+                    session.
                   </p>
                   <button
                     className="text-button"
@@ -253,7 +259,8 @@ export default function App() {
                     Gym rooms 127C &amp; 127D.
                   </p>
                   <span className="quiet">
-                    Arrive ready for an 8:15 PM start.
+                    Enter at 8:15 PM. Finish play by 10:05 PM; leave by 10:15
+                    PM.
                   </span>
                 </Card>
                 <Card>
@@ -298,14 +305,17 @@ export default function App() {
                 </div>
                 <p>
                   Bring indoor non-marking shoes. Warm up safely, call your own
-                  lines fairly, and welcome every partner. Final season fees,
-                  contact details and waiver text await administrator
-                  confirmation.
+                  lines fairly, and respect every partner. Victor Master 3
+                  shuttles: two per player per session. Give at least 3 days’
+                  notice for an absence refund. Facility cancellations have no
+                  cash refund; the two-bird allotment is returned. Participant
+                  waiver review is pending.
                 </p>
               </Card>
             </>
           )}
           {route === "schedule" && <Schedule />}
+          {route === "standings" && <Standings />}
           {route === "courts" &&
             (supabase ? (
               <SessionWorkspace online={online} />
@@ -818,9 +828,9 @@ function Member({
             </li>
           </ul>
           <p>
-            The local preview contains no real member profiles. Connected
-            membership workflows require the reviewed database migration and
-            test accounts.
+            Contact, emergency and payment details are private to you and
+            authorized administrators. Your chosen display name and league
+            results are visible to fellow members.
           </p>
         </Card>
       </div>
@@ -846,9 +856,10 @@ function Admin() {
         <Badge tone="test">LOCAL IMPORT PREVIEW</Badge>
         <h2>Review permit dates</h2>
         <p>
-          Permit #2026-07-21-0001 · {venue} · Rooms 127C &amp; 127D. The
-          supplied dates are transcribed from your request; the original PDF has
-          not been provided. Nothing is written to a database here.
+          Permit #2026-07-21-0001 · {venue} · Rooms 127C &amp; 127D. The 34
+          dates were verified against the supplied original PDF: 28 approved and
+          6 cancelled. This preview does not save changes until you explicitly
+          confirm an import.
         </p>
         <PermitUpload
           onSource={setSource}

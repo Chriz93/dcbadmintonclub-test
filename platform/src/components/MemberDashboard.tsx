@@ -1,3 +1,4 @@
+import { SeasonIntake } from "./SeasonIntake";
 import { PersonalRecords } from "./PersonalRecords";
 import { Registration } from "./Registration";
 import { useEffect, useState } from "react";
@@ -300,6 +301,7 @@ export function MemberDashboard() {
           </button>
         </>
       )}
+      <SeasonIntake />
       <Registration />
       <PersonalRecords />
       <h3>Your personal data</h3>

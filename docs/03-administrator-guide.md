@@ -27,3 +27,7 @@ Deploy a server-only scheduled worker only after a separate provider setup. `scr
 Review queue lag and failures after each session. Investigate repeated revision conflicts. Never replay jobs already delivered without comparing provider IDs. Confirm backups restore, not merely download. Keep error logs to action, time, request ID, error code and tenant ID; avoid email, medical data, message content and tokens. No external telemetry configured yet.
 
 Real member OTP and administrator TOTP were verified with the user on 2026-09-06. Do not reload the app to refresh data: Auth tokens intentionally live in memory, so a full reload requires signing in again. Use in-app refresh controls.
+
+## Maplewood intake and corrections
+
+Open Administration and load club records to review payment claims by name. Check your bank before confirming payment; membership approval is separate and requires the current participant waiver and full regular fee. In Courtside, preview assignments and use each player’s court selector to fix placement. Enter a correction reason to edit saved scores, including completed sessions. Restarting a round removes it and all later rounds from results, retains an audit snapshot, and reopens the session for reassignment. There is no one-click restoration yet. See `09-maplewood-season.md` for pending automation and launch gates.

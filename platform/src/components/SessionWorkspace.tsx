@@ -43,6 +43,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   const [plan, setPlan] = useState<Plan>([]);
   const [round, setRound] = useState(1);
   const [reason, setReason] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
   const [admin, setAdmin] = useState(false);
   const [scorekeeper, setScorekeeper] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -320,11 +321,39 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                 Preview court assignments
               </button>
               {plan.map((p, i) => (
-                <p key={p.court_id}>
-                  Court {courts[i].number}:{" "}
-                  {p.players.map(name).join(", ") || "Empty"}
-                  {p.players.length === 5 ? " · five-player rotation" : ""}
-                </p>
+                <fieldset key={p.court_id}>
+                  <legend>
+                    Court {courts[i].number} · {p.players.length} players
+                  </legend>
+                  {p.players.map((id) => (
+                    <label key={id}>
+                      {name(id)}
+                      <select
+                        aria-label={`Court for ${name(id)}`}
+                        value={p.court_id}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          const destination = e.target.value;
+                          setPlan((rows) =>
+                            rows.map((row) => ({
+                              ...row,
+                              players:
+                                row.court_id === destination
+                                  ? [...row.players.filter((x) => x !== id), id]
+                                  : row.players.filter((x) => x !== id),
+                            })),
+                          );
+                        }}
+                      >
+                        {courts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            Court {c.number}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </fieldset>
               ))}
               {plan.length > 0 && (
                 <>
@@ -340,7 +369,13 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                   </label>
                   <button
                     className="button primary"
-                    disabled={disabled || reason.trim().length < 5}
+                    disabled={
+                      disabled ||
+                      reason.trim().length < 5 ||
+                      plan.some(
+                        (p) => p.players.length === 1 || p.players.length > 5,
+                      )
+                    }
                     onClick={async () => {
                       if (
                         !window.confirm(
@@ -373,6 +408,91 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               )}
             </>
           )}
+          {admin && ["active", "completed"].includes(session.status) && (
+            <details>
+              <summary>Fix a score or restart a round</summary>
+              <p>
+                Enter a reason before correcting a saved score.
+                Completed-session statistics update automatically. Court
+                movements already played are not changed by a score correction.
+              </p>
+              <label>
+                Correction reason
+                <textarea
+                  value={correctionReason}
+                  minLength={5}
+                  maxLength={500}
+                  disabled={disabled}
+                  onChange={(e) => setCorrectionReason(e.target.value)}
+                />
+              </label>
+              <label>
+                Restart from round
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={round}
+                  disabled={disabled}
+                  onChange={(e) => {
+                    setRound(Number(e.target.value));
+                    setPlan([]);
+                  }}
+                />
+              </label>
+              <p>
+                Restarting removes round {round} and every later round from
+                current results (
+                {matches.filter((m) => m.round >= round).length} games). The
+                audit log retains the old scores and assignments. You can then
+                assign players again and complete the session.
+              </p>
+              <button
+                className="button"
+                disabled={
+                  disabled ||
+                  correctionReason.trim().length < 5 ||
+                  !matches.some((m) => m.round >= round)
+                }
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      `Restart round ${round} and all later rounds? Their scores will leave the standings. The audit log keeps a copy.`,
+                    )
+                  )
+                    return;
+                  setBusy(true);
+                  setReady("");
+                  try {
+                    const { error } = await supabase!.rpc("restart_round", {
+                      c: club,
+                      s: selected,
+                      from_round: round,
+                      expected_revision: session.revision,
+                      expected_matches: Object.fromEntries(
+                        matches
+                          .filter((m) => m.round >= round)
+                          .map((m) => [m.id, m.revision]),
+                      ),
+                      reason: correctionReason.trim(),
+                    });
+                    if (error) throw error;
+                    setMessage(
+                      "Round restarted. Refresh, review assignments and re-enter the corrected games.",
+                    );
+                  } catch {
+                    setMessage(
+                      "Restart not confirmed. Refresh to review the latest scores before retrying.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Restart reviewed rounds
+              </button>
+            </details>
+          )}
           <h3>Matches and rotations</h3>
           {matches.length === 0 ? (
             <p>No games assigned yet.</p>
@@ -401,17 +521,31 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         (id) => ![...m.side_a, ...m.side_b].includes(id),
                       )}
                       disabled={
-                        disabled || !scorekeeper || session.status !== "active"
+                        disabled ||
+                        !scorekeeper ||
+                        (session.status !== "active" &&
+                          !(admin && session.status === "completed")) ||
+                        (admin &&
+                          m.score_a !== null &&
+                          correctionReason.trim().length < 5)
                       }
                       onSave={async (a, b) => {
                         setBusy(true);
-                        const { error } = await supabase!.rpc("submit_score", {
-                          c: club,
-                          m: m.id,
-                          a,
-                          b,
-                          expected_revision: m.revision,
-                        });
+                        const { error } = await supabase!.rpc(
+                          admin && m.score_a !== null
+                            ? "correct_score"
+                            : "submit_score",
+                          {
+                            c: club,
+                            m: m.id,
+                            a,
+                            b,
+                            expected_revision: m.revision,
+                            ...(admin && m.score_a !== null
+                              ? { reason: correctionReason.trim() }
+                              : {}),
+                          },
+                        );
                         setBusy(false);
                         if (error) {
                           setReady("");
