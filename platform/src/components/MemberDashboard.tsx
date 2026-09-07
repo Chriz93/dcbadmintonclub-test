@@ -1,6 +1,9 @@
+import { ClubNews } from "./ClubNews";
+import { SmsPreferences } from "./SmsPreferences";
+import { SessionAccounts } from "./SessionAccounts";
 import { SeasonIntake } from "./SeasonIntake";
 import { PersonalRecords } from "./PersonalRecords";
-import { Registration } from "./Registration";
+import { AgreementSigning } from "./AgreementSigning";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "../services/auth";
@@ -8,6 +11,7 @@ import { Card } from "./ui";
 const membershipSchema = z.object({
   club_id: z.string(),
   role: z.string(),
+  kind: z.string().optional(),
   status: z.string(),
   club: z.object({ name: z.string() }).nullable().optional(),
 });
@@ -54,7 +58,7 @@ export function MemberDashboard() {
       if (!user) return;
       const { data, error } = await supabase!
         .from("memberships")
-        .select("club_id,role,status,club:clubs(name)")
+        .select("club_id,role,status,kind,club:clubs(name)")
         .eq("user_id", user.id);
       if (error) throw error;
       const rows = z.array(membershipSchema).parse(data);
@@ -135,10 +139,12 @@ export function MemberDashboard() {
       alive = false;
     };
   }, [selected, club, user]);
+  const isSpare = clubs.find((c) => c.club_id === club)?.kind === "spare";
   const session = sessions.find((s) => s.id === selected);
   return (
     <Card>
       <h2>Your upcoming sessions</h2>
+      {club && <ClubNews club={club} />}
       {clubs.length === 0 ? (
         <p>
           No memberships available. An administrator must review your
@@ -184,89 +190,99 @@ export function MemberDashboard() {
                 {new Date(session.rsvp_deadline).toLocaleString()} · Your place:{" "}
                 {placement}
               </p>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!supabase) return;
-                  setBusy(true);
-                  const payload = JSON.stringify({
-                    club,
-                    selected,
-                    response,
-                    note,
-                    revision,
-                  });
-                  const id =
-                    request?.payload === payload
-                      ? request.id
-                      : crypto.randomUUID();
-                  setRequest({ id, payload });
-                  try {
-                    const { data, error } = await supabase.rpc("submit_rsvp", {
-                      c: club,
-                      s: selected,
-                      u: user,
+              {isSpare ? (
+                <p>
+                  Use spare booking below to vote and submit your payment
+                  reference. Your place is confirmed after payment verification.
+                </p>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!supabase) return;
+                    setBusy(true);
+                    const payload = JSON.stringify({
+                      club,
+                      selected,
                       response,
                       note,
-                      expected_revision: revision,
-                      request_id: id,
+                      revision,
                     });
-                    if (error) throw error;
-                    const saved = rsvpSchema.parse(data);
-                    setRevision(saved.revision);
-                    setPlacement(saved.placement);
-                    setRequest(null);
-                    setMessage(
-                      "RSVP saved. If opted in, your email is queued separately.",
-                    );
-                  } catch {
-                    setMessage(
-                      "RSVP not confirmed. Retry safely; if another device changed it, reload the session first.",
-                    );
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <label>
-                  Your response
-                  <select
-                    value={response}
-                    onChange={(e) => setResponse(e.target.value)}
-                  >
-                    {[
-                      ["attending", "Attending"],
-                      ["not_attending", "Not attending"],
-                      ["maybe", "Maybe"],
-                      ["late", "Late"],
-                      ["need_spare", "Need a spare"],
-                    ].map(([v, t]) => (
-                      <option key={v} value={v}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Optional note
-                  <textarea
-                    maxLength={500}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                </label>
-                <button
-                  className="button primary"
-                  disabled={
-                    readySession !== selected ||
-                    busy ||
-                    !navigator.onLine ||
-                    session.status === "cancelled"
-                  }
+                    const id =
+                      request?.payload === payload
+                        ? request.id
+                        : crypto.randomUUID();
+                    setRequest({ id, payload });
+                    try {
+                      const { data, error } = await supabase.rpc(
+                        "submit_rsvp",
+                        {
+                          c: club,
+                          s: selected,
+                          u: user,
+                          response,
+                          note,
+                          expected_revision: revision,
+                          request_id: id,
+                        },
+                      );
+                      if (error) throw error;
+                      const saved = rsvpSchema.parse(data);
+                      setRevision(saved.revision);
+                      setPlacement(saved.placement);
+                      setRequest(null);
+                      setMessage(
+                        "RSVP saved. If opted in, your email is queued separately.",
+                      );
+                    } catch {
+                      setMessage(
+                        "RSVP not confirmed. Retry safely; if another device changed it, reload the session first.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
                 >
-                  {busy ? "Saving…" : "Save RSVP"}
-                </button>
-              </form>
+                  <label>
+                    Your response
+                    <select
+                      value={response}
+                      onChange={(e) => setResponse(e.target.value)}
+                    >
+                      {[
+                        ["attending", "Attending"],
+                        ["not_attending", "Not attending"],
+                        ["maybe", "Maybe"],
+                        ["late", "Late"],
+                        ["need_spare", "Need a spare"],
+                      ].map(([v, t]) => (
+                        <option key={v} value={v}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Optional note
+                    <textarea
+                      maxLength={500}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="button primary"
+                    disabled={
+                      readySession !== selected ||
+                      busy ||
+                      !navigator.onLine ||
+                      session.status === "cancelled"
+                    }
+                  >
+                    {busy ? "Saving…" : "Save RSVP"}
+                  </button>
+                </form>
+              )}
             </>
           ) : (
             <p>No upcoming sessions.</p>
@@ -301,8 +317,17 @@ export function MemberDashboard() {
           </button>
         </>
       )}
+      {club && <SmsPreferences club={club} />}
+      {club && selected && (
+        <SessionAccounts club={club} session={selected} isSpare={isSpare} />
+      )}
+      <p>
+        Signing for a child?{" "}
+        <a href="#participant-signing">Go to guardian signing</a>; you do not
+        need to register yourself as a player.
+      </p>
       <SeasonIntake />
-      <Registration />
+      <AgreementSigning />
       <PersonalRecords />
       <h3>Your personal data</h3>
       <button
@@ -336,7 +361,7 @@ export function MemberDashboard() {
           if (
             !supabase ||
             !window.confirm(
-              "Request data deletion and turn off your club email notices? An administrator will review retained records before erasure.",
+              "Request data deletion and turn off your club email and SMS notices? An administrator will review retained records before erasure.",
             )
           )
             return;
@@ -344,7 +369,7 @@ export function MemberDashboard() {
           setMessage(
             error
               ? "Request failed. Please retry."
-              : "Deletion review requested and email notices disabled.",
+              : "Deletion review requested; email and SMS notices disabled.",
           );
         }}
       >

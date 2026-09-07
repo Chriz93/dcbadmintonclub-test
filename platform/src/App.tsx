@@ -1,3 +1,4 @@
+import { ClubNews } from "./components/ClubNews";
 import { Standings } from "./components/Standings";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -162,6 +163,7 @@ export default function App() {
         <main id="main" tabIndex={-1}>
           {route === "home" && (
             <>
+              <ClubNews />
               <Heading
                 eyebrow="A NEW SEASON. MORE GOOD GAMES."
                 title="See you on court."

@@ -17,6 +17,9 @@ const standingSchema = z.object({
   position: z.number(),
 });
 export function Standings() {
+  const [elo, setElo] = useState<
+    { user_id: string; rating: number; played: number; name: string }[]
+  >([]);
   const [seasons, setSeasons] = useState<z.infer<typeof seasonSchema>[]>([]),
     [selected, setSelected] = useState(""),
     [rows, setRows] = useState<z.infer<typeof standingSchema>[]>([]),
@@ -48,6 +51,38 @@ export function Standings() {
       if (result.error) throw result.error;
       const standings = z.array(standingSchema).parse(result.data);
       setRows(standings);
+      const ratingReads = await Promise.all([
+        supabase
+          .from("elo_ratings")
+          .select("user_id,rating,played")
+          .eq("club_id", chosen.club_id)
+          .eq("season_id", chosen.id),
+        supabase.rpc("club_roster", { c: chosen.club_id }),
+      ]);
+      if (ratingReads.some((r) => r.error)) throw new Error();
+      const roster = z
+        .array(z.object({ user_id: z.string(), display_name: z.string() }))
+        .parse(ratingReads[1].data);
+      setElo(
+        z
+          .array(
+            z.object({
+              user_id: z.string(),
+              rating: z.coerce.number(),
+              played: z.number(),
+            }),
+          )
+          .parse(ratingReads[0].data)
+          .map((r) => ({
+            ...r,
+            name:
+              roster.find((p) => p.user_id === r.user_id)?.display_name ??
+              "Former player",
+          }))
+          .sort(
+            (a, b) => b.rating - a.rating || a.user_id.localeCompare(b.user_id),
+          ),
+      );
       setMessage(
         standings.length
           ? "Standings updated from completed sessions."
@@ -139,6 +174,19 @@ export function Standings() {
           </table>
         </div>
       )}
+      <h2>ELO skill ratings</h2>
+      <p>
+        Initial seeding is set by Christy. Completed rounds update team-based
+        ELO with equal round weighting. New players are provisional until they
+        have recorded games. No-show penalties affect court placement
+        separately.
+      </p>
+      {elo.map((r) => (
+        <p key={r.user_id}>
+          {r.name} · {Math.round(r.rating)} ELO · {r.played} games
+          {r.played === 0 ? " · provisional" : ""}
+        </p>
+      ))}
       <p role="status">{message}</p>
     </Card>
   );

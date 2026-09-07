@@ -4,12 +4,12 @@ export function SeasonAgreementRules() {
     <section aria-labelledby="season-agreement-rules">
       <h4 id="season-agreement-rules">Season rules for your agreement</h4>
       <p>
-        Review copy — signing is not available until the participant and
-        guardian agreement is ready.
+        Season policies are included in each published agreement. Signing
+        becomes available below after the organizer publishes the reviewed text.
       </p>
       <p>
-        Organizer: Christy, acting personally. Maplewood Advanced
-        Badminton League is the league name, not a separately registered club.
+        Organizer: Christy, acting personally. Maplewood Advanced Badminton
+        League is the league name, not a separately registered club.
       </p>
       <ul>
         <li>
@@ -17,7 +17,7 @@ export function SeasonAgreementRules() {
           spare session. Membership and spare places require approval.
         </li>
         <li>
-          For an absence refund, notify the club at least 72 hours before the
+          For a $14 absence refund, notify the club at least 72 hours before the
           session starts. The deadline is calculated from the actual start time
           and displayed in Toronto time.
         </li>

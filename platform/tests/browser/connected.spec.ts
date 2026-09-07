@@ -75,7 +75,7 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
         case "matches":
           data = matches;
           break;
-        case "rpc/assign_courts": {
+        case "rpc/assign_reviewed_courts": {
           const body = route.request().postDataJSON();
           expect(body.expected_revision).toBe(0);
           expect(body.reason).toBe("Initial checked-in player allocation");
@@ -111,6 +111,9 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
           });
           return;
         }
+        case "audit_events":
+          data = [];
+          break;
         default:
           await route.abort();
           return;
@@ -142,6 +145,18 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
   await page
     .getByLabel("Court for Player 25", { exact: true })
     .selectOption("court-6");
+  await page
+    .getByLabel("Court for Player 25", { exact: true })
+    .selectOption("");
+  await expect(
+    page.getByRole("group", { name: "Court 6 · 4 players" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Add Player 25 to court", { exact: true })
+    .selectOption("court-6");
+  await expect(
+    page.getByRole("group", { name: "Court 6 · 5 players" }),
+  ).toBeVisible();
   await page
     .getByLabel("Reason for this assignment")
     .fill("Initial checked-in player allocation");

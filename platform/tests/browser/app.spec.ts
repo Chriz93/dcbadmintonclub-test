@@ -106,13 +106,11 @@ test("PDF preview reads locally and cannot import without a backend", async ({
   await page
     .getByRole("button", { name: "Administration", exact: true })
     .click();
-  await page
-    .getByLabel("Read a permit PDF locally")
-    .setInputFiles({
-      name: "synthetic-permit.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from(pdf),
-    });
+  await page.getByLabel("Read a permit PDF locally").setInputFiles({
+    name: "synthetic-permit.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(pdf),
+  });
   await expect(page.locator(".permit-upload")).toContainText(
     "1 unambiguous booking rows proposed",
     { timeout: 20000 },

@@ -1,3 +1,6 @@
+import { PrivacyReview } from "./PrivacyReview";
+import { ClubSetup } from "./ClubSetup";
+import { LeagueOperations } from "./LeagueOperations";
 import { useEffect, useState } from "react";
 import { supabase } from "../services/auth";
 import { Card } from "./ui";
@@ -230,6 +233,9 @@ export function AdminTools() {
           >
             Load club records
           </button>
+          <LeagueOperations club={club} />
+          <ClubSetup club={club} />
+          <PrivacyReview club={club} />
           <h3>Payment review</h3>
           <p>
             Check your bank record before verifying. A payment claim does not

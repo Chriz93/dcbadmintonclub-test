@@ -1,12 +1,14 @@
+import { initialPlacement, nextRoundPlacement } from "../domain/placement";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "../services/auth";
-import { allocate, validateScore } from "../domain/courts";
+import { validateScore } from "../domain/courts";
 import { Card } from "./ui";
 const clubSchema = z.object({ id: z.string(), name: z.string() });
 const sessionSchema = z.object({
   id: z.string(),
   venue_id: z.string(),
+  season_id: z.string().optional(),
   starts_at: z.string(),
   status: z.string(),
   revision: z.number(),
@@ -41,6 +43,13 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [present, setPresent] = useState<string[]>([]);
   const [plan, setPlan] = useState<Plan>([]);
+  const [appliedPenalties, setAppliedPenalties] = useState<string[]>([]);
+  const [ratings, setRatings] = useState<
+    { user_id: string; rating: number; played: number }[]
+  >([]);
+  const [seeds, setSeeds] = useState<{ user_id: string; seed: number }[]>([]);
+  const [penalties, setPenalties] = useState<string[]>([]);
+  const [restartId, setRestartId] = useState<number | null>(null);
   const [round, setRound] = useState(1);
   const [reason, setReason] = useState("");
   const [correctionReason, setCorrectionReason] = useState("");
@@ -85,7 +94,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
       const results = await Promise.all([
         supabase!
           .from("sessions")
-          .select("id,venue_id,starts_at,status,revision")
+          .select("id,venue_id,season_id,starts_at,status,revision")
           .eq("club_id", club)
           .order("starts_at"),
         supabase!.rpc("club_roster", { c: club }),
@@ -142,7 +151,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
           .eq("session_id", selected),
         supabase
           .from("sessions")
-          .select("id,venue_id,starts_at,status,revision")
+          .select("id,venue_id,season_id,starts_at,status,revision")
           .eq("club_id", club)
           .eq("id", selected)
           .single(),
@@ -158,9 +167,66 @@ export function SessionWorkspace({ online }: { online: boolean }) {
           .map((p) => p.user_id),
       );
       const updated = sessionSchema.parse(results[3].data);
+      if (updated.season_id) {
+        const extra = await Promise.all([
+          supabase
+            .from("elo_ratings")
+            .select("user_id,rating,played")
+            .eq("club_id", club)
+            .eq("season_id", updated.season_id),
+          supabase
+            .from("initial_seeds")
+            .select("user_id,seed")
+            .eq("club_id", club)
+            .eq("season_id", updated.season_id),
+          supabase
+            .from("no_show_penalties")
+            .select("user_id")
+            .eq("club_id", club)
+            .eq("status", "pending"),
+        ]);
+        if (extra.some((r) => r.error)) throw new Error();
+        setRatings(
+          z
+            .array(
+              z.object({
+                user_id: z.string(),
+                rating: z.coerce.number(),
+                played: z.number(),
+              }),
+            )
+            .parse(extra[0].data),
+        );
+        setSeeds(
+          z
+            .array(z.object({ user_id: z.string(), seed: z.number() }))
+            .parse(extra[1].data),
+        );
+        setPenalties(
+          z
+            .array(z.object({ user_id: z.string() }))
+            .parse(extra[2].data)
+            .map((r) => r.user_id),
+        );
+      }
       setSessions((rows) =>
         rows.map((s) => (s.id === updated.id ? updated : s)),
       );
+      if (admin) {
+        const audit = await supabase
+          .from("audit_events")
+          .select("id")
+          .eq("club_id", club)
+          .eq("action", "round.restarted")
+          .eq("after_value->>session", selected)
+          .order("id", { ascending: false })
+          .limit(1);
+        if (audit.error) throw audit.error;
+        setRestartId(
+          z.array(z.object({ id: z.number() })).parse(audit.data)[0]?.id ??
+            null,
+        );
+      }
       setReady(selected);
     } catch {
       setMessage(
@@ -302,7 +368,61 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                 disabled={disabled || present.length < 2 || !courts.length}
                 onClick={() => {
                   try {
-                    const ids = allocate(present, courts.length);
+                    let ids: string[][];
+                    if (round === 1) {
+                      const preview = initialPlacement(
+                        present.map((id) => ({
+                          id,
+                          rating:
+                            ratings.find((r) => r.user_id === id)?.rating ??
+                            1000,
+                          seed:
+                            seeds.find((r) => r.user_id === id)?.seed ??
+                            roster.findIndex((p) => p.user_id === id) + 1000,
+                          penalized: penalties.includes(id),
+                        })),
+                        courts.length,
+                      );
+                      ids = preview.plan;
+                      setAppliedPenalties(preview.applied);
+                      if (preview.unresolved.length) {
+                        setMessage(
+                          `Penalty needs manual review for ${preview.unresolved.map(name).join(", ")}. Adjust the court preview and explain the decision.`,
+                        );
+                      }
+                    } else {
+                      setAppliedPenalties([]);
+                      const previous = matches.filter(
+                        (m) => m.round === round - 1,
+                      );
+                      if (
+                        !previous.length ||
+                        previous.some(
+                          (m) => m.score_a === null || m.score_b === null,
+                        )
+                      )
+                        throw new Error();
+                      const old = courts.map((c) => [
+                        ...new Set(
+                          previous
+                            .filter((m) => m.court_id === c.id)
+                            .flatMap((m) => [...m.side_a, ...m.side_b]),
+                        ),
+                      ]);
+                      ids = nextRoundPlacement(
+                        old,
+                        previous.map((m) => ({
+                          game: {
+                            a: m.side_a,
+                            b: m.side_b,
+                            rest: [],
+                            target: m.target,
+                          },
+                          a: m.score_a!,
+                          b: m.score_b!,
+                        })),
+                      );
+                    }
                     if (ids.some((c) => c.length === 1)) throw new Error();
                     setPlan(
                       courts.map((c, i) => ({
@@ -310,7 +430,11 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         players: ids[i],
                       })),
                     );
-                    setMessage("Review the assignments before saving.");
+                    setMessage((previous) =>
+                      previous.includes("Penalty needs")
+                        ? previous
+                        : "Review the assignments before saving. Initial courts use ELO; later rounds use ladder movement.",
+                    );
                   } catch {
                     setMessage(
                       "These players cannot fit playable courts. Check attendance and capacity.",
@@ -334,6 +458,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         disabled={disabled}
                         onChange={(e) => {
                           const destination = e.target.value;
+                          setAppliedPenalties([]);
                           setPlan((rows) =>
                             rows.map((row) => ({
                               ...row,
@@ -345,6 +470,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                           );
                         }}
                       >
+                        <option value="">Sit out this round</option>
                         {courts.map((c) => (
                           <option key={c.id} value={c.id}>
                             Court {c.number}
@@ -357,6 +483,58 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               ))}
               {plan.length > 0 && (
                 <>
+                  {present
+                    .filter((id) => !plan.some((p) => p.players.includes(id)))
+                    .map((id) => (
+                      <label key={id}>
+                        Add {name(id)} to this round
+                        <select
+                          aria-label={`Add ${name(id)} to court`}
+                          value=""
+                          disabled={disabled}
+                          onChange={(e) => {
+                            const destination = e.target.value;
+                            setAppliedPenalties([]);
+                            setPlan((rows) =>
+                              rows.map((row) =>
+                                row.court_id === destination
+                                  ? { ...row, players: [...row.players, id] }
+                                  : row,
+                              ),
+                            );
+                          }}
+                        >
+                          <option value="">Sitting out — choose court</option>
+                          {courts.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              Court {c.number}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  {round === 1 &&
+                    penalties
+                      .filter((id) => plan.some((p) => p.players.includes(id)))
+                      .map((id) => (
+                        <label className="check-label" key={id}>
+                          <input
+                            type="checkbox"
+                            checked={appliedPenalties.includes(id)}
+                            disabled={disabled}
+                            onChange={(e) =>
+                              setAppliedPenalties((rows) =>
+                                e.target.checked
+                                  ? [...rows, id]
+                                  : rows.filter((x) => x !== id),
+                              )
+                            }
+                          />
+                          Confirm {name(id)} moved one court down for the
+                          pending no-show. Leave unchecked to defer an
+                          unresolved penalty.
+                        </label>
+                      ))}
                   <label>
                     Reason for this assignment
                     <textarea
@@ -385,14 +563,18 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         return;
                       setBusy(true);
                       setReady("");
-                      const { error } = await supabase!.rpc("assign_courts", {
-                        c: club,
-                        s: selected,
-                        round_number: round,
-                        plan,
-                        expected_revision: session.revision,
-                        reason: reason.trim(),
-                      });
+                      const { error } = await supabase!.rpc(
+                        "assign_reviewed_courts",
+                        {
+                          c: club,
+                          s: selected,
+                          round_number: round,
+                          plan,
+                          expected_revision: session.revision,
+                          reason: reason.trim(),
+                          penalties_applied: appliedPenalties,
+                        },
+                      );
                       setMessage(
                         error
                           ? "Assignments not confirmed. Refresh to resolve any version conflict."
@@ -491,6 +673,45 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               >
                 Restart reviewed rounds
               </button>
+              {restartId !== null && (
+                <button
+                  className="button"
+                  disabled={disabled || correctionReason.trim().length < 5}
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        "Restore the most recent restarted rounds? This is allowed only when no replacement rounds exist.",
+                      )
+                    )
+                      return;
+                    setBusy(true);
+                    setReady("");
+                    try {
+                      const { error } = await supabase!.rpc(
+                        "undo_round_restart",
+                        {
+                          c: club,
+                          event_id: restartId,
+                          expected_revision: session.revision,
+                          reason: correctionReason.trim(),
+                        },
+                      );
+                      if (error) throw error;
+                      setMessage(
+                        "Restart undone. Refresh to see restored scores and statistics.",
+                      );
+                    } catch {
+                      setMessage(
+                        "Restore not confirmed. New work may exist or the snapshot was already restored; refresh before retrying.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Undo last round restart
+                </button>
+              )}
             </details>
           )}
           <h3>Matches and rotations</h3>
