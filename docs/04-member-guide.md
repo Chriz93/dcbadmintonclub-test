@@ -15,3 +15,11 @@ In connected test mode, use **Load my profile and results** to read your own dis
 ## Maplewood Advanced League 2026–27
 
 Member hub now accepts legal/display names, phone, emergency contact, regular/spare request and e-transfer claim after sign-in. Regular registration is closed; this form is for accepted players and spare applicants. Saving is not approval or payment confirmation. Waiver acceptance remains a separate step and is unavailable until a reviewed participant waiver is published. Open **Standings** for completed-session performance; use **Member hub → Your profile and results** for your own records.
+
+## Maplewood operational extension (available after TEST migrations 012–021)
+
+Sign in in Member hub, enter your own details and payment reference, then complete eligibility and the reviewed agreement. A payment reference is a claim; Christy verifies the bank receipt separately. Players aged 16–17 give a separate guardian email, and that guardian signs in on the same app with their own account to sign. Download your signed receipt from Participant and guardian agreement.
+
+Regular players use Save RSVP. Approved spares use Load my session account → Book as an approved spare, submit the $20 payment reference, and wait for confirmation. An unpaid claim does not reserve a place. At least 72 hours' notice qualifies for a $14 absence refund; school cancellations credit two physical shuttlecocks. View your ledger with Load my session account. Christy completes cash refunds/shuttle handovers separately.
+
+Standings shows completed-session performance and ELO. Courtside displays current courts and matches; your personal records show your assignments/results. Enable email or verify a phone and opt into SMS only if you want those channels; provider configuration is required before reminders operate. Messenger groups carry the app link, while votes are recorded in the app.

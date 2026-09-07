@@ -1,37 +1,40 @@
-# Agreement and attendance automation — September 7, 2026
+# Maplewood agreement and automation — September 7, 2026
 
-Confirmed: organizer Christy acts personally, with no registered club entity. Youngest current participant is 16; ages 16–17 use the guardian signing path and adults sign for themselves. verified no-show means one court down; school cancellation means two physical shuttlecocks and no cash refund; absence notice is 72 hours. The waiver-area review copy now displays these policies. It is not a signed or finalized agreement.
+## Implemented locally; migrations 012–021 await TEST application
 
-## Signing
+Organizer: **Christy**, acting personally. Maplewood Advanced Badminton League is the league name. No registered legal entity or surname is asserted.
 
-Incorporate the fee, refund, cancellation, no-show and facility clauses into the immutable published agreement text/hash. Retain verified signer identity, participant identity, signer capacity, version and timestamp; provide a receipt. A minor must not use adult self-signing. Build a separate verified guardian flow; guardian consent does not guarantee all claims of the minor are waived. Counsel/insurer review and exact absence-refund rounding remain outstanding. Do not describe the league as an incorporated or separately registered legal entity. The reported youngest age establishes the current roster age; an exclusion policy for future younger applicants has not separately been agreed. Keep optional messaging/photo consent separate.
+- Regular season $400, 25 regular places, closed regular recruitment. Accepted players enter their own details. Spare sessions $20.
+- Absence notice at least **72 elapsed hours** before session: **$14** ledger credit. Repeated requests do not create duplicate refunds. A refund ledger is not an automatic bank transfer.
+- School cancellation: no cash refund; **two physical shuttlecocks** for affected eligible players. Administrator records actual handover.
+- No response or “maybe” is not a no-show. Administrator verifies a committed player's absence, records the reason, and applies one court down at the next starting placement. Bottom-court/unresolved penalties remain pending unless reviewed; ELO is unchanged.
 
-## Attendance flow — proposed, not deployed
+## Participant and guardian signing
 
-- Open app attendance seven days before a session. Pin its link in the regular Messenger group.
-- Find nonresponders by comparing approved season registrations with submitted responses. Keep “uncertain” distinct from no response.
-- Remind unresolved members at 96 hours and again before 72 hours, through enabled email/SMS channels. Re-check response, consent and cancellation immediately before sending; deduplicate person/session/channel/reminder.
-- Escalate unresolved responses to Christy at the cutoff. Missing votes do not automatically mean absence, refund eligibility or no-show.
-- Offer vacancies to approved spares in a transparent queue. Use atomic, expiring holds so two people cannot take the last spot. The spare group can carry the app link; individual offers live in the app.
-- A spare accepts and pays $20. An e-transfer claim remains pending until Christy checks the bank or a verified provider confirms payment. Only confirm an available, unexpired place. Late payments require reconciliation rather than overbooking.
-- Assign eligible, confirmed attendees with completed agreements to courts; reconcile actual attendance before penalizing no-shows.
+Member hub provides details, date of birth, rule acknowledgment, separate guardian email for minors, complete agreement text, explicit electronic acceptance, and an exact downloadable receipt. Ages 16–17 use the separately signed-in guardian account. Guardian declares adult status and authority; verified email does not independently prove legal identity or authority.
 
-Email/SMS providers, verified senders, consent/unsubscribe handling and scheduler deployment remain required. No reminders were sent or providers activated.
+Administration publishes the reviewed liability text with the fixed league rules, version, hash and review reference. No legal text has been published or signed automatically. Each receipt preserves participant name, signer, capacity, relationship, complete body, hash and timestamp. Publishing a replacement agreement requires renewed approval for that season. Optional messaging consent remains separate.
 
-## Messenger research
+Christy's legal review remains a launch dependency. The supplied facility rules are not a participant waiver. No promise of complete legal protection is made. A signed identity correction currently requires an operator review, preserving the original receipt; do not directly overwrite signed records.
 
-Meta's documented Messenger Platform is Page-based and imposes recent-interaction/allowed outside-window requirements. No supported API for reading personal Messenger group poll votes or automatically messaging its nonvoters was identified. Do not equate Page messaging with personal group access. Keep voting in the app to reliably identify members and avoid a fragile chat-scraping dependency.
+## Voting and spare allocation
 
-Meta official collection:
-https://www.postman.com/meta/messenger-platform-api/documentation/iyp204x/messenger-platform-api?entity=request-22794852-31d80e54-aa3d-4c64-9e01-14925626797e
+Voting takes place in Member hub. Pin that link in the regular and spare Messenger groups. The system identifies nonresponders from approved registrations. It queues opted-in notices seven days ahead, then at 96 hours and within the final 78-to-72-hour window. Sending rechecks current response and consent. Missing responses continue reserving regular places until Christy resolves attendance.
 
-CRTC guidance for commercial email/text covers consent, sender identification and unsubscribe:
-https://crtc.gc.ca/eng/com500/faq500.htm
+Spare claims are not reservations. They expire after 24 hours or at session start. Christy checks the e-transfer and verifies payment. A confirmed available place is allocated atomically; excess/late payments go to reconciliation. “First vote and pay” uses the time payment is verified, because the app cannot independently observe e-transfer settlement. Eligible verified waiters are promoted when a spot opens; paid withdrawals follow the $14/72-hour rule. No bank transfer is executed by the app.
 
-## ELO placement — requested, not implemented
+## Ratings and courts
 
-The existing win/points percentages are not ELO. Seed initial ratings from Christy's order and label newcomers provisional. Publish doubles rating calculations and round weighting; avoid accidentally weighting the five-player court more heavily because players play extra games. Resting players receive no match outcome.
+Administration accepts Christy's seed order. Initial rating is 1000 plus 15 points for each lower seed. Starting placement sorts rating, seed, then stable member ID. Doubles ELO uses team average ratings, expected score with a 400-point scale, and K=32 averaged per played round, keeping 3-game and 4-game rounds equally weighted. Rest does not create a result. Completed-session scores drive ELO; correcting/reopening history rebuilds it chronologically.
 
-Sort confirmed attendees by rating and form playable courts: with 25 players, 4/4/4/4/4/5. Keep the one-court no-show penalty separate from ELO; use a capacity-preserving swap and handle the bottom-court edge case explicitly. Use initial seed order for equal ratings. Preview before publication, with administrator corrections.
+Subsequent rounds use ladder movement. Administrators preview, move players, sit a player out, add checked-in players, correct scores, restart a round and safely undo a restart before replacement work exists. Every saved correction requires MFA, revision checks and a reason. Standings contains performance ranking plus the separate ELO table.
 
-Recommended distinction: use ELO for starting placement, then ladder results for movement during the night. Re-sorting by ELO after every round can conflict with the promised ladder format. Corrected historic results must rebuild ratings chronologically and invalidate stale unpublished plans.
+## External delivery setup
+
+The server worker supports Resend email and Twilio SMS, with consent checks, leases and bounded retry. Provider acceptance is recorded as **accepted**, not delivered. SMS with an uncertain outcome is held for manual provider reconciliation. No provider was enabled, no club notices were sent, and no paid service was activated. See `11-operations-runbook.md` for setup and remaining delivery gates.
+
+Personal Messenger group poll automation is not implemented. Earlier research did not identify a supported API for reading those polls or messaging personal group nonvoters. The app is the attendance record; chat groups distribute its link.
+
+## Administration and unsubscribe additions
+
+Migrations 019–021 add audited public club settings, empty season/venue/court creation, revision-protected announcements and a club-scoped privacy review queue. New seasons require the verified participant/guardian workflow. The no-login email unsubscribe endpoint uses a signed club/person/channel token, shows confirmation on GET, and disables that channel on POST. Public HTTPS routing and a shared server signing key remain deployment requirements.

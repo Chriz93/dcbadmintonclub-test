@@ -37,3 +37,24 @@ Final live guard verification: 4 guarded revision RPCs, 0 browser-callable priva
 Migrations 009–011 and `scripts/maplewood-policy.sql` applied to TEST only. New private intake table has RLS; browser writes occur only through RPCs. Completed scores and round restart have MFA, stale-revision checks and audit records; restart snapshots every removed match and assignment. A minimal member-only standings RPC exposes no private profile fields. Actual signed-in standings and intake screens loaded against TEST. No actual intake, payment verification, waiver or match was created in TEST. See `09-maplewood-season.md` for precise remaining work.
 
 Final phase permission audit: 0 tables without RLS; anonymous intake SELECT false; member direct intake UPDATE false; private aggregate helper EXECUTE false; 6 new public RPC definitions present; intake requirement enabled; 28 scheduled and 6 cancelled sessions; 0 intakes, 0 waivers and 0 notification jobs.
+
+## September 7 operational implementation — current result
+
+This section supersedes older counts and proposed-feature descriptions above.
+
+- **106 tests passed** across ten files: 34 domain/config, 5 permit parsing, 3 calendar handler, 1 seed, 39 PostgreSQL lifecycle/security/recovery, 15 operational payment/signature/privacy/settings tests, 2 placement, 4 provider adapter and 1 authenticated-encryption test and 2 signed-unsubscribe token tests.
+- **22 browser checks passed** across desktop/mobile (20 regression cases plus the two corrected admin setup cases in a targeted rerun): existing routes, calendar/PDF, courtside five-player allocation, safe removal/re-addition to a round, stale-score reconciliation, standings, plus adult/guardian explicit signing and receipt availability, and admin settings/public announcement text escaping. All provider/Auth calls in the new signing browser cases are synthetic intercepted responses; no real email or SMS was sent. Axe scans passed for the tested public and signing states.
+- TypeScript production build and ESLint passed. Startup assets **175.8 KiB gzip** against 220 KiB budget; secret-marker check passed. The separate PDF worker is not in that startup budget. Build emits nonfatal third-party annotation and chunk-size advisories.
+- New PostgreSQL permission audit reports zero disabled RLS tables, anonymous table privileges, member direct writes, or browser execution of private implementation/scheduler helpers.
+- Verified operational behaviors include $14 refund idempotency, two physical-shuttle credits, reserved regular capacity, last-spare-place protection, guardian-only minor signing, immutable receipts, reminder suppression after response, paid spare promotion, no-show reversal, chronological ELO rebuild and guarded round undo.
+- Backups: synthetic PostgreSQL archive restoration remains tested; AES-GCM encrypted envelope round-trip, wrong-key and tampering checks pass. **No remote full backup or remote restore has been performed.**
+
+### Deployment boundary
+
+Migrations **012–021 are local and not yet applied to TEST**. Browser automation twice reported “The Mac is locked and automatic unlock could not unlock it.” An unlock request was presented while local work continued. Previously verified remote state remains through migration 011. The new connected UI therefore requires these migrations before end-to-end use. `verify-operations.sql` and `enable-maplewood-operations.sql` are prepared, not executed remotely.
+
+No production files/database were modified, no public deployment was performed, no legal agreement was published, no real member payment was marked verified, and no notification worker or paid provider was activated. Current engineering evidence is not a release sign-off.
+
+### Outstanding acceptance work
+
+Unlock and apply/verify TEST migrations; exercise new flows with distinct real test identities; connect an approved delivery provider and scheduler, finish unsubscribe/contact setup and delivery verification; verify external encrypted backup and isolated restore; obtain reviewed agreement and initial seeding; rehearse legacy identity migration if historical records are required; complete public hosting/production approval. Club display/contact/accent settings, empty season/venue/court creation, public/member announcement editing and club-scoped privacy review are implemented locally. Domain/logo provisioning, existing-season policy changes and final legal-retention erasure remain operator work; this is not a fully generalized self-service platform.

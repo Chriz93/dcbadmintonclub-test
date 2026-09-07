@@ -1,3 +1,5 @@
+> Status update September 7: new operational features are now implemented locally. See `10-agreement-and-automation.md` and `11-operations-runbook.md` for current implementation and deployment status; pending-feature descriptions below are historical.
+
 # Maplewood Advanced League — confirmed rules and remaining launch work
 
 Updated September 7, 2026. All changes are in the isolated TEST project. The local link is not a shareable public launch URL.
