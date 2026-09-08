@@ -1,6 +1,14 @@
 # Release handover — September 7, 2026
 
-## Current status
+## Latest continuation — September 8
+
+This section supersedes stale setup notes below. Organizer email delivery, login, MFA and protected club reads succeeded. The TEST checkout now tracks `https://github.com/Chriz93/dcbadmintonclub-test.git`; the original repo remains separate. Claude subsequently committed migrations 030–031, reminder/deployment workflows and a Pages unsubscribe function. Remote application of 030–031 has not been verified in this continuation. Migration 031 introduces a paid-spare cancellation refund exception; the user has been asked to confirm that newer decision before rollout.
+
+GitHub TEST secret-name inventory returned only `UNSUBSCRIBE_SIGNING_KEY`; no values were accessed. Remaining worker/deployment secrets and real independent-account/reminder tests are blockers. The previous email allowance has been used; a new four-message allowance was requested and is pending. Actual remote database restore and final agreement publication remain incomplete.
+
+Continuation fixes: deployment checks out the successful quality-run SHA, restricts eligible triggers, runs quality checks for manual dispatch, and validates nonempty configuration before changing Cloudflare bindings. Unsubscribe handles malformed service URLs, rejects redirects, bounds fetch time and returns a safe retry message for transport failures. Browser fixtures were updated for the new assignment and eligibility-review APIs. Verification: 161 automated tests and a fresh full 24-case desktop/mobile browser suite passed; build and lint/type checks passed. The initial browser run lacked local servers; the subsequent run exposed four outdated fixture failures, corrected before the final full pass. None of these continuation changes has been deployed remotely.
+
+## Previous status (historical)
 
 Hosted TEST: https://maplewood-league-test.pages.dev/
 

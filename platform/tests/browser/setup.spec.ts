@@ -74,7 +74,7 @@ test("administrator edits public settings with a reason and safely renders annou
               },
             }
           : [{ id: "club", name: "Synthetic Club" }];
-      else if (path.endsWith("/participant_eligibility"))
+      else if (path.endsWith("/rpc/eligibility_review_queue"))
         data = [
           {
             user_id: "child",
@@ -82,6 +82,12 @@ test("administrator edits public settings with a reason and safely renders annou
             birth_date: "2010-01-01",
             guardian_email: "guardian@example.invalid",
             revision: 3,
+            legal_name: "Synthetic child",
+            reviewed_at: null,
+            reviewed_guardian: null,
+            review_current: false,
+            signed: false,
+            registration_status: "pending",
           },
         ];
       else if (path.endsWith("/member_intake"))

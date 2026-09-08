@@ -22,6 +22,51 @@ it("Web Crypto verification accepts the worker's token and rejects tampering", a
   await expect(verifyUnsubscribeWeb(token, "short")).rejects.toThrow();
   await expect(verifyUnsubscribeWeb(token, key + "wrong")).rejects.toThrow();
 });
+it("unsubscribe handles unavailable services without exposing errors or claiming success", async () => {
+  const token = signUnsubscribe(value, key);
+  const request = new Request(
+    `https://example.invalid/unsubscribe?token=${token}`,
+    { method: "POST" },
+  );
+  const env = {
+    UNSUBSCRIBE_SIGNING_KEY: key,
+    SUPABASE_SERVICE_ROLE_KEY: "private-test-secret",
+    SUPABASE_URL: "https://wgolevihkvmosajumzvl.supabase.co",
+  };
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    for (const address of [
+      "not a URL",
+      "https://user:password@project.supabase.co",
+      "https://project.supabase.co/other",
+      "https://project.supabase.co?key=secret",
+    ]) {
+      const result = await onRequestPost({
+        request,
+        env: { ...env, SUPABASE_URL: address },
+      });
+      expect(result.status).toBe(503);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+    for (const error of [
+      new Error("private-test-secret"),
+      new DOMException("timed out", "TimeoutError"),
+    ]) {
+      fetcher.mockRejectedValueOnce(error);
+      const result = await onRequestPost({ request, env });
+      expect(result.status).toBe(502);
+      const body = await result.text();
+      expect(body).not.toContain("private-test-secret");
+      expect(body).not.toContain("<h1>Unsubscribed</h1>");
+    }
+    const [, options] = fetcher.mock.calls[0];
+    expect(options.redirect).toBe("error");
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 it("Pages function shows a form on GET, disables one channel on POST and never leaks secrets", async () => {
   const token = signUnsubscribe(value, key);
   const env = {

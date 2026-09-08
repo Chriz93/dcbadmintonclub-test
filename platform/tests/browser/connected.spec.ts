@@ -75,6 +75,16 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
         case "matches":
           data = matches;
           break;
+        case "assignments":
+          data = assigned.flatMap((p) =>
+            p.players.map((user_id, i) => ({
+              user_id,
+              court_id: p.court_id,
+              round: 1,
+              ordinal: i + 1,
+            })),
+          );
+          break;
         case "rpc/assign_reviewed_courts": {
           const body = route.request().postDataJSON();
           expect(body.expected_revision).toBe(0);

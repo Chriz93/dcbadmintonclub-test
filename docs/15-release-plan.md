@@ -5,7 +5,7 @@ The objective is a usable member website with auditable league administration, n
 | Phase | Deliverable | Exit evidence | Current status |
 |---|---|---|---|
 | 1. Scope | Feature inventory and explicit limitations | Rules mapped to behavior and acceptance tests | Baseline implemented; inventory below |
-| 2. Services | Free hosting, Gmail Auth, reminder delivery, scheduled execution and unsubscribe | Real sign-in received; opted-in test reminder received; unsubscribe stops next send | Hosted TEST site online; Gmail adapter and crash tests pass; SMTP credential handoff pending |
+| 2. Services | Free hosting, Gmail Auth, reminder delivery, scheduled execution and unsubscribe | Real sign-in received; opted-in test reminder received; unsubscribe stops next send | Hosted TEST site online; organizer email login and MFA verified; scheduler and unsubscribe code added by Claude, private service configuration and live reminder verification pending |
 | 3. Identity/security | Real member, guardian, admin sessions | Issued Auth tokens; cross-account denial; MFA; expiry; guardian consent separate from participant | SQL/mocked-browser checks passed; independent real-account acceptance pending |
 | 4. Match-day | Full session with 25 synthetic players | All players accounted for; valid partner rotation; 80 scores; ties; correction/replay/concurrency results | 150 automated checks and 24 browser cases passed; concurrency/restore re-run passed |
 | 5. Independent review | Claude findings and remediation record | Findings reproduced or explicitly dismissed with evidence; regression tests | Claude review complete; high/medium fixes implemented and tested; follow-ups recorded |
@@ -48,4 +48,4 @@ Unsupported under current constraints: automatic personal Facebook/Messenger pol
 
 ## User-dependent gates
 
-Private SMTP credentials must be entered directly in the provider, not chat. Real inbox recipients/test sends need explicit authorization. Actual remote backup connection must be supplied through private configuration. Reviewed legal text must be published before real signatures. Christy's initial seeding follows player registration/signing, so it is not a pre-registration engineering blocker.
+Organizer Auth SMTP is verified. Reminder-worker and deployment credentials must be entered directly in private service settings, not chat. Real inbox recipients/test sends need explicit authorization. Actual remote backup connection must be supplied through private configuration. Reviewed legal text must be published before real signatures. Christy's initial seeding follows player registration/signing, so it is not a pre-registration engineering blocker.

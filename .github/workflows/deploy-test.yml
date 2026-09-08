@@ -14,7 +14,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/upgrade/secure-platform') ||
+          (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -23,7 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: upgrade/secure-platform
+          # Deploy the commit that actually passed CI, not a newer branch tip.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -33,6 +38,30 @@ jobs:
           cache: pnpm
           cache-dependency-path: platform/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # Manual dispatch has no upstream quality run. Verify the checked-out commit
+      # before any deployment secrets are used.
+      - if: github.event_name == 'workflow_dispatch'
+        run: pnpm lint && pnpm test:coverage && pnpm build
+      - if: github.event_name == 'workflow_dispatch'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: github.event_name == 'workflow_dispatch'
+        run: pnpm test:e2e
+      - if: github.event_name == 'workflow_dispatch'
+        run: pnpm audit --audit-level high
+      - name: Validate deployment configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          UNSUBSCRIBE_SIGNING_KEY: ${{ secrets.UNSUBSCRIBE_SIGNING_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_SERVICE_ROLE_KEY UNSUBSCRIBE_SIGNING_KEY VITE_SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required deployment configuration is missing: $name"
+              exit 1
+            fi
+          done
       - name: Build TEST bundle
         env:
           VITE_APP_ENV: test

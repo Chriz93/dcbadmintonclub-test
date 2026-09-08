@@ -61,30 +61,59 @@ export const onRequestPost: Handler = async ({ request, env }) => {
       "<p>Preference service is not configured.</p>",
       503,
     );
-  const url = new URL(env.SUPABASE_URL);
-  if (url.protocol !== "https:" || !url.hostname.endsWith(".supabase.co"))
+  let url: URL;
+  try {
+    url = new URL(env.SUPABASE_URL);
+  } catch {
     return page(
       "Service unavailable",
       "<p>Preference service is not configured.</p>",
       503,
     );
-  const response = await fetch(
-    new URL("/rest/v1/rpc/unsubscribe_channel", url).toString(),
-    {
-      method: "POST",
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        "Content-Profile": "club_app",
+  }
+  if (
+    url.protocol !== "https:" ||
+    !url.hostname.endsWith(".supabase.co") ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  )
+    return page(
+      "Service unavailable",
+      "<p>Preference service is not configured.</p>",
+      503,
+    );
+  let response: Response;
+  try {
+    response = await fetch(
+      new URL("/rest/v1/rpc/unsubscribe_channel", url).toString(),
+      {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          "Content-Profile": "club_app",
+        },
+        body: JSON.stringify({
+          c: claim.club,
+          u: claim.user,
+          channel_name: claim.channel,
+        }),
       },
-      body: JSON.stringify({
-        c: claim.club,
-        u: claim.user,
-        channel_name: claim.channel,
-      }),
-    },
-  );
+    );
+  } catch {
+    return page(
+      "Service temporarily unavailable",
+      "<p>We could not confirm your preference update. Please try again or use Member hub preferences.</p>",
+      502,
+    );
+  }
   if (!response.ok)
     return page(
       "Unable to confirm this request",
