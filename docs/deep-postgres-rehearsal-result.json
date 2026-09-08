@@ -1,0 +1,22 @@
+{
+  "remoteDatabaseUsed": false,
+  "syntheticOnly": true,
+  "independentConnections": true,
+  "scoreRace": "one success, one stale conflict",
+  "importCorrectionRace": "correction committed; incompatible import rejected without deadlock",
+  "spareRace": "one confirmed, one payment reconciliation",
+  "emailRace": "90 unique leases across six connections",
+  "restore": {
+    "milliseconds": 565,
+    "tableHashesCompared": 44,
+    "privateReadDenied": true,
+    "encryptedBytes": 464751,
+    "archiveSha256": "2efa7efe09161cb80d7bb208d82d3b6adb70a192b63b3eab6e2a3f6f1e8719c5"
+  },
+  "matchday": {
+    "players": 25,
+    "games": 80
+  },
+  "result": "PASS",
+  "artifactDirectory": "/tmp/maplewood-pg-WIAr3c"
+}
