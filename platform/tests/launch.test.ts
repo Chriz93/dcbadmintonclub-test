@@ -343,3 +343,38 @@ it("organizer review queue and member next-session read expose only the right re
     as(stranger, `select * from club_app.my_upcoming('${c}')`),
   ).rejects.toThrow("membership required");
 });
+
+it("a confirmed spare gets the full $20 back when the school cancels, not shuttles", async () => {
+  const sid = "34000000-0000-0000-0000-000000000003";
+  await db.exec(
+    `delete from club_app.rate_limits;insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${sid}','${c}','${se}','${venue}',now()+interval '9 days',now()+interval '9 days 2 hours',now()+interval '9 days'-interval '2 hours',25);
+ insert into club_app.spare_requests(club_id,session_id,user_id,expires_at,payment_reference,status,paid_at,verified_by) values('${c}','${sid}','${spare}',now()+interval '1 day','ref','confirmed',now(),'${admin}');`,
+  );
+  await as(admin, `select club_app.cancel_session('${c}','${sid}',0)`, "aal2");
+  const ledger = (
+    await db.query<{
+      kind: string;
+      cents: number;
+      shuttles: number;
+      status: string;
+    }>(
+      `select kind,cents,shuttles,status from club_app.session_accounts where session_id='${sid}' and user_id='${spare}' order by kind`,
+    )
+  ).rows;
+  expect(ledger).toEqual([
+    { kind: "shuttle_credit", cents: 0, shuttles: 2, status: "void" },
+    {
+      kind: "spare_reconciliation",
+      cents: 2000,
+      shuttles: 0,
+      status: "pending",
+    },
+  ]);
+  expect(
+    (
+      await db.query(
+        `select shuttles,status from club_app.session_accounts where session_id='${sid}' and user_id='${regular2}' and kind='shuttle_credit'`,
+      )
+    ).rows,
+  ).toEqual([{ shuttles: 2, status: "pending" }]);
+});
