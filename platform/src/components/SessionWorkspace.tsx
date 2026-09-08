@@ -19,6 +19,10 @@ const rosterSchema = z.object({
   kind: z.string(),
 });
 const courtSchema = z.object({ id: z.string(), number: z.number() });
+const targetsSchema = z.object({
+  normalTarget: z.number().int().positive().default(21),
+  fiveTarget: z.number().int().positive().default(15),
+});
 const matchSchema = z.object({
   id: z.string(),
   court_id: z.string(),
@@ -57,6 +61,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   >([]);
   const [seeds, setSeeds] = useState<{ user_id: string; seed: number }[]>([]);
   const [penalties, setPenalties] = useState<string[]>([]);
+  const [targets, setTargets] = useState(targetsSchema.parse({}));
   const [restartId, setRestartId] = useState<number | null>(null);
   const [round, setRound] = useState(1);
   const [reason, setReason] = useState("");
@@ -82,7 +87,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
       setMessage(
         rows.length
           ? "Choose a club session."
-          : "Sign in as an active member through Member hub first.",
+          : "Your account needs an active club membership.",
       );
     } catch {
       setMessage("Club access could not be loaded. Sign in and retry.");
@@ -204,9 +209,20 @@ export function SessionWorkspace({ online }: { online: boolean }) {
             .select("user_id,seed")
             .eq("club_id", club)
             .eq("season_id", updated.season_id),
-          supabase.rpc("placement_penalties", { c: club, s: selected }),
+          scorekeeper
+            ? supabase.rpc("placement_penalties", { c: club, s: selected })
+            : Promise.resolve({ data: [], error: null }),
+          supabase
+            .from("seasons")
+            .select("rules")
+            .eq("club_id", club)
+            .eq("id", updated.season_id)
+            .single(),
         ]);
         if (extra.some((r) => r.error)) throw new Error();
+        setTargets(
+          z.object({ rules: targetsSchema }).parse(extra[3].data).rules,
+        );
         setRatings(
           z
             .array(
@@ -229,6 +245,11 @@ export function SessionWorkspace({ online }: { online: boolean }) {
             .parse(extra[2].data)
             .map((r) => r.user_id),
         );
+      } else {
+        setRatings([]);
+        setSeeds([]);
+        setPenalties([]);
+        setTargets(targetsSchema.parse({}));
       }
       setSessions((rows) =>
         rows.map((s) => (s.id === updated.id ? updated : s)),
@@ -261,8 +282,8 @@ export function SessionWorkspace({ online }: { online: boolean }) {
     <Card>
       <h1>Club session workspace</h1>
       <p>
-        Sign in through Member hub. Administrators verify their authenticator in
-        Administration before assigning courts or completing a session.
+        Administrators verify their authenticator in Administration before
+        assigning courts or completing a session.
       </p>
       <button
         className="button"
@@ -442,10 +463,9 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                               .flatMap((m) => [...m.side_a, ...m.side_b]),
                           ),
                         ];
-                        return saved.length === seen.length &&
-                          seen.every((id) => saved.includes(id))
-                          ? saved
-                          : seen;
+                        // Do not erase an assigned court just because some of its
+                        // match rows are missing from a failed/partial response.
+                        return saved.length ? saved : seen;
                       });
                       ids = nextRoundPlacement(
                         old,
@@ -453,12 +473,19 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                           game: {
                             a: m.side_a,
                             b: m.side_b,
-                            rest: [],
+                            rest: old[
+                              courts.findIndex((c) => c.id === m.court_id)
+                            ].filter(
+                              (id) =>
+                                !m.side_a.includes(id) &&
+                                !m.side_b.includes(id),
+                            ),
                             target: m.target,
                           },
                           a: m.score_a!,
                           b: m.score_b!,
                         })),
+                        targets,
                       );
                     }
                     if (ids.some((c) => c.length === 1)) throw new Error();
@@ -475,7 +502,9 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                     );
                   } catch {
                     setMessage(
-                      "These players cannot fit playable courts. Check attendance and capacity.",
+                      round === 1
+                        ? "These players cannot fit playable courts. Check attendance and capacity."
+                        : "The previous round is incomplete or has invalid games. Refresh and resolve its scores and assignments before moving players.",
                     );
                   }
                 }}
@@ -783,7 +812,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         disabled ||
                         !scorekeeper ||
                         (!admin && m.score_a !== null) ||
-                        (session.status !== "active" &&
+                        (!["scheduled", "active"].includes(session.status) &&
                           !(admin && session.status === "completed")) ||
                         (admin &&
                           m.score_a !== null &&
@@ -828,6 +857,14 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                               : x,
                           ),
                         );
+                        if (session.status === "scheduled")
+                          setSessions((rows) =>
+                            rows.map((s) =>
+                              s.id === selected
+                                ? { ...s, status: "active" }
+                                : s,
+                            ),
+                          );
                       }}
                     />
                   ))}

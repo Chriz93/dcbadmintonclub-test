@@ -70,6 +70,13 @@ export function rotation(
     throw new Error("A playable court needs 2–5 players.");
   if (!Number.isInteger(offset) || offset < 0)
     throw new Error("Invalid rotation offset.");
+  if (
+    ![rules.normalTarget, rules.fiveTarget, rules.winBy, rules.cap].every(
+      (value) => Number.isInteger(value) && value > 0,
+    ) ||
+    rules.cap < Math.max(rules.normalTarget, rules.fiveTarget)
+  )
+    throw new Error("Invalid rotation rules.");
   const game = (a: number[], b: number[], rest: number[] = []) => ({
     a: a.map((i) => ids[i]),
     b: b.map((i) => ids[i]),
@@ -136,6 +143,13 @@ export function rankings(ids: string[], results: Result[]) {
   for (const r of results) {
     validateScore(r.a, r.b, r.game.target);
     unique([...r.game.a, ...r.game.b, ...r.game.rest]);
+    if (
+      r.game.a.length < 1 ||
+      r.game.a.length > 2 ||
+      r.game.a.length !== r.game.b.length ||
+      r.game.rest.some((id) => !ids.includes(id))
+    )
+      throw new Error("Invalid teams or resting player in result.");
     for (const id of [...r.game.a, ...r.game.b]) {
       const p = rows.find((p) => p.id === id);
       if (!p) throw new Error("Unknown player in result.");

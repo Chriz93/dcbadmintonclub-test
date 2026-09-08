@@ -42,17 +42,14 @@ it("rotates who rests first on a five-player court each round while keeping four
     ["a", "b", "c", "d"],
     ["e", "f", "g", "h", "i"],
   ];
-  const game = (a: string[], b: string[], target: number) => ({
-    a,
-    b,
-    rest: [],
-    target,
-  });
-  const results = [
-    { game: game(["a", "b"], ["c", "d"], 21), a: 21, b: 5 },
-    { game: game(["e"], ["f"], 15), a: 15, b: 3 },
-    { game: game(["g"], ["h"], 15), a: 15, b: 2 },
-  ];
+  const { rotation } = await import("../src/domain/courts");
+  const results = courts.flatMap((ids) =>
+    rotation(ids).map((game) => ({
+      game,
+      a: game.target,
+      b: game.target === 21 ? 5 : 3,
+    })),
+  );
   const next = nextRoundPlacement(courts, results);
   // Court 1 keeps its lineup order apart from the swap; court 2 rotates after the swap.
   expect(next[0]).toEqual(["a", "b", "c", "e"]);

@@ -42,28 +42,45 @@ export function NextSession({
   refreshKey: number;
 }) {
   const [rows, setRows] = useState<z.infer<typeof row>[]>([]),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useState(""),
+    [retry, setRetry] = useState(0),
+    [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!supabase || !club) return;
     let alive = true;
-    void supabase.rpc("my_upcoming", { c: club }).then(({ data, error }) => {
-      if (!alive) return;
-      if (error) {
-        setMessage("Your next session could not be loaded.");
-        return;
+    setLoading(true);
+    setRows([]);
+    setMessage("");
+    void (async () => {
+      try {
+        const { data, error } = await supabase!.rpc("my_upcoming", { c: club });
+        if (error) throw error;
+        const parsed = z.array(row).parse(data);
+        if (alive) setRows(parsed);
+      } catch {
+        if (alive) setMessage("Your next session could not be loaded.");
+      } finally {
+        if (alive) setLoading(false);
       }
-      setRows(z.array(row).parse(data));
-      setMessage("");
-    });
+    })();
     return () => {
       alive = false;
     };
-  }, [club, refreshKey]);
+  }, [club, refreshKey, retry]);
   const next = rows[0];
   if (!next)
     return (
       <section className="next-session-panel" aria-label="Your next session">
-        <p>{message || "No upcoming session yet."}</p>
+        <p role="status">
+          {loading
+            ? "Loading your next session…"
+            : message || "No upcoming session yet."}
+        </p>
+        {message && (
+          <button onClick={() => setRetry((n) => n + 1)}>
+            Retry next session
+          </button>
+        )}
       </section>
     );
   const now = Date.now();
