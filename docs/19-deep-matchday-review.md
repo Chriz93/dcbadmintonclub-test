@@ -80,3 +80,9 @@ These are proposals. The implemented fixes and tests above are separate from the
 ## Remaining wider launch gates
 
 The final reviewed season agreement, independent real member/guardian verification, reminder worker/unsubscribe delivery setup and live consent tests, and an actual remote-backup restore remain separate requirements. The paid-spare facility-cancellation refund exception in migration 031 still needs an explicit policy decision. No new real messages were sent in this rehearsal. Test success reduces known risk; it does not establish that every possible failure is covered or that the app is ready for unrestricted production use.
+
+## Independent GitHub verification
+
+[Platform quality gates](https://github.com/Chriz93/dcbadmintonclub-test/actions/runs/34249367834) passed on `a7a82d53a4b32b05db4b6c75ed01b2b98cedba10`: dependency install, lint, coverage, build, advisory audit and the full browser suite. This independently repeats the local checks on a GitHub-hosted Linux runner.
+
+The subsequent [automatic TEST deployment](https://github.com/Chriz93/dcbadmintonclub-test/actions/runs/34249690752) stopped at its configuration guard because `CLOUDFLARE_API_TOKEN` is missing; the account ID and Supabase service-role secret are also unset in that workflow. It did not change the already successful manual TEST deployment. Automatic release/reminder configuration remains unfinished; this is not a failed application test. No credential was created, read, or changed to work around the guard.
