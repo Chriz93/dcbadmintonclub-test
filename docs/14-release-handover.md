@@ -2,7 +2,7 @@
 
 ## Latest: auth-first workflow alignment (2026-09-08)
 
-See `18-simpler-workflow.md`. Connected TEST now starts with email sign-in and routes new accounts through details, season agreement, and approval status. Active players get five simple tabs; owners/admins retain separate MFA-protected Administration access. Full 34-case browser suite, 161 unit/SQL tests, build and lint passed. This turn’s read-only remote metadata check confirmed the three migration-030 APIs used by the frontend plus assignment ordinal exist. No database writes or email sends were performed. Original production remains unchanged. Deployment evidence is recorded below after verification.
+See `18-simpler-workflow.md`. Connected TEST now starts with email sign-in and routes new accounts through details, season agreement, and approval status. Active players get five simple tabs; owners/admins retain separate MFA-protected Administration access. Full 34-case browser suite, 161 unit/SQL tests, build and lint passed. This turn’s read-only remote metadata check confirmed the three migration-030 APIs used by the frontend plus assignment ordinal exist. No database writes or email sends were performed. Original production remains unchanged. Source commit `275470f` was published through Cloudflare direct upload to the existing TEST site; Cloudflare reported Success and a fresh browser verified the new sign-in page and matching built asset filenames. See `18-simpler-workflow.md` for exact evidence and verification limits. The final 14 affected registration/guardian cases passed again after preserving entered values between steps.
 
 
 ## Latest continuation — September 8

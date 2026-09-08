@@ -26,3 +26,11 @@ Active club owners/admins have a separate Administration button; player registra
 - No database data/rules, payments, signatures or emails were changed by this work. Original GitHub Pages production remains untouched.
 
 Remaining launch gates are separate from this workflow change: final reviewed agreement publication, actual independent-account/reminder tests, complete reminder worker configuration, and an isolated restore of an actual remote backup. The paid-spare cancellation exception introduced in migration 031 still needs an unambiguous organizer decision before public launch; this change does not amend that policy.
+
+## Published TEST verification
+
+Source commit: `275470f`. Cloudflare direct upload to the existing `maplewood-league-test` project reported Success on 2026-09-08. Uploaded only the nine compiled static files in `platform/dist`; no source, environment files, database export, or server credentials were uploaded. Local archive SHA-256: `8d66dc9237ec346a07eb8749a6153910556b0f23c3ad7bf3aedf4e8deb8b26f8`. The upload artifact restricts CSP connections to the exact TEST Supabase hostname.
+
+A fresh browser tab at https://maplewood-league-test.pages.dev/ visibly showed the new sign-in front door. Its DOM loaded `index-Bp9bonus.js` and `index-7NJ17fDh.css`, matching the built asset filenames, and captured browser error logs were empty. A separate Python HTTP verification received 403, so independent HTTP/header and byte-for-byte remote verification was not obtained. The deployment was verified through Cloudflare success and the live browser. No new real sign-in email was sent in this turn.
+
+This was a static UI update. It did not deploy or enable the reminder worker/Pages unsubscribe function, publish a reviewed agreement, change database business rules, or launch the original production league.
