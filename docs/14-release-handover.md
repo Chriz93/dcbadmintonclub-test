@@ -1,38 +1,51 @@
 # Release handover — September 7, 2026
 
-## Status
+## Current status
 
-The upgraded app and legacy-history implementation are saved on `upgrade/secure-platform` in the TEST checkout. Migrations 001–025 are applied to the separate Supabase TEST project. Production files, database and public website remain unchanged. This is not a production release sign-off. The user confirmed that Cloudflare and the dedicated league Gmail account are not ready.
+Hosted TEST: https://maplewood-league-test.pages.dev/
 
-## Verified work
+The upgraded app remains on `upgrade/secure-platform` in the TEST checkout. Supabase TEST migrations 001–029 are applied. The original GitHub Pages production site, production checkout and production database remain unchanged. Cloudflare labels the main deployment of this separate TEST project “Production”; that is not the league production database or cutover.
 
-- 137 automated tests passed, including archive access isolation, verified identity linking, invalid historic scores, agreements, refunds, no-shows, ELO, corrections and recovery.
-- All 24 desktop/mobile browser tests passed, including previous matches, archived results and tested accessibility states. Connected browser cases use mocked API responses and are not independent real Auth account tests.
-- ESLint and the TypeScript production build passed; startup bundle approximately 177.5 KiB gzip, below the 220 KiB budget.
-- A real local PostgreSQL 17 rehearsal used separate simultaneous connections: one score edit succeeded and one stale edit conflicted; two payments for the last spare place produced one confirmation and one reconciliation; six email workers leased 90 unique jobs.
-- The synthetic 25-player, 80-game database was exported with pg_dump, encrypted using AES-256-GCM, and restored with pg_restore into a separate database. Data, Auth fixture rows, policies, grants and functions matched across 42 comparisons. Anonymous private reads remained denied. This verifies the recovery mechanism, not recovery of the actual remote Supabase database. The temporary database server was stopped.
-- TEST archive result: one archive, 32 legacy players, one completed session (36 games), zero identity links and zero real current-season signatures. Original protected tables are retained.
+The user created maplewoodbadmintonleague@gmail.com and Cloudflare, and reported Google 2-Step Verification enabled. Supabase SMTP non-secret fields were prepared with smtp.gmail.com:465 and the league sender. The credential setup is **not verified complete**: the user needed help generating a Google app password. The App passwords page is open, and the credential entry/save remains a user handoff. Do not inspect or print password field values.
 
-## What Christy needs to provide
+The user authorized up to four total test messages to christygeorge993@gmail.com and maplewoodbadmintonleague@gmail.com. **Zero of those four messages have been requested/sent in this phase.** No players may be contacted under this authorization.
 
-1. Create the free Cloudflare account and dedicated league Gmail account, then sign in through the browser. Do not paste passwords or app passwords into chat. No domain purchase is necessary for a pages.dev address.
-2. Finish review of the participation agreement, especially guardian participation and the organizer wording. Publish only the reviewed version. No waiver can guarantee absolute legal protection.
-3. Make the approved TEST database connection available through private configuration for an actual external backup/isolated restore, and provide separately controlled test mailboxes for independent member/guardian/admin Auth checks. No destructive restore over an existing project is authorized by this checklist.
-4. After players register and sign, approve eligible registrations and set initial seed order. Historical identity links can then be reviewed.
+## Completed evidence
 
-## Engineering still required before launch
+- 150 automated tests passed.
+- All 24 desktop/mobile browser cases passed across the full run (22 passed) and targeted rerun (2 passed after fixing the test's combobox locator). New coverage includes explicit organizer identity review and disabled submit until confirmation. Browser Auth/API responses are mocked.
+- Build, TypeScript and ESLint checks passed. TEST startup assets approximately 178.5 KiB gzip, below the 220 KiB budget.
+- Real local PostgreSQL separate connections passed competing score corrections, last-spare-place payments, six email workers with 90 unique leases, and permit import concurrent with score correction without deadlock.
+- The synthetic 25-player/80-game database was pg_dump-exported, AES-GCM-encrypted, decrypted and pg_restore-restored into a different database. Data/security matched across 43 comparisons; anonymous private reads stayed denied. This is **not an actual remote Supabase recovery**.
+- Claude completed an independent static review of a code-only snapshot. Findings and remediation are in `16-claude-review.md` and `17-review-remediation.md`. Key fixes cover guardian review, ordinary score overwrites, signed agreement republishing, cancellation/refunds, stale email and penalty reapplication. Low-severity follow-ups remain recorded; no claim of zero defects.
+- TEST legacy archive: 32 players, one completed session/36 games, no real current-season signatures or identity links imported.
+- Gmail reminder adapter is implemented, with durable pre-send markers and reconciliation after uncertain results. No scheduled live worker is deployed or enabled.
 
-- Configure public hosting, Auth URLs and delivery endpoints.
-- Implement/configure and verify the selected free Gmail delivery path (the current worker uses Resend, which needs a verified domain). A Gmail account alone does not make notifications operational. Verify Auth email, reminders, unsubscribe, quota behavior and scheduled execution end to end. SMS remains disabled; no paid subscription was activated.
-- Exercise independently issued real Auth sessions, guardian identity separation and privileged admin flows. The latest browser session returned to the MFA/sign-in gate.
-- Export and restore the actual remote TEST database into an approved isolated target, verify counts, permissions and authentication behavior, and separately account for Storage objects. The local synthetic backup and Supabase daily-backup listing do not satisfy this gate.
-- Verify production source inventory and reconcile any differences from TEST, archive it, then link only reviewed identities. TEST counts must not be represented as production counts.
-- Re-run release checks for the configured deployment and complete production cutover only when the conditional approval gates pass.
+## Next execution steps
 
-## Where to review
+1. User generates the Google app password and enters it directly into the prepared Supabase SMTP form, then saves. Verify a real sign-in email using the authorized four-message budget.
+2. Configure TEST hosted Auth URLs and complete distinct real member/guardian/admin login acceptance, without treating mocked tokens as real identity tests.
+3. Deploy/configure the Gmail reminder worker, scheduler and public signed-unsubscribe endpoint. The present static website deployment does not run server scripts. Private credentials must be supplied directly to the chosen server environment. Test delivery/consent/quotas/unsubscribe before enabling real recipients.
+4. Obtain actual remote TEST database connection through private configuration, export and restore to an approved isolated target, verify permissions/data, and separately account for Storage objects. No destructive restore over an existing project is authorized.
+5. Final participation text review/publication, production inventory reconciliation and conditional cutover after gates pass. Initial seeding follows real player registration, signing and organizer review.
 
-Local connected app: http://127.0.0.1:5174/
+## Review locations
 
-Members: Member hub → previous matches and Previous seasons. Standings has current rankings/results. Administrators: Administration → Previous-season archive and identity links (requires current verified administrator MFA).
+Member hub: details, season agreement, RSVP and previous matches. Standings: rankings/results. Administration: identity review, approvals, payments, seeding, match-day correction/recovery and previous-season identity linking.
 
-No real member notifications were sent in this pass; no payment was marked verified for a real member; no old signature was converted into a new-season signature.
+Plan and enhancement priorities: `15-release-plan.md`. No paid subscription was activated, no real payment was marked verified, and no real agreement was signed by the assistant.
+
+
+## SMTP live check — September 7, 2026
+
+User reported saving the Google app password. One authorized hosted TEST sign-in request to the organizer failed: Supabase Auth logged Gmail SMTP 535 / 5.7.8 (username and password not accepted). Delivery is not verified. Count this as one of the four authorized test attempts; do not retry automatically until credentials are corrected. No credential was recorded. The updated Cloudflare TEST deployment reported Success.
+
+September 8 follow-up: user removed spaces from the app password and saved. Two additional hosted TEST sign-in attempts failed in the UI (three total authorized attempts used, one remaining). Latest detailed cause still being checked; do not infer delivery or credential validity from the generic UI error.
+
+September 8 SMTP follow-up: browser input replacement required ControlOrMeta+A / Backspace; Meta/Super selection had appended text and caused temporary invalid addresses. Final fourth authorized sign-in request still failed in UI. Do not send further test emails without additional authorization. SMTP credentials remain unverified.
+
+September 8 latest SMTP check: after user reported a successful credential update, one additionally authorized hosted TEST sign-in request to the organizer succeeded. The application displayed the One-time code input and its success status. Inbox delivery and completed login remain pending user verification; no code or credential collected. Five total authorized request attempts across this setup, with no further messages authorized by this latest single retry.
+
+September 8 confirmed email login: organizer reported receiving/entering the code; hosted TEST showed authenticated Member hub with real league sessions and private account controls. Administration remained behind its authenticator verification gate. Existing-factor verification form opened for the organizer. This confirms one organizer email/login path, not independent member/guardian accounts or scheduled reminders.
+
+September 8 organizer MFA verification passed on hosted TEST. UI reported second factor verified; Load club records succeeded with Club records refreshed, real season sessions and existing audit events. No league records mutated by this read-only verification. Remaining independent-account, scheduled reminder delivery, and actual remote backup restore gates are unchanged.

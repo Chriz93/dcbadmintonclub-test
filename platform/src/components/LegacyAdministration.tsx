@@ -78,20 +78,22 @@ export function LegacyAdministration({ club }: { club: string }) {
     setUser("");
     if (!supabase || !se) return;
     try {
-    const { data, error } = await supabase.rpc("seed_candidates", {
-      c: club,
-      se,
-    });
-    if (error) {
+      const { data, error } = await supabase.rpc("seed_candidates", {
+        c: club,
+        se,
+      });
+      if (error) {
+        setMessage("Could not load signed, approved players.");
+        return;
+      }
+      setUsers(
+        z
+          .array(z.object({ user_id: z.string(), display_name: z.string() }))
+          .parse(data),
+      );
+    } catch {
       setMessage("Could not load signed, approved players.");
-      return;
     }
-    setUsers(
-      z
-        .array(z.object({ user_id: z.string(), display_name: z.string() }))
-        .parse(data),
-    );
-    } catch { setMessage("Could not load signed, approved players."); }
   }
   return (
     <details>

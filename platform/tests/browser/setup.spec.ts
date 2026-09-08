@@ -33,6 +33,7 @@ test("administrator edits public settings with a reason and safely renders annou
     Buffer.alloc(32).toString("base64url"),
   ].join(".");
   let saved: unknown;
+  let eligibilitySaved: unknown;
   await page.route(
     "https://wgolevihkvmosajumzvl.supabase.co/**",
     async (route) => {
@@ -73,7 +74,28 @@ test("administrator edits public settings with a reason and safely renders annou
               },
             }
           : [{ id: "club", name: "Synthetic Club" }];
-      else if (path.endsWith("/rpc/save_club_settings")) {
+      else if (path.endsWith("/participant_eligibility"))
+        data = [
+          {
+            user_id: "child",
+            season_id: "season",
+            birth_date: "2010-01-01",
+            guardian_email: "guardian@example.invalid",
+            revision: 3,
+          },
+        ];
+      else if (path.endsWith("/member_intake"))
+        data = [
+          {
+            user_id: "child",
+            season_id: "season",
+            legal_name: "Synthetic child",
+          },
+        ];
+      else if (path.endsWith("/rpc/review_eligibility")) {
+        eligibilitySaved = route.request().postDataJSON();
+        data = null;
+      } else if (path.endsWith("/rpc/save_club_settings")) {
         saved = route.request().postDataJSON();
         data = null;
       }
@@ -102,6 +124,43 @@ test("administrator edits public settings with a reason and safely renders annou
   await page
     .getByRole("button", { name: "Administration", exact: true })
     .click();
+  await page
+    .getByText("Participant and guardian identity review", { exact: true })
+    .click();
+  await page.getByRole("button", { name: "Load eligibility details" }).click();
+  await page
+    .getByRole("combobox", { name: "Participant", exact: true })
+    .selectOption("season/child");
+  await expect(
+    page.getByText("Date of birth: 2010-01-01.", { exact: false }),
+  ).toBeVisible();
+  const record = page.getByRole("button", { name: "Record identity review" });
+  await expect(record).toBeDisabled();
+  await page
+    .getByLabel("Verified guardian legal name")
+    .fill("Synthetic Guardian");
+  await page
+    .getByLabel("How you verified these details")
+    .fill("Synthetic in-person identity and relationship check");
+  await expect(record).toBeDisabled();
+  await page
+    .getByRole("checkbox", { name: "I independently checked", exact: false })
+    .check();
+  await record.click();
+  await expect
+    .poll(() => eligibilitySaved)
+    .toEqual({
+      c: "club",
+      s: "season",
+      u: "child",
+      expected_revision: 3,
+      guardian_name: "Synthetic Guardian",
+      reason: "Synthetic in-person identity and relationship check",
+      confirmed: true,
+    });
+  await expect(
+    page.getByRole("status").filter({ hasText: "Identity review recorded" }),
+  ).toBeVisible();
   await page
     .getByText("Club settings, season builder and announcements", {
       exact: true,

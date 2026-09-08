@@ -435,3 +435,52 @@ it("refunds at exactly 72 elapsed hours but not one millisecond late", async () 
     await db.exec("rollback");
   }
 });
+
+it("replacement opening plans unconsume omitted penalties and exclude current/future sessions", async () => {
+  const next = fixtureId(3, 60),
+    future = fixtureId(3, 61);
+  await db.exec(`insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${next}','${club}','${seasonId}','${fixtureId(4)}','2026-09-15T00:15Z','2026-09-15T02:15Z','2026-09-12T00:15Z',25),('${future}','${club}','${seasonId}','${fixtureId(4)}','2026-09-22T00:15Z','2026-09-22T02:15Z','2026-09-19T00:15Z',25);
+ insert into club_app.no_show_penalties(club_id,session_id,user_id,reason) values('${club}','${sessionId}','${players[0]}','Synthetic earlier absence'),('${club}','${next}','${players[1]}','Synthetic current absence'),('${club}','${future}','${players[2]}','Synthetic future absence');`);
+  expect(
+    (
+      await as(
+        admins[0],
+        `select * from club_app.placement_penalties('${club}','${next}')`,
+      )
+    )[0].rows,
+  ).toEqual([{ user_id: players[0] }]);
+  const plan = JSON.stringify(
+    allocate(players, 6).map((p, i) => ({
+      court_id: fixtureId(7, i + 1),
+      players: p,
+    })),
+  );
+  await as(
+    admins[0],
+    `select club_app.assign_reviewed_courts('${club}','${next}',1,'${plan}',0,'Synthetic reviewed penalty',array['${players[0]}']::uuid[])`,
+  );
+  expect(
+    (
+      await db.query(
+        `select status from club_app.no_show_penalties where session_id='${sessionId}' and user_id='${players[0]}'`,
+      )
+    ).rows,
+  ).toEqual([{ status: "applied" }]);
+  await as(
+    admins[0],
+    `select club_app.assign_reviewed_courts('${club}','${next}',1,'${plan}',1,'Synthetic revised plan defers penalty',array[]::uuid[])`,
+  );
+  expect(
+    (
+      await db.query(
+        `select status,applied_session from club_app.no_show_penalties where session_id='${sessionId}' and user_id='${players[0]}'`,
+      )
+    ).rows,
+  ).toEqual([{ status: "pending", applied_session: null }]);
+  await expect(
+    as(
+      admins[0],
+      `select club_app.assign_reviewed_courts('${club}','${next}',1,'${plan}',2,'Synthetic invalid current penalty',array['${players[1]}']::uuid[])`,
+    ),
+  ).rejects.toThrow("earlier session");
+});

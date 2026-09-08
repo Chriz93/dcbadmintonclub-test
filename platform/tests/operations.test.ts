@@ -197,6 +197,20 @@ it("routes a 17-year-old to the designated verified guardian and blocks forged/s
   ).toHaveLength(0);
   expect(
     (await as(guardian, "select * from club_app.signing_options()"))[0].rows,
+  ).toHaveLength(0);
+  await expect(
+    as(
+      minor,
+      `select club_app.review_eligibility('${c}','${se}','${minor}',1,'Guardian Name','Forged independent review',true)`,
+    ),
+  ).rejects.toThrow("Administrator MFA");
+  await as(
+    admin,
+    `select club_app.review_eligibility('${c}','${se}','${minor}',1,'Guardian Name','Synthetic independently checked guardian and date of birth',true)`,
+    "aal2",
+  );
+  expect(
+    (await as(guardian, "select * from club_app.signing_options()"))[0].rows,
   ).toHaveLength(1);
   const sign = (h: string) =>
     `select club_app.sign_agreement('${c}','${se}','${minor}','${waiver}','${h}','Guardian Name','Parent',true,true)`;
@@ -491,6 +505,11 @@ it("allows a younger participant but still requires their separate verified guar
     expect(
       (await as(young, "select * from club_app.signing_options()"))[0].rows,
     ).toHaveLength(0);
+    await as(
+      admin,
+      `select club_app.review_eligibility('${c}','${se}','${young}',1,'Guardian Name','Synthetic independently confirmed guardian',true)`,
+      "aal2",
+    );
     expect(
       (
         await as(
@@ -580,4 +599,168 @@ it("archives old games without granting membership and exposes only explicitly l
     "aal2",
   );
   expect(replay[0].rows[0].id).toBe(archive);
+});
+
+it("SMTP crash, duplicate start and stale completion require reconciliation without resend", async () => {
+  await db.exec("begin");
+  try {
+    const id = "99000000-0000-0000-0000-000000000026";
+    await db.exec(
+      `insert into club_app.notification_deliveries(id,club_id,user_id,channel,template,idempotency_key,status,attempts,lease_until,payload) values('${id}','${c}','${adult}','email','attendance.reminder','smtp-crash','processing',1,now()+interval '2 minutes','{}');`,
+    );
+    await db.exec("savepoint denied");
+    await expect(
+      as(adult, `select club_app.begin_smtp_delivery('${id}',1)`),
+    ).rejects.toThrow();
+    await db.exec("rollback to savepoint denied;reset role");
+    await db.exec(
+      `set role service_role;select club_app.begin_smtp_delivery('${id}',1);reset role;`,
+    );
+    await db.exec("savepoint duplicate");
+    await expect(
+      db.exec(`select club_app.begin_smtp_delivery('${id}',1)`),
+    ).rejects.toThrow("already started");
+    await db.exec("rollback to savepoint duplicate");
+    await db.exec(
+      `update club_app.notification_deliveries set lease_until=now()-interval '1 second' where id='${id}';select * from club_app.claim_delivery_batch(1,array['email']);`,
+    );
+    expect(
+      (
+        await db.query(
+          `select status,attempts from club_app.notification_deliveries where id='${id}'`,
+        )
+      ).rows,
+    ).toEqual([{ status: "failed", attempts: 1 }]);
+    await db.exec("savepoint stale");
+    await expect(
+      db.exec(
+        `select club_app.finish_delivery('${id}',1,'accepted','synthetic')`,
+      ),
+    ).rejects.toThrow("Stale");
+    await db.exec("rollback to savepoint stale");
+  } finally {
+    await db.exec("rollback;reset role");
+  }
+});
+it("SMTP uncertain error cannot be made automatically retryable", async () => {
+  await db.exec("begin");
+  try {
+    const id = "99000000-0000-0000-0000-000000000027";
+    await db.exec(
+      `insert into club_app.notification_deliveries(id,club_id,user_id,channel,template,idempotency_key,status,attempts,lease_until,payload) values('${id}','${c}','${adult}','email','attendance.reminder','smtp-failure','processing',1,now()+interval '2 minutes','{}');select club_app.begin_smtp_delivery('${id}',1);select club_app.finish_delivery('${id}',1,'pending');`,
+    );
+    expect(
+      (
+        await db.query(
+          `select status from club_app.notification_deliveries where id='${id}'`,
+        )
+      ).rows,
+    ).toEqual([{ status: "failed" }]);
+  } finally {
+    await db.exec("rollback");
+  }
+});
+
+it("signed terms cannot be republished and approved paid places remain reserved", async () => {
+  const before = (
+    await db.query(
+      `select user_id,status from club_app.registrations where club_id='${c}' order by user_id`,
+    )
+  ).rows;
+  await expect(
+    as(
+      admin,
+      `select club_app.publish_agreement('${c}','${se}',repeat('Revised synthetic text. ',10),'Synthetic typo correction',1)`,
+      "aal2",
+    ),
+  ).rejects.toThrow("already has signatures");
+  expect(
+    (
+      await db.query(
+        `select user_id,status from club_app.registrations where club_id='${c}' order by user_id`,
+      )
+    ).rows,
+  ).toEqual(before);
+  expect(
+    (
+      await db.query(
+        `select count(*)::int n from club_app.agreement_publications where club_id='${c}'`,
+      )
+    ).rows,
+  ).toEqual([{ n: 1 }]);
+});
+it("permit re-import cannot reopen a policy-cancelled session", async () => {
+  await expect(
+    as(
+      admin,
+      `select club_app.import_permit('${c}','${se}','${venue}','synthetic','synthetic.pdf',repeat('a',64),(select jsonb_build_array(jsonb_build_object('starts_at',starts_at,'ends_at',ends_at,'status','active')) from club_app.sessions where id='${sessions[0]}'),1,2,true)`,
+      "aal2",
+    ),
+  ).rejects.toThrow("cannot cancel or reopen");
+  expect(
+    (
+      await db.query(
+        `select status from club_app.sessions where id='${sessions[0]}'`,
+      )
+    ).rows,
+  ).toEqual([{ status: "cancelled" }]);
+});
+it("school cancellation voids a pending absence refund and credits physical shuttles", async () => {
+  await db.exec("begin");
+  try {
+    const sid = "99000000-0000-0000-0000-000000000030";
+    await db.exec(
+      `insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${sid}','${c}','${se}','${venue}',now()+interval '10 days',now()+interval '10 days 2 hours',now()+interval '7 days',1);`,
+    );
+    await as(
+      adult,
+      `select club_app.submit_rsvp('${c}','${sid}','${adult}','not_attending','Synthetic early notice',0,gen_random_uuid())`,
+    );
+    expect(
+      (
+        await db.query(
+          `select status from club_app.session_accounts where session_id='${sid}' and kind='absence_refund'`,
+        )
+      ).rows,
+    ).toEqual([{ status: "pending" }]);
+    await as(
+      admin,
+      `select club_app.cancel_session('${c}','${sid}',0)`,
+      "aal2",
+    );
+    expect(
+      (
+        await db.query(
+          `select status from club_app.session_accounts where session_id='${sid}' and kind='absence_refund'`,
+        )
+      ).rows,
+    ).toEqual([{ status: "void" }]);
+    expect(
+      (
+        await db.query(
+          `select shuttles from club_app.session_accounts where session_id='${sid}' and kind='shuttle_credit' and user_id='${adult}'`,
+        )
+      ).rows,
+    ).toEqual([{ shuttles: 2 }]);
+  } finally {
+    await db.exec("rollback;reset role");
+  }
+});
+it("never-attempted expired reminders are suppressed before claiming", async () => {
+  await db.exec("begin");
+  try {
+    const id = "99000000-0000-0000-0000-000000000031";
+    await db.exec(
+      `insert into club_app.notification_deliveries(id,club_id,user_id,channel,template,idempotency_key,payload,created_at) values('${id}','${c}','${adult}','email','spare.available','stale-unattempted','{}',now()-interval '2 days');select * from club_app.claim_delivery_batch(1,array['email']);`,
+    );
+    expect(
+      (
+        await db.query(
+          `select status,attempts from club_app.notification_deliveries where id='${id}'`,
+        )
+      ).rows,
+    ).toEqual([{ status: "suppressed", attempts: 0 }]);
+  } finally {
+    await db.exec("rollback;reset role");
+  }
 });

@@ -42,6 +42,14 @@ export function initialPlacement(
   }
   return { plan, applied, unresolved };
 }
+/**
+ * On a five-player court the lineup position decides who rests first (position 1 rests game 1,
+ * position 2 rests game 2, and so on). Rotating the lineup by one place each round moves that
+ * first rest to a different player, so nobody keeps the same rest slot round after round.
+ */
+export function rotateRestOrder(courts: string[][]) {
+  return courts.map((c) => (c.length === 5 ? [...c.slice(1), c[0]] : [...c]));
+}
 export function nextRoundPlacement(courts: string[][], results: Result[]) {
   if (!results.length) throw new Error("Complete the previous round first");
   const ordered = courts.map((ids) =>
@@ -50,5 +58,5 @@ export function nextRoundPlacement(courts: string[][], results: Result[]) {
       results.filter((r) => r.game.a.some((id) => ids.includes(id))),
     ).map((r) => r.id),
   );
-  return moveCourts(courts, ordered);
+  return rotateRestOrder(moveCourts(courts, ordered));
 }

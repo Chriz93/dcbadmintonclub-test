@@ -202,6 +202,23 @@ describe.sequential("operations, queue and rate limits", () => {
       ),
     ).rejects.toThrow("Revision conflict");
   });
+  it("recorded scores cannot be overwritten through ordinary score entry", async () => {
+    const match = "90000000-0000-0000-0000-000000000001";
+    await expect(
+      as(
+        admin,
+        `select club_app.submit_score('${c}','${match}',15,0,1)`,
+        "aal2",
+      ),
+    ).rejects.toThrow("administrator correction");
+    expect(
+      (
+        await db.query(
+          `select score_a,score_b,revision from club_app.matches where id='${match}'`,
+        )
+      ).rows,
+    ).toEqual([{ score_a: 15, score_b: 12, revision: 1 }]);
+  });
   it("cancellation requires MFA, audits and queues consented notices", async () => {
     await as(admin, `select club_app.cancel_session('${c}','${s}',0)`, "aal2");
     expect(

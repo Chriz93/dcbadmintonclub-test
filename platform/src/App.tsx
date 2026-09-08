@@ -698,10 +698,11 @@ function Courts({ online }: { online: boolean }) {
             <summary>Standings and movement rules</summary>
             <p>
               Compare win percentage, then points earned / possible points.
-              Complete every scheduled game before movement; tied movement
-              positions require a recorded administrator decision. Swap the
-              bottom player with the adjacent court’s top player, preserving all
-              court sizes. This preview does not persist movements.
+              Complete every scheduled game before movement. Exact ties use a
+              stable automatic order, which the administrator can review before
+              saving. Swap the bottom player with the adjacent court’s top
+              player, preserving all court sizes. This preview does not persist
+              movements.
             </p>
             {rankings(
               ids,

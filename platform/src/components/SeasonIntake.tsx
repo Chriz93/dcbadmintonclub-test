@@ -18,7 +18,8 @@ export function SeasonIntake() {
     [kind, setKind] = useState("regular"),
     [reference, setReference] = useState(""),
     [amount, setAmount] = useState("0"),
-    [revision, setRevision] = useState(0);
+    [revision, setRevision] = useState(0),
+    [invited, setInvited] = useState("");
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -43,9 +44,35 @@ export function SeasonIntake() {
     };
   }, []);
   const choice = options.find((o) => o.season_id === selected);
+  useEffect(() => {
+    if (!supabase || !choice) return;
+    let alive = true;
+    setInvited("");
+    void supabase
+      .rpc("my_invitation", { c: choice.club_id, s: choice.season_id })
+      .then(({ data, error }) => {
+        if (!alive) return;
+        const status = error ? "unknown" : String(data ?? "none");
+        setInvited(status);
+        if (status === "regular" || status === "spare") setKind(status);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [choice]);
+  const closed = invited === "none";
+  const lockedKind = invited === "regular" || invited === "spare";
   return (
     <section>
       <h3>Complete your league details</h3>
+      {closed && (
+        <p role="alert">
+          Registration is closed. This link completes onboarding only for
+          players Christy has already confirmed by email. If you were accepted
+          and still see this message, contact the organizer so your sign-in
+          email can be added.
+        </p>
+      )}
       <p>
         We collect contact details for league operations and emergencies. Your
         legal name, contact and payment details are private to you and
@@ -63,7 +90,7 @@ export function SeasonIntake() {
         and amount; never bank passwords or security answers. Christy verifies
         payments separately. Waiver acceptance is a separate step.
       </p>
-      {choice && (
+      {choice && !closed && (
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -241,7 +268,7 @@ export function SeasonIntake() {
             Player type
             <select
               value={kind}
-              disabled={busy}
+              disabled={busy || lockedKind}
               onChange={(e) => setKind(e.target.value)}
             >
               <option value="regular">

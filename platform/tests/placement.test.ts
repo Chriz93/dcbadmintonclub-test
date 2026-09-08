@@ -26,3 +26,37 @@ it("flags a bottom-court penalty rather than creating an invalid court", () => {
   expect(result.unresolved).toEqual(["p7"]);
   expect(result.plan.flat()).toHaveLength(8);
 });
+it("rotates who rests first on a five-player court each round while keeping four-player courts fixed", async () => {
+  const { rotateRestOrder, nextRoundPlacement } =
+    await import("../src/domain/placement");
+  expect(
+    rotateRestOrder([
+      ["a", "b", "c", "d", "e"],
+      ["f", "g", "h", "i"],
+    ]),
+  ).toEqual([
+    ["b", "c", "d", "e", "a"],
+    ["f", "g", "h", "i"],
+  ]);
+  const courts = [
+    ["a", "b", "c", "d"],
+    ["e", "f", "g", "h", "i"],
+  ];
+  const game = (a: string[], b: string[], target: number) => ({
+    a,
+    b,
+    rest: [],
+    target,
+  });
+  const results = [
+    { game: game(["a", "b"], ["c", "d"], 21), a: 21, b: 5 },
+    { game: game(["e"], ["f"], 15), a: 15, b: 3 },
+    { game: game(["g"], ["h"], 15), a: 15, b: 2 },
+  ];
+  const next = nextRoundPlacement(courts, results);
+  // Court 1 keeps its lineup order apart from the swap; court 2 rotates after the swap.
+  expect(next[0]).toEqual(["a", "b", "c", "e"]);
+  expect(next[1]).toHaveLength(5);
+  expect(next[1][4]).toBe("d");
+  expect(new Set(next.flat()).size).toBe(9);
+});

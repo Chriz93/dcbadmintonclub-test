@@ -1,3 +1,5 @@
+import { EligibilityReview } from "./EligibilityReview";
+import { Invitations } from "./Invitations";
 import { LegacyAdministration } from "./LegacyAdministration";
 import { PrivacyReview } from "./PrivacyReview";
 import { ClubSetup } from "./ClubSetup";
@@ -236,6 +238,8 @@ export function AdminTools() {
           </button>
           <LeagueOperations club={club} />
           <ClubSetup club={club} />
+          <Invitations key={club + "invitations"} club={club} />
+          <EligibilityReview key={club + "eligibility"} club={club} />
           <PrivacyReview club={club} />
           <LegacyAdministration key={club} club={club} />
           <h3>Payment review</h3>

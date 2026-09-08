@@ -101,10 +101,11 @@ export function SessionAccounts({
               <summary>Book as an approved spare — $20</summary>
               <p>
                 Current state: {spareStatus}. A vote and payment claim do not
-                reserve a place. The first eligible vote with verified payment
-                takes an available spot. Claims expire after 24 hours or at
-                session start. If payment cannot secure a place, the
-                administrator reconciles it.
+                reserve a place. Places are confirmed when both the vote and
+                payment verification are complete and capacity is available. An
+                earlier unpaid vote does not reserve a place. Claims expire
+                after 24 hours or at session start. If payment cannot secure a
+                place, the administrator reconciles it.
               </p>
               <button
                 className="button"

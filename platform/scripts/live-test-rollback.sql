@@ -33,6 +33,9 @@ begin
  begin perform club_app.sign_agreement(c,se,users[3],w,h,'Synthetic minor',null,true,true);exception when insufficient_privilege then blocked=true;end;
  if not blocked then raise exception 'Minor self-signing was not blocked';end if;
  perform set_config('request.jwt.claim.sub',users[4]::text,true);perform set_config('request.jwt.claims',jsonb_build_object('sub',users[4],'aal','aal1')::text,true);
+ perform set_config('request.jwt.claim.sub',users[1]::text,true);perform set_config('request.jwt.claims','{"aal":"aal2"}',true);
+ perform club_app.review_eligibility(c,se,users[3],1,'Synthetic guardian','Synthetic independent guardian review',true);
+ perform set_config('request.jwt.claim.sub',users[4]::text,true);perform set_config('request.jwt.claims','{"aal":"aal1"}',true);
  receipt=club_app.sign_agreement(c,se,users[3],w,h,'Synthetic guardian','Parent',true,true);
  if not exists(select 1 from club_app.signature_receipts where id=receipt and signer_capacity='guardian') then raise exception 'Guardian signing failed';end if;
  perform set_config('request.jwt.claim.sub',users[1]::text,true);perform set_config('request.jwt.claims',jsonb_build_object('sub',users[1],'aal','aal2')::text,true);

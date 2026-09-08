@@ -54,12 +54,16 @@ insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rs
       `select club_app.save_eligibility('${club}','${seasonId}','1990-01-01',null,0,true);
  select club_app.sign_agreement('${club}','${seasonId}','${id}',id,sha256,'TEST Player ${i + 1}',null,true,true) from club_app.waiver_versions where club_id='${club}';`,
       identity(admins[i % 2]),
-      `select club_app.approve_member('${club}','${seasonId}','${id}');`,
+      `select club_app.review_eligibility('${club}','${seasonId}','${id}',1,null,'Synthetic independent identity review',true);select club_app.approve_member('${club}','${seasonId}','${id}');`,
     );
   });
   sql.push(
     identity(admins[0]),
     `select club_app.set_seeding('${club}','${seasonId}',array[${players.map(q).join(",")}]::uuid[],0,'Synthetic organizer initial order');`,
+  );
+  // Onboarding and match-day are separate real-world phases; reset only fixture actors.
+  sql.push(
+    `delete from club_app.rate_limits where user_id in ('${admins[0]}','${admins[1]}');`,
   );
   let plan = allocate(players, 6);
   for (let round = 1; round <= 4; round++) {

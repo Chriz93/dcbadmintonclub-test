@@ -152,6 +152,38 @@ try {
   await sql(
     `begin;set local role authenticated;${identity(admins[0])}select club_app.correct_score('${club}','${m.id}',${m.score_a},${m.score_b},2,'Restore original synthetic score');commit;`,
   );
+  // Reproduce the former import-season/session versus correction-session/season inversion.
+  const correction = sql(
+    `begin;set application_name='maplewood-import-race';select id from club_app.sessions where id='${sessionId}' for update;select pg_sleep(2);set local role authenticated;${identity(admins[0])}select club_app.correct_score('${club}','${m.id}',${m.score_a},${m.score_b},3,'Concurrent import lock regression');commit;`,
+    "rehearsal",
+    true,
+  );
+  let importBarrier = false;
+  for (let i = 0; i < 80; i++) {
+    const waiting = await sql(
+      "select count(*) from pg_stat_activity where application_name='maplewood-import-race' and wait_event='PgSleep'",
+    );
+    if (waiting.out.toString().trim() === "1") {
+      importBarrier = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  check(importBarrier, "Import race barrier failed");
+  const permit = sql(
+    `begin;set local role authenticated;${identity(admins[1])}select club_app.import_permit('${club}','${fixtureId(2)}','${fixtureId(4)}','Synthetic race','synthetic.pdf',repeat('c',64),(select jsonb_build_array(jsonb_build_object('starts_at',starts_at,'ends_at',ends_at,'status','active')) from club_app.sessions where id='${sessionId}'),1,2,true);commit;`,
+    "rehearsal",
+    true,
+  );
+  const raced = await Promise.all([correction, permit]);
+  check(
+    raced[0].code === 0 &&
+      raced[1].err.includes("cannot cancel or reopen") &&
+      !raced.some((r) => /deadlock/i.test(r.err)),
+    "Import/correction lock race failed",
+  );
+  report.importCorrectionRace =
+    "correction committed; incompatible import rejected without deadlock";
   const spareSession = fixtureId(3, 9),
     spareSeason = fixtureId(2, 9);
   await sql(

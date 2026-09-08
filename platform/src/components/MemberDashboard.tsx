@@ -5,6 +5,7 @@ import { SessionAccounts } from "./SessionAccounts";
 import { SeasonIntake } from "./SeasonIntake";
 import { PersonalRecords } from "./PersonalRecords";
 import { AgreementSigning } from "./AgreementSigning";
+import { NextSession } from "./NextSession";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "../services/auth";
@@ -34,6 +35,7 @@ type Club = z.infer<typeof membershipSchema>;
 type Session = z.infer<typeof sessionSchema>;
 export function MemberDashboard() {
   const [readySession, setReadySession] = useState("");
+  const [upcomingKey, setUpcomingKey] = useState(0);
   const [clubs, setClubs] = useState<Club[]>([]),
     [club, setClub] = useState(""),
     [sessions, setSessions] = useState<Session[]>([]),
@@ -145,6 +147,7 @@ export function MemberDashboard() {
   return (
     <Card>
       <h2>Your upcoming sessions</h2>
+      {club && <NextSession club={club} refreshKey={upcomingKey} />}
       {club && <ClubNews club={club} />}
       {clubs.length === 0 ? (
         <p>
@@ -188,8 +191,21 @@ export function MemberDashboard() {
             <>
               <p>
                 Capacity: {session.capacity} · RSVP deadline:{" "}
-                {new Date(session.rsvp_deadline).toLocaleString()} · Your place:{" "}
-                {placement}
+                {new Date(session.rsvp_deadline).toLocaleString("en-CA", {
+                  timeZone: "America/Toronto",
+                  timeZoneName: "short",
+                })}{" "}
+                · Your place: {placement}
+              </p>
+              <p>
+                $14 absence refund notice is due by{" "}
+                {new Date(
+                  new Date(session.starts_at).getTime() - 72 * 60 * 60 * 1000,
+                ).toLocaleString("en-CA", {
+                  timeZone: "America/Toronto",
+                  timeZoneName: "short",
+                })}{" "}
+                (72 hours before play).
               </p>
               {isSpare ? (
                 <p>
@@ -232,6 +248,7 @@ export function MemberDashboard() {
                       setRevision(saved.revision);
                       setPlacement(saved.placement);
                       setRequest(null);
+                      setUpcomingKey((k) => k + 1);
                       setMessage(
                         "RSVP saved. If opted in, your email is queued separately.",
                       );

@@ -70,7 +70,7 @@ export function AgreementSigning() {
       setReceipts(z.array(receipt).parse(saved.data));
       setAccept(false);
       setMessage(
-        "Signing records refreshed. A guardian signs in using the guardian email supplied by the player.",
+        "Signing records refreshed. Christy must independently review a minor’s guardian identity before the guardian can see or sign the agreement.",
       );
     } catch {
       setMessage("Unable to load signing records. Sign in and retry.");
@@ -150,7 +150,7 @@ export function AgreementSigning() {
               setRevision(z.number().parse(data));
               await refresh();
               setMessage(
-                "Eligibility saved. Adult players may sign below when the reviewed agreement is published. For minors, ask the guardian to sign in using their own email on this website.",
+                "Eligibility saved. Adult players may sign below when the reviewed agreement is published. For minors, Christy must first confirm the guardian’s identity and relationship. The reviewed guardian then signs in using their own email on this website.",
               );
             } catch {
               setMessage(
@@ -214,8 +214,8 @@ export function AgreementSigning() {
       {!choices.length && (
         <p>
           No agreement is available for you to sign yet. The organizer must
-          publish the reviewed text; a minor’s designated guardian must sign in
-          separately.
+          publish the reviewed text and independently confirm a minor’s
+          guardian; that guardian must sign in separately.
         </p>
       )}
       {choices.length > 1 && (

@@ -41,6 +41,14 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   const [roster, setRoster] = useState<z.infer<typeof rosterSchema>[]>([]);
   const [courts, setCourts] = useState<z.infer<typeof courtSchema>[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [lineups, setLineups] = useState<
+    {
+      user_id: string;
+      court_id: string;
+      round: number;
+      ordinal: number | null;
+    }[]
+  >([]);
   const [present, setPresent] = useState<string[]>([]);
   const [plan, setPlan] = useState<Plan>([]);
   const [appliedPenalties, setAppliedPenalties] = useState<string[]>([]);
@@ -155,10 +163,27 @@ export function SessionWorkspace({ online }: { online: boolean }) {
           .eq("club_id", club)
           .eq("id", selected)
           .single(),
+        supabase
+          .from("assignments")
+          .select("user_id,court_id,round,ordinal")
+          .eq("club_id", club)
+          .eq("session_id", selected),
       ]);
       if (results.some((r) => r.error)) throw new Error();
       setCourts(z.array(courtSchema).parse(results[0].data));
       setMatches(z.array(matchSchema).parse(results[1].data));
+      setLineups(
+        z
+          .array(
+            z.object({
+              user_id: z.string(),
+              court_id: z.string(),
+              round: z.number(),
+              ordinal: z.number().nullable(),
+            }),
+          )
+          .parse(results[4].data),
+      );
       setPresent(
         z
           .array(z.object({ user_id: z.string(), status: z.string() }))
@@ -179,11 +204,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
             .select("user_id,seed")
             .eq("club_id", club)
             .eq("season_id", updated.season_id),
-          supabase
-            .from("no_show_penalties")
-            .select("user_id")
-            .eq("club_id", club)
-            .eq("status", "pending"),
+          supabase.rpc("placement_penalties", { c: club, s: selected }),
         ]);
         if (extra.some((r) => r.error)) throw new Error();
         setRatings(
@@ -402,13 +423,30 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                         )
                       )
                         throw new Error();
-                      const old = courts.map((c) => [
-                        ...new Set(
-                          previous
-                            .filter((m) => m.court_id === c.id)
-                            .flatMap((m) => [...m.side_a, ...m.side_b]),
-                        ),
-                      ]);
+                      // Saved lineup ordinals preserve the rest order; older rows without
+                      // ordinals fall back to first appearance in the recorded games.
+                      const old = courts.map((c) => {
+                        const saved = lineups
+                          .filter(
+                            (l) =>
+                              l.court_id === c.id &&
+                              l.round === round - 1 &&
+                              l.ordinal !== null,
+                          )
+                          .sort((x, y) => x.ordinal! - y.ordinal!)
+                          .map((l) => l.user_id);
+                        const seen = [
+                          ...new Set(
+                            previous
+                              .filter((m) => m.court_id === c.id)
+                              .flatMap((m) => [...m.side_a, ...m.side_b]),
+                          ),
+                        ];
+                        return saved.length === seen.length &&
+                          seen.every((id) => saved.includes(id))
+                          ? saved
+                          : seen;
+                      });
                       ids = nextRoundPlacement(
                         old,
                         previous.map((m) => ({
@@ -433,7 +471,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                     setMessage((previous) =>
                       previous.includes("Penalty needs")
                         ? previous
-                        : "Review the assignments before saving. Initial courts use ELO; later rounds use ladder movement.",
+                        : "Review the assignments before saving. Initial courts use ELO; later rounds use ladder movement, and a five-player court rotates who rests first.",
                     );
                   } catch {
                     setMessage(
@@ -744,6 +782,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                       disabled={
                         disabled ||
                         !scorekeeper ||
+                        (!admin && m.score_a !== null) ||
                         (session.status !== "active" &&
                           !(admin && session.status === "completed")) ||
                         (admin &&
