@@ -1,0 +1,45 @@
+name: Scheduled reminders (TEST)
+# Free GitHub-hosted scheduler for the Gmail reminder worker. Secrets stay in repository secrets.
+# Sends nothing until the repository variable ALLOW_REAL_RECIPIENTS is set to "true".
+on:
+  schedule:
+    - cron: "7 * * * *" # hourly; reminder stages are 7-day, 96-hour and 78–72-hour windows
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: reminder-worker
+  cancel-in-progress: false
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prod=false
+      - name: Run one worker pass
+        env:
+          TEST_PROJECT_REF: wgolevihkvmosajumzvl
+          TEST_SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APP_URL: https://maplewood-league-test.pages.dev/
+          DELIVERY_MODE: live
+          ALLOW_REAL_RECIPIENTS: ${{ vars.ALLOW_REAL_RECIPIENTS || 'false' }}
+          MAIL_PROVIDER: gmail
+          GMAIL_USER: maplewoodbadmintonleague@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          UNSUBSCRIBE_URL: https://maplewood-league-test.pages.dev/unsubscribe
+          UNSUBSCRIBE_SIGNING_KEY: ${{ secrets.UNSUBSCRIBE_SIGNING_KEY }}
+          SENDER_CONTACT: ${{ vars.SENDER_CONTACT || 'Maplewood Advanced Badminton League · organizer Christy · maplewoodbadmintonleague@gmail.com' }}
+        run: node --experimental-strip-types scripts/notification-worker.ts

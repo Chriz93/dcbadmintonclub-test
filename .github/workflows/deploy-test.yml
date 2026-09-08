@@ -1,0 +1,57 @@
+name: Deploy TEST site
+# Publishes platform/dist plus the /unsubscribe Pages Function to the Cloudflare Pages TEST project
+# only after the quality gates succeed on the release branch. Production is never touched here.
+on:
+  workflow_run:
+    workflows: ["Platform quality gates"]
+    types: [completed]
+    branches: ["upgrade/secure-platform"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-test-deploy
+  cancel-in-progress: true
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upgrade/secure-platform
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build TEST bundle
+        env:
+          VITE_APP_ENV: test
+          VITE_TEST_PROJECT_REF: wgolevihkvmosajumzvl
+          VITE_SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: pnpm build
+      - name: Configure unsubscribe function bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          UNSUBSCRIBE_SIGNING_KEY: ${{ secrets.UNSUBSCRIBE_SIGNING_KEY }}
+        run: |
+          printf '%s' "https://wgolevihkvmosajumzvl.supabase.co" | npx --yes wrangler@4 pages secret put SUPABASE_URL --project-name maplewood-league-test
+          printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 pages secret put SUPABASE_SERVICE_ROLE_KEY --project-name maplewood-league-test
+          printf '%s' "$UNSUBSCRIBE_SIGNING_KEY" | npx --yes wrangler@4 pages secret put UNSUBSCRIBE_SIGNING_KEY --project-name maplewood-league-test
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name maplewood-league-test --branch main --commit-dirty=true

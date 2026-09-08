@@ -24,6 +24,7 @@
     "src",
     "tests",
     "scripts",
+    "functions",
     "*.ts"
   ]
 }
