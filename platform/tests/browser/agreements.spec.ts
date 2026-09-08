@@ -85,13 +85,13 @@ for (const capacity of ["adult", "guardian"]) {
       },
     );
     await page.goto("http://127.0.0.1:5174/");
-    await page.getByRole("button", { name: "Member hub", exact: true }).click();
     await page.getByLabel("Email address", { exact: true }).fill(user.email);
     await page.getByRole("button", { name: "Send sign-in code" }).click();
     await page.getByLabel("One-time code").fill("123456");
     await page
       .getByRole("button", { name: "Verify code", exact: true })
       .click();
+    await page.getByRole("button", { name: "2 Season agreement" }).click();
     const signing = page.locator("#participant-signing");
     await expect(signing).toContainText(agreement.body);
     await expect(

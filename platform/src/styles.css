@@ -1130,3 +1130,203 @@ form button {
 .next-session-panel p {
   margin: 4px 0;
 }
+
+/* Connected league: a small, mobile-first set of destinations. */
+.league-app {
+  min-height: 100vh;
+}
+.league-header,
+.account-bar,
+.league-environment {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px max(20px, calc((100% - 1120px) / 2));
+}
+.league-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  justify-content: space-between;
+}
+.league-environment {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  justify-content: space-between;
+}
+.league-environment > :first-child {
+  color: #655520;
+  background: #f1ebd5;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.account-bar {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+}
+.signed-in-email {
+  margin-right: auto;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.league-app .league-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  background: var(--surface);
+  border-block: 1px solid var(--border);
+  padding: 7px 16px;
+}
+.league-nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  min-height: 48px;
+  border-radius: 8px;
+  padding: 8px 24px;
+  color: var(--muted);
+}
+.league-nav button[aria-current] {
+  background: var(--green);
+  color: white;
+}
+.league-app main {
+  padding: 32px 20px 40px;
+  max-width: 960px;
+}
+.league-app .league-wide {
+  max-width: 1260px;
+}
+.league-app .sign-in-main {
+  max-width: 640px;
+  padding-top: 44px;
+}
+.sign-in-card h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  margin-bottom: 20px;
+}
+.sign-in-card form .button {
+  width: 100%;
+}
+.sign-in-note {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 20px;
+  font-size: 0.9rem;
+}
+.sign-in-note p {
+  margin: 8px 0 0;
+}
+.league-app .league-footer {
+  max-width: 1120px;
+  margin: auto;
+  padding: 20px;
+  font-size: 0.8rem;
+}
+.registration-steps {
+  display: flex;
+  gap: 10px;
+  margin: 24px 0;
+}
+.registration-steps button {
+  flex: 1;
+  min-height: 58px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+}
+.registration-steps button[aria-current] {
+  border-color: var(--green);
+  background: var(--tint);
+  font-weight: 700;
+}
+.registration-steps button > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+}
+.registration-shortcut,
+.admin-shortcut {
+  margin: 24px 0;
+}
+.admin-shortcut .button + .button {
+  margin-left: 10px;
+}
+.admin-permit {
+  margin-block: 24px;
+}
+.admin-permit > summary {
+  padding: 16px;
+  font-weight: 600;
+}
+.league-app .card > section {
+  margin-top: 20px;
+}
+@media (max-width: 700px) {
+  .league-app .league-nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    gap: 3px;
+    padding: 5px 8px;
+  }
+  .league-nav button {
+    flex: 1;
+    flex-direction: column;
+    font-size: 0.7rem;
+    gap: 4px;
+    padding: 7px 3px;
+  }
+  .league-header .brand {
+    font-size: 0.95rem;
+  }
+  .league-header .brand small {
+    font-size: 0.55rem;
+  }
+  .league-app main {
+    padding: 24px 14px;
+  }
+  .league-app .sign-in-main {
+    padding-top: 24px;
+  }
+  .league-app .card {
+    padding: 20px 16px;
+  }
+  .account-bar {
+    gap: 10px;
+  }
+  .account-bar .button {
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+  .signed-in-email {
+    flex-basis: 100%;
+  }
+  .registration-steps {
+    gap: 7px;
+  }
+  .registration-steps button {
+    flex-direction: column;
+    padding: 10px 5px;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+}

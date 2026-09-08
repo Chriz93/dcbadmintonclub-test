@@ -2,7 +2,7 @@
 export function SeasonAgreementRules() {
   return (
     <section aria-labelledby="season-agreement-rules">
-      <h4 id="season-agreement-rules">Season rules for your agreement</h4>
+      <h3 id="season-agreement-rules">Season rules for your agreement</h3>
       <p>
         Season policies are included in each published agreement. Signing
         becomes available below after the organizer publishes the reviewed text.

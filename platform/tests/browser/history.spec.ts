@@ -104,7 +104,6 @@ test("player sees previous matches without login clutter, and can retry a failed
     },
   );
   await page.goto("http://127.0.0.1:5174/");
-  await page.getByRole("button", { name: "Member hub", exact: true }).click();
   await page.getByLabel("Email address", { exact: true }).fill(user.email);
   await page.getByRole("button", { name: "Send sign-in code" }).click();
   await page.getByLabel("One-time code").fill("123456");
@@ -118,8 +117,7 @@ test("player sees previous matches without login clutter, and can retry a failed
   ).toHaveCount(0);
   await expect(
     page.getByText("Reminder preferences", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Email reminders")).not.toBeVisible();
+  ).not.toBeVisible();
   fail = true;
   await history.getByRole("button", { name: "Refresh my matches" }).click();
   await expect(history).toContainText("Could not load your matches");
@@ -146,6 +144,10 @@ test("player sees previous matches without login clutter, and can retry a failed
         .analyze()
     ).violations,
   ).toEqual([]);
+  await page.getByRole("button", { name: "My account", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Reminder preferences" }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

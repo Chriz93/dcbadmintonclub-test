@@ -25,7 +25,7 @@ export function Standings() {
     [rows, setRows] = useState<z.infer<typeof standingSchema>[]>([]),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(
-      "Sign in through Member hub to view your league standings.",
+      "Refresh to see results and ELO for your league.",
     );
   async function load(id?: string) {
     if (!supabase) return;

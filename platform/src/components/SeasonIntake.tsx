@@ -6,7 +6,7 @@ const option = z.object({
   season_id: z.string(),
   season_name: z.string(),
 });
-export function SeasonIntake() {
+export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
   const [options, setOptions] = useState<z.infer<typeof option>[]>([]),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState(false),
@@ -64,7 +64,7 @@ export function SeasonIntake() {
   const lockedKind = invited === "regular" || invited === "spare";
   return (
     <section>
-      <h3>Complete your league details</h3>
+      <h2>Complete your league details</h2>
       {closed && (
         <p role="alert">
           Registration is closed. This link completes onboarding only for
@@ -123,6 +123,7 @@ export function SeasonIntake() {
               });
               if (error) throw error;
               setRevision(z.number().parse(data));
+              onSaved?.();
               setMessage(
                 "Details saved. Your place, payment and waiver still require review; you are not marked paid automatically.",
               );

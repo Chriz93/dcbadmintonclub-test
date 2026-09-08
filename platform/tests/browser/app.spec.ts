@@ -20,6 +20,9 @@ test("home, schedule and permit validation are usable", async ({ page }) => {
   await page
     .getByRole("button", { name: "Administration", exact: true })
     .click();
+  await page
+    .getByText("Permit dates and schedule import", { exact: true })
+    .click();
   await page.getByRole("button", { name: "Validate preview" }).click();
   await expect(page.locator("#main")).toContainText(
     "28 active sessions · 56 hours",
@@ -105,6 +108,9 @@ test("PDF preview reads locally and cannot import without a backend", async ({
   await page.goto("/");
   await page
     .getByRole("button", { name: "Administration", exact: true })
+    .click();
+  await page
+    .getByText("Permit dates and schedule import", { exact: true })
     .click();
   await page.getByLabel("Read a permit PDF locally").setInputFiles({
     name: "synthetic-permit.pdf",

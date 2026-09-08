@@ -2,9 +2,7 @@ import { LegacyHistory } from "./LegacyHistory";
 import { ClubNews } from "./ClubNews";
 import { MyMatches } from "./MyMatches";
 import { SessionAccounts } from "./SessionAccounts";
-import { SeasonIntake } from "./SeasonIntake";
 import { PersonalRecords } from "./PersonalRecords";
-import { AgreementSigning } from "./AgreementSigning";
 import { NextSession } from "./NextSession";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -33,7 +31,11 @@ const rsvpSchema = z.object({
 });
 type Club = z.infer<typeof membershipSchema>;
 type Session = z.infer<typeof sessionSchema>;
-export function MemberDashboard() {
+export function MemberDashboard({
+  view = "home",
+}: {
+  view?: "home" | "account";
+}) {
   const [readySession, setReadySession] = useState("");
   const [upcomingKey, setUpcomingKey] = useState(0);
   const [clubs, setClubs] = useState<Club[]>([]),
@@ -68,7 +70,11 @@ export function MemberDashboard() {
       if (alive) {
         setUser(user.id);
         setClubs(rows);
-        setClub(rows[0]?.club_id ?? "");
+        setClub(
+          rows.find((row) => row.status === "active")?.club_id ??
+            rows[0]?.club_id ??
+            "",
+        );
       }
     })().catch(() =>
       setMessage(
@@ -146,9 +152,13 @@ export function MemberDashboard() {
   const session = sessions.find((s) => s.id === selected);
   return (
     <Card>
-      <h2>Your upcoming sessions</h2>
-      {club && <NextSession club={club} refreshKey={upcomingKey} />}
-      {club && <ClubNews club={club} />}
+      <h2>
+        {view === "home" ? "Your upcoming sessions" : "Profile and preferences"}
+      </h2>
+      {view === "home" && club && (
+        <NextSession club={club} refreshKey={upcomingKey} />
+      )}
+      {view === "home" && club && <ClubNews club={club} />}
       {clubs.length === 0 ? (
         <p>
           No memberships available. An administrator must review your
@@ -156,7 +166,7 @@ export function MemberDashboard() {
         </p>
       ) : (
         <>
-          <label>
+          <label hidden={clubs.length === 1}>
             Club
             <select
               value={club}
@@ -170,255 +180,250 @@ export function MemberDashboard() {
               ))}
             </select>
           </label>
-          <label>
-            Session
-            <select
-              value={selected}
-              disabled={busy}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {new Date(s.starts_at).toLocaleString("en-CA", {
-                    timeZone: "America/Toronto",
-                  })}{" "}
-                  · {s.status}
-                </option>
-              ))}
-            </select>
-          </label>
-          {session ? (
+          {view === "home" && (
             <>
-              <p>
-                Capacity: {session.capacity} · RSVP deadline:{" "}
-                {new Date(session.rsvp_deadline).toLocaleString("en-CA", {
-                  timeZone: "America/Toronto",
-                  timeZoneName: "short",
-                })}{" "}
-                · Your place: {placement}
-              </p>
-              <p>
-                $14 absence refund notice is due by{" "}
-                {new Date(
-                  new Date(session.starts_at).getTime() - 72 * 60 * 60 * 1000,
-                ).toLocaleString("en-CA", {
-                  timeZone: "America/Toronto",
-                  timeZoneName: "short",
-                })}{" "}
-                (72 hours before play).
-              </p>
-              {isSpare ? (
-                <p>
-                  Use spare booking below to vote and submit your payment
-                  reference. Your place is confirmed after payment verification.
-                </p>
-              ) : (
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (!supabase) return;
-                    setBusy(true);
-                    const payload = JSON.stringify({
-                      club,
-                      selected,
-                      response,
-                      note,
-                      revision,
-                    });
-                    const id =
-                      request?.payload === payload
-                        ? request.id
-                        : crypto.randomUUID();
-                    setRequest({ id, payload });
-                    try {
-                      const { data, error } = await supabase.rpc(
-                        "submit_rsvp",
-                        {
-                          c: club,
-                          s: selected,
-                          u: user,
+              <label>
+                Session
+                <select
+                  value={selected}
+                  disabled={busy}
+                  onChange={(e) => setSelected(e.target.value)}
+                >
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {new Date(s.starts_at).toLocaleString("en-CA", {
+                        timeZone: "America/Toronto",
+                      })}{" "}
+                      · {s.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {session ? (
+                <>
+                  <p>
+                    Capacity: {session.capacity} · RSVP deadline:{" "}
+                    {new Date(session.rsvp_deadline).toLocaleString("en-CA", {
+                      timeZone: "America/Toronto",
+                      timeZoneName: "short",
+                    })}{" "}
+                    · Your place: {placement}
+                  </p>
+                  <p>
+                    $14 absence refund notice is due by{" "}
+                    {new Date(
+                      new Date(session.starts_at).getTime() -
+                        72 * 60 * 60 * 1000,
+                    ).toLocaleString("en-CA", {
+                      timeZone: "America/Toronto",
+                      timeZoneName: "short",
+                    })}{" "}
+                    (72 hours before play).
+                  </p>
+                  {isSpare ? (
+                    <p>
+                      Use spare booking below to vote and submit your payment
+                      reference. Your place is confirmed after payment
+                      verification.
+                    </p>
+                  ) : (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!supabase) return;
+                        setBusy(true);
+                        const payload = JSON.stringify({
+                          club,
+                          selected,
                           response,
                           note,
-                          expected_revision: revision,
-                          request_id: id,
-                        },
-                      );
-                      if (error) throw error;
-                      const saved = rsvpSchema.parse(data);
-                      setRevision(saved.revision);
-                      setPlacement(saved.placement);
-                      setRequest(null);
-                      setUpcomingKey((k) => k + 1);
-                      setMessage(
-                        "RSVP saved. If opted in, your email is queued separately.",
-                      );
-                    } catch {
-                      setMessage(
-                        "RSVP not confirmed. Retry safely; if another device changed it, reload the session first.",
-                      );
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  <label>
-                    Your response
-                    <select
-                      value={response}
-                      onChange={(e) => setResponse(e.target.value)}
+                          revision,
+                        });
+                        const id =
+                          request?.payload === payload
+                            ? request.id
+                            : crypto.randomUUID();
+                        setRequest({ id, payload });
+                        try {
+                          const { data, error } = await supabase.rpc(
+                            "submit_rsvp",
+                            {
+                              c: club,
+                              s: selected,
+                              u: user,
+                              response,
+                              note,
+                              expected_revision: revision,
+                              request_id: id,
+                            },
+                          );
+                          if (error) throw error;
+                          const saved = rsvpSchema.parse(data);
+                          setRevision(saved.revision);
+                          setPlacement(saved.placement);
+                          setRequest(null);
+                          setUpcomingKey((k) => k + 1);
+                          setMessage(
+                            "RSVP saved. If opted in, your email is queued separately.",
+                          );
+                        } catch {
+                          setMessage(
+                            "RSVP not confirmed. Retry safely; if another device changed it, reload the session first.",
+                          );
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
                     >
-                      {[
-                        ["attending", "Attending"],
-                        ["not_attending", "Not attending"],
-                        ["maybe", "Maybe"],
-                        ["late", "Late"],
-                        ["need_spare", "Need a spare"],
-                      ].map(([v, t]) => (
-                        <option key={v} value={v}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Optional note
-                    <textarea
-                      maxLength={500}
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="button primary"
-                    disabled={
-                      readySession !== selected ||
-                      busy ||
-                      !navigator.onLine ||
-                      session.status === "cancelled"
-                    }
-                  >
-                    {busy ? "Saving…" : "Save RSVP"}
-                  </button>
-                </form>
+                      <label>
+                        Your response
+                        <select
+                          value={response}
+                          onChange={(e) => setResponse(e.target.value)}
+                        >
+                          {[
+                            ["attending", "Attending"],
+                            ["not_attending", "Not attending"],
+                            ["maybe", "Maybe"],
+                            ["late", "Late"],
+                            ["need_spare", "Need a spare"],
+                          ].map(([v, t]) => (
+                            <option key={v} value={v}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Optional note
+                        <textarea
+                          maxLength={500}
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                        />
+                      </label>
+                      <button
+                        className="button primary"
+                        disabled={
+                          readySession !== selected ||
+                          busy ||
+                          !navigator.onLine ||
+                          session.status === "cancelled"
+                        }
+                      >
+                        {busy ? "Saving…" : "Save RSVP"}
+                      </button>
+                    </form>
+                  )}
+                </>
+              ) : (
+                <p>No upcoming sessions.</p>
               )}
             </>
-          ) : (
-            <p>No upcoming sessions.</p>
           )}
+          {view === "account" && (
+            <section>
+              <h3>Reminder preferences</h3>
+              <h3>Email preferences</h3>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />
+                I opt in to transactional club email. I can unsubscribe here
+                anytime.
+              </label>
+              <button
+                className="button"
+                disabled={busy || !navigator.onLine}
+                onClick={async () => {
+                  if (!supabase) return;
+                  const { error } = await supabase.rpc("set_preference", {
+                    c: club,
+                    enabled: consent,
+                  });
+                  setMessage(
+                    error
+                      ? "Preference not saved. Please retry."
+                      : "Email preference saved.",
+                  );
+                }}
+              >
+                Save email preference
+              </button>
+              <p>
+                SMS is unavailable on the no-cost plan. Check this app for
+                updates.
+              </p>
+            </section>
+          )}
+        </>
+      )}
+      {view === "home" && (
+        <>
+          <MyMatches />
+          <LegacyHistory />
+          {club && selected && (
+            <SessionAccounts club={club} session={selected} isSpare={isSpare} />
+          )}
+        </>
+      )}
+      {view === "account" && (
+        <>
           <details>
-            <summary>Reminder preferences</summary>
-            <h3>Email preferences</h3>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
-              I opt in to transactional club email. I can unsubscribe here
-              anytime.
-            </label>
+            <summary>Profile, privacy and downloads</summary>
+            <PersonalRecords />
+            <h3>Your personal data</h3>
             <button
               className="button"
               disabled={busy || !navigator.onLine}
               onClick={async () => {
                 if (!supabase) return;
-                const { error } = await supabase.rpc("set_preference", {
-                  c: club,
-                  enabled: consent,
-                });
+                const { data, error } = await supabase.rpc("export_my_data");
+                if (error) {
+                  setMessage("Export failed. Please retry.");
+                  return;
+                }
+                const url = URL.createObjectURL(
+                  new Blob([JSON.stringify(data, null, 2)], {
+                    type: "application/json",
+                  }),
+                );
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "my-club-data.json";
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              Download my data
+            </button>
+            <button
+              className="button"
+              disabled={busy || !navigator.onLine}
+              onClick={async () => {
+                if (
+                  !supabase ||
+                  !window.confirm(
+                    "Request data deletion and turn off your club email and SMS notices? An administrator will review retained records before erasure.",
+                  )
+                )
+                  return;
+                const { error } = await supabase.rpc("request_my_deletion");
                 setMessage(
                   error
-                    ? "Preference not saved. Please retry."
-                    : "Email preference saved.",
+                    ? "Request failed. Please retry."
+                    : "Deletion review requested; email and SMS notices disabled.",
                 );
               }}
             >
-              Save email preference
+              Request data deletion
             </button>
-            <p>
-              SMS is unavailable on the no-cost plan. Check this app for
-              updates.
-            </p>
           </details>
         </>
       )}
-      <MyMatches />
-      <LegacyHistory />
-      {club && selected && (
-        <SessionAccounts club={club} session={selected} isSpare={isSpare} />
-      )}
-      <details
-        open={clubs.length === 0 || clubs.some((c) => c.status !== "active")}
-      >
-        <summary>Registration and season agreement</summary>
-        <p>
-          Signing for a child?{" "}
-          <a href="#participant-signing">Go to guardian signing</a>; you do not
-          need to register yourself as a player.
-        </p>
-        <SeasonIntake />
-        <AgreementSigning />
-      </details>
-      <details>
-        <summary>Profile, privacy and downloads</summary>
-        <PersonalRecords />
-        <h3>Your personal data</h3>
-        <button
-          className="button"
-          disabled={busy || !navigator.onLine}
-          onClick={async () => {
-            if (!supabase) return;
-            const { data, error } = await supabase.rpc("export_my_data");
-            if (error) {
-              setMessage("Export failed. Please retry.");
-              return;
-            }
-            const url = URL.createObjectURL(
-              new Blob([JSON.stringify(data, null, 2)], {
-                type: "application/json",
-              }),
-            );
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "my-club-data.json";
-            link.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-          }}
-        >
-          Download my data
-        </button>
-        <button
-          className="button"
-          disabled={busy || !navigator.onLine}
-          onClick={async () => {
-            if (
-              !supabase ||
-              !window.confirm(
-                "Request data deletion and turn off your club email and SMS notices? An administrator will review retained records before erasure.",
-              )
-            )
-              return;
-            const { error } = await supabase.rpc("request_my_deletion");
-            setMessage(
-              error
-                ? "Request failed. Please retry."
-                : "Deletion review requested; email and SMS notices disabled.",
-            );
-          }}
-        >
-          Request data deletion
-        </button>
-      </details>
       <p role="status">{message}</p>
-      <button
-        className="text-button"
-        onClick={async () => {
-          await supabase?.auth.signOut();
-          window.location.reload();
-        }}
-      >
-        Sign out and clear this session
-      </button>
     </Card>
   );
 }

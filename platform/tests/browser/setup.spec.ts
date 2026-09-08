@@ -62,6 +62,26 @@ test("administrator edits public settings with a reason and safely renders annou
           user,
         };
       else if (path === "/auth/v1/user") data = user;
+      else if (path.endsWith("/announcements"))
+        data = [
+          {
+            id: "a",
+            title: "Public notice",
+            public: true,
+            revision: 0,
+            body: "<script>window.unwanted=true</script>",
+          },
+        ];
+      else if (path.endsWith("/memberships"))
+        data = [
+          {
+            club_id: "club",
+            role: "club_owner",
+            status: "active",
+            kind: "regular",
+            club: { name: "Synthetic Club" },
+          },
+        ];
       else if (path.endsWith("/rpc/is_admin")) data = true;
       else if (path.endsWith("/clubs"))
         data = route.request().headers().accept?.includes("object")
@@ -113,13 +133,6 @@ test("administrator edits public settings with a reason and safely renders annou
     },
   );
   await page.goto("http://127.0.0.1:5174/");
-  await expect(page.getByRole("region", { name: "Club news" })).toContainText(
-    "<script>window.unwanted=true</script>",
-  );
-  expect(await page.evaluate(() => Object.hasOwn(window, "unwanted"))).toBe(
-    false,
-  );
-  await page.getByRole("button", { name: "Member hub", exact: true }).click();
   await page.getByLabel("Email address", { exact: true }).fill(user.email);
   await page.getByRole("button", { name: "Send sign-in code" }).click();
   await page.getByLabel("One-time code").fill("123456");
@@ -127,6 +140,12 @@ test("administrator edits public settings with a reason and safely renders annou
   await expect(
     page.getByRole("heading", { name: "Your upcoming sessions" }),
   ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Club news" })).toContainText(
+    "<script>window.unwanted=true</script>",
+  );
+  expect(await page.evaluate(() => Object.hasOwn(window, "unwanted"))).toBe(
+    false,
+  );
   await page
     .getByRole("button", { name: "Administration", exact: true })
     .click();

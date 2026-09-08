@@ -1,4 +1,5 @@
 import { ClubNews } from "./components/ClubNews";
+import { LeagueApp } from "./components/LeagueApp";
 import { Standings } from "./components/Standings";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -90,6 +91,17 @@ export default function App() {
     (s) =>
       s.status === "active" && s.date >= new Date().toISOString().slice(0, 10),
   );
+  if (supabase)
+    return (
+      <LeagueApp
+        online={online}
+        dark={dark}
+        onTheme={() => setDark(!dark)}
+        schedule={<Schedule />}
+        admin={<Admin />}
+        courts={<SessionWorkspace online={online} />}
+      />
+    );
   return (
     <div className="app">
       <a className="skip" href="#main">
@@ -855,115 +867,92 @@ function Admin() {
     [error, setError] = useState("");
   return (
     <>
-      <Heading
-        eyebrow="SEASON PREPARATION"
-        title="Build a better club night."
-      />
-      <Card>
-        <Badge tone="test">LOCAL IMPORT PREVIEW</Badge>
-        <h2>Review permit dates</h2>
-        <p>
-          Permit #2026-07-21-0001 · {venue} · Rooms 127C &amp; 127D. The 34
-          dates were verified against the supplied original PDF: 28 approved and
-          6 cancelled. This preview does not save changes until you explicitly
-          confirm an import.
-        </p>
-        <PermitUpload
-          onSource={setSource}
-          onProposed={(value) => {
-            setText(value);
-            setReport(null);
-          }}
-        />
-        <label>
-          Bookings: YYYY-MM-DD HH:MM HH:MM active or cancelled
-          <textarea
-            rows={10}
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
+      <Heading eyebrow="SEASON PREPARATION" title="Administration" />
+      <AdminTools />
+      <details className="admin-permit">
+        <summary>Permit dates and schedule import</summary>
+        <Card>
+          <Badge tone="test">LOCAL IMPORT PREVIEW</Badge>
+          <h2>Review permit dates</h2>
+          <p>
+            Permit #2026-07-21-0001 · {venue} · Rooms 127C &amp; 127D. The 34
+            dates were verified against the supplied original PDF: 28 approved
+            and 6 cancelled. This preview does not save changes until you
+            explicitly confirm an import.
+          </p>
+          <PermitUpload
+            onSource={setSource}
+            onProposed={(value) => {
+              setText(value);
               setReport(null);
             }}
           />
-        </label>
-        <button
-          className="button primary"
-          onClick={() => {
-            try {
-              const result = validateSchedule(
-                parseScheduleText(
-                  text,
-                  "2026-07-21-0001",
-                  venue,
-                  "127C & 127D",
-                ),
-              );
-              setReport(result);
-              setError("");
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        >
-          Validate preview
-        </button>
-        <div role="status">
-          {error}
-          {report && (
-            <>
-              <h3>
-                {report.active} active sessions · {report.hours} hours
-              </h3>
-              <p>
-                {report.sessions.length} unique dates.{" "}
-                {report.errors.length
-                  ? report.errors.join(" · ")
-                  : "No conflicting duplicates or invalid local times."}
-              </p>
-              <p>
-                {report.active === 28 && report.hours === 56
-                  ? "Matches the supplied permit totals."
-                  : "Totals differ from the supplied 28 sessions / 56 hours. Review before import."}
-              </p>
-            </>
-          )}
-        </div>
-      </Card>
-      {report && report.errors.length === 0 && (
-        <Card>
-          <PermitCommit
-            key={JSON.stringify(report.sessions)}
-            rows={report.sessions}
-            source={source}
-            active={report.active}
-            hours={report.hours}
-          />
+          <label>
+            Bookings: YYYY-MM-DD HH:MM HH:MM active or cancelled
+            <textarea
+              rows={10}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setReport(null);
+              }}
+            />
+          </label>
+          <button
+            className="button primary"
+            onClick={() => {
+              try {
+                const result = validateSchedule(
+                  parseScheduleText(
+                    text,
+                    "2026-07-21-0001",
+                    venue,
+                    "127C & 127D",
+                  ),
+                );
+                setReport(result);
+                setError("");
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            Validate preview
+          </button>
+          <div role="status">
+            {error}
+            {report && (
+              <>
+                <h3>
+                  {report.active} active sessions · {report.hours} hours
+                </h3>
+                <p>
+                  {report.sessions.length} unique dates.{" "}
+                  {report.errors.length
+                    ? report.errors.join(" · ")
+                    : "No conflicting duplicates or invalid local times."}
+                </p>
+                <p>
+                  {report.active === 28 && report.hours === 56
+                    ? "Matches the supplied permit totals."
+                    : "Totals differ from the supplied 28 sessions / 56 hours. Review before import."}
+                </p>
+              </>
+            )}
+          </div>
         </Card>
-      )}
-      <AdminTools />
-      <div className="three-grid admin-notes">
-        <Card>
-          <h3>Member administration</h3>
-          <p>
-            Approval, payment and private exports require a verified club
-            administrator with a second authentication factor.
-          </p>
-        </Card>
-        <Card>
-          <h3>Notification delivery</h3>
-          <p>
-            RSVP writes and queued email are separate. Provider delivery is
-            disabled until test configuration and consent are verified.
-          </p>
-        </Card>
-        <Card>
-          <h3>Release readiness</h3>
-          <p>
-            Database policy tests, remote backup restoration and end-to-end
-            acceptance must pass before launch.
-          </p>
-        </Card>
-      </div>
+        {report && report.errors.length === 0 && (
+          <Card>
+            <PermitCommit
+              key={JSON.stringify(report.sessions)}
+              rows={report.sessions}
+              source={source}
+              active={report.active}
+              hours={report.hours}
+            />
+          </Card>
+        )}
+      </details>
     </>
   );
 }

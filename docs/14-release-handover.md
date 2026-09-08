@@ -1,5 +1,10 @@
 # Release handover — September 7, 2026
 
+## Latest: auth-first workflow alignment (2026-09-08)
+
+See `18-simpler-workflow.md`. Connected TEST now starts with email sign-in and routes new accounts through details, season agreement, and approval status. Active players get five simple tabs; owners/admins retain separate MFA-protected Administration access. Full 34-case browser suite, 161 unit/SQL tests, build and lint passed. This turn’s read-only remote metadata check confirmed the three migration-030 APIs used by the frontend plus assignment ordinal exist. No database writes or email sends were performed. Original production remains unchanged. Deployment evidence is recorded below after verification.
+
+
 ## Latest continuation — September 8
 
 This section supersedes stale setup notes below. Organizer email delivery, login, MFA and protected club reads succeeded. The TEST checkout now tracks `https://github.com/Chriz93/dcbadmintonclub-test.git`; the original repo remains separate. Claude subsequently committed migrations 030–031, reminder/deployment workflows and a Pages unsubscribe function. Remote application of 030–031 has not been verified in this continuation. Migration 031 introduces a paid-spare cancellation refund exception; the user has been asked to confirm that newer decision before rollout.

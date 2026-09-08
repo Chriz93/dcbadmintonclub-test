@@ -122,7 +122,7 @@ export function AgreementSigning() {
   }, [choice]);
   return (
     <section id="participant-signing">
-      <h3>Participant and guardian agreement</h3>
+      <h2>Participant and guardian agreement</h2>
       <SeasonAgreementRules />
       <button
         className="button"
@@ -281,12 +281,12 @@ export function AgreementSigning() {
               }
             }}
           >
-            <h4>
+            <h3>
               {o.participant_name} · version {o.version} ·{" "}
               {o.capacity === "guardian"
                 ? "Parent/legal guardian"
                 : "Adult participant"}
-            </h4>
+            </h3>
             <pre
               className="waiver-text"
               style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}

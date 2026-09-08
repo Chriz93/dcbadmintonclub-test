@@ -126,7 +126,7 @@ export function AdminTools() {
       );
     } catch {
       setMessage(
-        "Verification failed. Sign in through Member hub first, then retry.",
+        "Verification failed. Check your authenticator code and try again.",
       );
     } finally {
       setBusy(false);
@@ -184,10 +184,7 @@ export function AdminTools() {
   return (
     <Card>
       <h2>Verified administrator access</h2>
-      <p>
-        Sign in through Member hub, then verify your authenticator to manage
-        club records.
-      </p>
+      <p>Verify your authenticator to manage club records.</p>
       {qr && (
         <img
           className="mfa-qr"

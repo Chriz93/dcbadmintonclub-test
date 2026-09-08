@@ -1,3 +1,4 @@
+import { mockSignIn, signIn } from "./auth-fixture";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { rotation } from "../../src/domain/courts";
@@ -135,8 +136,14 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
       });
     },
   );
-  await page.goto("http://127.0.0.1:5174/");
-  await page.getByRole("button", { name: "Courtside", exact: true }).click();
+  await mockSignIn(
+    page,
+    "club_owner",
+    "active",
+    "10000000-0000-0000-0000-000000000001",
+  );
+  await signIn(page);
+  await page.getByRole("button", { name: "Courts", exact: true }).click();
   await page.getByRole("button", { name: "Load my clubs" }).click();
   await expect(
     page.getByRole("button", { name: "Refresh session" }),
@@ -199,9 +206,7 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
   expect(scores).toEqual([
     { c: club, m: "match-5-0", a: 15, b: 12, expected_revision: 0 },
   ]);
-  await page
-    .getByRole("button", { name: "Season schedule", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Schedule", exact: true }).click();
   await expect(page.locator(".schedule-row.active")).toHaveCount(1);
   await expect(page.locator(".schedule-row.cancelled")).toHaveCount(1);
   await expect(page.getByRole("status")).toContainText(
@@ -247,7 +252,8 @@ test("member standings display normalized results and shared ranks (mock API)", 
       });
     },
   );
-  await page.goto("http://127.0.0.1:5174/");
+  await mockSignIn(page);
+  await signIn(page);
   await page.getByRole("button", { name: "Standings", exact: true }).click();
   await page.getByRole("button", { name: "Refresh standings" }).click();
   await expect(page.getByRole("table")).toContainText("Alex");
