@@ -382,14 +382,27 @@ textarea.inp{resize:vertical;min-height:80px;}
 <!-- ══ HOME ══ -->
 <div id="page-home" class="page active">
   <div class="hero">
-    <div class="hero-club"><span>DC</span> Badminton Club</div>
-    <div class="hero-league">Maplewood Advanced League · 8 Sessions</div>
+    <div class="hero-club"><span>Maplewood</span> League</div>
+    <div class="hero-league">Maplewood Advanced League · 2026–27 · 28 Tuesdays</div>
     <div class="hero-next">
       <div class="hero-next-lbl">Next Session</div>
       <div class="hero-next-date" id="next-date">Loading...</div>
-      <div class="hero-next-sub">Maplewood SS · 8:15–10:15 PM · Gym 127C & 127D</div>
+      <div class="hero-next-sub">Maplewood SS · 8:00–10:00 PM · Gym 127C & 127D</div>
     </div>
     <div class="countdown" id="countdown"></div>
+  </div>
+  <div id="home-vote"></div>
+  <div class="card" id="season-rules-card">
+    <div class="card-title">📜 Season rules 2026–27</div>
+    <div style="font-size:12px;line-height:1.6;">
+      • 28 Tuesdays, 8:00–10:00 PM, Maplewood SS gyms 127C & 127D. Six courts.<br>
+      • Regular season $400 (25 players). Spare session $20, confirmed only after Christy verifies the e-transfer.<br>
+      • Vote every week. Decline at least 72 hours before start for a $14 refund; later notice or a no-show earns no refund.<br>
+      • School cancellation: no cash refund — regulars get two shuttlecocks, a paid spare gets the $20 back.<br>
+      • Verified no-show: one court down next week. A missing vote alone is not a no-show.<br>
+      • When all 25 play, Court 6 runs five players rotating through five games to 15; other courts play three games to 21. Everyone rests once and the first rest rotates each week.<br>
+      • Christy sets initial seeding; results then move players up and down one court. Ties are settled automatically (head-to-head, then points conceded).
+    </div>
   </div>
   <div id="pos-home"></div>
   <div id="ann-home"></div>
@@ -456,7 +469,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div class="waiver-box">
           <p><strong style="color:var(--text);">DC Badminton Club — Maplewood Ladder League</strong><br>
           <em style="color:var(--muted);font-size:11px;">Privately organized recreational badminton group operated by Christy George (individual organizer) — not a registered corporation or non-profit</em><br>
-          700 Cope Drive, Stittsville · Tuesdays 8:15–10:15 PM · Apr 7 – May 26, 2026</p>
+          700 Cope Drive, Stittsville · Tuesdays 8:00–10:00 PM · Sep 15, 2026 – May 18, 2027</p>
 
           <h4>1. Nature of the Activity & Group</h4>
           <p>DC Badminton Club is a privately organized recreational badminton group. It is not a registered corporation, non-profit, or incorporated association. All sessions are organized by Christy George (individual). By registering, I understand and accept this context and voluntarily choose to participate.</p>
@@ -477,7 +490,7 @@ textarea.inp{resize:vertical;min-height:80px;}
           <p>• Non-marking, soft-soled indoor shoes are mandatory at all times<br>
           • No food or drinks in the gymnasium<br>
           • No alcohol, smoking, vaping or cannabis on school premises<br>
-          • Do not arrive before 8:15 PM; vacate by 10:15 PM sharp<br>
+          • Play 8:00–10:00 PM; finish play by 10:05 PM and leave by 10:15 PM sharp<br>
           • Remain in designated gymnasium areas only<br>
           • No nuts, nut products, shellfish or latex items on premises<br>
           • No aggressive behaviour, coarse language, or discrimination of any kind<br>
@@ -558,7 +571,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div class="alert alert-warn" id="reg-payment-note">⚠️ E-transfer $150 to:<br><strong>christygeorge993@gmail.com</strong><br><small>Use your name as the message</small></div>
         <div class="alert alert-info" id="reg-spare-payment-note" style="display:none;">💡 As a spare, you pay <strong>$20 per session</strong> when called in.<br>E-transfer to <strong>christygeorge993@gmail.com</strong> before or on the session date.</div>
         <div class="alert alert-info">📍 Maplewood Secondary School<br>700 Cope Drive, Stittsville · Gym 127C & 127D</div>
-        <div class="alert alert-success">✅ First session: <strong>Tuesday April 7, 2026 at 8:15 PM</strong></div>
+        <div class="alert alert-success">✅ First session: <strong>Tuesday September 15, 2026 at 8:00 PM</strong></div>
       </div>
     </div>
   </div>
@@ -627,8 +640,8 @@ textarea.inp{resize:vertical;min-height:80px;}
   <div class="page-sub">8 Sessions · Every Tuesday</div>
   <div class="card" style="margin-bottom:14px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center;">
-      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">8:15 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Start</div></div>
-      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">10:15 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">End</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">8:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Start</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">10:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">End</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">6</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Courts</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$150</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Season</div></div>
     </div>
@@ -836,9 +849,21 @@ async function deleteKV(k){await rpc('delete_state',{k});delete _stateVersion[k]
 // ══════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════
-const DATES=['Apr 7','Apr 14','Apr 21','Apr 28','May 5','May 12','May 19','May 26'];
-const FD=[new Date('2026-04-07T20:15:00'),new Date('2026-04-14T20:15:00'),new Date('2026-04-21T20:15:00'),new Date('2026-04-28T20:15:00'),new Date('2026-05-05T20:15:00'),new Date('2026-05-12T20:15:00'),new Date('2026-05-19T20:15:00'),new Date('2026-05-26T20:15:00')];
-const NC=6,NCYC=99,NG=3; // NCYC=99: no hard cap on rounds, admin ends session when ready
+// Permit 2026-07-21-0001 (OCDSB, last modified Sep 8, 2026): 28 approved Tuesdays, 6 cancelled dates.
+// Play time shown to players: 8:00–10:00 PM (organizer's instruction). Facility permit window is 8:15–10:15 PM.
+const SEASON_LABEL='2026–27';
+const SESSION_TIME_LABEL='8:00–10:00 PM';
+const APPROVED_DATES=['2026-09-15','2026-09-22','2026-09-29','2026-10-06','2026-10-13','2026-10-20','2026-10-27','2026-11-03','2026-11-10','2026-11-17','2026-11-24','2026-12-15','2027-01-05','2027-01-19','2027-01-26','2027-02-02','2027-02-09','2027-02-16','2027-02-23','2027-03-02','2027-03-09','2027-03-23','2027-03-30','2027-04-13','2027-04-20','2027-05-04','2027-05-11','2027-05-18'];
+const CANCELLED_DATES=['2026-12-01','2026-12-08','2027-01-12','2027-04-06','2027-04-27','2027-05-25'];
+const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,facilityShuttles:2};
+function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});}
+const DATES=APPROVED_DATES.map(fmtDate);
+// Local wall-clock 8:00 PM on each date (players are in the Ottawa time zone; DST handled by the browser).
+const FD=APPROVED_DATES.map(iso=>{const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,20,0,0);});
+const NC=6,NCYC=99,NG=3,MAXG=5; // NG: games per round on a 2–4 player court; MAXG: games on the five-player court
+function courtGames(n){return n===5?5:3;}            // every court plays 3 games, except five players play 5
+function courtTarget(n){return n===5?15:21;}         // five-player games go to 15, everything else to 21
+function courtCap(c){return c===NC?5:4;}             // only Court 6 may hold a fifth player
 const MAX_ROUNDS_PER_SESSION=2; // Soft policy: each Tuesday session = 2 rounds. Auto-advance stops, prompts admin to end.
 let S={players:[],sessions:[],current:null,announcements:[],lastUndo:null,votes:{},rsvp:{},qaQuestions:[]};
 let adminUnlocked=false;
@@ -882,7 +907,9 @@ async function signInStep(){
   }catch(e){err.textContent='❌ '+(e.message||'Try again');}
   finally{btn.disabled=false;}
 }
-async function afterSignIn(){showGate(false);setSS('syncing');const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();renderAll();startSync();toast('Signed in as '+myEmail(),'success');}else{setSS('err');toast('Cannot load league data','error');}}
+async function afterSignIn(){showGate(false);setSS('syncing');const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();renderAll();startSync();toast('Signed in as '+myEmail(),'success');registrationFirst();}else{setSS('err');toast('Cannot load league data','error');}}
+// First thing after sign-in for someone without a player record: the registration form.
+function registrationFirst(){if(S_me.organizer)return;const me=myPlayer();if(!me){nav('register');toast('Welcome! Please complete your registration first.','info');}else if(!me.approved){nav('register');}}
 async function initAuth(){loadSession();if(!_session){showGate(true);return false;}const x=await ensureSession();if(!x){showGate(true);return false;}showGate(false);return true;}
 async function signOut(){await authSignOut();adminUnlocked=false;userRegistered=false;S_me={organizer:false,verified:false,player_id:null,email:null};S.players=[];signInReset();showGate(true);updateNavVisibility();}
 async function refreshMe(){try{const r=await rpc('admin_status');if(r)S_me=r;}catch(e){S_me={organizer:false,verified:false,player_id:null,email:myEmail()};}}
@@ -946,8 +973,12 @@ async function submitRSVP(coming){
 }
 
 function renderRSVP(){
-  const el = document.getElementById('sec-vote');
+  renderRSVPInto(document.getElementById('sec-vote'));
+  renderRSVPInto(document.getElementById('home-vote'),true);
+}
+function renderRSVPInto(el,compact){
   if(!el) return;
+  if(compact&&(!userRegistered||!S.current)){el.innerHTML='';return;}
   if(!S.current){
     el.innerHTML = '<div class="alert alert-warn">No active session</div>';
     return;
@@ -960,8 +991,8 @@ function renderRSVP(){
   const total = S.players.filter(p=>p.approved).length;
   const notResponded = Math.max(0, total - Object.keys(rsvpData).length);
 
-  let html = `<div class="alert alert-info">📋 RSVP for Session ${S.current.number}</div>`;
-  html += `<div class="card"><div class="card-title">Attendance Confirmation</div>
+  let html = compact?'':`<div class="alert alert-info">📋 RSVP for Session ${S.current.number}</div>`;
+  html += `<div class="card"><div class="card-title">🗳️ Vote: are you playing Session ${S.current.number} (${DATES[S.current.number-1]||''})?</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;text-align:center;">
       <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${coming}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Coming</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${notComing}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Not Coming</div></div>
@@ -978,7 +1009,7 @@ function renderRSVP(){
   }
   html += `</div>`;
 
-  if(adminUnlocked){
+  if(adminUnlocked&&!compact){
     html += `<div class="card"><div class="card-title">📋 RSVP Status</div>`;
     S.players.filter(p=>p.approved).forEach(p => {
       const status = rsvpData[p.id];
@@ -1116,9 +1147,9 @@ async function changePin(){toast('PINs are retired: organizer access uses your a
 // ══════════════════════════════════════════════
 function renderHome(){
   const now=new Date();
-  let ni=FD.findIndex(d=>d>now);if(ni===-1)ni=7;
+  let ni=FD.findIndex(d=>d>now);if(ni===-1)ni=DATES.length-1;
   const nd=document.getElementById('next-date');
-  if(nd)nd.textContent=S.sessions.length>=8?'Season Complete! 🎉':`Session ${ni+1} — ${DATES[ni]}, 2026`;
+  if(nd)nd.textContent=S.sessions.length>=DATES.length?'Season Complete! 🎉':`Session ${ni+1} — ${DATES[ni]}`;
   
   // Registration gate banner
   const regBanner = document.querySelector('.reg-gate-banner');
@@ -1146,7 +1177,7 @@ function renderHome(){
     }
   }
   const cd=document.getElementById('countdown');
-  if(cd&&ni<8){const diff=FD[ni]-now;if(diff>0){const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);cd.innerHTML=`<div class="cd-box"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div><div class="cd-box"><div class="cd-num">${hrs}</div><div class="cd-lbl">Hours</div></div><div class="cd-box"><div class="cd-num">${mins}</div><div class="cd-lbl">Mins</div></div>`;}}
+  if(cd&&ni<DATES.length){const diff=FD[ni]-now;if(diff>0){const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);cd.innerHTML=`<div class="cd-box"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div><div class="cd-box"><div class="cd-num">${hrs}</div><div class="cd-lbl">Hours</div></div><div class="cd-box"><div class="cd-num">${mins}</div><div class="cd-lbl">Mins</div></div>`;}}
   // Announcements
   const ah=document.getElementById('ann-home');
   if(ah)ah.innerHTML=S.announcements.length?S.announcements.slice(0,3).map(a=>`<div class="ann-card ann-${a.type}"><div class="ann-title">${esc(a.title)}</div><div class="ann-body">${esc(a.body)}</div><div class="ann-time">${new Date(a.created_at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div>`).join(''):'';
@@ -1226,11 +1257,11 @@ function renderSchedule(){
     const bg=done?'var(--green)':act?'var(--teal)':'var(--s3)';
     return `<div class="sched-row">
       <div style="width:30px;height:30px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">${done?'✓':i+1}</div>
-      <div style="flex:1;"><div style="font-weight:800;font-size:14px;color:${done?'var(--green2)':act?'var(--teal2)':'var(--text)'}">Session ${i+1} — ${d}, 2026</div>
-        <div style="font-size:11px;color:var(--muted);">Tuesday · 8:15–10:15 PM</div></div>
+      <div style="flex:1;"><div style="font-weight:800;font-size:14px;color:${done?'var(--green2)':act?'var(--teal2)':'var(--text)'}">Session ${i+1} — ${d}</div>
+        <div style="font-size:11px;color:var(--muted);">Tuesday · ${SESSION_TIME_LABEL}</div></div>
       <span class="tag ${done?'tg-green':act?'tg-teal':'tg-gray'}">${done?'Done':act?'Active':'—'}</span>
     </div>`;
-  }).join('');
+  }).join('')+`<div class="card" style="margin-top:12px;"><div class="card-title">No play (school cancellations)</div>${CANCELLED_DATES.map(fmtDate).map(d=>`<div style="font-size:12px;padding:4px 0;color:var(--muted);">✖ ${d}</div>`).join('')}<div style="font-size:11px;color:var(--muted);margin-top:8px;">No cash refund for school cancellations: regulars receive two physical shuttlecocks; a paid spare gets the $20 back.</div></div>`;
 }
 
 // ══════════════════════════════════════════════
@@ -1712,7 +1743,7 @@ function renderAnnouncementsAdmin(){
 // ══════════════════════════════════════════════
 async function startSession(){
   if(S.current)return toast('Session already active','warn');
-  const n=S.sessions.length+1;if(n>8)return toast('All 8 done!','warn');
+  const n=S.sessions.length+1;if(n>DATES.length)return toast('All '+DATES.length+' sessions are done!','warn');
   const initAssign=autoAssign();
   const sess={id:Date.now(),number:n,date:DATES[n-1],cycle:1,assignments:initAssign,initialAssignments:JSON.parse(JSON.stringify(initAssign)),scores:{},movements:[],completed:false,preTosses:{}};
   await setKV('current_session',sess);await loadAll();renderAll();toast('Session '+n+' started!','success');
@@ -1733,7 +1764,7 @@ function isCourtDone(c){
   const cy=S.current.cycle;
   const pids=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id));
   if(pids.length<2)return true;
-  const numGames=pids.length===3?3:NG;
+  const numGames=courtGames(pids.length);
   for(let g=1;g<=numGames;g++){if(!S.current.scores[`c${c}_y${cy}_g${g}`])return false;}
   return true;
 }
@@ -1856,7 +1887,7 @@ async function nextCycle(){
   for(let c=1;c<=NC;c++){
     const courtPlayers=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id)).length;
     if(courtPlayers<2) continue; // skip courts with <2 players (no games possible)
-    const numGames=courtPlayers===3?3:NG; // 3-player RR has 3 games too
+    const numGames=courtGames(courtPlayers); // 3-player RR has 3 games too
     for(let g=1;g<=numGames;g++)if(!S.current.scores[`c${c}_y${S.current.cycle}_g${g}`])missing.push(`C${c}G${g}`);
   }
   if(missing.length){toast(`Cannot advance — ${missing.length} scores missing: ${missing.slice(0,6).join(', ')}${missing.length>6?'...':''}`,'error');return;}
@@ -1898,10 +1929,23 @@ async function nextCycle(){
     toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
   }finally{_autoAdvancing=false;}
 }
+// Deterministic tie-break inside a court: head-to-head games won between the tied players,
+// then fewer points conceded, then lower player id (earlier registration). Same rule everywhere.
+function tieOrder(ids,cy,ptAgainst){
+  const h2h={};ids.forEach(i=>h2h[i]=0);
+  for(let c=1;c<=NC;c++)for(let g=1;g<=MAXG;g++){
+    const sc=S.current?.scores?.[`c${c}_y${cy}_g${g}`];if(!sc)continue;
+    const A=[sc.a1,sc.a2].filter(x=>x!=null),B=[sc.b1,sc.b2].filter(x=>x!=null);
+    const tiedA=A.filter(i=>ids.includes(i)),tiedB=B.filter(i=>ids.includes(i));
+    if(!tiedA.length||!tiedB.length)continue; // only games where tied players opposed each other
+    if(sc.w==='A')tiedA.forEach(i=>h2h[i]++);else if(sc.w==='B')tiedB.forEach(i=>h2h[i]++);
+  }
+  return[...ids].sort((x,y)=>h2h[y]-h2h[x]||(ptAgainst[x]||0)-(ptAgainst[y]||0)||x-y);
+}
 async function applyRotation(){
   const cy=S.current.cycle,a=S.current.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
   activePlayers().forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;gamesPlayedCycle[p.id]=0;});
-  for(let c=1;c<=NC;c++)for(let g=1;g<=NG;g++){
+  for(let c=1;c<=NC;c++)for(let g=1;g<=MAXG;g++){
     const sc=S.current.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
     // Handle both doubles (a2/b2 present) and singles (a2/b2 null)
     const side_a=[sc.a1,sc.a2].filter(x=>x!=null);
@@ -1942,8 +1986,8 @@ async function applyRotation(){
             const p=S.players.find(pp=>pp.id===s.id);
             return {id:s.id,name:p?p.name:'?'};
           });
-          winnerId=await tossPrompt({court:c,direction:'up',players:tiedPlayers});
-          if(winnerId==null)throw new Error('TOSS_CANCELLED');
+          void tiedPlayers;
+          winnerId=tieOrder(topGroup.map(s=>s.id),cy,ptAgainst)[0];
         }
         // Record toss: winnerId beats every other tied player at the top
         topGroup.forEach(s=>{
@@ -1974,8 +2018,8 @@ async function applyRotation(){
             const p=S.players.find(pp=>pp.id===s.id);
             return {id:s.id,name:p?p.name:'?'};
           });
-          loserId=await tossPrompt({court:c,direction:'down',players:tiedPlayers});
-          if(loserId==null)throw new Error('TOSS_CANCELLED');
+          void tiedPlayers;
+          loserId=tieOrder(botGroup.map(s=>s.id),cy,ptAgainst).slice(-1)[0];
         }
         // Record toss: every other tied player beats loserId at the bottom
         botGroup.forEach(s=>{
@@ -2019,7 +2063,7 @@ async function applyRotation(){
     let to=from;if(m==='up')to=Math.max(1,from-1);if(m==='down')to=Math.min(NC,from+1);
     na[to].push(pid);
   });
-  for(let c=1;c<=NC;c++)while(na[c].length>4){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
+  for(let c=1;c<=NC;c++)while(na[c].length>courtCap(c)){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
   S.current.assignments=na;
   S.current.movements.push({cycle:cy,mv,wins:{...wins},pts:{...pts},tosses:tossResults,tossChoices});
   // Clear consumed pre-toss records — next round starts fresh
@@ -2046,7 +2090,7 @@ async function endSession(){
   const alreadyProcessed=S.current.movements.some(m=>m.cycle===cy);
   const finalWins={},finalGamesPlayed={},finalPts={},finalPtFor={},finalPtAgainst={};
   activePlayers().forEach(p=>{finalWins[p.id]=0;finalGamesPlayed[p.id]=0;finalPts[p.id]=0;finalPtFor[p.id]=0;finalPtAgainst[p.id]=0;});
-  for(let c=1;c<=NC;c++)for(let g=1;g<=NG;g++){
+  for(let c=1;c<=NC;c++)for(let g=1;g<=MAXG;g++){
     const sc=S.current.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
     const side_a=[sc.a1,sc.a2].filter(x=>x!=null);
     const side_b=[sc.b1,sc.b2].filter(x=>x!=null);
@@ -2096,7 +2140,7 @@ async function endSession(){
       else if(dir==='down')to=Math.min(NC,c+1);
       _finalA[to].push(id);
     });
-    for(let c=1;c<=NC;c++)while(_finalA[c].length>4){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
+    for(let c=1;c<=NC;c++)while(_finalA[c].length>courtCap(c)){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
   }
   // ── Process attendance — determine absent players FIRST ──
   const att=S.current.attendance||{};
@@ -2478,14 +2522,14 @@ function renderSessionAdmin(){
     const n=S.sessions.length+1;
     el.innerHTML=`<div class="alert alert-info">Next: Session ${n} — ${DATES[n-1]||'Season done'}</div>
     <div class="card"><div class="card-title">Dates</div>${renderDatesList()}</div>
-    <button class="btn btn-primary" onclick="startSession()" ${n>8?'disabled':''}>🏸 Start Session ${n}</button>`;
+    <button class="btn btn-primary" onclick="startSession()" ${n>DATES.length?'disabled':''}>🏸 Start Session ${n}</button>`;
   }
 }
 function renderDatesList(){
   return DATES.map((d,i)=>{
     const done=S.sessions.find(s=>s.number===i+1),act=S.current&&S.current.number===i+1;
     return `<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:13px;font-weight:700;">Session ${i+1} — ${d}</div><div style="font-size:10px;color:var(--muted);">8:15–10:15 PM</div></div>
+      <div><div style="font-size:13px;font-weight:700;">Session ${i+1} — ${d}</div><div style="font-size:10px;color:var(--muted);">${SESSION_TIME_LABEL}</div></div>
       <span class="tag ${done?'tg-green':act?'tg-teal':''}">${done?'✓ Done':act?'● Active':'—'}</span>
     </div>`;
   }).join('');
@@ -2565,7 +2609,7 @@ async function saveAssignments(){
   let ok=true,seen=[],underFull=[];
   for(let c=1;c<=NC;c++){
     const pl=S.current?.assignments[c]||[];
-    if(pl.length>4){toast('Court '+c+' has more than 4 players!','warn');ok=false;}
+    if(pl.length>courtCap(c)){toast('Court '+c+' has more than '+courtCap(c)+' players!','warn');ok=false;}
     if(pl.length<4&&pl.length>0)underFull.push('C'+c+'('+pl.length+'/4)');
     pl.forEach(id=>{if(seen.includes(id)){toast('Player on multiple courts!','warn');ok=false;}seen.push(id);});
   }
@@ -2748,7 +2792,7 @@ function shareCourtAssignments(){
     const medal=c===1?'🥇':c===2?'🥈':c===3?'🥉':'🏸';
     msg+=`${medal} *Court ${c}*\n${players.map(p=>`• ${p.name}`).join('\n')||'• Empty'}\n\n`;
   }
-  msg+=`📍 Maplewood SS · 700 Cope Drive\n⏰ 8:15–10:15 PM`;
+  msg+=`📍 Maplewood SS · 700 Cope Drive\n⏰ ${SESSION_TIME_LABEL}`;
   const url=`https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
 }
@@ -2767,6 +2811,10 @@ function buildCombos(players){
       {g:2,t:'Game 2',ta:`${A.name} & ${C.name}`,tb:`${B.name} & ${D.name}`,md:'(A+C vs B+D — Doubles)',a1:A.id,a2:C.id,b1:B.id,b2:D.id},
       {g:3,t:'Game 3',ta:`${A.name} & ${D.name}`,tb:`${B.name} & ${C.name}`,md:'(A+D vs B+C — Doubles)',a1:A.id,a2:D.id,b1:B.id,b2:C.id}
     ];
+  }else if(n===5){
+    const[A,B,C,D,E]=players;
+    const mk=(g,x,y,z,w,r)=>({g,t:`Game ${g}`,ta:`${x.name} & ${y.name}`,tb:`${z.name} & ${w.name}`,md:`(${r.name} rests)`,a1:x.id,a2:y.id,b1:z.id,b2:w.id,rest:r.id});
+    return[mk(1,B,E,C,D,A),mk(2,C,A,D,E,B),mk(3,D,B,E,A,C),mk(4,E,C,A,B,D),mk(5,A,D,B,C,E)];
   }else if(n===3){
     const[A,B,C]=players;
     return[
@@ -2791,7 +2839,7 @@ function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
     const dx=(ptFor[x]||0)-(ptAgainst[x]||0);
     const dy=(ptFor[y]||0)-(ptAgainst[y]||0);
     if(dx!==dy)return dy-dx;
-    return x-y;
+    const o=tieOrder([x,y],cy,ptAgainst);return o[0]===x?-1:1;
   });
   const pT=preTosses||{};
   const topT=pT[`${cy}_c${c}_top`];
@@ -2834,7 +2882,7 @@ function computeRoundStatus(){
     const pids=(a[c]||[]).filter(id=>S.players.find(p=>p.id===id));
     if(pids.length<2){courts[c]={scored:false,players:0,skip:true,courtCycle:cy};continue;}
     totalCourts++;
-    const numGames=pids.length===3?3:NG;
+    const numGames=courtGames(pids.length);
     let gamesScored=0;
     for(let g=1;g<=numGames;g++){
       const sc=S.current.scores[`c${c}_y${cy}_g${g}`];
@@ -2893,7 +2941,7 @@ function computeRoundStatus(){
     // Add to new courts
     moves.forEach(({pid,to})=>{na[to].push(pid);});
     // Handle overflow
-    for(let c=1;c<=NC;c++)while(na[c].length>4){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
+    for(let c=1;c<=NC;c++)while(na[c].length>courtCap(c)){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
     projectedAssignments=na;
   }
   return{courts,projectedMv,projectedAssignments,allScored:totalScored===totalCourts&&totalCourts>0,totalScored,totalCourts,wins,pts,ptFor,ptAgainst};
@@ -2946,7 +2994,7 @@ function renderRoundTracker(){
           // For now, show players grouped by their post-rotation court
           // Actually better: check the scores to see which court the player played on
           let playedOnCourt=false;
-          for(let g2=1;g2<=NG;g2++){
+          for(let g2=1;g2<=MAXG;g2++){
             const sc=S.current.scores[`c${c}_y${mCy}_g${g2}`];
             if(!sc)continue;
             if([sc.a1,sc.a2,sc.b1,sc.b2].filter(x=>x!=null).includes(pid)){playedOnCourt=true;break;}
@@ -3113,7 +3161,7 @@ function renderScoreEntry(){
   const _prevCy=parseInt(el.dataset.cy||0);
   const _prevCourt=parseInt(el.dataset.court||0);
   if(_prevCy===cy&&_prevCourt===court){
-    for(let g=1;g<=3;g++){
+    for(let g=1;g<=MAXG;g++){
       const aEl=document.getElementById(`si_${court}_${g}_a`);
       const bEl=document.getElementById(`si_${court}_${g}_b`);
       if(aEl&&aEl.value!=='')_unsaved[`${g}_a`]=aEl.value;
@@ -3125,12 +3173,12 @@ function renderScoreEntry(){
     el.innerHTML=`<div class="alert alert-warn">Court ${court} has ${players.length===0?'no':'only 1'} player assigned — minimum 2 needed.</div>`;return;
   }
   const n=players.length;
-  const modeLabel=n===4?'Doubles (4 players)':n===3?'⚠️ 3 Players — Round-Robin Singles':'⚠️ 2 Players — Singles Best of 3';
+  const modeLabel=n===5?'Five players — rotating doubles, 5 games to 15':n===4?'Doubles (4 players) — 3 games to 21':n===3?'⚠️ 3 Players — Round-Robin Singles':'⚠️ 2 Players — Singles Best of 3';
   const modeBg=n===4?'alert-info':n===3?'alert-warn':'alert-warn';
   const combos=buildCombos(players);
   // Player grid
-  const labels=['A','B','C','D'];
-  const gridCols=n===2?'1fr 1fr':n===3?'1fr 1fr 1fr':'1fr 1fr';
+  const labels=['A','B','C','D','E'];
+  const gridCols=n===2?'1fr 1fr':n===3?'1fr 1fr 1fr':n===5?'1fr 1fr 1fr':'1fr 1fr';
   let playerGrid=players.map((p,i)=>`<div style="background:var(--s2);padding:6px 10px;border-radius:6px;">${labels[i]}: ${esc(p.name)}</div>`).join('');
   let html=`<div class="alert ${modeBg}">Court ${court} · Round ${cy} · ${modeLabel}</div>
     <div class="card" style="margin-bottom:10px;"><div class="card-title">🏸 Players on Court ${court}</div>
@@ -3180,7 +3228,7 @@ function renderScoreEntry(){
   html+=`<div id="res-${court}" style="margin-top:10px;"></div>`;
   el.innerHTML=html;
   // ── Restore unsaved score values after re-render ──
-  for(let g=1;g<=3;g++){
+  for(let g=1;g<=MAXG;g++){
     const key=`c${court}_y${cy}_g${g}`;
     if(!S.current.scores[key]){
       const aEl=document.getElementById(`si_${court}_${g}_a`);
@@ -3201,11 +3249,21 @@ function liveW(c,g){
   const a=document.getElementById(`si_${c}_${g}_a`),b=document.getElementById(`si_${c}_${g}_b`),w=document.getElementById(`wr_${c}_${g}`);
   if(!a||!b||!w)return;const sa=parseInt(a.value),sb=parseInt(b.value);
   if(isNaN(sa)||isNaN(sb)){w.innerHTML='';return;}
-  if(sa>21||sb>21){a.className='sinp';b.className='sinp';w.innerHTML=`<span class="tag tg-red">❌ Max score is 21 — games are first to 21, no deuce</span>`;return;}
-  if(sa>sb){a.className='sinp win';b.className='sinp lose';w.innerHTML=`<span class="tag tg-green">Team A wins ${sa}–${sb}</span>${sa!==21?' <span style="color:var(--yellow2);">(⚠ Neither team at 21 — check score)</span>':''}`;
-  }else if(sb>sa){b.className='sinp win';a.className='sinp lose';w.innerHTML=`<span class="tag tg-green">Team B wins ${sb}–${sa}</span>${sb!==21?' <span style="color:var(--yellow2);">(⚠ Neither team at 21 — check score)</span>':''}`;
-  }else if(sa>0){a.className='sinp';b.className='sinp';w.innerHTML=`<span class="tag tg-yellow">⚠️ Tied ${sa}–${sb} — Not valid! One team must reach 21</span>`;}
-  else{a.className='sinp';b.className='sinp';w.innerHTML='';}
+  const T=courtTarget((S.current?.assignments?.[c]||[]).length);
+  const v=validScore(sa,sb,T);
+  if(v.error){a.className='sinp';b.className='sinp';w.innerHTML=`<span class="tag tg-red">❌ ${v.error}</span>`;return;}
+  if(sa>sb){a.className='sinp win';b.className='sinp lose';w.innerHTML=`<span class="tag tg-green">Team A wins ${sa}–${sb}</span>`;}
+  else{b.className='sinp win';a.className='sinp lose';w.innerHTML=`<span class="tag tg-green">Team B wins ${sb}–${sa}</span>`;}
+}
+// A finished game: the winner has exactly the target (21, or 15 on the five-player court), the loser fewer. No ties, no over-scores.
+function validScore(sa,sb,T){
+  if(!Number.isInteger(sa)||!Number.isInteger(sb)||sa<0||sb<0)return{error:'Enter both scores'};
+  if(sa===sb)return{error:`Tied ${sa}–${sb} is not a finished game — one side must reach ${T}`};
+  const hi=Math.max(sa,sb),lo=Math.min(sa,sb);
+  if(hi>T)return{error:`Games end at ${T} — no deuce`};
+  if(hi<T)return{error:`The winner must reach ${T} (entered ${hi})`};
+  if(lo>=T)return{error:`Only one side can reach ${T}`};
+  return{ok:true};
 }
 async function saveGameScore(court,gameNum){
   if(!S.current)return toast('No session','warn');
@@ -3217,10 +3275,7 @@ async function saveGameScore(court,gameNum){
   const combo=combos.find(c=>c.g===gameNum);if(!combo){toast('Invalid game','warn');return;}
   const sa=parseInt(document.getElementById(`si_${court}_${gameNum}_a`)?.value);
   const sb=parseInt(document.getElementById(`si_${court}_${gameNum}_b`)?.value);
-  if(isNaN(sa)||isNaN(sb)){toast('Enter both scores','warn');return;}
-  if(sa<0||sb<0){toast('No negative scores','warn');return;}
-  if(sa>21||sb>21){toast('Max score is 21 — games end at first to 21','warn');return;}
-  if(sa===sb&&!confirm(`Game ${gameNum}: tied ${sa}–${sb}. Save anyway?`)){return;}
+  {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(v.error,'warn');return;}}
   const key=`c${court}_y${cy}_g${gameNum}`;
   S.current.scores[key]={a1:combo.a1,a2:combo.a2,b1:combo.b1,b2:combo.b2,sA:sa,sB:sb,w:sa>sb?'A':sb>sa?'B':'T'};
   // Invalidate any previously-recorded toss for this court/round — the score change
@@ -3247,10 +3302,8 @@ async function saveScores(court){
   combos.forEach(({g,a1,a2,b1,b2})=>{
     const sa=parseInt(document.getElementById(`si_${court}_${g}_a`)?.value);
     const sb=parseInt(document.getElementById(`si_${court}_${g}_b`)?.value);
-    if(isNaN(sa)||isNaN(sb)){toast('Enter all 3 scores','warn');valid=false;return;}
-    if(sa<0||sb<0){toast('No negative scores','warn');valid=false;return;}
-    if(sa>21||sb>21){toast('Max score is 21 — games end at first to 21','warn');valid=false;return;}
-    if(sa===sb&&!confirm(`Game ${g}: tied ${sa}–${sb}. Save anyway?`)){valid=false;return;}
+    if(isNaN(sa)||isNaN(sb)){toast(`Enter all ${combos.length} scores`,'warn');valid=false;return;}
+    {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(`Game ${g}: `+v.error,'warn');valid=false;return;}}
     entries.push({g,a1,a2,b1,b2,sA:sa,sB:sb,w:sa>sb?'A':sb>sa?'B':'T'});
   });
   if(!valid)return;
@@ -3287,7 +3340,7 @@ function renderCourtTally(court){
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2){el.innerHTML='';return;}
   // Read scored games for this court/cycle
-  const numGames=players.length===3?3:NG;
+  const numGames=courtGames(players.length);
   const wins={},pts={},ptFor={},ptAgainst={};
   players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
   let gamesScored=0;
@@ -3374,7 +3427,7 @@ async function recordCourtToss(court,direction){
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   // Recompute wins AND points AND differential for this court
-  const numGames=players.length===3?3:NG;
+  const numGames=courtGames(players.length);
   const wins={},pts={},ptFor={},ptAgainst={};
   players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
   for(let g=1;g<=numGames;g++){
@@ -3448,7 +3501,7 @@ function renderLeaderboard(){
     const cy=S.current.cycle;
     for(let c=1;c<=NC;c++){
       const pids=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id));
-      const numGames=pids.length===3?3:NG;
+      const numGames=courtGames(pids.length);
       for(let g=1;g<=numGames;g++){
         const sc=S.current.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
         const side_a=[sc.a1,sc.a2].filter(x=>x!=null);
@@ -3579,7 +3632,7 @@ function computeEloRatings(){
         const K=8+Math.round(courtFactor*17);
         let courtWins={};pids.forEach(id=>courtWins[id]=0);
         let gamesPlayed=0;
-        for(let g=1;g<=NG;g++){
+        for(let g=1;g<=MAXG;g++){
           const sc=sess.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
           gamesPlayed++;
           const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);
@@ -3655,7 +3708,7 @@ function computePlayerStreakAndImprovement(){
         for(let c=1;c<=NC;c++){
           const pids=s.assignments?.[c]||[];
           if(!pids.includes(p.id))continue;
-          const numG=pids.length===3?3:NG;
+          const numG=courtGames(pids.length);
           for(let g2=1;g2<=numG;g2++){
             const sc=s.scores?.[`c${c}_y${m.cycle}_g${g2}`];
             if(!sc)continue;
@@ -3729,7 +3782,7 @@ function renderPlayerStats(){
     if(S.current){
       const scy=S.current.cycle;
       for(let c=1;c<=NC;c++){
-        for(let g2=1;g2<=NG;g2++){
+        for(let g2=1;g2<=MAXG;g2++){
           const sc=S.current.scores[`c${c}_y${scy}_g${g2}`];if(!sc)continue;
           const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);
           if(sc.w==='A'){if(sa.includes(p.id))lw++;if(sb.includes(p.id))ll++;}
@@ -3860,7 +3913,7 @@ function sessFinalAssignments(s){
       computed[to].push(id);
     });
   }
-  for(let c=1;c<=NC;c++)while(computed[c].length>4){const ov=computed[c].pop();const t=c<NC?c+1:c-1;computed[t].unshift(ov);}
+  for(let c=1;c<=NC;c++)while(computed[c].length>courtCap(c)){const ov=computed[c].pop();const t=c<NC?c+1:c-1;computed[t].unshift(ov);}
   // If s.assignments matches the computed result, prefer s.assignments (preserves intended order)
   const keySer=o=>Object.entries(o).map(([k,v])=>k+':'+[...v].sort().join(',')).sort().join('|');
   if(s.assignments&&keySer(s.assignments)===keySer(computed))return s.assignments;
@@ -3970,7 +4023,7 @@ function renderSessionScores(s){
       let hasScores=false;
       let courtHtml=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px;margin-bottom:4px;">
         <div style="font-size:10px;font-weight:800;color:${c<=3?c===1?'var(--gold)':c===2?'var(--silver)':'var(--bronze)':'var(--teal2)'};">Court ${c}</div>`;
-      for(let g=1;g<=NG;g++){
+      for(let g=1;g<=MAXG;g++){
         const sc=s.scores?.[`c${c}_y${cy}_g${g}`];
         if(sc){
           hasScores=true;
@@ -4694,7 +4747,7 @@ function renderGameHistory(playerId){
     let found=false;
     for(let cy=1;cy<=S.current.cycle;cy++){
       for(let c=1;c<=NC;c++){
-        for(let g2=1;g2<=NG;g2++){
+        for(let g2=1;g2<=MAXG;g2++){
           const sc=S.current.scores[`c${c}_y${cy}_g${g2}`];if(!sc)continue;
           const allIds=[sc.a1,sc.a2,sc.b1,sc.b2].filter(x=>x!=null);
           if(!allIds.includes(playerId))continue;
@@ -4721,7 +4774,7 @@ function renderGameHistory(playerId){
     let found=false;
     for(let cy=1;cy<=NCYC;cy++){
       for(let c=1;c<=NC;c++){
-        for(let g2=1;g2<=NG;g2++){
+        for(let g2=1;g2<=MAXG;g2++){
           const sc=s.scores?.[`c${c}_y${cy}_g${g2}`];if(!sc)continue;
           const allIds=[sc.a1,sc.a2,sc.b1,sc.b2].filter(x=>x!=null);
           if(!allIds.includes(playerId))continue;
@@ -4921,7 +4974,7 @@ async function init(){
       }
       if(dirty)setKV('current_session',S.current);
     }
-    checkRegistrationStatus();renderAll();startSync();setInterval(renderHome,30000);registerServiceWorker();
+    checkRegistrationStatus();renderAll();startSync();setInterval(renderHome,30000);registerServiceWorker();registrationFirst();
   }
   else{setSS('err');toast('Cannot connect to database','error');}
 }
@@ -5005,7 +5058,7 @@ async function distributeBirds(){
     const lastRound=S.current.cycle;
     const playerWins={};
     pids.forEach(id=>playerWins[id]=0);
-    for(let g=1;g<=NG;g++){
+    for(let g=1;g<=MAXG;g++){
       const sc=S.current.scores[`c${c}_y${lastRound}_g${g}`];
       if(!sc)continue;
       const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);
@@ -6952,7 +7005,7 @@ if(window.location.hash==='#run-tests'){
       // Top player should have most total wins (not just Court 1)
       const liveW2={},liveL2={};
       activePlayers().forEach(p=>{liveW2[p.id]=0;liveL2[p.id]=0;});
-      if(S.current){const cy2=S.current.cycle;for(let c=1;c<=NC;c++){for(let g2=1;g2<=NG;g2++){const sc=S.current.scores[`c${c}_y${cy2}_g${g2}`];if(!sc)continue;const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);if(sc.w==='A'){sa.forEach(id=>{liveW2[id]++;});sb.forEach(id=>{liveL2[id]++;});}else if(sc.w==='B'){sb.forEach(id=>{liveW2[id]++;});sa.forEach(id=>{liveL2[id]++;});}}}};
+      if(S.current){const cy2=S.current.cycle;for(let c=1;c<=NC;c++){for(let g2=1;g2<=MAXG;g2++){const sc=S.current.scores[`c${c}_y${cy2}_g${g2}`];if(!sc)continue;const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);if(sc.w==='A'){sa.forEach(id=>{liveW2[id]++;});sb.forEach(id=>{liveL2[id]++;});}else if(sc.w==='B'){sb.forEach(id=>{liveW2[id]++;});sa.forEach(id=>{liveL2[id]++;});}}}};
       // Find player with most total wins
       const topByWins=[...activePlayers()].sort((a,b)=>(b.seasonWins+(liveW2[b.id]||0))-(a.seasonWins+(liveW2[a.id]||0)))[0];
       // The first lbrow in the HTML should contain this player's name
@@ -8250,7 +8303,7 @@ if(window.location.hash==='#run-tests'){
       // Manually compute last round wins for Court 1
       const c1pids=S.current.assignments[1]||[];
       const c1wins={};c1pids.forEach(id=>c1wins[id]=0);
-      for(let g=1;g<=NG;g++){
+      for(let g=1;g<=MAXG;g++){
         const sc=S.current.scores[`c1_y${lastRd}_g${g}`];
         if(!sc)continue;
         if(sc.w==='A')[sc.a1,sc.a2].filter(x=>x!=null).forEach(id=>{if(c1wins[id]!==undefined)c1wins[id]++;});
@@ -8278,7 +8331,7 @@ if(window.location.hash==='#run-tests'){
         if(pids.length<2){P(`BD3:C${sc.court}_skip`);continue;}
         // Compute last round wins for this court
         const cWins={};pids.forEach(id=>cWins[id]=0);
-        for(let g=1;g<=NG;g++){
+        for(let g=1;g<=MAXG;g++){
           const score=S.current.scores[`c${sc.court}_y${lastRd}_g${g}`];
           if(!score)continue;
           if(score.w==='A')[score.a1,score.a2].filter(x=>x!=null).forEach(id=>{if(cWins[id]!==undefined)cWins[id]++;});
@@ -8370,7 +8423,7 @@ if(window.location.hash==='#run-tests'){
         if(score.w==='B')[score.b1,score.b2].filter(x=>x!=null).forEach(id=>{if(allRoundWins[id]!==undefined)allRoundWins[id]++;});
       });
       const lastRoundWins={};c1pids.forEach(id=>lastRoundWins[id]=0);
-      for(let g=1;g<=NG;g++){
+      for(let g=1;g<=MAXG;g++){
         const score=S.current.scores[`c1_y${lastRd}_g${g}`];if(!score)continue;
         if(score.w==='A')[score.a1,score.a2].filter(x=>x!=null).forEach(id=>{if(lastRoundWins[id]!==undefined)lastRoundWins[id]++;});
         if(score.w==='B')[score.b1,score.b2].filter(x=>x!=null).forEach(id=>{if(lastRoundWins[id]!==undefined)lastRoundWins[id]++;});
@@ -8385,7 +8438,7 @@ if(window.location.hash==='#run-tests'){
       if(c6pids2.length===3){
         // 3 players: each plays 2 games, max 2 wins
         const c6wins={};c6pids2.forEach(id=>c6wins[id]=0);
-        for(let g=1;g<=NG;g++){
+        for(let g=1;g<=MAXG;g++){
           const score=S.current.scores[`c${NC}_y${lastRd}_g${g}`];if(!score)continue;
           if(score.w==='A')[score.a1].filter(x=>x!=null).forEach(id=>{if(c6wins[id]!==undefined)c6wins[id]++;});
           if(score.w==='B')[score.b1].filter(x=>x!=null).forEach(id=>{if(c6wins[id]!==undefined)c6wins[id]++;});
