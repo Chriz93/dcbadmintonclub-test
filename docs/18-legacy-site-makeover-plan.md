@@ -132,3 +132,17 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 3. Approve restoring the legacy tables on the TEST project behind new rules so the test copy can run.
 4. Season rollover: keep 2025–26 results as history and reset season statistics for 2026–27 (recommended), or keep counting.
 5. Any enhancement in section 4 you do not want.
+
+## Status — 2026-09-09 (end of Phase 3)
+
+- Phases 1–2 complete on TEST: email one-time-code sign-in, organizer authenticator, database rules L01–L06, derived
+  statistics, Elo, registration-first, voting, season constants from the OCDSB permit.
+- Phase 2f cross-tab audit: dates carried a duplicated year; Home picked the next session by calendar instead of by
+  completed sessions; win streaks miscounted games after a court move; Player of the Session assumed 3 games a round;
+  fees and capacity were literals; history could show "?" for renamed players; hard-coded "8 sessions". All fixed
+  (`legacy/patches/p07`–`p10`), guarded by the extended Playwright scenario (Leaders, Rankings against an independent
+  Elo reference, per-player game history, Stats, Sessions, History, Home, Schedule) — 6/6 passing.
+- Phase 3 visual refresh applied (`p09`, `p10`): midnight-and-gold tokens, Inter, glass navigation, 10px text floor,
+  organizer tab only for organizers. Screenshots: `legacy/tests/e2e/screens/` (run with `SCREENS=<dir>`).
+- Open: reminder emails, backup/restore drill, production migration script (L01, L03–L06) and cutover checklist,
+  Supabase Free-plan move (see `docs/19-supabase-free-plan.md`), organizer's real sign-in check on the test site.
