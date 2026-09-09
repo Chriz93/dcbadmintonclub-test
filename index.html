@@ -759,6 +759,10 @@ textarea.inp{resize:vertical;min-height:80px;}
       </div>
       <div class="card">
         <div class="card-title" style="color:var(--red2);">⚠️ Danger Zone</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Start a new season: archives every completed session and player statistic under a label, resets season wins/losses/games/no-shows, and asks every player to register and sign again. Courts and ratings history are kept.</div>
+        <input class="inp" id="new-season-label" placeholder="Archive label, e.g. 2025-26">
+        <button class="btn btn-warn" onclick="startNewSeason()">📦 Archive season and start fresh</button>
+        <div style="height:10px;"></div>
         <button class="btn btn-danger" onclick="hardReset()">Full Reset — Wipe All Data</button>
       </div>
     </div>
@@ -852,6 +856,9 @@ async function deleteKV(k){await rpc('delete_state',{k});delete _stateVersion[k]
 // Permit 2026-07-21-0001 (OCDSB, last modified Sep 8, 2026): 28 approved Tuesdays, 6 cancelled dates.
 // Play time shown to players: 8:00–10:00 PM (organizer's instruction). Facility permit window is 8:15–10:15 PM.
 const SEASON_LABEL='2026–27';
+const SEASON_START='2026-09-01'; // registrations dated before this belong to a previous season
+const REGULAR_CAPACITY=25;
+function registeredThisSeason(p){return !!(p&&p.registeredAt&&p.registeredAt>=SEASON_START);}
 const SESSION_TIME_LABEL='8:00–10:00 PM';
 const APPROVED_DATES=['2026-09-15','2026-09-22','2026-09-29','2026-10-06','2026-10-13','2026-10-20','2026-10-27','2026-11-03','2026-11-10','2026-11-17','2026-11-24','2026-12-15','2027-01-05','2027-01-19','2027-01-26','2027-02-02','2027-02-09','2027-02-16','2027-02-23','2027-03-02','2027-03-09','2027-03-23','2027-03-30','2027-04-13','2027-04-20','2027-05-04','2027-05-11','2027-05-18'];
 const CANCELLED_DATES=['2026-12-01','2026-12-08','2027-01-12','2027-04-06','2027-04-27','2027-05-25'];
@@ -1273,7 +1280,7 @@ async function addPlayer(){
   if(!name){toast('Enter a name','warn');return;}
   if(mtype==='regular'){
     const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
-    if(regularCount>=24){toast('Regular slots full (24/24). Please choose Spare.','warn');return;}
+    if(regularCount>=REGULAR_CAPACITY){toast('Regular slots full (25/25). Please choose Spare.','warn');return;}
   }
   // Check if player exists as a registered (court=0) player — if so, activate them instead of creating new
   const existingReg=S.players.find(p=>p.name.toLowerCase()===name.toLowerCase()&&(!p.currentCourt||p.currentCourt===0));
@@ -1412,7 +1419,7 @@ async function toggleMembership(id,type){
   if(type===p.membershipType)return; // no change
   if(type==='regular'){
     const regularCount=S.players.filter(x=>x.membershipType==='regular'&&!x.waitlisted&&x.sig&&x.sig!=='admin'&&x.id!==id).length;
-    if(regularCount>=24){toast('Regular slots full (24/24). Cannot switch to Regular.','warn');return;}
+    if(regularCount>=REGULAR_CAPACITY){toast('Regular slots full (25/25). Cannot switch to Regular.','warn');return;}
   }
   // Primary: store in KV override (works regardless of DB schema)
   const overrides=await getKV('membership_overrides')||{};
@@ -1632,7 +1639,7 @@ function renderRegPlayers(){
 async function promoteFromWaitlist(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
   const regularCount=S.players.filter(x=>x.membershipType==='regular'&&!x.waitlisted&&x.sig&&x.sig!=='admin').length;
-  if(regularCount>=24){toast('Still no open regular slots (24/24)','warn');return;}
+  if(regularCount>=REGULAR_CAPACITY){toast('Still no open regular slots (25/25)','warn');return;}
   if(!confirm(`Promote ${p.name} off the waitlist to Regular member?`))return;
   const approvals=await getKV('player_approvals')||{};
   approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:false};
@@ -1784,6 +1791,7 @@ async function autoAdvanceCheck(){
   const cy=S.current.cycle;
   if(cy>=NCYC)return;
   if(!allCourtsDone())return;
+  if(!adminUnlocked){toast('All courts are done — waiting for Christy to advance the round','info');return;}
   _autoAdvancing=true;
   // Hard cap: after MAX_ROUNDS_PER_SESSION, run final rotation but mark complete instead of opening a new round
   const isFinalRound=cy>=MAX_ROUNDS_PER_SESSION;
@@ -3265,6 +3273,20 @@ function validScore(sa,sb,T){
   if(lo>=T)return{error:`Only one side can reach ${T}`};
   return{ok:true};
 }
+// Scores are written by the database function: only players on that court (or the organizer),
+// only for the current round, only finished games. The returned version keeps our copy current.
+async function persistCourtScores(court,cy,scores){
+  try{
+    const v=await rpc('save_court_scores',{p_court:court,p_cycle:cy,p_scores:scores,p_expected:_stateVersion['current_session']||null});
+    Object.assign(S.current.scores,scores);_stateVersion['current_session']=v;
+    if(S.current.preTosses){delete S.current.preTosses[`${cy}_c${court}_top`];delete S.current.preTosses[`${cy}_c${court}_bot`];}
+    return true;
+  }catch(e){
+    if(e.code==='40001'||/Stale state|round is over/.test(e.message||'')){toast('⚠️ '+e.message+' — reloading','warn');await loadAll();renderAll();}
+    else toast('Score not saved: '+(e.message||'refresh and retry'),'error');
+    return false;
+  }
+}
 async function saveGameScore(court,gameNum){
   if(!S.current)return toast('No session','warn');
   if(_autoAdvancing)return toast('Round is advancing — resolve the toss prompt before saving new scores','warn');
@@ -3277,15 +3299,8 @@ async function saveGameScore(court,gameNum){
   const sb=parseInt(document.getElementById(`si_${court}_${gameNum}_b`)?.value);
   {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(v.error,'warn');return;}}
   const key=`c${court}_y${cy}_g${gameNum}`;
-  S.current.scores[key]={a1:combo.a1,a2:combo.a2,b1:combo.b1,b2:combo.b2,sA:sa,sB:sb,w:sa>sb?'A':sb>sa?'B':'T'};
-  // Invalidate any previously-recorded toss for this court/round — the score change
-  // may have resolved the tie differently or shifted which players are tied, making
-  // the recorded toss stale. Mirrors the behavior in saveScores (bulk save).
-  if(S.current.preTosses){
-    delete S.current.preTosses[`${cy}_c${court}_top`];
-    delete S.current.preTosses[`${cy}_c${court}_bot`];
-  }
-  await setKV('current_session',S.current);
+  const entry={a1:combo.a1,a2:combo.a2,b1:combo.b1,b2:combo.b2,sA:sa,sB:sb,w:sa>sb?'A':'B'};
+  if(!(await persistCourtScores(court,cy,{[key]:entry})))return;
   renderScoreEntry();renderRoundTracker();renderLeaderboard();toast(`Game ${gameNum} saved!`,'success');
   // Auto-advance if all games for this court are done
   setTimeout(()=>autoAdvanceCheck(),500);
@@ -3310,13 +3325,8 @@ async function saveScores(court){
   const btn=document.getElementById(`sbtn_${court}`);
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';}
   S.lastUndo={court,cy,keys:entries.map(e=>`c${court}_y${cy}_g${e.g}`)};
-  entries.forEach(e=>S.current.scores[`c${court}_y${cy}_g${e.g}`]=e);
-  // When scores change, any previously-recorded toss for this court/round must be invalidated
-  if(S.current.preTosses){
-    delete S.current.preTosses[`${cy}_c${court}_top`];
-    delete S.current.preTosses[`${cy}_c${court}_bot`];
-  }
-  await setKV('current_session',S.current);
+  const payload={};entries.forEach(e=>{payload[`c${court}_y${cy}_g${e.g}`]={a1:e.a1,a2:e.a2,b1:e.b1,b2:e.b2,sA:e.sA,sB:e.sB,w:e.w};});
+  if(!(await persistCourtScores(court,cy,payload))){if(btn){btn.disabled=false;btn.innerHTML='💾 Save All Court '+court+' Scores';}return;}
   // Update round tracker after saving, then re-render scores (wipes old res-X), then re-inject tally
   renderRoundTracker();
   renderScoreEntry();
@@ -4078,7 +4088,7 @@ function selectMembership(type){
   else{const cb=document.getElementById('w5');if(cb)cb.checked=false;}
 }
 function regStep1(){
-  const name=g('r-name').trim(),email=g('r-email').trim(),phone=g('r-phone').trim(),emergency=g('r-emergency').trim();
+  const name=g('r-name').trim(),email=(myEmail()||g('r-email')).trim().toLowerCase(),phone=g('r-phone').trim(),emergency=g('r-emergency').trim();
   if(!name||!email||!phone||!emergency){toast('Fill all required fields','warn');return;}
   if(!email.includes('@')||email.length<5){toast('Valid email required','warn');return;}
   if(name.length<2){toast('Name too short','warn');return;}
@@ -4086,8 +4096,8 @@ function regStep1(){
   // Check regular capacity — allow waitlist if full
   if(type==='regular'){
     const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
-    if(regularCount>=24){
-      if(!confirm('Regular slots are FULL (24/24). You will be added to the WAITLIST and notified if a spot opens. Continue?'))return;
+    if(regularCount>=REGULAR_CAPACITY){
+      if(!confirm('Regular slots are FULL (25/25). You will be added to the WAITLIST and notified if a spot opens. Continue?'))return;
       regData.waitlisted=true;
     } else {
       regData.waitlisted=false;
@@ -4095,7 +4105,8 @@ function regStep1(){
   } else {
     regData.waitlisted=false;
   }
-  if(S.players.find(p=>p.email.toLowerCase()===email.toLowerCase())){toast('Email already registered!','warn');return;}
+  const existing=S.players.find(p=>(p.email||'').toLowerCase()===email);
+  if(existing&&registeredThisSeason(existing)){toast('You already registered this season — Christy will approve it','warn');return;}
   regData={...regData,name,email,phone,emergency,medical:g('r-medical').trim(),membershipType:type};
   // Show/hide payment checkboxes based on membership type
   const w5row=document.getElementById('w5-row');if(w5row)w5row.style.display=type==='regular'?'flex':'none';
@@ -4141,8 +4152,8 @@ async function approvePlayer(id){
   const approvals=await getKV('player_approvals')||{};
   if(p.membershipType!=='spare'&&!p.waitlisted){
     const regularCount=S.players.filter(x=>x.membershipType!=='spare'&&!x.waitlisted&&x.approved&&x.sig&&x.sig!=='admin'&&x.id!==id).length;
-    if(regularCount>=24){
-      if(!confirm('⚠️ Regular slots are FULL (24/24). Approve this player and add to WAITLIST instead?'))return;
+    if(regularCount>=REGULAR_CAPACITY){
+      if(!confirm('⚠️ Regular slots are FULL (25/25). Approve this player and add to WAITLIST instead?'))return;
       approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:true};
       await setKV('player_approvals',approvals);
       await loadAll();renderAll();toast('Approved (waitlisted — regular slots full)','warn');return;
@@ -4236,16 +4247,16 @@ function goRS(n){
   [1,2,3].forEach(i=>{const l=document.getElementById('sl'+i);if(l)l.className='sline'+(i<n?' done':'');});
 }
 function renderRegPage(){
-  const myEmail=myEmail(),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
+  const myEmailAddr=myEmail(),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
   // Update capacity display (exclude waitlisted from count — they don't hold active slots)
   const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
   const slotsEl=document.getElementById('reg-slots-text');
   if(slotsEl){
-    const remaining=24-regularCount;
+    const remaining=REGULAR_CAPACITY-regularCount;
     if(remaining<=0){slotsEl.innerHTML='<span style="color:var(--red2);font-weight:800;">FULL</span>';}
     else{slotsEl.innerHTML=`<span style="color:var(--green2);">${remaining} spots left</span>`;}
   }
-  if(regularCount>=24){
+  if(regularCount>=REGULAR_CAPACITY){
     const regularBox=document.getElementById('mt-regular-box');
     if(regularBox){
       const waitlistCount=S.players.filter(p=>p.membershipType==='regular'&&p.waitlisted).length;
@@ -4255,9 +4266,19 @@ function renderRegPage(){
       if(!sub){const d=document.createElement('div');d.className='waitlist-sub';d.style.cssText='font-size:10px;color:var(--teal2);margin-top:4px;';d.textContent=`FULL — Join Waitlist (#${waitlistCount+1})`;regularBox.appendChild(d);}
     }
   }
-  if(myEmail){
-    const me=S.players.find(p=>p.email.toLowerCase()===myEmail.toLowerCase());
-    if(me){
+  const emailInp=document.getElementById('r-email');
+  if(emailInp&&myEmailAddr){emailInp.value=myEmailAddr;emailInp.readOnly=true;emailInp.style.opacity='0.7';}
+  if(myEmailAddr){
+    const me=myPlayer();
+    if(me&&!registeredThisSeason(me)){
+      // Returning player: details on file, but every season needs a fresh registration and agreement.
+      already.style.display='block';form.style.display='block';
+      already.innerHTML=`<div class="alert alert-info">👋 Welcome back, <strong>${esc(me.name)}</strong>. A new season needs a fresh registration and agreement. Your details are filled in below — check them and submit.</div>`;
+      const nm=document.getElementById('r-name');if(nm&&!nm.value)nm.value=me.name||'';
+      const ph=document.getElementById('r-phone');if(ph&&!ph.value)ph.value=me.phone||'';
+      const em=document.getElementById('r-emergency');if(em&&!em.value)em.value=me.emergency||'';
+      const md=document.getElementById('r-medical');if(md&&!md.value)md.value=me.medical||'';
+    }else if(me){
       already.style.display='block';form.style.display='none';
       const isSpare=me.membershipType==='spare';
       const approvalStatus=me.approved?'<span class="tag tg-green">✅ Approved</span>':'<span class="tag tg-yellow">⏳ Pending Admin Approval</span>';
@@ -4454,6 +4475,14 @@ async function promptSaveSnapshot(){
   const label=document.getElementById('snap-label')?.value||'';
   await saveSnapshot(label);
   const inp=document.getElementById('snap-label');if(inp)inp.value='';
+}
+async function startNewSeason(){
+  const label=(document.getElementById('new-season-label')?.value||'').trim();
+  if(label.length<3)return toast('Enter an archive label (for example 2025-26)','warn');
+  if(S.current)return toast('End the active session first','warn');
+  if(!confirm(`Archive the finished season as "${label}" and reset season statistics? Every player must register again for the new season.`))return;
+  try{const r=await rpc('start_new_season',{p_label:label});toast(`Archived ${r.archived}; ${r.players_reset} players reset`,'success');await loadAll();renderAll();}
+  catch(e){toast('Not started: '+(e.message||'refresh and retry'),'error');}
 }
 async function hardReset(){
   if(!confirm('⚠️ Wipe ALL data?'))return;if(!confirm('Last chance!'))return;

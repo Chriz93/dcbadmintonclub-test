@@ -76,3 +76,30 @@ do $$ declare v int; n int; begin
 end $$;
 reset role;
 select 'RULES PASS' as result;
+
+\i legacy/migrations/L03_scores_and_season.sql
+-- Court-scoped score entry: player 1 is on court 1 of the active session; player 2 is not.
+update public.app_state set value='{"number":4,"cycle":1,"assignments":{"1":[1,2],"6":[3]},"scores":{}}',version=7 where key='current_session';
+set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"test-player-01@example.invalid"}',false);
+do $$ declare v int; begin
+ v=public.save_court_scores(1,1,'{"c1_y1_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":15,"w":"A"}}'::jsonb,7);
+ if v<>8 then raise exception 'version expected 8 got %',v; end if;
+ begin perform public.save_court_scores(1,1,'{"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":21,"w":"A"}}'::jsonb,8); raise exception 'tie accepted'; exception when raise_exception then null; end;
+ begin perform public.save_court_scores(1,1,'{"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":22,"sB":20,"w":"A"}}'::jsonb,8); raise exception 'over-score accepted'; exception when raise_exception then null; end;
+ begin perform public.save_court_scores(6,1,'{"c6_y1_g1":{"a1":3,"a2":null,"b1":3,"b2":null,"sA":21,"sB":1,"w":"A"}}'::jsonb,8); raise exception 'foreign court accepted'; exception when insufficient_privilege then null; end;
+ begin perform public.save_court_scores(1,1,'{"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":3,"w":"A"}}'::jsonb,7); raise exception 'stale accepted'; exception when serialization_failure then null; end;
+ begin perform public.save_court_scores(1,2,'{"c1_y2_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":3,"w":"A"}}'::jsonb,8); raise exception 'wrong round accepted'; exception when serialization_failure then null; end;
+end $$;
+-- Season rollover (organizer with second factor): archive created, stats zeroed, approval withdrawn.
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare r jsonb; begin
+ begin perform public.start_new_season('2026-27'); raise exception 'rollover with active session accepted'; exception when raise_exception then null; end;
+ perform public.delete_state('current_session');
+ r=public.start_new_season('2025-26');
+ if (r->>'players_reset')::int<>3 then raise exception 'players reset %',r; end if;
+ if exists(select 1 from public.players where approved or season_wins<>0) then raise exception 'stats not reset'; end if;
+ if not exists(select 1 from public.app_state where key='archive_2025-26') then raise exception 'archive missing'; end if;
+ begin perform public.start_new_season('2025-26'); raise exception 'duplicate archive accepted'; exception when raise_exception then null; end;
+end $$;
+reset role;
+select 'PHASE2 RULES PASS' as result;
