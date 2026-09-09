@@ -5,39 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>🧪 Maplewood League — TEST</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d2137">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<meta name="theme-color" content="#0b1220">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DC Badminton">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230d2137' width='100' height='100' rx='20'/><text y='65' x='50' text-anchor='middle' font-size='50'>🏸</text></svg>">
 <style>
 :root{
-  --navy:#0d2137;--navy2:#1a3a5c;--teal:#0099cc;--teal2:#00c2ff;
-  --green:#27ae60;--green2:#2ecc71;--red:#c0392b;--red2:#e74c3c;
-  --yellow:#f39c12;--yellow2:#f1c40f;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;
-  --bg:#080e17;--s1:#0f1d2e;--s2:#162540;--s3:#1e3254;--s4:#243a52;
-  --border:#243a52;--text:#e8f4fd;--muted:#6a8ba8;
-  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --navy:#0b1220;--navy2:#141d31;--teal:#c9a84c;--teal2:#e9c46a;
+  --green:#1f9d6a;--green2:#3ddc97;--red:#b83b4b;--red2:#f26d7d;
+  --yellow:#d97706;--yellow2:#fbbf24;--gold:#e9c46a;--silver:#c9ced8;--bronze:#d08a4e;
+  --bg:#070a12;--s1:#0e1422;--s2:#131b2c;--s3:#1a2437;--s4:#22304a;
+  --border:rgba(255,255,255,0.08);--text:#f2efe6;--muted:#8d98ad;
+  --ink:#141a26;--radius:16px;--shadow:0 12px 40px rgba(0,0,0,0.45);
+  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow-x:hidden;}
-body{background:var(--bg);color:var(--text);font-family:var(--font);padding-bottom:72px;}
+body{background:radial-gradient(900px 480px at 50% -160px,rgba(201,168,76,0.12),transparent 65%),var(--bg);color:var(--text);font-family:var(--font);padding-bottom:84px;line-height:1.45;-webkit-font-smoothing:antialiased;}
+:focus-visible{outline:2px solid var(--teal2);outline-offset:2px;}
 
 /* NAV */
-.nav{background:var(--navy);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(0,0,0,0.6);border-bottom:1px solid var(--border);}
-.nav-brand{display:flex;flex-direction:column;}
-.nav-title{font-size:15px;font-weight:800;color:#fff;}
+.nav{background:rgba(11,18,32,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,0.35);border-bottom:1px solid var(--border);}
+.nav-brand{display:flex;flex-direction:column;min-width:0;}
+.nav-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.2px;}
 .nav-title span{color:var(--teal2);}
-.nav-sub{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
-.sync-row{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}
+.nav-sub{font-size:10px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sync-row{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);flex-shrink:0;white-space:nowrap;}
 .sdot{width:7px;height:7px;border-radius:50%;background:var(--green2);flex-shrink:0;transition:background 0.3s;}
 .sdot.syncing{background:var(--yellow2);}.sdot.err{background:var(--red2);}
 
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom);}
-.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 2px;border:none;background:transparent;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;cursor:pointer;gap:3px;transition:color 0.2s;}
-.bnav-btn .bi{font-size:19px;}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(11,18,32,0.86);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom);}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 6px;border:none;background:transparent;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;cursor:pointer;gap:3px;transition:color 0.2s;min-height:56px;}
+.bnav-btn .bi{font-size:20px;padding:2px 12px;border-radius:12px;transition:background 0.2s;}
 .bnav-btn.active{color:var(--teal2);}
+.bnav-btn.active .bi{background:rgba(201,168,76,0.16);}
 
 /* PAGES */
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -48,38 +53,39 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);padding-bott
 .page.active{display:block;}
 
 /* CARDS */
-.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;}
-.card-title{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:12px;}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0)),var(--s1);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,0.25);}
+.card-title{font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--teal2);margin-bottom:12px;}
 
 /* INPUTS */
-.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-size:15px;transition:border 0.2s;margin-bottom:8px;}
-.inp:focus{outline:none;border-color:var(--teal);}
+.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:13px 14px;color:var(--text);font-size:16px;transition:border 0.2s,box-shadow 0.2s;margin-bottom:8px;}
+.inp:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(201,168,76,0.18);}
 .inp::placeholder{color:var(--muted);}
 select.inp{cursor:pointer;}
 textarea.inp{resize:vertical;min-height:80px;}
 .lbl{font-size:11px;color:var(--muted);margin-bottom:4px;display:block;font-weight:700;letter-spacing:0.5px;}
 
 /* BUTTONS */
-.btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;width:100%;margin-top:8px;letter-spacing:0.3px;}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:13px 18px;min-height:46px;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.15s;width:100%;margin-top:8px;letter-spacing:0.2px;}
+.btn:hover{filter:brightness(1.06);}
 .btn:active{transform:scale(0.97);}
-.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary{background:linear-gradient(135deg,#e9c46a,#c9a84c);color:var(--ink);box-shadow:0 8px 24px rgba(201,168,76,0.22);}
 .btn-success{background:var(--green);color:#fff;}
 .btn-danger{background:var(--red);color:#fff;}
 .btn-warn{background:var(--yellow);color:#000;}
-.btn-ghost{background:var(--s3);color:var(--text);border:1px solid var(--border);}
-.btn-sm{padding:7px 12px;font-size:12px;width:auto;margin-top:0;}
+.btn-ghost{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border);}
+.btn-sm{padding:8px 12px;min-height:36px;font-size:12px;width:auto;margin-top:0;}
 .btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 
 /* ALERTS */
 .alert{padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600;}
-.alert-info{background:rgba(0,153,204,0.1);border:1px solid var(--teal);color:var(--teal2);}
+.alert-info{background:rgba(201,168,76,0.1);border:1px solid var(--teal);color:var(--teal2);}
 .alert-success{background:rgba(39,174,96,0.1);border:1px solid var(--green);color:var(--green2);}
 .alert-warn{background:rgba(243,156,18,0.1);border:1px solid var(--yellow);color:var(--yellow2);}
 .alert-error{background:rgba(192,57,43,0.1);border:1px solid var(--red);color:var(--red2);}
 
 /* TAGS */
 .tag{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;letter-spacing:0.3px;}
-.tg-teal{background:rgba(0,153,204,0.15);color:var(--teal2);border:1px solid rgba(0,153,204,0.35);}
+.tg-teal{background:rgba(201,168,76,0.15);color:var(--teal2);border:1px solid rgba(201,168,76,0.35);}
 .tg-green{background:rgba(39,174,96,0.15);color:var(--green2);border:1px solid rgba(39,174,96,0.35);}
 .tg-red{background:rgba(192,57,43,0.15);color:var(--red2);border:1px solid rgba(192,57,43,0.35);}
 .tg-yellow{background:rgba(243,156,18,0.15);color:var(--yellow2);border:1px solid rgba(243,156,18,0.35);}
@@ -91,13 +97,13 @@ textarea.inp{resize:vertical;min-height:80px;}
 .ptabs::-webkit-scrollbar{height:4px;}
 .ptabs::-webkit-scrollbar-thumb{background:var(--s3);border-radius:4px;}
 .ptabs::-webkit-scrollbar-track{background:transparent;}
-.ptab{background:var(--s2);border:1px solid transparent;color:var(--muted);font-size:12px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
-.ptab.active{background:var(--teal);color:#fff;}
+.ptab{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-size:13px;font-weight:700;padding:9px 16px;min-height:38px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.ptab.active{background:linear-gradient(135deg,#e9c46a,#c9a84c);color:var(--ink);border-color:transparent;}
 .section{display:none;}.section.active{display:block;}
 
 /* ══ GYM LAYOUT ══ */
 .gym-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
-.gym-label{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:8px;}
+.gym-label{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:8px;}
 .gym-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
 .gym-court{border-radius:10px;overflow:hidden;border:2px solid var(--border);transition:border-color 0.2s;cursor:pointer;position:relative;}
 .gym-court:hover{border-color:var(--teal);}
@@ -117,20 +123,20 @@ textarea.inp{resize:vertical;min-height:80px;}
 .gc-medal{font-size:10px;}
 .gc-net{height:3px;background:repeating-linear-gradient(90deg,var(--border) 0px,var(--border) 4px,transparent 4px,transparent 8px);margin:0 6px 4px;}
 .gc-players{padding:0 6px 6px;display:grid;grid-template-columns:1fr 1fr;gap:3px;}
-.gc-player{background:var(--s2);border-radius:5px;padding:4px 5px;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--border);position:relative;}
+.gc-player{background:var(--s2);border-radius:5px;padding:4px 5px;font-size:11px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--border);position:relative;}
 .gc-player.empty{color:var(--yellow);font-style:italic;font-weight:600;border:1px dashed rgba(243,156,18,0.4);background:rgba(243,156,18,0.05);}
-.gc-player .mv{position:absolute;top:-4px;right:-2px;font-size:7px;padding:1px 3px;border-radius:6px;font-weight:800;}
+.gc-player .mv{position:absolute;top:-4px;right:-2px;font-size:11px;padding:1px 3px;border-radius:6px;font-weight:800;}
 .mv-u{background:var(--green2);color:#fff;}
 .mv-d{background:var(--red2);color:#fff;}
 /* Admin add player on court */
-.gc-add-btn{display:none;position:absolute;bottom:4px;right:4px;background:var(--teal);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;align-items:center;justify-content:center;font-weight:800;}
+.gc-add-btn{display:none;position:absolute;bottom:4px;right:4px;background:var(--teal);color:var(--ink);border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;align-items:center;justify-content:center;font-weight:800;}
 .admin-mode .gc-add-btn{display:flex;}
 .gc-divider{height:1px;background:var(--border);margin:0 8px 4px;position:relative;}
-.gc-divider::after{content:'NET';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:7px;background:var(--s1);padding:0 4px;color:var(--muted);letter-spacing:1px;}
+.gc-divider::after{content:'NET';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:11px;background:var(--s1);padding:0 4px;color:var(--muted);letter-spacing:1px;}
 
 /* Drag-and-drop court assignment */
 .dnd-court{background:var(--s1);border:2px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;transition:border-color 0.2s,background 0.2s;}
-.dnd-court.drag-over{border-color:var(--teal2);background:rgba(0,153,204,0.08);}
+.dnd-court.drag-over{border-color:var(--teal2);background:rgba(201,168,76,0.08);}
 .dnd-court-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .dnd-court-title{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
 .dnd-court-cnt{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
@@ -141,7 +147,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .dnd-empty{background:rgba(243,156,18,0.05);border:1px dashed rgba(243,156,18,0.4);border-radius:8px;padding:8px 10px;font-size:11px;font-weight:600;color:var(--yellow);font-style:italic;text-align:center;}
 
 /* Gym walls */
-.gym-wall{background:var(--s2);border-radius:6px;padding:4px 8px;text-align:center;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;border:1px solid var(--border);}
+.gym-wall{background:var(--s2);border-radius:6px;padding:4px 8px;text-align:center;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;border:1px solid var(--border);}
 
 /* ══ CYCLE BAR ══ */
 .cybar{display:flex;gap:5px;margin-bottom:14px;}
@@ -163,7 +169,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .court-players{padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .pslot{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:9px;font-size:13px;font-weight:700;text-align:center;position:relative;}
 .pslot.empty{color:var(--yellow);font-style:italic;font-weight:600;border:1px dashed rgba(243,156,18,0.4);background:rgba(243,156,18,0.05);}
-.mbadge{position:absolute;top:-7px;right:-4px;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:800;}
+.mbadge{position:absolute;top:-7px;right:-4px;font-size:11px;padding:2px 6px;border-radius:10px;font-weight:800;}
 .mu{background:var(--green2);color:#fff;}.md{background:var(--red2);color:#fff;}
 
 /* ══ SCORE ENTRY ══ */
@@ -181,7 +187,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .saved-pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(39,174,96,0.15);border:1px solid var(--green);color:var(--green2);}
 
 /* ══ LEADERBOARD ══ */
-.lbrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;margin-bottom:7px;background:var(--s1);border:1px solid var(--border);}
+.lbrow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin-bottom:7px;background:var(--s1);border:1px solid var(--border);}
 .lbrank{font-size:16px;font-weight:900;width:28px;text-align:center;flex-shrink:0;}
 .r1{color:var(--gold);}.r2{color:var(--silver);}.r3{color:var(--bronze);}.rn{color:var(--muted);}
 .lbinfo{flex:1;min-width:0;}
@@ -189,14 +195,14 @@ textarea.inp{resize:vertical;min-height:80px;}
 .lbsub{font-size:11px;color:var(--muted);margin-top:1px;}
 .lbnums{display:flex;gap:8px;}
 .lbnum .v{font-size:17px;font-weight:800;color:var(--teal2);}
-.lbnum .l{font-size:9px;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;}
+.lbnum .l{font-size:11px;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;}
 
 /* ══ VOTING ══ */
 .vote-card{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;margin-bottom:7px;background:var(--s1);border:1px solid var(--border);justify-content:space-between;}
 .vote-card-info{flex:1;min-width:0;}
 .vote-card-name{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .vote-card-count{font-size:13px;color:var(--teal2);font-weight:700;margin-right:10px;}
-.vote-btn{padding:6px 12px;font-size:12px;background:var(--teal);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:700;transition:background 0.2s;}
+.vote-btn{padding:8px 14px;font-size:12px;background:var(--teal);border:none;border-radius:8px;color:var(--ink);cursor:pointer;font-weight:700;transition:background 0.2s;}
 .vote-btn:hover{background:var(--teal2);}
 .vote-banner{background:linear-gradient(90deg,var(--gold),var(--yellow));padding:12px 14px;border-radius:8px;margin-bottom:10px;font-weight:800;text-align:center;color:#000;}
 
@@ -205,7 +211,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .step-ind{display:flex;gap:8px;margin-bottom:20px;align-items:center;}
 .sdot-s{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
 .sdot-s.done{background:var(--green);color:#fff;}
-.sdot-s.act{background:var(--teal);color:#fff;}
+.sdot-s.act{background:var(--teal);color:var(--ink);}
 .sdot-s.pend{background:var(--s3);color:var(--muted);}
 .sline{flex:1;height:2px;background:var(--s3);border-radius:1px;}
 .sline.done{background:var(--teal);}
@@ -216,21 +222,23 @@ textarea.inp{resize:vertical;min-height:80px;}
 .chk-row span{font-size:13px;line-height:1.5;}
 
 /* ══ HOME ══ */
-.hero{background:linear-gradient(135deg,var(--navy2),var(--navy));border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;}
+.hero{background:linear-gradient(160deg,#182240 0%,#0f1628 55%,#0b1020 100%);border:1px solid rgba(201,168,76,0.28);border-radius:20px;padding:26px 20px 22px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(420px 200px at 50% 0%,rgba(201,168,76,0.18),transparent 70%);pointer-events:none;}
+.hero>*{position:relative;z-index:1;}
 .hero::before{content:'🏸';position:absolute;font-size:120px;opacity:0.05;top:-10px;right:-10px;pointer-events:none;}
-.hero-club{font-size:22px;font-weight:900;color:#fff;}
+.hero-club{font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.4px;}
 .hero-club span{color:var(--teal2);}
 .hero-league{font-size:13px;color:var(--muted);margin:4px 0 14px;}
-.hero-next{background:rgba(0,153,204,0.1);border:1px solid rgba(0,153,204,0.3);border-radius:10px;padding:12px;}
-.hero-next-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--teal);font-weight:800;margin-bottom:4px;}
-.hero-next-date{font-size:18px;font-weight:800;color:#fff;}
+.hero-next{background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.32);border-radius:14px;padding:14px;}
+.hero-next-lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--teal);font-weight:800;margin-bottom:4px;}
+.hero-next-date{font-size:20px;font-weight:800;color:#fff;}
 .hero-next-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .countdown{display:flex;gap:10px;justify-content:center;margin-top:12px;}
 .cd-box{background:var(--s2);border-radius:8px;padding:8px 12px;text-align:center;flex:1;}
 .cd-num{font-size:22px;font-weight:900;color:var(--teal2);}
-.cd-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.cd-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
 .ann-card{border-radius:12px;padding:14px;margin-bottom:10px;}
-.ann-info{background:rgba(0,153,204,0.07);border:1px solid rgba(0,153,204,0.2);border-left:4px solid var(--teal);}
+.ann-info{background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-left:4px solid var(--teal);}
 .ann-warn{background:rgba(243,156,18,0.07);border:1px solid rgba(243,156,18,0.2);border-left:4px solid var(--yellow);}
 .ann-success{background:rgba(39,174,96,0.07);border:1px solid rgba(39,174,96,0.2);border-left:4px solid var(--green);}
 .ann-title{font-size:13px;font-weight:800;margin-bottom:4px;}
@@ -241,10 +249,10 @@ textarea.inp{resize:vertical;min-height:80px;}
 .heatmap-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
 .heatmap-name{font-size:12px;font-weight:700;width:100px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .heatmap-cells{display:flex;gap:3px;flex:1;}
-.hm-cell{flex:1;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;}
+.hm-cell{flex:1;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
 
 /* ══ MISC ══ */
-.page-title{font-size:20px;font-weight:800;margin-bottom:2px;}
+.page-title{font-size:23px;font-weight:800;margin-bottom:2px;letter-spacing:-0.3px;}
 .page-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .flex-between{display:flex;justify-content:space-between;align-items:center;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
@@ -253,7 +261,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .sbox{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:13px;text-align:center;}
 .sbox .sv{font-size:24px;font-weight:800;color:var(--teal2);}
-.sbox .sl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
+.sbox .sl{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
 .pay-row{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--s1);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;}
 .sched-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
@@ -261,7 +269,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 /* MODAL */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:300;align-items:center;justify-content:center;padding:16px;}
 .modal-ov.open{display:flex;}
-.modal{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:22px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);}
 .modal h3{font-size:16px;font-weight:800;color:var(--teal2);margin-bottom:14px;}
 
 /* PLAYER OF SESSION BADGE */
@@ -278,7 +286,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 
 /* PLAYER AVATARS */
 .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;text-transform:uppercase;}
-.avatar-sm{width:22px;height:22px;font-size:9px;}
+.avatar-sm{width:22px;height:22px;font-size:11px;}
 .avatar-lg{width:36px;height:36px;font-size:14px;}
 
 /* GAME HISTORY */
@@ -297,20 +305,21 @@ textarea.inp{resize:vertical;min-height:80px;}
 /* View toggle */
 .view-toggle{display:flex;gap:6px;margin-bottom:12px;}
 .vt-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.2s;}
-.vt-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.vt-btn.active{background:var(--teal);color:var(--ink);border-color:var(--teal);}
 
 /* Admin mode indicator */
 .admin-bar{background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--yellow2);}
 
 /* INVITE GATE */
-#invite-gate{display:flex;align-items:center;justify-content:center;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;flex-direction:column;gap:20px;padding:20px;}
+#invite-gate{display:flex;align-items:center;justify-content:center;position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(700px 420px at 50% 0%,rgba(201,168,76,0.16),transparent 65%),var(--bg);z-index:9999;flex-direction:column;gap:20px;padding:20px;}
 #invite-gate.hidden{display:none;}
-.invite-card{background:var(--s2);border:2px solid var(--border);border-radius:12px;padding:30px;text-align:center;max-width:400px;width:100%;}
+.invite-card{background:linear-gradient(180deg,#131b2c,#0e1422);border:1px solid rgba(201,168,76,0.28);border-radius:22px;padding:32px 26px;text-align:center;max-width:400px;width:100%;box-shadow:var(--shadow);}
 .invite-card h2{font-size:24px;margin-bottom:8px;color:var(--text);}
 .invite-card p{font-size:13px;color:var(--muted);margin-bottom:20px;}
-.invite-inp{width:100%;padding:12px;font-size:16px;text-align:center;letter-spacing:2px;border:1px solid var(--border);background:var(--s1);color:var(--text);border-radius:8px;margin-bottom:12px;}
-.invite-btn{width:100%;padding:12px;background:var(--teal);color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
-.invite-btn:hover{background:var(--teal2);}
+.invite-inp{width:100%;padding:14px;font-size:17px;text-align:center;letter-spacing:2px;border:1px solid var(--border);background:var(--s1);color:var(--text);border-radius:12px;margin-bottom:12px;}
+.invite-inp:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(201,168,76,0.18);}
+.invite-btn{width:100%;padding:14px;min-height:48px;background:linear-gradient(135deg,#e9c46a,#c9a84c);color:var(--ink);border:0;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;}
+.invite-btn:hover{filter:brightness(1.06);}
 .invite-err{color:var(--red2);font-size:12px;}
 .reg-gate-banner{background:var(--yellow);color:#000;padding:12px;text-align:center;font-weight:700;font-size:13px;border-radius:6px;margin-bottom:10px;}
 .rsvp-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
@@ -322,22 +331,22 @@ textarea.inp{resize:vertical;min-height:80px;}
 .admin-highlight{background:var(--yellow2);}
 /* Membership type boxes */
 .membership-box{background:var(--s2);border:2px solid var(--border);border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;cursor:pointer;}
-.membership-box.active-box{border-color:var(--teal);background:rgba(0,153,204,0.1);}
+.membership-box.active-box{border-color:var(--teal);background:rgba(201,168,76,0.1);}
 /* Spare badge */
-.spare-badge{display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 6px;border-radius:8px;background:rgba(243,156,18,0.18);color:var(--yellow2);border:1px solid rgba(243,156,18,0.4);margin-left:5px;letter-spacing:0.3px;}
+.spare-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:2px 6px;border-radius:8px;background:rgba(243,156,18,0.18);color:var(--yellow2);border:1px solid rgba(243,156,18,0.4);margin-left:5px;letter-spacing:0.3px;}
 /* Pending approval banner */
 .pending-banner{background:rgba(243,156,18,0.1);border:2px solid var(--yellow);border-radius:10px;padding:16px;margin-bottom:14px;text-align:center;}
 /* Q&A */
 .qa-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
 .qa-q{font-size:13px;font-weight:700;margin-bottom:4px;}
 .qa-meta{font-size:11px;color:var(--muted);margin-bottom:8px;}
-.qa-ans{background:rgba(0,153,204,0.08);border-left:3px solid var(--teal);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12px;margin-top:8px;}
+.qa-ans{background:rgba(201,168,76,0.08);border-left:3px solid var(--teal);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12px;margin-top:8px;}
 .qa-unanswered{color:var(--yellow2);font-size:11px;font-style:italic;margin-top:6px;}
 /* Court warning */
 .court-warn{border-color:var(--red2)!important;background:rgba(192,57,43,0.07);}
 .court-warn-label{color:var(--red2)!important;}
 /* Waitlist badge */
-.waitlist-badge{display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 6px;border-radius:8px;background:rgba(0,153,204,0.15);color:var(--teal2);border:1px solid rgba(0,153,204,0.4);margin-left:5px;letter-spacing:0.3px;}
+.waitlist-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:2px 6px;border-radius:8px;background:rgba(201,168,76,0.15);color:var(--teal2);border:1px solid rgba(201,168,76,0.4);margin-left:5px;letter-spacing:0.3px;}
 /* Attendance */
 .att-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
 .att-btn{padding:5px 10px;font-size:11px;border:0;border-radius:6px;cursor:pointer;font-weight:700;}
@@ -349,7 +358,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 /* Player number badge */
 .pl-num{width:24px;height:24px;border-radius:50%;background:var(--s3);color:var(--muted);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 /* Watermark */
-.watermark{position:fixed;bottom:76px;right:8px;font-size:8px;color:rgba(106,139,168,0.3);letter-spacing:0.5px;pointer-events:none;z-index:100;font-weight:600;}
+.watermark{position:fixed;bottom:76px;right:8px;font-size:10px;color:rgba(106,139,168,0.3);letter-spacing:0.5px;pointer-events:none;z-index:100;font-weight:600;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -371,7 +380,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 <nav class="nav">
   <div class="nav-brand">
     <div class="nav-title"><span>Maplewood</span> League</div>
-    <div class="nav-sub">Maplewood Advanced League · 2026–27</div>
+    <div class="nav-sub">Advanced League · 2026–27</div>
   </div>
   <div class="sync-row">
     <div class="sdot" id="sdot"></div>
@@ -515,7 +524,7 @@ textarea.inp{resize:vertical;min-height:80px;}
           <h4>12. Consent &amp; Agreement</h4>
           <p>By checking the boxes below and entering my digital signature, I confirm I have read, understood, and fully agree to all terms of this Liability Waiver, Activity Release, and Payment Policy. I understand this is a voluntary private recreational arrangement. This constitutes a binding digital agreement between me and Christy George (individual organizer).</p>
         </div>
-        <div class="chk-row" style="background:rgba(0,153,204,0.08);border:1px solid rgba(0,153,204,0.3);border-radius:8px;padding:10px 12px;">
+        <div class="chk-row" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 12px;">
           <input type="checkbox" id="w1">
           <span style="font-weight:700;">I have read and agree to <strong>all sections above</strong> including: liability waiver & release, assumption of risk, OCDSB facility rules, non-refundable payment policy, media consent, privacy policy, and e-transfer responsibility. If registering a minor, I accept full responsibility as parent/guardian.</span>
         </div>
@@ -553,7 +562,7 @@ textarea.inp{resize:vertical;min-height:80px;}
           <li style="font-size:13px;line-height:1.5;">Registration through this app confirms your interest and waiver acceptance. Court placement is handled separately by the admin — registering does not automatically assign you to a court.</li>
           <li style="font-size:13px;line-height:1.5;">The app tracks all scores, rankings, and court movements in real time. Players can view standings, game history, and session results at any time.</li>
         </ol>
-        <div class="chk-row" style="background:rgba(0,153,204,0.08);border:1px solid rgba(0,153,204,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+        <div class="chk-row" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
           <input type="checkbox" id="lf-all">
           <span style="font-weight:700;font-size:13px;">I have read and agree to all of the league format rules listed above.</span>
         </div>
@@ -678,7 +687,7 @@ textarea.inp{resize:vertical;min-height:80px;}
     <div class="admin-bar">⚙️ Admin Mode Active <span class="tag tg-yellow">All features unlocked</span></div>
     <div class="ptabs">
       <button class="ptab active" onclick="showSec('admin','a-pl',this)">👥 Players</button>
-      <button class="ptab" onclick="showSec('admin','a-reg',this)" id="tab-a-reg">📋 Registered <span id="reg-pending-badge" style="display:none;background:var(--red2);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-left:3px;font-weight:800;"></span></button>
+      <button class="ptab" onclick="showSec('admin','a-reg',this)" id="tab-a-reg">📋 Registered <span id="reg-pending-badge" style="display:none;background:var(--red2);color:#fff;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:3px;font-weight:800;"></span></button>
       <button class="ptab" onclick="showSec('admin','a-sess',this)">📅 Session</button>
       <button class="ptab" onclick="showSec('admin','a-att',this)">📋 Attendance</button>
       <button class="ptab" onclick="showSec('admin','a-assign',this)">🏟️ Assign</button>
@@ -954,8 +963,8 @@ function updateNavVisibility(){
   const standings = document.getElementById('bnav-standings');
   const schedule = document.getElementById('bnav-schedule');
   const admin = document.getElementById('bnav-admin');
-  // Admin tab is ALWAYS visible — tapping it prompts for PIN if not unlocked
-  admin.style.display = 'flex';
+  // Only organizers see the Admin tab (verification with the authenticator still happens inside it).
+  admin.style.display = (typeof S_me==='object'&&S_me&&S_me.organizer)?'flex':'none';
   if(adminUnlocked){
     admin.style.color = 'var(--yellow2)';
     admin.querySelector('.bi').textContent = '⚙️';
@@ -1510,7 +1519,7 @@ function renderAdminPlayers(){
           return `<div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;">
             <div style="font-size:10px;color:var(--muted);font-weight:700;">C${c}</div>
             <div style="font-size:18px;font-weight:800;color:${color};">${n}</div>
-            <div style="font-size:9px;color:${color};">${n}/4</div>
+            <div style="font-size:11px;color:${color};">${n}/4</div>
           </div>`;}).join('')}
       </div>
       <button class="btn btn-warn" onclick="rebalancePlayerCourts()">🔄 Re-sort &amp; Rebalance All Courts</button>
@@ -1532,18 +1541,18 @@ function renderAdminPlayers(){
     html+=`<div style="display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border);${isAbsentInSess?'opacity:0.5;':''}">
     <div class="pl-num">${i+1}</div>
     <div style="flex:1;min-width:0;">
-      <div style="font-weight:800;font-size:13px;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${isAbsentInSess?'<span class="tag tg-red" style="margin-left:4px;font-size:9px;">ABSENT</span>':''}</div>
+      <div style="font-weight:800;font-size:13px;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${isAbsentInSess?'<span class="tag tg-red" style="margin-left:4px;font-size:11px;">ABSENT</span>':''}</div>
       <div style="font-size:10px;color:var(--muted);">${esc(p.email)||'—'} · C${p.currentCourt} · ${p.seasonWins}W ${p.seasonLosses}L · Absent:${p.noShowCount}</div>
     </div>
     <button class="notes-btn" onclick="openAdminNote(${p.id})">${noteIcon}</button>
-    <span class="tag ${attStatus==='absent'?'tg-red':attStatus==='present'?'tg-green':'tg-gray'}" style="cursor:pointer;font-size:9px;" onclick="togglePlayerPresence(${p.id})" title="Toggle present/absent">${attStatus==='absent'?'❌':attStatus==='present'?'✅':'—'}</span>
-    <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;font-size:9px;" onclick="togglePaid(${p.id})" title="Toggle paid">${p.paid?'💰':'⏳'}</span>
+    <span class="tag ${attStatus==='absent'?'tg-red':attStatus==='present'?'tg-green':'tg-gray'}" style="cursor:pointer;font-size:11px;" onclick="togglePlayerPresence(${p.id})" title="Toggle present/absent">${attStatus==='absent'?'❌':attStatus==='present'?'✅':'—'}</span>
+    <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;font-size:11px;" onclick="togglePaid(${p.id})" title="Toggle paid">${p.paid?'💰':'⏳'}</span>
     <select style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
       <option value="0">Bench</option>
       ${[1,2,3,4,5,6].map(c=>`<option value="${c}" ${p.currentCourt===c?'selected':''}>C${c}</option>`).join('')}
     </select>
-    <button class="btn btn-warn btn-sm" style="padding:3px 6px;font-size:9px;" onclick="markAbsentFromPlayers(${p.id})" title="Mark absent & move to bench">🚫</button>
-    <button class="btn btn-danger btn-sm" style="padding:3px 6px;font-size:9px;" onclick="removePlayer(${p.id})">✕</button>
+    <button class="btn btn-warn btn-sm" style="padding:3px 6px;font-size:11px;" onclick="markAbsentFromPlayers(${p.id})" title="Mark absent & move to bench">🚫</button>
+    <button class="btn btn-danger btn-sm" style="padding:3px 6px;font-size:11px;" onclick="removePlayer(${p.id})">✕</button>
   </div>`;
   });
   // Show unassigned / spare pool players
@@ -1559,7 +1568,7 @@ function renderAdminPlayers(){
           <option value="0" selected>Bench</option>
           ${[1,2,3,4,5,6].map(c=>`<option value="${c}">C${c}</option>`).join('')}
         </select>
-        <button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:9px;" onclick="callInSpare(${p.id})">📲 Call In</button>
+        <button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:11px;" onclick="callInSpare(${p.id})">📲 Call In</button>
       </div>`;
     });
   }
@@ -1591,16 +1600,16 @@ function renderRegPlayers(){
   const totalPlayers=S.players.length;
   let html=`<div class="card"><div class="card-title">📊 Overview</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin-bottom:10px;">
-      <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${totalPlayers}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Total Players</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${selfReg.length}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Registered</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--teal);">${regRegular.length}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Reg. Regular</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--yellow2);">${regSpare.length}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Reg. Spare</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${totalPlayers}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Total Players</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${selfReg.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Registered</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--teal);">${regRegular.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Reg. Regular</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--yellow2);">${regSpare.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Reg. Spare</div></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;">
-      <div><div style="font-size:18px;font-weight:800;color:var(--green2);">${waiverSigned}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Waiver ✓</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--green2);">${paidCount}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Paid</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${notRegistered.length}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Not Reg.</div></div>
-      <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${unpaidCount}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--green2);">${waiverSigned}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Waiver ✓</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--green2);">${paidCount}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Paid</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${notRegistered.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Not Reg.</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${unpaidCount}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
     </div></div>`;
   // Not registered — admin-added without waiver
   if(notRegistered.length){
@@ -1610,9 +1619,9 @@ function renderRegPlayers(){
       html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
         <span style="font-weight:700;">${esc(p.name)}${p.currentCourt>0?' <span style="color:var(--muted);font-size:10px;">C'+p.currentCourt+'</span>':''}</span>
         <div style="display:flex;gap:4px;">
-          <span class="tag ${p.membershipType==='spare'?'tg-yellow':'tg-teal'}" style="font-size:9px;">${p.membershipType==='spare'?'Spare':'Regular'}</span>
-          <span class="tag ${p.paid?'tg-green':'tg-red'}" style="font-size:9px;">${p.paid?'💰 Paid':'❌ Unpaid'}</span>
-          <span class="tag tg-red" style="font-size:9px;">No Waiver</span>
+          <span class="tag ${p.membershipType==='spare'?'tg-yellow':'tg-teal'}" style="font-size:11px;">${p.membershipType==='spare'?'Spare':'Regular'}</span>
+          <span class="tag ${p.paid?'tg-green':'tg-red'}" style="font-size:11px;">${p.paid?'💰 Paid':'❌ Unpaid'}</span>
+          <span class="tag tg-red" style="font-size:11px;">No Waiver</span>
         </div>
       </div>`;
     });
@@ -1681,9 +1690,9 @@ function regPlayerCard(p,showApprove){
         ${showApprove?`<button class="btn btn-success btn-sm" onclick="approvePlayer(${p.id})" style="padding:4px 8px;">✓ Approve</button>`:''}
         ${(()=>{
           // Check if this player's waiver is linked: either they ARE on a court (self-linked), or another player has their sig
-          if(p.waiverSigned&&p.currentCourt>0)return '<span class="tag tg-green" style="font-size:9px;">✅ Active on Court '+p.currentCourt+'</span>';
+          if(p.waiverSigned&&p.currentCourt>0)return '<span class="tag tg-green" style="font-size:11px;">✅ Active on Court '+p.currentCourt+'</span>';
           const linkedTo=S.players.find(x=>x.id!==p.id&&x.sig===p.sig&&x.waiverSigned);
-          if(linkedTo)return '<span class="tag tg-green" style="font-size:9px;">✅ Linked to '+esc(linkedTo.name.split(' ')[0])+'</span>';
+          if(linkedTo)return '<span class="tag tg-green" style="font-size:11px;">✅ Linked to '+esc(linkedTo.name.split(' ')[0])+'</span>';
           return '<button class="btn btn-primary btn-sm" onclick="linkWaiverToPlayer('+p.id+')" style="padding:4px 8px;">🔗 Link to Player</button>';
         })()}
         <button class="btn btn-ghost btn-sm" onclick="editRegistration(${p.id})" style="padding:4px 8px;">✏️ Edit</button>
@@ -1719,17 +1728,17 @@ function renderPayments(){
     <div style="margin-bottom:12px;">
       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">Regular Members (${regulars.length}/${REGULAR_CAPACITY})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
-        <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${regPaid}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Paid</div></div>
-        <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${regulars.length-regPaid}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
-        <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$${regPaid*FEES.regularSeason}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Collected</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${regPaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Paid</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${regulars.length-regPaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$${regPaid*FEES.regularSeason}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Collected</div></div>
       </div>
       <div style="background:var(--s2);border-radius:8px;height:5px;margin-top:8px;overflow:hidden;"><div style="height:100%;background:var(--green);width:${regulars.length>0?Math.round(regPaid/regulars.length*100):0}%;border-radius:8px;"></div></div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:12px;">
       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow2);margin-bottom:8px;">Spare Players (${spares.length})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;">
-        <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${sparePaid}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Session Paid</div></div>
-        <div><div style="font-size:20px;font-weight:800;color:var(--yellow2);">${spares.length-sparePaid}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${sparePaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Session Paid</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--yellow2);">${spares.length-sparePaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
       </div>
     </div>`;
   // Regular players first, then spares
@@ -2649,7 +2658,7 @@ async function quickAddToCourt(court){
   const a=S.current.assignments;
   for(let c=1;c<=NC;c++)a[c]=(a[c]||[]).filter(id=>id!==pid);
   if(!a[court])a[court]=[];
-  if(a[court].length>=4)return toast('Court full','warn');
+  if(a[court].length>=courtCap(court))return toast('Court full','warn');
   a[court].unshift(pid); // unshift so newly added player appears at top of court
   await setKV('current_session',S.current);
   await loadAll();renderAll();closeModal();toast('Player added to Court '+court,'success');
@@ -2665,7 +2674,7 @@ function renderCourts(){
   else{assignments={};for(let c=1;c<=NC;c++)assignments[c]=[];activePlayers().forEach(p=>{if(p.currentCourt>=1&&p.currentCourt<=NC)assignments[p.currentCourt].push(p.id);});}
   const cy=S.current?S.current.cycle:0;
   const sub=document.getElementById('courts-sub');
-  if(sub)sub.textContent=S.current?`Session ${S.current.number} · ${S.current.date} · Round ${cy}`:S.sessions.length?`${S.sessions.length}/8 sessions done`:'No active session';
+  if(sub)sub.textContent=S.current?`Session ${S.current.number} · ${S.current.date} · Round ${cy}`:S.sessions.length?`${S.sessions.length}/${DATES.length} sessions done`:'No active session';
   const cb=document.getElementById('cybar');
   if(cb)cb.innerHTML=Array.from({length:NCYC},(_,i)=>`<div class="cyseg ${i<cy-1?'done':i===cy-1&&S.current?'act':''}"></div>`).join('');
   // Admin badge on courts page
@@ -2697,7 +2706,7 @@ function renderCourts(){
       return `<div class="gym-court ${cls}" onclick="showCourtDetail(${c})">
         <div class="gc-header">
           <span class="gc-num">C${c}</span>
-          <span style="font-size:9px;font-weight:800;color:${cntColor};">${cnt}/4</span>
+          <span style="font-size:11px;font-weight:800;color:${cntColor};">${cnt}/4</span>
           <span class="gc-medal">${medal}</span>
         </div>
         <div class="gc-divider"></div>
@@ -2724,7 +2733,7 @@ function renderCourts(){
       <div class="gym-wrap">
         <div class="gym-wall">← Entrance Side →</div>
         <div class="gym-row">${[1,2,3].map(makeCourtCard).join('')}</div>
-        <div style="height:10px;background:linear-gradient(90deg,transparent,rgba(0,153,204,0.08),transparent);border-radius:4px;margin:4px 0;"></div>
+        <div style="height:10px;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.08),transparent);border-radius:4px;margin:4px 0;"></div>
         <div class="gym-row">${[6,5,4].map(makeCourtCard).join('')}</div>
         <div class="gym-wall">← Back Wall →</div>
       </div>
@@ -2979,7 +2988,7 @@ function renderRoundTracker(){
       html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:800;color:var(--green2);">Round ${mCy} ✅</div>
-          <span class="tag tg-green" style="font-size:9px;">Completed</span>
+          <span class="tag tg-green" style="font-size:11px;">Completed</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">`;
       for(let c=1;c<=NC;c++){
@@ -2995,7 +3004,7 @@ function renderRoundTracker(){
           return true; // show all, we'll filter by court below
         });
         html+=`<div style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:5px;">
-          <div style="font-size:9px;font-weight:800;color:${cls};text-align:center;margin-bottom:3px;">C${c}</div>`;
+          <div style="font-size:11px;font-weight:800;color:${cls};text-align:center;margin-bottom:3px;">C${c}</div>`;
         // Show players with their wins and movement from this round
         Object.entries(mMv).forEach(([id,dir])=>{
           const pid=parseInt(id);
@@ -3014,7 +3023,7 @@ function renderRoundTracker(){
           if(!playedOnCourt)return;
           const w=mWins[pid]||0;
           const mvIcon=dir==='up'&&c>1?'<span style="color:var(--green2);font-weight:800;"> ↑</span>':dir==='down'&&c<NC?'<span style="color:var(--red2);font-weight:800;"> ↓</span>':'';
-          html+=`<div style="font-size:9px;padding:1px 0;display:flex;justify-content:space-between;align-items:center;">
+          html+=`<div style="font-size:11px;padding:1px 0;display:flex;justify-content:space-between;align-items:center;">
             <span>${esc(p.name.split(' ')[0])}${mvIcon}</span>
             <span style="color:var(--teal2);font-weight:700;">${w}W</span>
           </div>`;
@@ -3042,7 +3051,7 @@ function renderRoundTracker(){
         const arrow=mv==='up'?'<span style="color:var(--green2);"> ↑</span>':mv==='down'?'<span style="color:var(--red2);"> ↓</span>':'';
         return `<div style="font-size:10px;padding:1px 0;">${esc(p.name.split(' ')[0])}${arrow}</div>`;
       }).join('')}
-      ${pids.length===0?'<div style="font-size:9px;color:var(--muted);font-style:italic;">Empty</div>':''}
+      ${pids.length===0?'<div style="font-size:11px;color:var(--muted);font-style:italic;">Empty</div>':''}
     </div>`;
   }
   html+=`</div></div>`;
@@ -3062,7 +3071,7 @@ function renderRoundTracker(){
     if(!cs||cs.skip){
       html+=`<div style="background:var(--s3);border-radius:8px;padding:8px;text-align:center;opacity:0.5;">
         <div style="font-size:11px;font-weight:800;color:var(--muted);">C${c}</div>
-        <div style="font-size:9px;color:var(--muted);">Skipped</div></div>`;
+        <div style="font-size:11px;color:var(--muted);">Skipped</div></div>`;
       continue;
     }
     const done=cs.scored;
@@ -3072,9 +3081,9 @@ function renderRoundTracker(){
     const loserP=cs.loser?S.players.find(p=>p.id===cs.loser):null;
     html+=`<div style="background:${bg};border:${border};border-radius:8px;padding:8px;text-align:center;">
       <div style="font-size:11px;font-weight:800;color:${done?'var(--green2)':'var(--muted)'};">C${c} ${done?'✅':'⏳'}</div>
-      <div style="font-size:9px;color:var(--muted);">${cs.gamesScored||0}/${cs.numGames} games</div>
-      ${done&&winnerP?`<div style="font-size:9px;margin-top:3px;">${c>1?`<span style="color:var(--green2);">↑${esc(winnerP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">👑${esc(winnerP.name.split(' ')[0])}</span>`}</div>`:''}
-      ${done&&loserP?`<div style="font-size:9px;">${c<NC?`<span style="color:var(--red2);">↓${esc(loserP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">⬇️Stay</span>`}</div>`:''}
+      <div style="font-size:11px;color:var(--muted);">${cs.gamesScored||0}/${cs.numGames} games</div>
+      ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;">${c>1?`<span style="color:var(--green2);">↑${esc(winnerP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">👑${esc(winnerP.name.split(' ')[0])}</span>`}</div>`:''}
+      ${done&&loserP?`<div style="font-size:11px;">${c<NC?`<span style="color:var(--red2);">↓${esc(loserP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">⬇️Stay</span>`}</div>`:''}
     </div>`;
   }
   html+=`</div>`;
@@ -3131,7 +3140,7 @@ function renderRoundTracker(){
         ${players.map(p=>{
           const mv=status.projectedMv[p.id];
           const mvIcon=mv==='up'?'<span style="color:var(--green2);"> ↑</span>':mv==='down'?'<span style="color:var(--red2);"> ↓</span>':'';
-          return `<div style="font-size:9px;color:var(--text);padding:1px 0;">${esc(p.name.split(' ')[0])}${mvIcon}</div>`;
+          return `<div style="font-size:11px;color:var(--text);padding:1px 0;">${esc(p.name.split(' ')[0])}${mvIcon}</div>`;
         }).join('')}
       </div>`;
     }
@@ -3153,7 +3162,7 @@ function renderScoreEntry(){
   if(!S.current){el.innerHTML='<div class="alert alert-warn">No active session. Ask admin to start one.</div>';return;}
   // Hard cap: session is complete after MAX_ROUNDS_PER_SESSION rounds — no more score entry
   if(S.current.completed){
-    el.innerHTML=`<div class="card" style="border-color:var(--green2);background:linear-gradient(135deg,rgba(46,204,113,0.15),rgba(0,194,255,0.08));">
+    el.innerHTML=`<div class="card" style="border-color:var(--green2);background:linear-gradient(135deg,rgba(46,204,113,0.15),rgba(233,196,106,0.08));">
       <div style="font-size:48px;text-align:center;margin-bottom:8px;">🏁</div>
       <div style="font-size:16px;font-weight:900;text-align:center;color:var(--green2);margin-bottom:6px;">Session Complete</div>
       <div style="font-size:12px;text-align:center;color:var(--text);margin-bottom:14px;">All ${MAX_ROUNDS_PER_SESSION} rounds finished. Score entry is locked to protect the standings.</div>
@@ -3575,8 +3584,8 @@ function renderLeaderboard(){
     const totalW=p.seasonWins+(liveWins[p.id]||0),totalL=p.seasonLosses+(liveLosses[p.id]||0);
     const totalGP=p.gamesPlayed+(liveWins[p.id]||0)+(liveLosses[p.id]||0);
     const wr=totalGP>0?Math.round(totalW/totalGP*100):0;
-    const liveTag=(liveWins[p.id]||0)>0||(liveLosses[p.id]||0)>0?` <span style="color:var(--yellow2);font-size:9px;">(+${liveWins[p.id]||0}W live)</span>`:'';
-    const absentTag=!isActive?'<span style="color:var(--muted);font-size:9px;margin-left:4px;">(absent)</span>':'';
+    const liveTag=(liveWins[p.id]||0)>0||(liveLosses[p.id]||0)>0?` <span style="color:var(--yellow2);font-size:11px;">(+${liveWins[p.id]||0}W live)</span>`:'';
+    const absentTag=!isActive?'<span style="color:var(--muted);font-size:11px;margin-left:4px;">(absent)</span>':'';
     // Insert section divider before inactive players
     let divider='';
     if(!isActive&&prevActive&&inactiveCount>0){divider=`<div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-top:1px solid var(--border);margin-top:8px;">Not Playing This Session</div>`;prevActive=false;}
@@ -3647,7 +3656,7 @@ function renderRankings(){
     const ratingColor=p.rating>=1500?'var(--gold)':p.rating>=1300?'var(--green2)':p.rating>=1100?'var(--teal2)':'var(--muted)';
     const courtCls=p.courtPos===1?'var(--gold)':p.courtPos===2?'var(--silver)':p.courtPos===3?'var(--bronze)':'var(--teal2)';
     const trend=p.rating>=1500-(p.courtPos-1)*100+50?'📈':p.rating<=1500-(p.courtPos-1)*100-50?'📉':'';
-    const absentTag=!p.isActive?'<span style="color:var(--muted);font-size:9px;margin-left:4px;">(absent)</span>':'';
+    const absentTag=!p.isActive?'<span style="color:var(--muted);font-size:11px;margin-left:4px;">(absent)</span>':'';
     html+=`<div class="lbrow" style="cursor:pointer;${!p.isActive?'opacity:0.7;':''}" onclick="renderGameHistory(${p.id})">
       <div style="font-size:14px;font-weight:900;width:28px;text-align:center;flex-shrink:0;color:${i<3?'var(--gold)':'var(--muted)'};">${i+1}</div>
       ${avatar(p.name)}
@@ -3657,7 +3666,7 @@ function renderRankings(){
       </div>
       <div style="text-align:center;">
         <div style="font-size:18px;font-weight:900;color:${ratingColor};">${p.rating}</div>
-        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">ELO</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">ELO</div>
       </div>
     </div>`;
   });
@@ -3770,8 +3779,8 @@ function renderPlayerStats(){
       <div style="font-weight:800;font-size:15px;">${esc(p.name)}${awards.length?` <span style="font-size:14px;">${awards.join('')}</span>`:''}</div>
       ${courtTag}</div>
       <div class="sgrid">
-        <div class="sbox"><div class="sv">${totalW}</div><div class="sl">Wins${lw>0?' <span style="color:var(--yellow2);font-size:8px;">(+'+lw+' live)</span>':''}</div></div>
-        <div class="sbox"><div class="sv">${totalL}</div><div class="sl">Losses${ll>0?' <span style="color:var(--yellow2);font-size:8px;">(+'+ll+' live)</span>':''}</div></div>
+        <div class="sbox"><div class="sv">${totalW}</div><div class="sl">Wins${lw>0?' <span style="color:var(--yellow2);font-size:10px;">(+'+lw+' live)</span>':''}</div></div>
+        <div class="sbox"><div class="sv">${totalL}</div><div class="sl">Losses${ll>0?' <span style="color:var(--yellow2);font-size:10px;">(+'+ll+' live)</span>':''}</div></div>
         <div class="sbox"><div class="sv">${liveWr}%</div><div class="sl">Win Rate</div></div>
         <div class="sbox"><div class="sv">C${Math.min(displayCourt||NC,p.highestCourt||displayCourt||NC)}</div><div class="sl">Best Court</div></div>
       </div>
@@ -3789,9 +3798,9 @@ function renderHeatmap(){
   const el=document.getElementById('sec-heat');if(!el)return;
   if(!S.sessions.length){el.innerHTML='<div class="empty-state"><div class="ei">🔥</div><div class="em">No sessions yet</div></div>';return;}
   // Court history per player across sessions
-  const colors={1:'rgba(255,215,0,0.8)',2:'rgba(192,192,192,0.7)',3:'rgba(205,127,50,0.7)',4:'rgba(0,153,204,0.5)',5:'rgba(100,160,200,0.4)',6:'rgba(60,100,140,0.3)'};
+  const colors={1:'rgba(255,215,0,0.8)',2:'rgba(192,192,192,0.7)',3:'rgba(205,127,50,0.7)',4:'rgba(201,168,76,0.5)',5:'rgba(100,160,200,0.4)',6:'rgba(60,100,140,0.3)'};
   el.innerHTML=`<div class="card"><div class="card-title">🔥 Court History by Player</div>
-    <div style="display:flex;gap:4px;margin-bottom:10px;font-size:9px;color:var(--muted);">
+    <div style="display:flex;gap:4px;margin-bottom:10px;font-size:11px;color:var(--muted);">
       ${S.sessions.map(s=>`<div style="flex:1;text-align:center;">S${s.number}</div>`).join('')}
     </div>
     ${leaderboardPlayers().map(p=>`<div class="heatmap-row">
@@ -3950,9 +3959,9 @@ function renderSessionStandings(){
         const wr=gp>0?Math.round(w/gp*100):0;
         const sc=lastPlayed[id]?.court||c;
         let mvText='';
-        if(sc<c)mvText=`<span style="color:var(--red2);font-size:9px;"> (↓ C${sc}→C${c})</span>`;
-        else if(sc>c)mvText=`<span style="color:var(--green2);font-size:9px;"> (↑ C${sc}→C${c})</span>`;
-        else mvText=`<span style="color:var(--muted);font-size:9px;"> (stayed C${c})</span>`;
+        if(sc<c)mvText=`<span style="color:var(--red2);font-size:11px;"> (↓ C${sc}→C${c})</span>`;
+        else if(sc>c)mvText=`<span style="color:var(--green2);font-size:11px;"> (↑ C${sc}→C${c})</span>`;
+        else mvText=`<span style="color:var(--muted);font-size:11px;"> (stayed C${c})</span>`;
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;">
           <span>${i+1}. ${esc(name.split(' ')[0])}${mvText}</span>
           <span style="color:var(--teal2);font-weight:700;">${w}W ${l}L · ${wr}%</span>
@@ -4478,7 +4487,7 @@ function generateSeasonPDF(){
     let totalBirds=0;
     S.sessions.forEach(s=>Object.values(s.birdDistribution||{}).forEach(b=>totalBirds+=b.birdsReceived||0));
     const totalGames=S.players.reduce((s,p)=>s+(p.gamesPlayed||0),0);
-    doc.text(`Sessions Played: ${totalSess}/8`,mg,y);y+=lh;
+    doc.text(`Sessions Played: ${totalSess}/${DATES.length}`,mg,y);y+=lh;
     doc.text(`Total Games Played: ${totalGames}`,mg,y);y+=lh;
     doc.text(`Total Shuttlecocks Used: ${totalBirds}`,mg,y);y+=lh;
     doc.text(`Total Players: ${S.players.length} (${S.players.filter(p=>p.membershipType!=='spare').length} Regular · ${S.players.filter(p=>p.membershipType==='spare').length} Spare)`,mg,y);y+=lh+4;
@@ -4837,7 +4846,7 @@ let toastT;
 function toast(msg,type='info'){
   let t=document.getElementById('_t');
   if(!t){t=document.createElement('div');t.id='_t';t.style.cssText='position:fixed;bottom:82px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:25px;font-size:13px;font-weight:700;z-index:500;pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center;transition:opacity 0.3s;';document.body.appendChild(t);}
-  const c={success:'#27ae60',warn:'#f39c12',error:'#e74c3c',info:'#0099cc'};
+  const c={success:'#27ae60',warn:'#f39c12',error:'#e74c3c',info:'#c9a84c'};
   t.style.background=c[type]||c.info;t.style.color='#fff';t.style.opacity='1';t.textContent=msg;
   clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity='0',2800);
 }
@@ -5119,7 +5128,7 @@ function renderAttendanceTab(){
       const p=S.players.find(x=>x.id===id);if(!p)return;
       const status=att[id]||'';
       const vote=(S.rsvp||{})[id];
-      const voteTag=vote==='coming'?'<span class="tag tg-green" style="font-size:9px;">voted in</span>':vote==='notcoming'?'<span class="tag tg-red" style="font-size:9px;">voted out</span>':'<span class="tag tg-gray" style="font-size:9px;">no vote</span>';
+      const voteTag=vote==='coming'?'<span class="tag tg-green" style="font-size:11px;">voted in</span>':vote==='notcoming'?'<span class="tag tg-red" style="font-size:11px;">voted out</span>':'<span class="tag tg-gray" style="font-size:11px;">no vote</span>';
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name.split(' ')[0])} ${voteTag}</span>
         <button class="btn btn-sm ${status==='present'?'btn-success':'btn-ghost'}" style="padding:3px 8px;font-size:10px;margin:0;" onclick="markAttForTab(${id},'present')">✅</button>
@@ -5159,14 +5168,14 @@ function renderAttendanceTab(){
       html+=`<div style="padding:8px 0;border-bottom:1px solid var(--border);">
         <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="_expandedHist['att${idx}']=!_expandedHist['att${idx}'];renderAttendanceTab();">
           <strong style="font-size:12px;">Session ${sess.number} — ${sess.date}</strong>
-          <div style="display:flex;gap:4px;"><span class="tag tg-green" style="font-size:9px;">✅ ${sPres.length}</span>${sAbs.length?`<span class="tag tg-red" style="font-size:9px;">❌ ${sAbs.length}</span>`:''}</div>
+          <div style="display:flex;gap:4px;"><span class="tag tg-green" style="font-size:11px;">✅ ${sPres.length}</span>${sAbs.length?`<span class="tag tg-red" style="font-size:11px;">❌ ${sAbs.length}</span>`:''}</div>
         </div>
         ${isExp?`<div style="margin-top:6px;padding:6px;background:var(--s1);border-radius:6px;">
           ${sPres.length?`<div style="font-size:10px;color:var(--green2);margin-bottom:4px;font-weight:700;">Present (${sPres.length}):</div>
           <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">${sPres.map(([id])=>S.players.find(p=>p.id===parseInt(id))?.name||'?').join(', ')}</div>`:''}
           ${sAbs.length?`<div style="font-size:10px;color:var(--red2);font-weight:700;">Absent (${sAbs.length}):</div>
           <div style="font-size:10px;color:var(--muted);">${sAbs.map(([id])=>S.players.find(p=>p.id===parseInt(id))?.name||'?').join(', ')}</div>`:'<div style="font-size:10px;color:var(--green2);">Full attendance — everyone present!</div>'}
-        </div>`:'<div style="font-size:9px;color:var(--muted);margin-top:2px;">Tap to see details</div>'}
+        </div>`:'<div style="font-size:11px;color:var(--muted);margin-top:2px;">Tap to see details</div>'}
       </div>`;
     });
     html+=`</div>`;
@@ -5865,7 +5874,7 @@ if(window.location.hash==='#run-tests'){
       Array.isArray(S.current.movements)?P('State:mvArray'):F('State:mvArray','bad');
       S.current.completed===false?P('State:notCompleted'):F('State:notCompleted','true');
       // Session number <= 8
-      S.current.number<=8?P('State:numRange'):F('State:numRange',S.current.number);
+      S.current.number<=DATES.length?P('State:numRange'):F('State:numRange',S.current.number);
       // Date is valid
       typeof S.current.date==='string'?P('State:dateStr'):F('State:dateStr','not str');
       // Assignments have courts 1-NC
@@ -5878,9 +5887,9 @@ if(window.location.hash==='#run-tests'){
       typeof NCYC==='number'?P('Cfg:NCYCnum'):F('Cfg:NCYCnum','not num');
       NCYC>=4?P('Cfg:NCYCmin4'):F('Cfg:NCYCmin4',NCYC);
       Array.isArray(DATES)?P('Cfg:DATESarray'):F('Cfg:DATESarray','not arr');
-      DATES.length===8?P('Cfg:8dates'):F('Cfg:8dates',DATES.length);
+      DATES.length===APPROVED_DATES.length&&DATES.length>0?P('Cfg:dates'):F('Cfg:dates',DATES.length);
       Array.isArray(FD)?P('Cfg:FDarray'):F('Cfg:FDarray','not arr');
-      FD.length===8?P('Cfg:8FD'):F('Cfg:8FD',FD.length);
+      FD.length===DATES.length?P('Cfg:FD'):F('Cfg:FD',FD.length);
       FD.every(d=>d instanceof Date)?P('Cfg:FDdates'):F('Cfg:FDdates','not dates');
       typeof S==='object'?P('Cfg:Sobj'):F('Cfg:Sobj','not obj');
 
@@ -6774,7 +6783,7 @@ if(window.location.hash==='#run-tests'){
       ap().every(p=>Number.isInteger(p.id)&&p.id>0)?P('Stale:posIntIds'):F('Stale:posIntIds','bad');
       // Session state consistent
       S.current.id>0?P('Stale:sessId'):F('Stale:sessId','bad');
-      S.current.number>=1&&S.current.number<=8?P('Stale:sessNum'):F('Stale:sessNum',S.current.number);
+      S.current.number>=1&&S.current.number<=DATES.length?P('Stale:sessNum'):F('Stale:sessNum',S.current.number);
       typeof S.current.date==='string'&&S.current.date.length>0?P('Stale:sessDate'):F('Stale:sessDate','bad');
       S.current.cycle>=1?P('Stale:sessCycle'):F('Stale:sessCycle',S.current.cycle);
       S.current.completed===false?P('Stale:notCompleted'):F('Stale:notCompleted','true');
@@ -8242,7 +8251,7 @@ if(window.location.hash==='#run-tests'){
       // Constants valid
       NC===6?P('INT:nc6'):F('INT:nc6',NC);
       NG===3?P('INT:ng3'):F('INT:ng3',NG);
-      DATES.length===8?P('INT:8dates'):F('INT:8dates',DATES.length);
+      DATES.length===APPROVED_DATES.length?P('INT:dates'):F('INT:dates',DATES.length);
       P('INT:kvConsistent');P('INT:dbConsistent');P('INT:renderSafe');P('INT:productionReady');P('INT:complete');
 
       // ═══ CAT 118: FINAL COMPREHENSIVE CLEANUP (20) ═══

@@ -59,6 +59,11 @@ function eloReference(players: MockState["players"], sessions: Sess[]): Record<n
   }
   return Object.fromEntries(Object.entries(elo).map(([k, v]) => [k, Math.round(v)]));
 }
+const SHOTS = process.env.SCREENS ? `${__dirname}/screens/${process.env.SCREENS}` : "";
+async function shot(page: Page, name: string) {
+  if (!SHOTS) return;
+  await page.screenshot({ path: `${SHOTS}/${test.info().project.name}-${name}.png`, fullPage: true });
+}
 const wl = (text: string) => [...text.matchAll(/(\d+)W (\d+)L/g)].map((m) => ({ w: +m[1], l: +m[2] }));
 const FOUR: [number, number][] = [[21, 15], [21, 10], [18, 21]]; // A top on points, D bottom
 const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A/B fully tied, C/D fully tied
@@ -208,14 +213,22 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(rows).toHaveCount(28);
     await expect(rows.nth(0)).toContainText("Done");
     await expect(rows.nth(1)).toContainText("Sep 22, 2026");
+    await shot(page, "schedule");
+    await page.click("#bnav-home"); await shot(page, "home-organizer");
+    await page.click("#bnav-standings"); await page.click("#page-standings .ptab:has-text('Leaders')"); await shot(page, "standings-leaders");
+    await page.click("#page-standings .ptab:has-text('Rankings')"); await shot(page, "standings-rankings");
+    await page.click("#page-standings .ptab:has-text('History')"); await shot(page, "standings-history");
+    await page.click("#bnav-courts"); await shot(page, "courts");
     void byId;
     expect(state.requests.some((r) => r.includes("/realtime/"))).toBe(false);
   });
 
   test("a confirmed player registers first, gets approved, votes; strangers and stale screens are refused", async ({ page }) => {
+    await shot(page, "signin");
     // Registration is the first thing after a first sign-in.
     await signIn(page, "christygeorge993+regular@gmail.com");
     await expect(page.locator("#page-register")).toHaveClass(/active/);
+    await shot(page, "register");
     await expect(page.locator("#bnav-courts")).toBeHidden();
     await expect(page.locator("#r-email")).toHaveValue("christygeorge993+regular@gmail.com");
     await expect(page.locator("#r-email")).toHaveAttribute("readonly", "");
@@ -252,6 +265,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     // Voting is open for the upcoming session before the organizer starts the night.
     await expect(page.locator("#next-date")).toHaveText("Session 1 — Sep 15, 2026");
     await expect(page.locator("#home-vote")).toContainText("Vote: are you playing Session 1 (Sep 15, 2026)");
+    await shot(page, "home-player");
     await page.locator("#home-vote button", { hasText: "I'm Coming" }).click();
     await expect.poll(() => state.rsvps.find((r) => r.player_id === newId)?.session_number).toBe(1);
     // Once the organizer starts Session 2 (Session 1 done elsewhere), the same card asks about Session 2.
