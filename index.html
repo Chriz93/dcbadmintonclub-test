@@ -376,6 +376,7 @@ textarea.inp{resize:vertical;min-height:80px;}
   <div class="sync-row">
     <div class="sdot" id="sdot"></div>
     <span id="slbl">Connecting</span>
+    <button class="btn btn-ghost btn-sm" id="signout-btn" onclick="signOut()" style="margin-left:8px;padding:4px 8px;font-size:10px;">Sign out</button>
   </div>
 </nav>
 
@@ -847,7 +848,17 @@ async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'
 // ── Shared state with versions: a stale screen can never overwrite newer data. ──
 const _stateVersion={};
 async function getKV(k){try{const r=await sbG('app_state',`key=eq.${encodeURIComponent(k)}&select=key,value,version`);if(r&&r[0]){_stateVersion[k]=r[0].version||0;return JSON.parse(r[0].value);}return null;}catch(e){return null;}}
-async function setKV(k,v){try{const nv=await rpc('set_state',{k,v:JSON.stringify(v),expected:_stateVersion[k]||0});_stateVersion[k]=nv;}catch(e){if(e.code==='40001'||/Stale state/.test(e.message||'')){toast('⚠️ Someone else saved newer changes — reloading','warn');await loadAll();renderAll();throw e;}console.error('setKV failed:',k,e);toast('⚠️ Save failed: '+String(e.message||'check connection').substring(0,80),'error');throw e;}}
+async function mirrorApprovals(v){
+  for(const[id,a]of Object.entries(v||{})){
+    const p=S.players.find(x=>x.id===parseInt(id));if(!p||!a)continue;
+    const patch={};
+    if(a.approved!==undefined&&!!a.approved!==!!p.approved)patch.approved=!!a.approved;
+    if(a.waitlisted!==undefined&&!!a.waitlisted!==!!p.waitlisted)patch.waitlisted=!!a.waitlisted;
+    if(a.membershipType&&a.membershipType!==p.membershipType)patch.membership_type=a.membershipType;
+    if(Object.keys(patch).length)await sbU('players',id,patch);
+  }
+}
+async function setKV(k,v){try{const nv=await rpc('set_state',{k,v:JSON.stringify(v),expected:_stateVersion[k]||0});_stateVersion[k]=nv;if(k==='player_approvals')await mirrorApprovals(v);}catch(e){if(e.code==='40001'||/Stale state/.test(e.message||'')){toast('⚠️ Someone else saved newer changes — reloading','warn');await loadAll();renderAll();throw e;}console.error('setKV failed:',k,e);toast('⚠️ Save failed: '+String(e.message||'check connection').substring(0,80),'error');throw e;}}
 async function deleteKV(k){await rpc('delete_state',{k});delete _stateVersion[k];}
 
 // ══════════════════════════════════════════════
@@ -914,11 +925,11 @@ async function signInStep(){
   }catch(e){err.textContent='❌ '+(e.message||'Try again');}
   finally{btn.disabled=false;}
 }
-async function afterSignIn(){showGate(false);setSS('syncing');const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();renderAll();startSync();toast('Signed in as '+myEmail(),'success');registrationFirst();}else{setSS('err');toast('Cannot load league data','error');}}
+async function afterSignIn(){showGate(false);setSS('syncing');const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();nav('home');startSync();toast('Signed in as '+myEmail(),'success');registrationFirst();}else{setSS('err');toast('Cannot load league data','error');}}
 // First thing after sign-in for someone without a player record: the registration form.
 function registrationFirst(){if(S_me.organizer)return;const me=myPlayer();if(!me){nav('register');toast('Welcome! Please complete your registration first.','info');}else if(!me.approved){nav('register');}}
 async function initAuth(){loadSession();if(!_session){showGate(true);return false;}const x=await ensureSession();if(!x){showGate(true);return false;}showGate(false);return true;}
-async function signOut(){await authSignOut();adminUnlocked=false;userRegistered=false;S_me={organizer:false,verified:false,player_id:null,email:null};S.players=[];signInReset();showGate(true);updateNavVisibility();}
+async function signOut(){await authSignOut();adminUnlocked=false;userRegistered=false;S_me={organizer:false,verified:false,player_id:null,email:null};S.players=[];S.current=null;S.sessions=[];lockAdmin();regData={};try{goRS(1);}catch(e){}signInReset();showGate(true);updateNavVisibility();}
 async function refreshMe(){try{const r=await rpc('admin_status');if(r)S_me=r;}catch(e){S_me={organizer:false,verified:false,player_id:null,email:myEmail()};}}
 function myPlayer(){const em=myEmail();return S.players.find(p=>p.id===S_me.player_id)||(em?S.players.find(p=>(p.email||'').toLowerCase()===em):null)||null;}
 function checkRegistrationStatus(){
@@ -1047,7 +1058,7 @@ async function loadAll(){
     const mo=membershipOverrides||{},pa=playerApprovals||{};
     S.players=(pl||[]).map(p=>{
       const kv=pa[p.id]||{};
-      return{id:p.id,name:p.name,email:p.email||'',phone:p.phone||'',emergency:p.emergency||'',medical:p.medical||'',sig:p.sig||'',waiverSigned:p.waiver_ok!==undefined?!!p.waiver_ok:((p.waiver_signed&&p.sig!=='admin')||(!!(p.sig&&p.sig!=='admin'))),paid:p.paid,currentCourt:p.current_court,highestCourt:p.highest_court,seasonWins:p.season_wins,seasonLosses:p.season_losses,gamesPlayed:p.games_played,membershipType:mo[p.id]||kv.membershipType||p.membership_type||'regular',approved:kv.approved!==undefined?kv.approved:(p.approved===undefined?true:!!p.approved),registeredAt:kv.registeredAt||p.registered_at||p.created_at||'',waitlisted:kv.waitlisted!==undefined?kv.waitlisted:!!p.waitlisted,noShowCount:p.no_show_count||0,adminNote:p.admin_note||''};
+      return{id:p.id,name:p.name,email:p.email||'',phone:p.phone||'',emergency:p.emergency||'',medical:p.medical||'',sig:p.sig||'',waiverSigned:p.waiver_ok!==undefined?!!p.waiver_ok:((p.waiver_signed&&p.sig!=='admin')||(!!(p.sig&&p.sig!=='admin'))),paid:p.paid,currentCourt:p.current_court,highestCourt:p.highest_court,seasonWins:p.season_wins,seasonLosses:p.season_losses,gamesPlayed:p.games_played,membershipType:mo[p.id]||p.membership_type||kv.membershipType||'regular',approved:p.approved!==undefined&&p.approved!==null?!!p.approved:(kv.approved!==undefined?kv.approved:true),registeredAt:p.registered_at||kv.registeredAt||'',waitlisted:p.waitlisted!==undefined&&p.waitlisted!==null?!!p.waitlisted:!!kv.waitlisted,noShowCount:p.no_show_count||0,adminNote:p.admin_note||''};
     });
     S.announcements=an||[];
     S.current=cur||null;

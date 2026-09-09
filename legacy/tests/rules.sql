@@ -78,6 +78,7 @@ reset role;
 select 'RULES PASS' as result;
 
 \i legacy/migrations/L03_scores_and_season.sql
+\i legacy/migrations/L05_rollover_registration.sql
 -- Court-scoped score entry: player 1 is on court 1 of the active session; player 2 is not.
 update public.app_state set value='{"number":4,"cycle":1,"assignments":{"1":[1,2],"6":[3]},"scores":{}}',version=7 where key='current_session';
 set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"test-player-01@example.invalid"}',false);
@@ -97,7 +98,7 @@ do $$ declare r jsonb; begin
  perform public.delete_state('current_session');
  r=public.start_new_season('2025-26');
  if (r->>'players_reset')::int<>3 then raise exception 'players reset %',r; end if;
- if exists(select 1 from public.players where approved or season_wins<>0) then raise exception 'stats not reset'; end if;
+ if exists(select 1 from public.players where approved or season_wins<>0 or registered_at is not null) then raise exception 'stats not reset'; end if;
  if not exists(select 1 from public.app_state where key='archive_2025-26') then raise exception 'archive missing'; end if;
  begin perform public.start_new_season('2025-26'); raise exception 'duplicate archive accepted'; exception when raise_exception then null; end;
 end $$;
