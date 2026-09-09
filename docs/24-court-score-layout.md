@@ -27,4 +27,12 @@ This update follows Christy's two supplied reference screenshots. It changes the
 - Six additional browser scenarios, each on desktop and mobile: physical layout/teams/rests/accessibility; roster selection and permissions; partial completion; proposed versus published movement; missing-game rejection; unsaved edit protection and administrator corrections.
 - Existing browser selectors updated to the new controls; all original permission, scoring, navigation and match-day assertions retained.
 
+## Published verification
+
+- Preview: https://league-release.maplewood-league-test.pages.dev/
+- Source revision: `304b770b94f28dedef85d2076c08bb345869f9c2`.
+- [GitHub quality gates passed](https://github.com/Chriz93/dcbadmintonclub-test/actions/runs/34407320522), including coverage, builds, dependency audit and all browser tests.
+- TEST archive: 27 public files, SHA-256 `8f6e4eae4b367ba5be7acd5ce1805ad0f29255db76b04c29052d778c464726df`; no hidden build metadata or credentials packaged.
+- Hosted browser loaded `assets/index-DkPjGf-d.js`, matching the built entry. After a simulated round publication, the map showed 25 players, one resting slot, five upward and five downward movements. Scores showed six roster cards, six completed courts and 25 standings rows with published movement labels. No browser errors were reported.
+
 The launch dependencies documented in [23-connected-product-release.md](23-connected-product-release.md) still apply. This visual update does not enable the deferred reminder credentials or constitute a production launch.
