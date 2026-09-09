@@ -146,3 +146,15 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   organizer tab only for organizers. Screenshots: `legacy/tests/e2e/screens/` (run with `SCREENS=<dir>`).
 - Open: reminder emails, backup/restore drill, production migration script (L01, L03–L06) and cutover checklist,
   Supabase Free-plan move (see `docs/19-supabase-free-plan.md`), organizer's real sign-in check on the test site.
+
+## Status — 2026-09-09 (end of Phase 4)
+
+- Voting: spares answer "available"; each declined regular opens a seat, filled in answer order (confirmed/standby),
+  organizer seats confirmed spares from Attendance in one tap. One-tap links `?vote=coming&s=N` from emails.
+- Reminders: `legacy/automation/remind.mjs` (hourly workflow `legacy-reminders.yml`, dry-run until
+  `LEGACY_DELIVERY_MODE=live`, redirected to the league inbox until `ALLOW_REAL_RECIPIENTS=true`). Stages: Thursday
+  evening, Saturday before the 72-hour cutoff, Monday afternoon; spare invitations whenever a seat is open.
+- L07 applied to TEST; `verify.sql` green on TEST and on the local rehearsal.
+- Production kit ready: `PROD_2026-27.sql`, `P00_organizer.sql`, `verify.sql`, `ROLLBACK_reopen_anon.sql`,
+  `build-production.py`, `docs/20-production-cutover.md`.
+- Open: organizer's real sign-in check on TEST; credential rotation; backup/restore drill; secrets for the reminder job.
