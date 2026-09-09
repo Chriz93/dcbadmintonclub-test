@@ -3,6 +3,134 @@
   margin: 1rem 0 2rem;
   min-width: 0;
 }
+.league-app:has(.lp-match-day) {
+  --bg: #080f17;
+  --surface: #0e1d2e;
+  --text: #e5eff8;
+  --muted: #9cb9cf;
+  --border: #2a435b;
+  --green: #007e9e;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+body:has(.lp-match-day) {
+  background: #080f17;
+}
+.lp.lp-match-day {
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  --lp-accent: #43d7f7;
+  font-size: 14px;
+}
+.lp-match-day .lp-day-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.lp-match-day .lp-day-heading h1 {
+  font-size: 22px;
+  margin: 8px 0 2px;
+}
+.lp-match-day .lp-day-heading p {
+  color: var(--md-muted);
+  font-size: 12px;
+  margin: 0;
+}
+.lp-match-day .lp-toolbar {
+  font-size: 11px;
+  margin: 0 0 12px;
+  gap: 8px;
+}
+.lp-match-day .lp-toolbar label {
+  font-size: 11px;
+  margin: 0;
+  min-width: 130px;
+}
+.lp-match-day .lp-toolbar select {
+  max-width: 240px;
+  padding: 6px;
+}
+.lp-match-day .button {
+  background: #1c3451;
+  border: 1px solid #2a435b;
+  color: #e5eff8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  min-height: 38px;
+  font-size: 12px;
+}
+.lp-match-day .button.primary {
+  background: #007e9e;
+  border-color: #007e9e;
+  color: #fff;
+}
+.lp-match-day .lp-view-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 12px 0;
+}
+.lp-match-day .lp-view-tabs .button {
+  width: 100%;
+}
+.lp-match-day .lp-session-picker {
+  font-size: 12px;
+  color: var(--md-muted);
+  margin: 10px 0;
+}
+.lp-match-day summary {
+  cursor: pointer;
+}
+.lp-match-day .lp-selectors {
+  margin: 0;
+}
+.lp-match-day select,
+.lp-match-day input,
+.lp-match-day textarea {
+  background: #172840;
+  color: #e5eff8;
+  border-color: #2a435b;
+}
+.lp-match-day .lp-court-selector label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--md-muted);
+}
+.lp-match-day .lp-court-selector select {
+  font-size: 14px;
+  min-height: 44px;
+}
+.lp-match-day .lp-card,
+.lp-match-day .lp-match {
+  background: #0e1d2e;
+  border-color: #2a435b;
+}
+.lp-match-day .lp-muted {
+  color: #9cb9cf;
+}
+.lp-match-day .lp-fresh,
+.lp-match-day .lp-up {
+  color: #64e3a0;
+}
+.lp-match-day .lp-stale,
+.lp-match-day .lp-down {
+  color: #ffac95;
+}
+.lp-court-game {
+  padding: 12px 0;
+  border-top: 1px solid #2a435b;
+}
+.lp-court-game p {
+  margin: 5px 0;
+}
+.lp-match-day #court-details {
+  scroll-margin-top: 20px;
+}
+.lp.lp-match-day.lp-projector {
+  max-width: none;
+}
 [data-theme="dark"] .lp,
 .dark .lp {
   --lp-accent: #39d0e4;

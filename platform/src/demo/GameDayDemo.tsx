@@ -16,12 +16,8 @@ import {
   Settings,
   Trophy,
 } from "lucide-react";
-import { rankings } from "../domain/courts";
-import {
-  courtMovements,
-  movementText,
-  roundStatus,
-} from "../domain/round-status";
+import { rankings, defaultRules } from "../domain/courts";
+import { courtMovements, movementText } from "../domain/round-status";
 import {
   activeCourts,
   allMatches,
@@ -43,6 +39,11 @@ import {
   type Match,
 } from "./model";
 import { tour } from "./tour";
+import {
+  CourtBoard,
+  CourtRoster,
+  RoundOverview,
+} from "../components/MatchDayViews";
 import "./game-day.css";
 
 type Screen =
@@ -306,7 +307,6 @@ export default function GameDayDemo() {
     myLast = matches
       .filter((m) => scored(m) && [...m.a, ...m.b].includes(viewer))
       .at(-1);
-  const progress = roundStatus(round.courts, round.matches);
   const incoming =
     round.number > 1
       ? courtMovements(session.rounds[round.number - 2].courts, round.courts)
@@ -314,9 +314,6 @@ export default function GameDayDemo() {
   const published = round.publishedNext
     ? courtMovements(round.courts, round.publishedNext)
     : [];
-  const myProgress = progress.courts.find(
-    (c) => c.court === courtFor(round.courts, viewer),
-  );
   const myNext = !active.complete
     ? current.matches.find((m) => !scored(m) && m.court === myCourt)
     : undefined;
@@ -337,38 +334,30 @@ export default function GameDayDemo() {
     setRoundNumber(latest?.number ?? round.number);
     setScreen("movements");
   };
-  const progressCard = (
-    <section className="gd-note gd-round-status" aria-label="Round progress">
-      <strong>
-        Round {round.number} · {progress.completed} / {progress.expected} games
-        complete
-      </strong>
-      <p>
-        {round.publishedNext
-          ? "Movement published. View the saved movements below."
-          : progress.state === "invalid"
-            ? `Christy needs to repair this round: ${progress.error}`
-            : progress.state === "ready"
-              ? "All courts finished. Stay on your court until Christy publishes the next assignments."
-              : myProgress?.completed === myProgress?.expected &&
-                  myProgress?.expected
-                ? "Your court is finished. Waiting for the other courts—no movement yet."
-                : "Finish every scheduled game. Courts move together after Christy reviews and publishes."}
-      </p>
-      <div className="gd-round-counters">
-        {progress.courts
-          .filter((c) => c.expected)
-          .map((c) => (
-            <span key={c.court}>
-              C{c.court}: {c.completed}/{c.expected}
-              {c.completed === c.expected ? " ✓" : ""}
-            </span>
-          ))}
-      </div>
-      <button className="gd-button" onClick={showMovements}>
-        Court movements
-      </button>
-    </section>
+  const dayCourts = round.courts.map((ids, i) => ({
+    id: String(i + 1),
+    number: i + 1,
+    players: ids,
+  }));
+  const dayGames = round.matches.map((m) => ({
+    ...m,
+    number: Number(m.id.split("-g")[1]),
+  }));
+  const chosenScoreCourt =
+    scoreCourt === "mine"
+      ? String(courtFor(round.courts, viewer) || "")
+      : scoreCourt;
+  const roundOverview = (
+    <RoundOverview
+      courts={dayCourts}
+      games={dayGames}
+      round={round.number}
+      rules={defaultRules}
+      published={published}
+      name={playerName}
+      onPlayer={open}
+      viewer={viewer}
+    />
   );
   const selectedPlayers = players.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
@@ -846,7 +835,10 @@ export default function GameDayDemo() {
             </p>
           </details>
         </aside>
-        <main className="gd-main" id="demo-main">
+        <main
+          className={`gd-main ${screen === "courts" || screen === "scores" ? "md-layout gd-match-day" : ""}`}
+          id="demo-main"
+        >
           <div className="gd-page-heading">
             <div>
               <p className="gd-kicker">
@@ -863,7 +855,9 @@ export default function GameDayDemo() {
                       ? "Review movement"
                       : screen === "sessions"
                         ? "Session results"
-                        : nav.find(([s]) => s === screen)?.[1]}
+                        : screen === "scores"
+                          ? "Enter Scores"
+                          : nav.find(([s]) => s === screen)?.[1]}
               </h1>
             </div>
             <span className="gd-live">
@@ -1169,77 +1163,67 @@ export default function GameDayDemo() {
 
           {screen === "courts" && (
             <>
-              {selectors}
-              {progressCard}
-              <div className="gd-tabs">
+              <details className="gd-session-picker">
+                <summary>Session &amp; round</summary>
+                {selectors}
+              </details>
+              <div className="gd-tabs gd-view-tabs">
                 <button
                   className={gym ? "active" : ""}
+                  aria-pressed={gym}
                   onClick={() => setGym(true)}
                 >
-                  Gym view
+                  🏟 Gym View
                 </button>
                 <button
                   className={!gym ? "active" : ""}
+                  aria-pressed={!gym}
                   onClick={() => setGym(false)}
                 >
-                  List view
+                  📋 List View
                 </button>
               </div>
-              <div className="gd-note gd-success">
-                ✓ {round.courts.flat().length} players assigned · 6 courts ·
-                Court 6 rotates 5
-              </div>
-              <div className={gym ? "gd-gym" : "gd-court-list"}>
-                <div className="gd-entrance">← ENTRANCE SIDE →</div>
-                {(gym ? [0, 1, 2, 5, 4, 3] : [0, 1, 2, 3, 4, 5]).map((c) => (
-                  <section
-                    key={c}
-                    className={`gd-court ${court === c + 1 ? "selected" : ""}`}
+              <CourtBoard
+                courts={dayCourts}
+                games={dayGames}
+                mode={gym ? "gym" : "list"}
+                selected={String(court)}
+                incoming={incoming}
+                name={playerName}
+                onPlayer={open}
+                viewer={viewer}
+                onCourt={(id) => {
+                  setCourt(Number(id));
+                  requestAnimationFrame(() =>
+                    document
+                      .getElementById("demo-court-details")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  );
+                }}
+              />
+              <a
+                className="md-share"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://wa.me/?text=${encodeURIComponent(["FICTIONAL DEMO — Maplewood court assignments", `Session ${sessionNumber} · Round ${round.number}`, ...dayCourts.map((c) => `Court ${c.number}: ${c.players.map(playerName).join(", ")}`)].join("\n"))}`}
+              >
+                Share Court Assignments on WhatsApp
+              </a>
+              {role === "admin" && (
+                <section className="md-panel">
+                  <h2>⚙ Admin · Court assignments</h2>
+                  <button
+                    className="gd-button"
+                    onClick={() => {
+                      setAdminTab("Assign");
+                      setScreen("admin");
+                    }}
                   >
-                    <button
-                      className="gd-court-title"
-                      onClick={() => setCourt(c + 1)}
-                      aria-label={`Open Court ${c + 1}`}
-                    >
-                      <strong>C{c + 1}</strong>
-                      <span>{round.courts[c].length} players</span>
-                    </button>
-                    <div className="gd-net">NET</div>
-                    <div className="gd-court-players">
-                      {round.courts[c].map((id) => (
-                        <div
-                          key={id}
-                          className={id === viewer ? "gd-current-player" : ""}
-                        >
-                          <Name id={id} onOpen={open} />
-                          {incoming.find((m) => m.id === id) &&
-                            (() => {
-                              const m = incoming.find((m) => m.id === id)!;
-                              return (
-                                <small
-                                  className={`gd-movement-label gd-${m.direction}`}
-                                >
-                                  {movementText(m)}
-                                </small>
-                              );
-                            })()}
-                        </div>
-                      ))}
-                    </div>
-                    {c === 5 && (
-                      <small className="gd-rest">
-                        One rests each game · first to 15
-                      </small>
-                    )}
-                  </section>
-                ))}
-                <div className="gd-entrance">← BACK WALL →</div>
-              </div>
-              <p className="gd-fine gd-center">
-                Tap a player for their full profile. Tap a court number for its
-                games.
-              </p>
-              <section className="gd-card">
+                    Manage court assignments
+                  </button>
+                </section>
+              )}
+              <section className="gd-card" id="demo-court-details">
                 <h2>
                   Court {court} · Round {round.number}
                 </h2>
@@ -1280,41 +1264,53 @@ export default function GameDayDemo() {
                   Open scores for Court {court}
                 </button>
               </section>
+              <button className="gd-button" onClick={showMovements}>
+                Court movements
+              </button>
+              {roundOverview}
             </>
           )}
 
           {screen === "scores" && (
             <>
-              {selectors}
-              {progressCard}
-              <div className="gd-row gd-score-progress">
-                <strong>
-                  {round.matches.filter(scored).length} / {round.matches.length}{" "}
-                  games scored
-                </strong>
-                <span>
-                  {session.complete ? "Completed session" : "Current round"}
-                </span>
-              </div>
-              <progress
-                value={round.matches.filter(scored).length}
-                max={round.matches.length}
+              <p className="gd-muted">Enter your result after each game.</p>
+              <details className="gd-session-picker">
+                <summary>Session &amp; round</summary>
+                {selectors}
+              </details>
+              <section className="md-panel">
+                <label className="gd-label">
+                  Select Your Court
+                  <select
+                    value={chosenScoreCourt}
+                    onChange={(e) => setScoreCourt(e.target.value)}
+                  >
+                    <option value="">— Choose Court —</option>
+                    {dayCourts.map((c) => (
+                      <option value={c.id} key={c.id}>
+                        Court {c.number}
+                        {c.players.includes(viewer) ? " · Your court" : ""}
+                      </option>
+                    ))}
+                    <option value="all">All courts</option>
+                  </select>
+                </label>
+              </section>
+              <CourtRoster
+                courts={dayCourts}
+                round={round.number}
+                selected={chosenScoreCourt}
+                onCourt={setScoreCourt}
+                name={playerName}
               />
-              <label className="gd-label">
-                Show games
-                <select
-                  value={scoreCourt}
-                  onChange={(e) => setScoreCourt(e.target.value)}
-                >
-                  <option value="mine">My games · {playerName(viewer)}</option>
-                  {role === "admin" && <option value="all">All courts</option>}
-                  {[1, 2, 3, 4, 5, 6].map((c) => (
-                    <option key={c} value={c}>
-                      Court {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {roundOverview}
+              <h2>
+                {chosenScoreCourt === "all"
+                  ? "All court scores"
+                  : chosenScoreCourt
+                    ? `Court ${chosenScoreCourt} scores`
+                    : "Choose your court to enter scores"}
+              </h2>
               <p className="gd-muted">
                 {role === "admin"
                   ? "Christy can correct any result with a reason. Official ELO rebuilds from completed sessions."
@@ -1323,10 +1319,8 @@ export default function GameDayDemo() {
               {round.matches
                 .filter(
                   (m) =>
-                    scoreCourt === "all" ||
-                    (scoreCourt === "mine"
-                      ? [...m.a, ...m.b].includes(viewer)
-                      : m.court === Number(scoreCourt)),
+                    chosenScoreCourt === "all" ||
+                    m.court === Number(chosenScoreCourt),
                 )
                 .map((m) => (
                   <ScoreCard
@@ -1548,7 +1542,7 @@ export default function GameDayDemo() {
                   </div>
                 </>
               ) : (
-                progressCard
+                <div className="md-layout">{roundOverview}</div>
               )}
               <details className="gd-card">
                 <summary>How court movement works</summary>

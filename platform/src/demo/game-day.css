@@ -17,6 +17,33 @@
   line-height: 1.55;
   padding-bottom: 82px;
 }
+.gd-main.gd-match-day {
+  max-width: 640px;
+  width: 100%;
+  margin-inline: auto;
+}
+.gd-match-day .gd-page-heading h1 {
+  font-size: 22px;
+}
+.gd-match-day .gd-view-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 12px 0;
+}
+.gd-match-day .gd-view-tabs button {
+  width: 100%;
+}
+.gd-session-picker {
+  color: #9cb9cf;
+  font-size: 12px;
+  margin: 10px 0;
+}
+.gd-session-picker summary {
+  cursor: pointer;
+}
+.gd-match-day #demo-court-details {
+  scroll-margin-top: 20px;
+}
 .gd-app * {
   box-sizing: border-box;
 }
@@ -1224,4 +1251,12 @@
 }
 .gd-guide[hidden] {
   display: none;
+}
+
+.gd-match-day .md-panel > .gd-label {
+  margin: 0;
+}
+.gd-match-day .gd-page-heading {
+  margin-bottom: 8px;
+  padding-bottom: 10px;
 }

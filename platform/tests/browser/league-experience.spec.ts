@@ -19,8 +19,8 @@ test("25 connected players, six gym courts, all published movements, profiles an
   const homeA11y = await new AxeBuilder({ page }).include("#main").analyze();
   expect(homeA11y.violations).toEqual([]);
   await nav(page, "Courts");
-  await expect(page.locator(".lp-court")).toHaveCount(6);
-  await expect(page.locator(".lp-court-person")).toHaveCount(25);
+  await expect(page.locator(".md-court")).toHaveCount(6);
+  await expect(page.locator(".md-player")).toHaveCount(25);
   await expect(
     page.getByRole("region", { name: "Round progress" }),
   ).toContainText("Round 2");
@@ -87,7 +87,7 @@ test("member submits only own matches; saved results require a private correctio
   await page.getByRole("button", { name: "Send correction request" }).click();
   await expect.poll(() => state.data.reviews.length).toBe(1);
   await page
-    .getByRole("combobox", { name: "Show games", exact: true })
+    .getByRole("combobox", { name: "Select Your Court", exact: true })
     .selectOption("all");
   await expect(
     page.locator(".lp-match").filter({
@@ -129,7 +129,7 @@ test("navigation confirms before discarding a score and a stale save cannot over
   page.once("dialog", (d) => d.dismiss());
   await nav(page, "Courts");
   await expect(
-    page.getByRole("heading", { name: "Scores", exact: true }),
+    page.getByRole("heading", { name: "Enter Scores", exact: true }),
   ).toBeVisible();
   m.revision++;
   await page
@@ -145,13 +145,13 @@ test("network failure retains readable courts but blocks saving until refreshed"
 }) => {
   const state = await openLeague(page);
   await nav(page, "Courts");
-  await expect(page.locator(".lp-court")).toHaveCount(6);
+  await expect(page.locator(".md-court")).toHaveCount(6);
   state.fail = true;
   await page
     .getByRole("button", { name: "Refresh league", exact: true })
     .click();
   await expect(page.getByRole("alert")).toContainText("could not be refreshed");
-  await expect(page.locator(".lp-court")).toHaveCount(6);
+  await expect(page.locator(".md-court")).toHaveCount(6);
   await nav(page, "Scores");
   await expect(
     page.getByRole("button", { name: "Save result", exact: true }).first(),

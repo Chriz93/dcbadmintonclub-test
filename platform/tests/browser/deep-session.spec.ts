@@ -195,7 +195,7 @@ test("ordinary players can view a season's courts without privileged penalty acc
   });
   await openLeague(page);
   await page.getByRole("button", { name: "Courts", exact: true }).click();
-  await expect(page.locator(".lp-court")).toHaveCount(6);
+  await expect(page.locator(".md-court")).toHaveCount(6);
   expect(privilegedReads).toBe(0);
   await expect(
     page.getByRole("button", { name: "Administration", exact: true }),

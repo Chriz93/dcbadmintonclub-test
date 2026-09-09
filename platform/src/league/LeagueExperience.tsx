@@ -12,7 +12,6 @@ import {
   nameOf,
   participant,
   partners,
-  roundProgress,
   roundsFor,
   savedMovements,
   sessionCourts,
@@ -23,6 +22,11 @@ import {
   type LeagueData,
   type LeagueMatch,
 } from "./data";
+import {
+  CourtBoard,
+  CourtRoster,
+  RoundOverview,
+} from "../components/MatchDayViews";
 import "./league.css";
 export type LeaguePage = "home" | "courts" | "scores" | "standings" | "help";
 const pct = (v: number) => `${(100 * v).toFixed(0)}%`;
@@ -445,6 +449,7 @@ export function LeagueExperience({
     [round, setRound] = useState(0),
     [profile, setProfile] = useState<string | null>(null),
     [courtMode, setCourtMode] = useState("gym"),
+    [detailCourt, setDetailCourt] = useState<string | null>(null),
     [scoreFilter, setScoreFilter] = useState("mine"),
     [tab, setTab] = useState("Rankings"),
     [search, setSearch] = useState(""),
@@ -550,7 +555,6 @@ export function LeagueExperience({
     roundMatches = data.matches.filter(
       (m) => m.session_id === selected && m.round === r,
     ),
-    progress = roundProgress(data, selected, r),
     movements = savedMovements(data, selected, r),
     incoming = r > 1 ? savedMovements(data, selected, r - 1) : [],
     my = data.players.find((p) => p.id === userId),
@@ -609,38 +613,29 @@ export function LeagueExperience({
       </label>
     </div>
   );
+  const dayCourts = courts.map((c, i) => ({ ...c, players: assigned[i] }));
+  const dayGames = roundMatches.map((m) => ({
+    ...m,
+    ...gameDetails(data, m),
+    court: courts.findIndex((c) => c.id === m.court_id) + 1,
+    number: m.game,
+  }));
+  const selectedScoreCourt =
+    scoreFilter === "mine" ? (courts[myCourt]?.id ?? "") : scoreFilter;
+  const chooseScoreCourt = (id: string) => {
+    if (league.canLeave()) setScoreFilter(id);
+  };
   const progressPanel = (
-    <section className="lp-status" aria-label="Round progress">
-      <strong>
-        Round {r} · {progress.completed} / {progress.expected} games complete
-      </strong>
-      <p>
-        {!rounds.length
-          ? "Christy has not published assignments yet."
-          : movements.length
-            ? "Movement published. Open Movements to see all changes."
-            : progress.state === "invalid"
-              ? `This round needs administrator review: ${progress.error}`
-              : progress.state === "ready"
-                ? session?.status === "completed"
-                  ? "Session completed. Ratings are official."
-                  : "All courts finished. Stay on your court until Christy publishes movement."
-                : myCourt >= 0 &&
-                    progress.courts[myCourt]?.completed ===
-                      progress.courts[myCourt]?.expected
-                  ? "Your court has finished. Waiting for the other courts."
-                  : "Finish every scheduled game; all courts move together after review."}
-      </p>
-      <div className="lp-counters">
-        {progress.courts
-          .filter((c) => c.expected)
-          .map((c) => (
-            <span key={c.court}>
-              C{courts[c.court - 1]?.number}: {c.completed}/{c.expected}
-            </span>
-          ))}
-      </div>
-    </section>
+    <RoundOverview
+      courts={dayCourts}
+      games={dayGames}
+      round={r}
+      rules={data.season.rules}
+      published={movements}
+      name={(id) => nameOf(data, id)}
+      onPlayer={open}
+      viewer={userId}
+    />
   );
   const movementList = (
     <section className="lp-card">
@@ -690,7 +685,9 @@ export function LeagueExperience({
     </section>
   );
   return (
-    <div className={`lp ${projector ? "lp-projector" : ""}`}>
+    <div
+      className={`lp ${!profile && (page === "courts" || page === "scores") ? "md-layout lp-match-day" : ""} ${projector ? "lp-projector" : ""}`}
+    >
       <div className="lp-toolbar">
         <label>
           Season
@@ -875,37 +872,150 @@ export function LeagueExperience({
           )}
           {(page === "courts" || page === "scores") && (
             <>
-              <h1>{page === "courts" ? "Courts" : "Scores"}</h1>
-              {selectors}
-              {progressPanel}
+              <div className="lp-day-heading">
+                <div>
+                  <h1>{page === "courts" ? "Courts" : "Enter Scores"}</h1>
+                  <p>
+                    {page === "courts"
+                      ? `${session ? dateLabel(session.starts_at) : "Session"} · Round ${r}`
+                      : "Enter your result after each game."}
+                  </p>
+                </div>
+                {league.admin && (
+                  <button className="button" onClick={onAdmin}>
+                    ⚙ Admin
+                  </button>
+                )}
+              </div>
+              <details className="lp-session-picker">
+                <summary>Session &amp; round</summary>
+                {selectors}
+              </details>
             </>
           )}
           {page === "courts" && (
             <>
-              <div className="lp-tabs">
-                {["gym", "list", "movements"].map((mode) => (
+              <div className="lp-view-tabs">
+                {["gym", "list"].map((mode) => (
                   <button
                     className={`button ${courtMode === mode ? "primary" : ""}`}
+                    aria-pressed={courtMode === mode}
                     key={mode}
-                    onClick={() => {
-                      setCourtMode(mode);
-                      if (mode === "movements" && !movements.length) {
-                        const published = [...rounds]
-                          .reverse()
-                          .find(
-                            (n) => savedMovements(data, selected, n).length,
-                          );
-                        if (published) setRound(published);
-                      }
-                    }}
+                    onClick={() => setCourtMode(mode)}
                   >
-                    {mode === "gym"
-                      ? "Gym view"
-                      : mode === "list"
-                        ? "List view"
-                        : "Movements"}
+                    {mode === "gym" ? "🏟 Gym View" : "📋 List View"}
                   </button>
                 ))}
+              </div>
+              {courtMode === "movements" ? (
+                movementList
+              ) : (
+                <>
+                  <CourtBoard
+                    courts={dayCourts}
+                    games={dayGames}
+                    mode={courtMode === "list" ? "list" : "gym"}
+                    selected={detailCourt ?? undefined}
+                    incoming={incoming}
+                    viewer={userId}
+                    name={(id) => nameOf(data, id)}
+                    onPlayer={open}
+                    onCourt={(id) => {
+                      setDetailCourt(id);
+                      requestAnimationFrame(() =>
+                        document
+                          .getElementById("court-details")
+                          ?.scrollIntoView({
+                            block: "start",
+                            behavior: "smooth",
+                          }),
+                      );
+                    }}
+                  />
+                  {assigned.some((c) => c.length) && (
+                    <a
+                      className="md-share"
+                      href={`https://wa.me/?text=${encodeURIComponent(summaryText(data, selected, r))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Share Court Assignments on WhatsApp
+                    </a>
+                  )}
+                  {league.admin && (
+                    <section className="md-panel">
+                      <h2>⚙ Admin · Court assignments</h2>
+                      <p className="md-hint">
+                        Review eligible players, fix assignments and publish
+                        changes.
+                      </p>
+                      <button className="button" onClick={onAdmin}>
+                        Manage court assignments
+                      </button>
+                    </section>
+                  )}
+                  {detailCourt && courts.some((c) => c.id === detailCourt) && (
+                    <section className="lp-card" id="court-details">
+                      <h2>
+                        Court {courts.find((c) => c.id === detailCourt)?.number}{" "}
+                        · Round {r}
+                      </h2>
+                      <p>Games &amp; rest turns</p>
+                      {roundMatches
+                        .filter((m) => m.court_id === detailCourt)
+                        .map((m) => (
+                          <div className="lp-court-game" key={m.id}>
+                            <strong>
+                              Game {m.game} ·{" "}
+                              {completed(m)
+                                ? `${m.scoreA}–${m.scoreB}`
+                                : `First to ${m.target}`}
+                            </strong>
+                            <p>
+                              {m.a.map((id) => nameOf(data, id)).join(" + ")} vs{" "}
+                              {m.b.map((id) => nameOf(data, id)).join(" + ")}
+                            </p>
+                            {gameDetails(data, m).rest.length > 0 && (
+                              <small>
+                                Rest:{" "}
+                                {gameDetails(data, m)
+                                  .rest.map((id) => nameOf(data, id))
+                                  .join(", ")}
+                              </small>
+                            )}
+                          </div>
+                        ))}
+                      {!roundMatches.some(
+                        (m) => m.court_id === detailCourt,
+                      ) && <p>No games published for this court yet.</p>}
+                      <button
+                        className="button primary"
+                        onClick={() => {
+                          setScoreFilter(detailCourt);
+                          onNavigate("scores");
+                        }}
+                      >
+                        Open scores for this court
+                      </button>
+                    </section>
+                  )}
+                </>
+              )}
+              <div className="lp-actions">
+                <button
+                  className="button"
+                  onClick={() => {
+                    setCourtMode("movements");
+                    if (!movements.length) {
+                      const published = [...rounds]
+                        .reverse()
+                        .find((n) => savedMovements(data, selected, n).length);
+                      if (published) setRound(published);
+                    }
+                  }}
+                >
+                  Movements
+                </button>
                 <button
                   className="button"
                   onClick={() => setProjector(!projector)}
@@ -935,116 +1045,54 @@ export function LeagueExperience({
                   <textarea readOnly value={copy} />
                 </label>
               )}
-              {courtMode === "movements" ? (
-                movementList
-              ) : (
-                <>
-                  <div
-                    className={courtMode === "gym" ? "lp-gym" : "lp-court-list"}
-                  >
-                    {(courts.length === 6 && courtMode === "gym"
-                      ? [0, 1, 2, 5, 4, 3]
-                      : courts.map((_, i) => i)
-                    ).map((i) => (
-                      <section className="lp-court" key={courts[i].id}>
-                        <header>
-                          <h2>Court {courts[i].number}</h2>
-                          <span>{assigned[i].length} players</span>
-                        </header>
-                        <div className="lp-net">NET</div>
-                        {assigned[i].map((id) => (
-                          <div
-                            className={
-                              id === userId
-                                ? "lp-court-person lp-you"
-                                : "lp-court-person"
-                            }
-                            key={id}
-                          >
-                            {person(id)}
-                            {incoming.find((m) => m.id === id) && (
-                              <small>
-                                {movementText(
-                                  incoming.find((m) => m.id === id)!,
-                                )}
-                              </small>
-                            )}
-                          </div>
-                        ))}
-                        {!assigned[i].length && <p>No assignments yet</p>}
-                        <details>
-                          <summary>Games & rest turns</summary>
-                          {roundMatches
-                            .filter((m) => m.court_id === courts[i].id)
-                            .map((m) => (
-                              <p key={m.id}>
-                                <strong>
-                                  Game {m.game}:{" "}
-                                  {completed(m)
-                                    ? `${m.scoreA}–${m.scoreB}`
-                                    : `to ${m.target}`}
-                                </strong>
-                                <br />
-                                {m.a
-                                  .map((id) => nameOf(data, id))
-                                  .join(" + ")}{" "}
-                                vs{" "}
-                                {m.b.map((id) => nameOf(data, id)).join(" + ")}
-                                {gameDetails(data, m).rest.length > 0 && (
-                                  <>
-                                    <br />
-                                    Rest:{" "}
-                                    {gameDetails(data, m)
-                                      .rest.map((id) => nameOf(data, id))
-                                      .join(", ")}
-                                  </>
-                                )}
-                              </p>
-                            ))}
-                        </details>
-                      </section>
-                    ))}
-                  </div>
-                  <button
-                    className="button primary"
-                    onClick={() => onNavigate("scores")}
-                  >
-                    Enter my scores
-                  </button>
-                </>
-              )}
+              {courtMode !== "movements" && progressPanel}
             </>
           )}
           {page === "scores" && (
             <>
-              <label>
-                Show games
-                <select
-                  value={scoreFilter}
-                  onChange={(e) => {
-                    if (league.canLeave()) setScoreFilter(e.target.value);
-                  }}
-                >
-                  <option value="mine">My games</option>
-                  <option value="all">All courts</option>
-                  {courts.map((c) => (
-                    <option value={c.id} key={c.id}>
-                      Court {c.number}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p>
-                Any participant can submit the first result. Christy reviews
-                corrections.
+              <section className="md-panel lp-court-selector">
+                <label>
+                  Select Your Court
+                  <select
+                    value={selectedScoreCourt}
+                    onChange={(e) => chooseScoreCourt(e.target.value)}
+                  >
+                    <option value="">— Choose Court —</option>
+                    {courts.map((c, i) => (
+                      <option value={c.id} key={c.id}>
+                        Court {c.number}
+                        {i === myCourt ? " · Your court" : ""}
+                      </option>
+                    ))}
+                    <option value="all">All courts</option>
+                  </select>
+                </label>
+              </section>
+              <CourtRoster
+                courts={dayCourts}
+                round={r}
+                selected={selectedScoreCourt}
+                onCourt={chooseScoreCourt}
+                name={(id) => nameOf(data, id)}
+              />
+              {progressPanel}
+              <h2>
+                {selectedScoreCourt === "all"
+                  ? "All court scores"
+                  : selectedScoreCourt
+                    ? `Court ${courts.find((c) => c.id === selectedScoreCourt)?.number} scores`
+                    : "Choose your court to enter scores"}
+              </h2>
+              <p className="md-hint">
+                {league.admin
+                  ? "Christy can correct any result with a reason."
+                  : "You can submit results for games you played. Christy reviews corrections."}
               </p>
               {roundMatches
                 .filter(
                   (m) =>
-                    scoreFilter === "all" ||
-                    (scoreFilter === "mine"
-                      ? participant(m, userId)
-                      : m.court_id === scoreFilter),
+                    selectedScoreCourt === "all" ||
+                    m.court_id === selectedScoreCourt,
                 )
                 .map((m) => (
                   <ScoreEditor

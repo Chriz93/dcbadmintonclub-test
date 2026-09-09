@@ -41,18 +41,18 @@ test("shows all 25 court players, all five rest slots, and clickable full profil
   page,
 }) => {
   await page.getByLabel("Jump to a step").selectOption("5");
-  await expect(page.locator(".gd-court-players .gd-name")).toHaveCount(25);
+  await expect(page.locator(".md-player button")).toHaveCount(25);
   await expect(
     page
-      .locator(".gd-court")
+      .locator(".md-court")
       .filter({
         has: page.getByRole("button", { name: "Open Court 6", exact: true }),
       })
-      .locator(".gd-name"),
+      .locator(".md-player button"),
   ).toHaveCount(5);
   await expect(page.locator(".gd-court-game .gd-rest")).toHaveCount(5);
   await page
-    .locator(".gd-court-players")
+    .locator(".md-board")
     .getByRole("button", { name: "Maya Chen", exact: true })
     .click();
   await expect(
@@ -90,7 +90,7 @@ test("rejects tied scores and saves a player's own result only once", async ({
     card.getByRole("button", { name: "Correct result" }),
   ).toBeDisabled();
   await page
-    .getByRole("combobox", { name: "Show games", exact: true })
+    .getByRole("combobox", { name: "Select Your Court", exact: true })
     .selectOption("6");
   for (const input of await page.locator(".gd-score-entry input").all())
     await expect(input).toBeDisabled();
@@ -107,10 +107,11 @@ test("reviews movement and completes 80 games without losing players or adding a
   await page
     .getByRole("button", { name: "Publish round 2", exact: true })
     .click();
+  await page.locator(".gd-session-picker summary").click();
   await expect(
     page.getByRole("combobox", { name: "Round", exact: true }),
   ).toHaveValue("2");
-  await expect(page.locator(".gd-court-players .gd-name")).toHaveCount(25);
+  await expect(page.locator(".md-player button")).toHaveCount(25);
   await page.getByLabel("Jump to a step").selectOption("8");
   await expect(page.locator(".gd-summary-courts .gd-final-row")).toHaveCount(
     25,
@@ -122,13 +123,14 @@ test("reviews movement and completes 80 games without losing players or adding a
     .getByRole("navigation")
     .getByRole("button", { name: "Scores", exact: true })
     .click();
+  await page.locator(".gd-session-picker summary").click();
   await expect(
     page
       .getByRole("combobox", { name: "Round", exact: true })
       .locator("option"),
   ).toHaveCount(4);
   await expect(
-    page.getByText("20 / 20 games scored", { exact: true }),
+    page.getByText("20 / 20 games complete", { exact: true }),
   ).toBeVisible();
 });
 
@@ -239,8 +241,8 @@ test("phone and desktop layouts retain all courts without page overflow", async 
       .getByRole("navigation")
       .getByRole("button", { name: "Courts", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "List view", exact: true }).click();
-  await expect(page.locator(".gd-court-list .gd-court")).toHaveCount(6);
+  await page.getByRole("button", { name: "📋 List View", exact: true }).click();
+  await expect(page.locator(".md-list .md-court")).toHaveCount(6);
 });
 
 test("published movements remain accessible for every round, including final placements", async ({
@@ -250,9 +252,9 @@ test("published movements remain accessible for every round, including final pla
   await page
     .getByRole("button", { name: "Publish round 2", exact: true })
     .click();
-  await expect(page.locator(".gd-movement-label")).toHaveCount(25);
-  await expect(page.locator(".gd-movement-label.gd-up")).toHaveCount(5);
-  await expect(page.locator(".gd-movement-label.gd-down")).toHaveCount(5);
+  await expect(page.locator(".md-movement")).toHaveCount(25);
+  await expect(page.locator(".md-movement.md-up")).toHaveCount(5);
+  await expect(page.locator(".md-movement.md-down")).toHaveCount(5);
   await page
     .getByRole("button", { name: "Court movements", exact: true })
     .click();
@@ -322,11 +324,11 @@ test("a player has their next game, opponents and a direct scores action", async
   await expect(next).toContainText("Opponents:");
   await next.getByRole("button", { name: "My scores", exact: true }).click();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Scores" }),
+    page.getByRole("heading", { level: 1, name: "Enter Scores" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("combobox", { name: "Show games", exact: true }),
-  ).toHaveValue("mine");
+    page.getByRole("combobox", { name: "Select Your Court", exact: true }),
+  ).toHaveValue("4");
 });
 
 test("movement history fits on screen and names remain clickable", async ({

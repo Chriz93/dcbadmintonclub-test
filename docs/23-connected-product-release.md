@@ -2,6 +2,8 @@
 
 This is the current handover. It supersedes the pending-integration statements in documents 14–22. The connected product is deployed in the **Preview** environment of the existing Cloudflare TEST project. It is not a production launch.
 
+The subsequent [Courts and Scores layout update](24-court-score-layout.md) aligns those screens with Christy's supplied screenshots and expands the browser suite to 92 passing desktop/mobile cases. The launch dependencies below remain in effect.
+
 - App: https://league-release.maplewood-league-test.pages.dev/
 - Narrated, interactive practice session: https://league-release.maplewood-league-test.pages.dev/?demo=game-day
 - Source: `platform/` on `upgrade/secure-platform`, in `Chriz93/dcbadmintonclub-test`.
