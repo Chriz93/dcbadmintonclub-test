@@ -46,7 +46,7 @@ Migration 037 updates future agreement terms. In remote TEST, hashes of all publ
 ## Verification evidence
 
 - **1,190 tests in 22 files passed** on patched Vitest 4.1.11, including the requested 500 movement scenarios, 145 round/database cases and 53 new connected-experience cases.
-- **78/78 desktop/mobile browser cases passed** in one full run. The final home-heading/accessibility refinement passed again on both device projects. These browser cases use mocked API responses; they are not independent real Auth tests.
+- **78/78 desktop/mobile browser cases passed** in the initial full run. The suite now has **80 cases** after adding first-load failure/recovery on both devices. All 26 affected member-workflow checks were verified after preserving the page title for empty, loading and error states. CI caught the empty-season regression introduced by the initial heading refinement; it was fixed, not bypassed. These browser cases use mocked API responses; they are not independent real Auth tests.
 - CI browser setup uses the GitHub Ubuntu runner's installed Chrome through the same explicit executable setting used locally. This avoids an unrelated Google apt mirror checksum mismatch encountered during Playwright dependency installation; no package integrity checks are disabled.
 - TypeScript, ESLint and the compiled TEST build passed. Startup payload is approximately **199.2 KiB gzip**, within the 220 KiB limit. The build checks for server-secret markers.
 - The development-only Vitest advisory [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9) was patched by upgrading Vitest and coverage-v8 together. The subsequent dependency audit reported **no known vulnerabilities**.
@@ -61,8 +61,8 @@ Migration 037 updates future agreement terms. In remote TEST, hashes of all publ
 
 Cloudflare project `maplewood-league-test`, Preview branch `league-release`. Final upload contains only 26 compiled public files, including demo narration; no environment files, source database records or private credentials.
 
-- Bundle SHA-256: `a00c1ce451e21f24562924aa52a230a98f5e65a95e95ac26dae60211399659a1`
-- Entry asset: `index-kum_EBKT.js`; app asset: `App-BpwicT68.js`. A fresh hosted demo reported that exact entry filename, and a rebuild after the dependency update matched every public ZIP file byte-for-byte.
+- Bundle SHA-256: `21fc81699def8dc1f110b76d46960dff91c7be21844be668b1d69fe0ec28872c`
+- Entry asset: `index-DfazTpK3.js`; app asset: `App-BYRme9la.js`. A fresh hosted demo reported that exact entry filename, and a rebuild after the dependency update matched every public ZIP file byte-for-byte.
 - The TEST main deployment and legacy production were not replaced. The earlier automatic approval rejection concerned Cloudflare's Production selection; the successful upload used Preview.
 - Future automation is explicitly opt-in using `ENABLE_TEST_DEPLOY=true`; it targets `--branch league-release` and Preview secrets. See [Cloudflare Pages CLI reference](https://developers.cloudflare.com/workers/wrangler/commands/pages/). Private configuration remains deferred.
 

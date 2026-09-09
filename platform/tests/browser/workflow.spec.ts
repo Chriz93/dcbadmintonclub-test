@@ -221,6 +221,9 @@ test("membership failures fail closed and retry; regular members can sign out an
     page.getByRole("heading", { name: "Your league night." }),
   ).toBeVisible();
   await expect(
+    page.getByText("No season has been published yet.", { exact: false }),
+  ).toBeVisible();
+  await expect(
     page.getByRole("button", { name: "Administration", exact: true }),
   ).toHaveCount(0);
   await expect(

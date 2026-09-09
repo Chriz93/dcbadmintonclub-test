@@ -99,12 +99,13 @@ export async function openLeague(
   page: Page,
   admin = false,
   data = leagueFixture(),
+  initialFailure = false,
 ) {
   const state = {
     data,
     reads: 0,
     saves: 0,
-    fail: false,
+    fail: initialFailure,
     malformed: false,
     delay: 0,
   };

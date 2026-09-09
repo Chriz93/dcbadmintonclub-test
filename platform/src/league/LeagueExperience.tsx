@@ -515,9 +515,17 @@ export function LeagueExperience({
       setMessage((e as Error).message);
     }
   }
+  const pageTitle = {
+    home: "Your league night.",
+    courts: "Courts",
+    scores: "Scores",
+    standings: "Standings",
+    help: "League questions",
+  }[page];
   if (league.loaded && !league.choices.length)
     return (
       <section className="lp">
+        <h1>{pageTitle}</h1>
         <p>
           No season has been published yet. Christy can create it in
           Administration.
@@ -530,6 +538,7 @@ export function LeagueExperience({
   if (!data)
     return (
       <section className="lp">
+        <h1>{pageTitle}</h1>
         <p role="status">{league.error || "Loading your league…"}</p>
         <button className="button" onClick={() => void league.refresh(true)}>
           Refresh league

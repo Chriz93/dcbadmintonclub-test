@@ -204,3 +204,23 @@ test("gym display retains an exit and hides navigation", async ({ page }) => {
     page.getByRole("navigation", { name: "Main navigation" }),
   ).toBeVisible();
 });
+
+test("a failed first league load keeps the page title and recovers through Retry", async ({
+  page,
+}) => {
+  const state = await openLeague(page, false, undefined, true);
+  await expect(
+    page.getByRole("heading", { name: "Your league night.", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Live results could not be refreshed" }),
+  ).toBeVisible();
+  state.fail = false;
+  await page
+    .getByRole("button", { name: "Refresh league", exact: true })
+    .click();
+  await expect(page.locator(".lp-home")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+});
