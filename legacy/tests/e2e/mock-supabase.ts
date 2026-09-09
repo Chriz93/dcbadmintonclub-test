@@ -11,7 +11,7 @@ export const ORGANIZER = "christygeorge993@gmail.com";
 
 export interface Player {
   id: number; name: string; email: string; phone: string; emergency: string; medical: string; sig: string;
-  waiver_signed: boolean; paid: boolean; current_court: number; highest_court: number; season_wins: number;
+  waiver_signed: boolean; paid: boolean; email_reminders?: boolean; current_court: number; highest_court: number; season_wins: number;
   season_losses: number; games_played: number; no_show_count: number; membership_type: string; created_at: string;
   approved: boolean; waitlisted: boolean; registered_at: string | null; admin_note: string; user_id: string | null;
 }
@@ -210,6 +210,7 @@ export async function installMock(page: Page, s: MockState) {
         s.audit.push({ action: "stats.rebuilt" });
         return json(200, { players_changed: n });
       }
+      if (fn === "set_email_reminders") { const p = s.players.find((x) => x.id === me); if (!p) return deny("No player record"); p.email_reminders = !!a.p_on; return json(200, null); }
       if (fn === "update_my_profile") return json(200, null);
       return json(404, { message: `unknown rpc ${fn}` });
     }

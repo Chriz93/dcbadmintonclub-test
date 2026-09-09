@@ -9,6 +9,21 @@ async function signIn(page: Page, email: string) {
   await page.click("#signin-btn");
   await expect(page.locator("#invite-gate")).toBeHidden();
 }
+async function registerSelf(page: Page, name: string) {
+  await expect(page.locator("#page-register")).toHaveClass(/active/);
+  await page.fill("#r-name", name);
+  await page.fill("#r-phone", "613-555-0100");
+  await page.fill("#r-emergency", "Emergency Person 613-555-0101");
+  await page.click("text=Continue →");
+  await page.check("#w1");
+  if (await page.locator("#w5-row").isVisible()) await page.check("#w5");
+  if (await page.locator("#w6-row").isVisible()) await page.check("#w6");
+  await page.fill("#r-sig", name);
+  await page.click("#reg-btn");
+  await page.check("#lf-all");
+  await page.fill("#r-sig-lf", name);
+  await page.click("#reg-btn-lf");
+}
 async function unlockOrganizer(page: Page) {
   await page.click("#bnav-admin");
   await expect(page.locator("#admin-lock-msg")).toContainText(/authenticator|Enter the 6-digit/i);
@@ -29,8 +44,10 @@ async function scoreCourt(page: Page, court: number, scores: [number, number][])
     await page.fill(`#si_${court}_${i + 1}_a`, String(a));
     await page.fill(`#si_${court}_${i + 1}_b`, String(b));
   }
+  const saved = await page.evaluate(() => S.current ? Object.keys(S.current.scores).length : 0);
   await page.click(`#sbtn_${court}`);
-  await expect(page.locator(`#sbtn_${court}`)).toBeEnabled({ timeout: 10000 });
+  // The save is done when the session holds more scores; the score area may re-render (auto-advance) right after.
+  await expect.poll(() => page.evaluate(() => S.current ? Object.keys(S.current.scores).length : Infinity), { timeout: 15000 }).toBeGreaterThan(saved);
 }
 type Score = { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string };
 type Sess = { scores: Record<string, Score> };
@@ -321,10 +338,52 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#reg-already")).toContainText("Welcome back");
     await expect(page.locator("#r-name")).toHaveValue("TEST Player 01");
   });
+  test("spare seats fill themselves from declined regulars; one-tap vote links; reminder opt-out", async ({ page }) => {
+    // A spare registers and is approved.
+    await signIn(page, "christygeorge993+spare@gmail.com");
+    await registerSelf(page, "Spare Tester");
+    await expect.poll(() => state.players.find((p) => p.email === "christygeorge993+spare@gmail.com")?.membership_type).toBe("spare");
+    const spareId = state.players.find((p) => p.email === "christygeorge993+spare@gmail.com")!.id;
+    await page.evaluate(() => signOut());
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await page.evaluate((id) => approvePlayer(id), spareId);
+    await expect.poll(() => state.players.find((p) => p.id === spareId)!.approved).toBe(true);
+    await page.evaluate(() => signOut());
+
+    // No regular has declined: the spare sees no open seat and goes on standby after saying "available".
+    await signIn(page, "christygeorge993+spare@gmail.com");
+    await expect(page.locator("#page-home")).toHaveClass(/active/);
+    await expect(page.locator("#home-vote")).toContainText("Spare: are you available for Session 1");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open");
+    await page.locator("#home-vote button", { hasText: "I'm available" }).click();
+    await expect(page.locator("#home-vote .spare-status")).toContainText("Standby — you are #1 in line");
+    // A regular declines (their own answer, recorded earlier): a seat opens and the spare is confirmed automatically.
+    state.rsvps.push({ session_number: 1, player_id: 1, response: "notcoming", note: "", updated_at: new Date().toISOString() });
+    await page.evaluate(async () => { await loadAll(); renderAll(); });
+    await expect(page.locator("#home-vote .spare-status")).toContainText("Seat confirmed (seat 1)");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open · 1 confirmed · 0 standby");
+    // Reminder opt-out is the player's own switch.
+    await page.uncheck("#home-vote .email-reminders-toggle");
+    await expect.poll(() => state.players.find((p) => p.id === spareId)!.email_reminders).toBe(false);
+    // One-tap link from a reminder email: the vote is applied after sign-in without any other tap.
+    await page.goto("/?vote=notcoming&s=1");
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)?.response, { timeout: 15000 }).toBe("notcoming");
+    expect(new URL(page.url()).search).toBe("");
+    await expect(page.locator("#home-vote")).toContainText("Sit this one out");
+    // A link for a session that is not open is refused, not applied.
+    await page.goto("/?vote=coming&s=5");
+    await expect(page.locator("body")).toContainText("That link was for Session 5");
+    expect(state.rsvps.find((r) => r.player_id === spareId && r.session_number === 5)).toBeUndefined();
+
+    // Organizer sees the spare list in Attendance with the seat control.
+    state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)!.response = "coming";
+    await page.evaluate(() => signOut());
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await page.evaluate(() => showSec("admin", "a-att"));
+    await expect(page.locator("#confirmed-spares")).toContainText("1 regular declined · 1 confirmed · 0 standby");
+    await expect(page.locator("#confirmed-spares")).toContainText("Spare Tester");
+    await expect(page.locator("#confirmed-spares button", { hasText: "Seat" })).toBeVisible();
+  });
 });
-declare const S: { current: any; players: any[] };
-declare function buildCombos(players: unknown[]): Game[];
-declare function rpc(fn: string, args: unknown): Promise<unknown>;
-declare function setKV(k: string, v: unknown): Promise<void>;
-declare function signOut(): Promise<void>;
-declare function approvePlayer(id: number): Promise<void>;

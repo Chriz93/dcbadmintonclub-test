@@ -114,3 +114,45 @@ do $$ declare r jsonb; begin
 end $$;
 reset role;
 select 'PHASE2 RULES PASS' as result;
+
+-- ── L07: reminder targets and spare seats ──────────────────────────────────────────────────────
+\i legacy/migrations/L07_reminders_and_spares.sql
+reset role;
+-- Fresh season 3 for this block: players 1 (regular, court 1), 2 (regular), 3 (spare) approved again.
+update public.players set approved=true,waitlisted=false where id in(1,2,3);
+update public.players set membership_type='spare' where id=3;
+update public.players set user_id='a0000000-0000-0000-0000-000000000002' where id=1;
+delete from public.rsvps where session_number=7;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin
+ perform public.set_email_reminders(false);
+ if (select email_reminders from public.players where id=1) then raise exception 'opt-out not stored'; end if;
+ perform public.set_email_reminders(true);
+ begin perform public.reminder_targets(7); raise exception 'member could read reminder targets'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ declare n int; begin
+ -- Nobody answered: both regulars are targets, the spare is not (no open seat).
+ select count(*) into n from public.reminder_targets(7) where kind='vote'; if n<>2 then raise exception 'vote targets %',n; end if;
+ select count(*) into n from public.reminder_targets(7) where kind='spare'; if n<>0 then raise exception 'spare invited without a seat'; end if;
+ -- Alice declines: one seat opens, the spare becomes a target, Alice no longer is.
+ insert into public.rsvps(session_number,player_id,response) values(7,1,'notcoming');
+ select count(*) into n from public.reminder_targets(7) where kind='spare' and open_seats=1; if n<>1 then raise exception 'spare not invited'; end if;
+ select count(*) into n from public.reminder_targets(7) where kind='vote'; if n<>1 then raise exception 'declined player still targeted'; end if;
+ -- Opted-out players are never targeted.
+ update public.players set email_reminders=false where id=2;
+ select count(*) into n from public.reminder_targets(7); if n<>1 then raise exception 'opt-out ignored'; end if;
+ update public.players set email_reminders=true where id=2;
+ -- The spare claims the seat: confirmed, rank 1, no seats left.
+ insert into public.rsvps(session_number,player_id,response) values(7,3,'coming');
+ if not exists(select 1 from public.spare_seats(7) where player_id=3 and rank=1 and confirmed and open_seats=0) then raise exception 'spare not confirmed'; end if;
+ select count(*) into n from public.reminder_targets(7) where kind='spare'; if n<>0 then raise exception 'confirmed spare still targeted'; end if;
+ -- Alice changes her mind: the spare drops to standby.
+ update public.rsvps set response='coming' where session_number=7 and player_id=1;
+ if exists(select 1 from public.spare_seats(7) where player_id=3 and confirmed) then raise exception 'standby not applied'; end if;
+ -- Reminder log refuses duplicates.
+ insert into public.reminder_log(session_number,player_id,kind) values(7,2,'vote-1');
+ begin insert into public.reminder_log(session_number,player_id,kind) values(7,2,'vote-1'); raise exception 'duplicate reminder logged'; exception when unique_violation then null; end;
+end $$;
+select 'PHASE3 RULES PASS' as result;

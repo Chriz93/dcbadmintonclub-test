@@ -1,0 +1,53 @@
+name: Legacy site vote reminders (TEST)
+# Hourly. Sends nothing until DELIVERY_MODE is live AND the two operator secrets exist; addresses real players only
+# when the repository variable ALLOW_REAL_RECIPIENTS is "true". Otherwise messages go to the league inbox, max 3/run.
+on:
+  schedule:
+    - cron: "12 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: legacy-reminders
+  cancel-in-progress: false
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: legacy/automation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check operator secrets
+        id: gate
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GMAIL_KEY: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          if [ -z "$SERVICE_KEY" ] || [ -z "$GMAIL_KEY" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"; echo "Secrets not configured; skipping (nothing sent)."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.ready == 'true'
+        run: npm install --no-audit --no-fund --omit=dev
+      - if: steps.gate.outputs.ready == 'true'
+        run: node --test
+      - name: Reminder pass
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          TZ: America/Toronto
+          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: https://chriz93.github.io/dcbadmintonclub-test/
+          DELIVERY_MODE: ${{ vars.LEGACY_DELIVERY_MODE || 'dry-run' }}
+          ALLOW_REAL_RECIPIENTS: ${{ vars.ALLOW_REAL_RECIPIENTS || 'false' }}
+          GMAIL_USER: maplewoodbadmintonleague@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TEST_INBOX: maplewoodbadmintonleague@gmail.com
+          ORGANIZER_EMAIL: christygeorge993@gmail.com
+        run: node remind.mjs
