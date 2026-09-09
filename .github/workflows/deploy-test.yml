@@ -43,8 +43,12 @@ jobs:
       # before any deployment secrets are used.
       - if: github.event_name == 'workflow_dispatch'
         run: pnpm lint && pnpm test:coverage && pnpm build
-      - if: github.event_name == 'workflow_dispatch'
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Use preinstalled Chrome
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          browser_path="$(command -v google-chrome)"
+          test -x "$browser_path"
+          echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
       - if: github.event_name == 'workflow_dispatch'
         run: pnpm test:e2e
       - if: github.event_name == 'workflow_dispatch'

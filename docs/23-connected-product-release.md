@@ -47,6 +47,7 @@ Migration 037 updates future agreement terms. In remote TEST, hashes of all publ
 
 - **1,190 tests in 22 files passed** on patched Vitest 4.1.11, including the requested 500 movement scenarios, 145 round/database cases and 53 new connected-experience cases.
 - **78/78 desktop/mobile browser cases passed** in one full run. The final home-heading/accessibility refinement passed again on both device projects. These browser cases use mocked API responses; they are not independent real Auth tests.
+- CI browser setup uses the GitHub Ubuntu runner's installed Chrome through the same explicit executable setting used locally. This avoids an unrelated Google apt mirror checksum mismatch encountered during Playwright dependency installation; no package integrity checks are disabled.
 - TypeScript, ESLint and the compiled TEST build passed. Startup payload is approximately **199.2 KiB gzip**, within the 220 KiB limit. The build checks for server-secret markers.
 - The development-only Vitest advisory [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9) was patched by upgrading Vitest and coverage-v8 together. The subsequent dependency audit reported **no known vulnerabilities**.
 - Vitest 4's coverage report: 96.98% statements, 93.64% branches, 97.92% lines, **for the configured domain/config scope only**, not the whole application. Its instrumentation differs from earlier reports.
