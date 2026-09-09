@@ -32,6 +32,34 @@ async function scoreCourt(page: Page, court: number, scores: [number, number][])
   await page.click(`#sbtn_${court}`);
   await expect(page.locator(`#sbtn_${court}`)).toBeEnabled({ timeout: 10000 });
 }
+type Score = { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string };
+type Sess = { scores: Record<string, Score> };
+// Independent Elo reference (team-average expectation, K = 32, mean change per round, ratings frozen within a round).
+function eloReference(players: MockState["players"], sessions: Sess[]): Record<number, number> {
+  const elo: Record<number, number> = {};
+  for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
+    const seed = p.highest_court > 0 && p.highest_court <= 6 ? p.highest_court : p.current_court > 0 ? p.current_court : 6;
+    elo[p.id] = 1500 - (seed - 1) * 100;
+  }
+  const r = (id: number) => elo[id] ?? 1000;
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  for (const sess of sessions) {
+    const cycles = [...new Set(Object.keys(sess.scores).map((k) => parseInt(k.match(/_y(\d+)_/)![1])))].sort((a, b) => a - b);
+    for (const cy of cycles) {
+      const sum: Record<number, number> = {}, cnt: Record<number, number> = {};
+      for (const [k, sc] of Object.entries(sess.scores)) {
+        if (!k.includes(`_y${cy}_`) || (sc.w !== "A" && sc.w !== "B")) continue;
+        const A = [sc.a1, sc.a2].filter((x): x is number => x != null), B = [sc.b1, sc.b2].filter((x): x is number => x != null);
+        const ea = 1 / (1 + Math.pow(10, (avg(B.map(r)) - avg(A.map(r))) / 400));
+        for (const id of A) { sum[id] = (sum[id] || 0) + ((sc.w === "A" ? 1 : 0) - ea); cnt[id] = (cnt[id] || 0) + 1; }
+        for (const id of B) { sum[id] = (sum[id] || 0) + ((sc.w === "B" ? 1 : 0) - (1 - ea)); cnt[id] = (cnt[id] || 0) + 1; }
+      }
+      for (const id of Object.keys(sum).map(Number)) elo[id] = r(id) + 32 * (sum[id] / cnt[id]);
+    }
+  }
+  return Object.fromEntries(Object.entries(elo).map(([k, v]) => [k, Math.round(v)]));
+}
+const wl = (text: string) => [...text.matchAll(/(\d+)W (\d+)L/g)].map((m) => ({ w: +m[1], l: +m[2] }));
 const FOUR: [number, number][] = [[21, 15], [21, 10], [18, 21]]; // A top on points, D bottom
 const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A/B fully tied, C/D fully tied
 const FIVE: [number, number][] = [[15, 10], [15, 9], [15, 12], [15, 8], [15, 11]];
@@ -115,6 +143,72 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     expect(played).toBe(160); expect(wins).toBe(80); expect(losses).toBe(80);
     expect(Object.values(JSON.parse(state.state["completed_sessions"].value)[0].finalAssignments).map((a: unknown) => (a as number[]).length)).toEqual([4, 4, 4, 4, 4, 5]);
     expect(state.players.every((p) => p.current_court >= 1 && p.current_court <= 6)).toBe(true);
+
+    // ── Every tab reads the same season record ──────────────────────────────────────────────
+    const done = JSON.parse(state.state["completed_sessions"].value) as (Sess & { number: number; date: string; playerNames: Record<string, string> })[];
+    expect(Object.keys(done[0].scores)).toHaveLength(40); // 5 courts × 3 games + 1 court × 5 games, two rounds
+    expect(done[0].date).toBe("Sep 15, 2026");
+    const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
+    await expect(page.locator("#modal")).toHaveClass(/open/); // session summary shown to the organizer
+    await page.evaluate(() => closeModal());
+    await page.click("#bnav-standings");
+    // Leaders: 25 rows, each row's record equals the database statistics, totals 80/80.
+    const lb = wl(await page.locator("#sec-lb").innerText());
+    expect(lb).toHaveLength(25);
+    expect(lb.reduce((n, x) => n + x.w, 0)).toBe(80); expect(lb.reduce((n, x) => n + x.l, 0)).toBe(80);
+    // Rankings: Elo values match the independent reference, sorted high to low, first-round winners above first-round losers.
+    await page.click("#page-standings .ptab:has-text('Rankings')");
+    await expect(page.locator("#sec-rank")).toContainText("Elo rating");
+    const appElo = await page.evaluate(() => computeEloRatings() as Record<number, number>);
+    const refElo = eloReference(state.players, done);
+    expect(appElo).toEqual(refElo);
+    expect(await page.evaluate(() => JSON.stringify(computeEloRatings()))).toBe(JSON.stringify(appElo)); // deterministic
+    const shown = (await page.locator("#sec-rank .lbrow").allInnerTexts()).map((t) => parseInt(t.match(/(\d{3,4})\s*ELO/)![1]));
+    expect(shown).toHaveLength(25);
+    expect([...shown].sort((a, b) => b - a)).toEqual(shown);
+    expect(new Set(shown)).toEqual(new Set(Object.values(appElo)));
+    for (const p of state.players) { // rating moved in the direction of the player's record, never further than 32 per round
+      const seed = 1500 - (p.highest_court - 1) * 100;
+      expect(Math.abs(appElo[p.id] - seed)).toBeLessThanOrEqual(64);
+      if (p.season_wins === p.games_played) expect(appElo[p.id]).toBeGreaterThan(seed);
+      if (p.season_losses === p.games_played) expect(appElo[p.id]).toBeLessThan(seed);
+    }
+    // A player's game history lists exactly their games, with the frozen names.
+    await page.locator("#sec-rank .lbrow").first().click();
+    const topName = (await page.locator("#sec-rank .lbrow .lbname").first().innerText()).trim();
+    const top = state.players.find((p) => p.name === topName)!;
+    await expect(page.locator("#modal-title")).toContainText(top.name);
+    expect(await page.locator("#modal-body .gh-row").count()).toBe(top.games_played);
+    expect(await page.locator("#modal-body .gh-row:has-text('?')").count()).toBe(0);
+    await page.locator("#modal button:has-text('Close')").click();
+    // Stats: per-player wins/games equal the database.
+    await page.click("#page-standings .ptab:has-text('Stats')");
+    for (const p of state.players.slice(0, 5)) {
+      const card = page.locator("#sec-pstats .card", { hasText: p.name }).filter({ hasNotText: "Season Awards" }).first();
+      await expect(card.locator(".sbox", { hasText: "Wins" }).locator(".sv")).toHaveText(String(p.season_wins));
+    }
+    // Sessions: final placements per court sum to 25 and carry the single-year date.
+    await page.click("#page-standings .ptab:has-text('Sessions')");
+    await expect(page.locator("#sec-sessstand")).toContainText("Session 1 — Sep 15, 2026 · 2 Rounds");
+    expect(await page.locator("#sec-sessstand").innerText()).not.toContain("2026, 2026");
+    expect(wl(await page.locator("#sec-sessstand").innerText()).reduce((n, x) => n + x.w, 0)).toBe(80);
+    // History: one card, 2 rounds, 40 games, expandable to the round-by-round scores.
+    await page.click("#page-standings .ptab:has-text('History')");
+    await expect(page.locator("#sec-hist")).toContainText("Session 1 — Sep 15, 2026");
+    await expect(page.locator("#sec-hist")).toContainText("2 rounds");
+    await expect(page.locator("#sec-hist")).toContainText("40 games");
+    await page.locator("#sec-hist .card").first().click();
+    await expect(page.locator("#sec-hist")).toContainText("Round 2");
+    // Home and Schedule agree on what comes next.
+    await page.click("#bnav-home");
+    await expect(page.locator("#next-date")).toContainText("Session 2 — Sep 22, 2026");
+    await expect(page.locator("#pos-home")).toContainText("Player of Session 1");
+    await page.click("#bnav-schedule");
+    const rows = page.locator("#sched-list .sched-row");
+    await expect(rows).toHaveCount(28);
+    await expect(rows.nth(0)).toContainText("Done");
+    await expect(rows.nth(1)).toContainText("Sep 22, 2026");
+    void byId;
     expect(state.requests.some((r) => r.includes("/realtime/"))).toBe(false);
   });
 
@@ -152,15 +246,23 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await unlockOrganizer(page);
     await page.evaluate((id) => approvePlayer(id), newId);
     await expect.poll(() => state.players.find((p) => p.id === newId)!.approved).toBe(true);
-    state.state["current_session"] = { value: JSON.stringify({ number: 2, cycle: 1, assignments: { 1: [1, 2, 3, 4] }, scores: {}, movements: [], preTosses: {} }), version: 3 };
     await page.evaluate(() => signOut());
     await signIn(page, "christygeorge993+regular@gmail.com");
     await expect(page.locator("#page-home")).toHaveClass(/active/);
+    // Voting is open for the upcoming session before the organizer starts the night.
+    await expect(page.locator("#next-date")).toHaveText("Session 1 — Sep 15, 2026");
+    await expect(page.locator("#home-vote")).toContainText("Vote: are you playing Session 1 (Sep 15, 2026)");
+    await page.locator("#home-vote button", { hasText: "I'm Coming" }).click();
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === newId)?.session_number).toBe(1);
+    // Once the organizer starts Session 2 (Session 1 done elsewhere), the same card asks about Session 2.
+    state.state["current_session"] = { value: JSON.stringify({ number: 2, cycle: 1, assignments: { 1: [1, 2, 3, 4] }, scores: {}, movements: [], preTosses: {} }), version: 3 };
+    await page.evaluate(async () => { await loadAll(); renderAll(); });
+    await expect(page.locator("#next-date")).toContainText("Session 2 — Sep 22, 2026 · in progress");
     await expect(page.locator("#home-vote")).toContainText("Vote: are you playing Session 2");
     await page.locator("#home-vote button", { hasText: "I'm Coming" }).click();
-    await expect.poll(() => state.rsvps.find((r) => r.player_id === newId)?.response).toBe("coming");
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === newId && r.session_number === 2)?.response).toBe("coming");
     await page.locator("#home-vote button", { hasText: "Not Coming" }).click();
-    await expect.poll(() => state.rsvps.find((r) => r.player_id === newId)?.response).toBe("notcoming");
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === newId && r.session_number === 2)?.response).toBe("notcoming");
     await expect(page.locator("#home-vote")).toContainText("Sit this one out");
 
     // Uninvited stranger: no registration.
