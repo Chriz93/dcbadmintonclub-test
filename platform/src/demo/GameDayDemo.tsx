@@ -18,6 +18,11 @@ import {
 } from "lucide-react";
 import { rankings } from "../domain/courts";
 import {
+  courtMovements,
+  movementText,
+  roundStatus,
+} from "../domain/round-status";
+import {
   activeCourts,
   allMatches,
   courtFor,
@@ -25,6 +30,7 @@ import {
   finishDemo,
   makeDemo,
   makeRound,
+  movementRevision,
   nextCourts,
   playerName,
   players,
@@ -48,6 +54,7 @@ type Screen =
   | "schedule"
   | "admin"
   | "movement"
+  | "movements"
   | "sessions"
   | "profile";
 type StandTab =
@@ -260,7 +267,8 @@ function ScoreCard({
 export default function GameDayDemo() {
   const [state, setState] = useState(makeDemo),
     [screen, setScreen] = useState<Screen>("home"),
-    [step, setStep] = useState(0);
+    [step, setStep] = useState(0),
+    [guideOpen, setGuideOpen] = useState(true);
   const [role, setRole] = useState<"player" | "admin">("player"),
     [viewer, setViewer] = useState("demo-13"),
     [profile, setProfile] = useState("demo-13");
@@ -298,6 +306,70 @@ export default function GameDayDemo() {
     myLast = matches
       .filter((m) => scored(m) && [...m.a, ...m.b].includes(viewer))
       .at(-1);
+  const progress = roundStatus(round.courts, round.matches);
+  const incoming =
+    round.number > 1
+      ? courtMovements(session.rounds[round.number - 2].courts, round.courts)
+      : [];
+  const published = round.publishedNext
+    ? courtMovements(round.courts, round.publishedNext)
+    : [];
+  const myProgress = progress.courts.find(
+    (c) => c.court === courtFor(round.courts, viewer),
+  );
+  const myNext = !active.complete
+    ? current.matches.find((m) => !scored(m) && m.court === myCourt)
+    : undefined;
+  const lastPublished = [...active.rounds]
+    .reverse()
+    .find((r) => r.publishedNext);
+  const myMovement = lastPublished
+    ? courtMovements(lastPublished.courts, lastPublished.publishedNext!).find(
+        (m) => m.id === viewer,
+      )
+    : undefined;
+  const showMovements = () => {
+    const latest = round.publishedNext
+      ? round
+      : [...session.rounds]
+          .reverse()
+          .find((r) => r.number < round.number && r.publishedNext);
+    setRoundNumber(latest?.number ?? round.number);
+    setScreen("movements");
+  };
+  const progressCard = (
+    <section className="gd-note gd-round-status" aria-label="Round progress">
+      <strong>
+        Round {round.number} · {progress.completed} / {progress.expected} games
+        complete
+      </strong>
+      <p>
+        {round.publishedNext
+          ? "Movement published. View the saved movements below."
+          : progress.state === "invalid"
+            ? `Christy needs to repair this round: ${progress.error}`
+            : progress.state === "ready"
+              ? "All courts finished. Stay on your court until Christy publishes the next assignments."
+              : myProgress?.completed === myProgress?.expected &&
+                  myProgress?.expected
+                ? "Your court is finished. Waiting for the other courts—no movement yet."
+                : "Finish every scheduled game. Courts move together after Christy reviews and publishes."}
+      </p>
+      <div className="gd-round-counters">
+        {progress.courts
+          .filter((c) => c.expected)
+          .map((c) => (
+            <span key={c.court}>
+              C{c.court}: {c.completed}/{c.expected}
+              {c.completed === c.expected ? " ✓" : ""}
+            </span>
+          ))}
+      </div>
+      <button className="gd-button" onClick={showMovements}>
+        Court movements
+      </button>
+    </section>
+  );
   const selectedPlayers = players.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
@@ -406,7 +478,7 @@ export default function GameDayDemo() {
   }
   function move() {
     run(
-      () => publishMovement(state),
+      () => publishMovement(state, movementRevision(current)),
       current.number === 4
         ? "Demo session closed. Final placements and official ELO are published."
         : "Movement published. The next round is ready.",
@@ -639,12 +711,27 @@ export default function GameDayDemo() {
         <span>
           25 fictional players · Local simulation · Changes reset on reload
         </span>
+        <button
+          aria-expanded={guideOpen}
+          aria-controls="game-day-guide"
+          onClick={() => {
+            stop();
+            setGuideOpen(!guideOpen);
+          }}
+        >
+          {guideOpen ? "Hide walkthrough" : "Show walkthrough"}
+        </button>
         <button onClick={reset}>
           <RotateCcw size={14} /> Reset demo
         </button>
       </div>
-      <div className="gd-layout">
-        <aside className="gd-guide" aria-label="Game-day walkthrough">
+      <div className={`gd-layout ${guideOpen ? "" : "gd-guide-closed"}`}>
+        <aside
+          id="game-day-guide"
+          hidden={!guideOpen}
+          className="gd-guide"
+          aria-label="Game-day walkthrough"
+        >
           <span className="gd-kicker">YOUR GAME-DAY WALKTHROUGH</span>
           <div className="gd-row">
             <span>
@@ -770,11 +857,13 @@ export default function GameDayDemo() {
               <h1 ref={heading}>
                 {screen === "profile"
                   ? playerName(profile)
-                  : screen === "movement"
-                    ? "Review movement"
-                    : screen === "sessions"
-                      ? "Session results"
-                      : nav.find(([s]) => s === screen)?.[1]}
+                  : screen === "movements"
+                    ? "Court movements"
+                    : screen === "movement"
+                      ? "Review movement"
+                      : screen === "sessions"
+                        ? "Session results"
+                        : nav.find(([s]) => s === screen)?.[1]}
               </h1>
             </div>
             <span className="gd-live">
@@ -849,6 +938,76 @@ export default function GameDayDemo() {
                         ],
                       ]}
                     />
+                    {myMovement && (
+                      <p className="gd-personal-movement">
+                        <strong>{movementText(myMovement)}</strong> · After
+                        round {lastPublished!.number}
+                        {active.complete ? " · Final placement" : ""}
+                      </p>
+                    )}
+                    {myNext ? (
+                      <div className="gd-next-game" aria-label="My next game">
+                        <h3>
+                          Round {current.number} · Game{" "}
+                          {myNext.id.split("-g")[1]} · C{myCourt}
+                        </h3>
+                        {myNext.rest.includes(viewer) ? (
+                          <p>
+                            <strong>You rest this game.</strong> Your court has
+                            five players; everyone rests once.
+                          </p>
+                        ) : (
+                          <>
+                            <p>
+                              Partner:{" "}
+                              <strong>
+                                {(myNext.a.includes(viewer)
+                                  ? myNext.a
+                                  : myNext.b
+                                )
+                                  .filter((id) => id !== viewer)
+                                  .map(playerName)
+                                  .join(", ") || "Singles game"}
+                              </strong>
+                            </p>
+                            <p>
+                              Opponents:{" "}
+                              {(myNext.a.includes(viewer) ? myNext.b : myNext.a)
+                                .map(playerName)
+                                .join(" + ")}
+                            </p>
+                          </>
+                        )}
+                        <p>
+                          First to {myNext.target}.{" "}
+                          {myNext.rest.length > 0 &&
+                          !myNext.rest.includes(viewer)
+                            ? `Resting: ${myNext.rest.map(playerName).join(", ")}.`
+                            : ""}
+                        </p>
+                        <button
+                          className="gd-button gd-primary"
+                          onClick={() => {
+                            setSessionNumber(4);
+                            setRoundNumber(current.number);
+                            setScoreCourt("mine");
+                            setScreen("scores");
+                          }}
+                        >
+                          My scores
+                        </button>
+                      </div>
+                    ) : !active.complete ? (
+                      <p>
+                        Your court has finished. Wait for Christy to publish
+                        movement.
+                      </p>
+                    ) : (
+                      <p>
+                        Session complete. Your official ELO and full match
+                        history are ready.
+                      </p>
+                    )}
                     <div className="gd-actions">
                       <button
                         className="gd-button gd-primary"
@@ -1010,6 +1169,7 @@ export default function GameDayDemo() {
           {screen === "courts" && (
             <>
               {selectors}
+              {progressCard}
               <div className="gd-tabs">
                 <button
                   className={gym ? "active" : ""}
@@ -1051,6 +1211,17 @@ export default function GameDayDemo() {
                           className={id === viewer ? "gd-current-player" : ""}
                         >
                           <Name id={id} onOpen={open} />
+                          {incoming.find((m) => m.id === id) &&
+                            (() => {
+                              const m = incoming.find((m) => m.id === id)!;
+                              return (
+                                <small
+                                  className={`gd-movement-label gd-${m.direction}`}
+                                >
+                                  {movementText(m)}
+                                </small>
+                              );
+                            })()}
                         </div>
                       ))}
                     </div>
@@ -1114,6 +1285,7 @@ export default function GameDayDemo() {
           {screen === "scores" && (
             <>
               {selectors}
+              {progressCard}
               <div className="gd-row gd-score-progress">
                 <strong>
                   {round.matches.filter(scored).length} / {round.matches.length}{" "}
@@ -1168,7 +1340,16 @@ export default function GameDayDemo() {
                     onSave={(a, b, reason) =>
                       run(
                         () =>
-                          recordScore(state, m.id, a, b, role, viewer, reason),
+                          recordScore(
+                            state,
+                            m.id,
+                            a,
+                            b,
+                            role,
+                            viewer,
+                            reason,
+                            m.revision,
+                          ),
                         "Result saved in the demo. Statistics updated; official ELO uses completed sessions.",
                       )
                     }
@@ -1200,6 +1381,11 @@ export default function GameDayDemo() {
 
           {screen === "movement" && (
             <>
+              <p className="gd-note">
+                {current.publishedNext
+                  ? "Already published. These saved assignments remain unchanged by later score corrections."
+                  : "Preview only. Players stay on their current courts until Christy publishes."}
+              </p>
               <p>
                 Round {current.number}: {current.matches.filter(scored).length}{" "}
                 / 20 games complete. Movement uses win %, points %, then stable
@@ -1219,7 +1405,7 @@ export default function GameDayDemo() {
                               b: m.scoreB!,
                             })),
                         ),
-                        next = nextCourts(current);
+                        next = current.publishedNext ?? nextCourts(current);
                       return (
                         <section className="gd-card" key={c}>
                           <h3>Court {c + 1}</h3>
@@ -1301,6 +1487,98 @@ export default function GameDayDemo() {
                   </button>
                 </section>
               )}
+            </>
+          )}
+
+          {screen === "movements" && (
+            <>
+              {selectors}
+              <p className="gd-note">
+                {round.publishedNext
+                  ? `Published after round ${round.number}${session.complete && round.number === session.rounds.length ? " · Final placement, no additional round" : ` · Assignments for round ${round.number + 1}`}.`
+                  : "No movements published for this round. Finish every game, then Christy reviews and publishes."}
+              </p>
+              {published.length > 0 ? (
+                <>
+                  <p>
+                    Saved assignments for all {published.length} players. Later
+                    score corrections update results and ELO; they do not
+                    rewrite where people played.
+                  </p>
+                  <div className="gd-movement-history">
+                    {["up", "down", "stayed", "joined", "sat_out"].map(
+                      (direction) => {
+                        const rows = published.filter(
+                          (m) => m.direction === direction,
+                        );
+                        if (!rows.length) return null;
+                        return (
+                          <section className="gd-card" key={direction}>
+                            <h2>
+                              {
+                                {
+                                  up: "↑ Moved up",
+                                  down: "↓ Moved down",
+                                  stayed: "Stayed on court",
+                                  joined: "Joined",
+                                  sat_out: "Sitting out",
+                                }[direction]
+                              }{" "}
+                              · {rows.length}
+                            </h2>
+                            {rows.map((m) => (
+                              <div
+                                className={`gd-final-row ${m.id === viewer ? "gd-you-row" : ""}`}
+                                key={m.id}
+                              >
+                                <span>
+                                  <Name id={m.id} onOpen={open} />
+                                  {m.id === viewer && <small> YOU</small>}
+                                </span>
+                                <strong className={`gd-${m.direction}`}>
+                                  {movementText(m)}
+                                </strong>
+                              </div>
+                            ))}
+                          </section>
+                        );
+                      },
+                    )}
+                  </div>
+                </>
+              ) : (
+                progressCard
+              )}
+              <details className="gd-card">
+                <summary>How court movement works</summary>
+                <p>
+                  Every active court finishes its full rotation. Four players
+                  play three games to 21; five players play five games to 15,
+                  with one rest each. Highest win percentage ranks first, then
+                  points earned divided by maximum possible points. An exact tie
+                  uses the same stable player identifier each time.
+                </p>
+                <p>
+                  The top player moves up one court and the bottom player moves
+                  down one court. Court 1’s top player and the lowest active
+                  court’s bottom player stay. All adjacent swaps happen
+                  together, preserving each court’s size. ELO is separate and
+                  updates officially when Christy closes the session.
+                </p>
+              </details>
+              <button
+                className="gd-button"
+                onClick={() => {
+                  setRoundNumber(
+                    Math.min(round.number + 1, session.rounds.length),
+                  );
+                  setScreen("courts");
+                }}
+              >
+                {session.complete && round.number === session.rounds.length
+                  ? "See last played courts"
+                  : "See court assignments"}
+              </button>
             </>
           )}
 
@@ -1931,6 +2209,10 @@ export default function GameDayDemo() {
               onClick={() => {
                 stop();
                 setScreen(key);
+                if (key === "courts" || key === "scores") {
+                  setSessionNumber(4);
+                  setRoundNumber(current.number);
+                }
                 setNotice("");
               }}
             >

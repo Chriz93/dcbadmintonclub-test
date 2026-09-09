@@ -6,6 +6,7 @@ import {
   type Result,
 } from "../domain/courts";
 import { nextRoundPlacement } from "../domain/placement";
+import { roundStatus } from "../domain/round-status";
 
 export const players = [
   "Alex Morgan",
@@ -78,8 +79,22 @@ export const courtFor = (courts: string[][], id: string) =>
 
 /** Same frozen-per-round, K=32 mean-delta method as rebuild_elo in migration 014. */
 export function rateRound(before: Ratings, matches: Match[]): Ratings {
+  if (Object.values(before).some((r) => !Number.isFinite(r)))
+    throw new Error("Every ELO rating must be finite.");
+  if (new Set(matches.map((m) => m.id)).size !== matches.length)
+    throw new Error("Duplicate game cannot count twice toward ELO.");
   const changes: Record<string, number[]> = {};
   for (const m of matches.filter(scored)) {
+    const ids = [...m.a, ...m.b, ...m.rest];
+    if (
+      !m.id ||
+      m.a.length < 1 ||
+      m.a.length > 2 ||
+      m.a.length !== m.b.length ||
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !id || !Object.hasOwn(before, id))
+    )
+      throw new Error("ELO requires distinct known players on valid teams.");
     validateScore(m.scoreA!, m.scoreB!, m.target);
     const avg = (team: string[]) =>
       team.reduce((n, id) => n + before[id], 0) / team.length;
@@ -108,7 +123,7 @@ export function makeRound(
     courts: courts.map((c) => [...c]),
     publishedNext: null,
     matches: courts.flatMap((ids, c) =>
-      rotation(ids).map((g, i) => ({
+      (ids.length ? rotation(ids) : []).map((g, i) => ({
         ...g,
         id: `s${session}-r${number}-c${c + 1}-g${i + 1}`,
         court: c + 1,
@@ -124,7 +139,8 @@ export function makeRound(
 export function sampleScore(m: Match): [number, number] {
   const n = Number(m.id.split("-g")[1]);
   // Session 1 / Court 6 produces a five-way tie, exercising the final stable tie-break.
-  if (m.session === 1 && m.court === 6) return [15, 10];
+  if (m.session === 1 && m.court === 6)
+    return [m.target, Math.max(0, m.target - 5)];
   const winA = (m.session * 11 + m.round * 7 + m.court * 3 + n) % 5 < 3;
   const loser = Math.max(
     3,
@@ -148,7 +164,9 @@ export function fillRound(round: Round): Round {
   };
 }
 export function nextCourts(round: Round) {
-  if (round.matches.some((m) => !scored(m)))
+  const status = roundStatus(round.courts, round.matches);
+  if (status.state === "invalid") throw new Error(status.error!);
+  if (status.state !== "ready")
     throw new Error("Finish every game before reviewing movement.");
   return nextRoundPlacement(
     round.courts,
@@ -215,12 +233,17 @@ export function recordScore(
   actor: "player" | "admin",
   viewer: string,
   reason = "",
+  expectedRevision?: number,
 ): DemoState {
+  if (actor !== "admin" && actor !== "player")
+    throw new Error("Unknown scoring role.");
   const copy = structuredClone(state);
   const m = copy.sessions
     .flatMap((s) => s.rounds.flatMap((r) => r.matches))
     .find((g) => g.id === matchId);
   if (!m) throw new Error("Match not found.");
+  if (expectedRevision !== undefined && expectedRevision !== m.revision)
+    throw new Error("This result changed. Reload before saving again.");
   if (actor === "player" && ![...m.a, ...m.b].includes(viewer))
     throw new Error("You can enter scores only for your own matches.");
   if (scored(m) && actor !== "admin")
@@ -243,17 +266,36 @@ export function scoreCurrentRound(state: DemoState): DemoState {
   const copy = structuredClone(state),
     s = copy.sessions[3];
   if (s.complete) return copy;
+  const status = roundStatus(s.rounds.at(-1)!.courts, s.rounds.at(-1)!.matches);
+  if (status.state === "invalid") throw new Error(status.error!);
+  if (status.state === "ready") return copy;
   s.rounds[s.rounds.length - 1] = fillRound(s.rounds.at(-1)!);
   copy.audit.unshift(
     `Demo results filled: session 4, round ${s.rounds.length}, 20 of 20 games scored.`,
   );
   return copy;
 }
-export function publishMovement(state: DemoState): DemoState {
+export const movementRevision = (round: Round) =>
+  JSON.stringify([
+    round.number,
+    round.courts,
+    round.matches.map((m) => [m.id, m.revision]),
+  ]);
+export function publishMovement(
+  state: DemoState,
+  expectedRevision?: string,
+): DemoState {
   const copy = structuredClone(state),
     s = copy.sessions[3];
   if (s.complete) throw new Error("The session is already complete.");
   const round = s.rounds.at(-1)!;
+  if (
+    expectedRevision !== undefined &&
+    expectedRevision !== movementRevision(round)
+  )
+    throw new Error(
+      "The round changed. Review movement again before publishing.",
+    );
   const courts = nextCourts(round);
   round.publishedNext = courts;
   if (round.number === 4) {

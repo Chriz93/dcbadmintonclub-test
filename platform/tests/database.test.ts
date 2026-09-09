@@ -180,7 +180,7 @@ describe.sequential("operations, queue and rate limits", () => {
       `insert into club_app.courts(id,club_id,venue_id,number) values('${court}','${c}','${venueId}',1);update club_app.sessions set status='active' where id='${s}';insert into club_app.matches(id,club_id,session_id,court_id,round,game,target,side_a,side_b) values('${match}','${c}','${s}','${court}',1,1,15,array['${u}']::uuid[],array['${v}']::uuid[]);`,
     );
     await expect(
-      as(u, `select club_app.submit_score('${c}','${match}',15,12,0)`),
+      as(admin, `select club_app.submit_score('${c}','${match}',15,12,0)`),
     ).rejects.toThrow("Forbidden");
     await expect(
       as(
@@ -189,11 +189,8 @@ describe.sequential("operations, queue and rate limits", () => {
         "aal2",
       ),
     ).rejects.toThrow("Invalid completed score");
-    await as(
-      admin,
-      `select club_app.submit_score('${c}','${match}',15,12,0)`,
-      "aal2",
-    );
+    // Ordinary participants can submit their own first result (migration 033).
+    await as(u, `select club_app.submit_score('${c}','${match}',15,12,0)`);
     await expect(
       as(
         admin,

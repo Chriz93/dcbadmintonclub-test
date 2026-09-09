@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { mockSignIn, signIn } from "./auth-fixture";
+import { mockSignIn, signIn, mockUser } from "./auth-fixture";
 import { allocate, rotation } from "../../src/domain/courts";
 import { nextRoundPlacement } from "../../src/domain/placement";
 const people = Array.from({ length: 25 }, (_, i) => ({
@@ -246,7 +246,7 @@ test("25 players play all 80 games, rotate across four rounds and complete the s
           .fill(String(b));
         await section
           .getByRole("button", { name: "Save official score", exact: true })
-          .nth((round - 1) * games.length + index)
+          .nth(index)
           .click();
         await expect.poll(() => game.revision).toBe(1);
         roundResults.push({
@@ -352,4 +352,112 @@ test("malformed next-session data gives a retry and recovers without an uncaught
   ).toContainText("No upcoming session yet");
   expect(attempts).toBe(beforeRetry + 1);
   expect(errors).toEqual([]);
+});
+
+test("member scores only their own games and sees published round history (mock API)", async ({
+  page,
+}) => {
+  const { state, session } = await fixture(page, false);
+  session.status = "active";
+  const ids = people.map((p, i) => (i === 12 ? mockUser.id : p.user_id));
+  const before = allocate(ids, 6);
+  const addRound = (lineup: string[][], r: number, scored: boolean) => {
+    state.assignments.push(
+      ...lineup.flatMap((ids, c) =>
+        ids.map((user_id, i) => ({
+          user_id,
+          court_id: courts[c].id,
+          round: r,
+          ordinal: i + 1,
+        })),
+      ),
+    );
+    state.matches.push(
+      ...lineup.flatMap((ids, c) =>
+        rotation(ids).map((g, i) => ({
+          id: `${r}-${c}-${i}`,
+          court_id: courts[c].id,
+          round: r,
+          game: i + 1,
+          target: g.target,
+          side_a: g.a,
+          side_b: g.b,
+          score_a: scored ? g.target : null,
+          score_b: scored ? 10 : null,
+          revision: scored ? 1 : 0,
+        })),
+      ),
+    );
+  };
+  addRound(before, 1, true);
+  const after = nextRoundPlacement(
+    before,
+    state.matches.map((m) => ({
+      game: {
+        a: m.side_a,
+        b: m.side_b,
+        rest: before[courts.findIndex((c) => c.id === m.court_id)].filter(
+          (id) => ![...m.side_a, ...m.side_b].includes(id),
+        ),
+        target: m.target,
+      },
+      a: m.score_a!,
+      b: m.score_b!,
+    })),
+  );
+  addRound(after, 2, false);
+  await refresh(page);
+  await expect(
+    page.getByRole("combobox", { name: "View round", exact: true }),
+  ).toHaveValue("2");
+  await expect(
+    page.getByRole("button", { name: "Save official score", exact: true }),
+  ).toHaveCount(20);
+  const mine = state.matches.filter(
+    (m) => m.round === 2 && [...m.side_a, ...m.side_b].includes(mockUser.id),
+  );
+  await expect(
+    page
+      .getByRole("button", { name: "Save official score", exact: true })
+      .and(page.locator(":enabled")),
+  ).toHaveCount(mine.length);
+  const m = mine[0],
+    section = page
+      .getByRole("heading", {
+        name: `Court ${courts.find((c) => c.id === m.court_id)!.number}`,
+        exact: true,
+      })
+      .locator("..");
+  await section
+    .getByLabel(`Round 2 game ${m.game} team A score`)
+    .fill(String(m.target));
+  await section.getByLabel(`Round 2 game ${m.game} team B score`).fill("10");
+  await section
+    .getByRole("button", { name: "Save official score", exact: true })
+    .nth(m.game - 1)
+    .click();
+  await expect.poll(() => state.submissions).toBe(1);
+  await expect(
+    section
+      .getByRole("button", { name: "Save official score", exact: true })
+      .nth(m.game - 1),
+  ).toBeDisabled();
+  await page
+    .getByRole("combobox", { name: "View round", exact: true })
+    .selectOption("1");
+  await page
+    .getByText("Court movements after round 1", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Published assignments for round 2.", { exact: false }),
+  ).toBeVisible();
+  const history = page
+    .locator("details")
+    .filter({
+      has: page.getByText("Court movements after round 1", { exact: true }),
+    });
+  await expect(history.locator("li")).toHaveCount(25);
+  await expect(history).toContainText("Moved up");
+  await expect(history).toContainText("Moved down");
+  expect(state.privilegedReads).toBe(0);
 });

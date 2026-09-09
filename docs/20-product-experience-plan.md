@@ -12,6 +12,8 @@ Reuse the original navigation, visual gym arrangement and useful performance vie
 
 The reference is the original site at https://chriz93.github.io/dcbadmintonclub/, the three supplied screenshots, and its local `index.html`. Old prices, dates, capacity assumptions and access-control implementation are not current season requirements.
 
+September 9 follow-up: round progress, persistent movement history, current-round score forms and participant scoring are implemented in local source. Migrations 032–034 and hosted integration remain pending. The updated verification and full legacy parity matrix are in [22-round-movements-and-legacy-review.md](22-round-movements-and-legacy-review.md). The table below records the original planning baseline, not the current delivery status.
+
 ## What is present and what is missing
 
 | Capability | Verified current situation | Required result |

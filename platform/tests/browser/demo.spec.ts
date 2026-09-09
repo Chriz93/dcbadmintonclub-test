@@ -242,3 +242,116 @@ test("phone and desktop layouts retain all courts without page overflow", async 
   await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(page.locator(".gd-court-list .gd-court")).toHaveCount(6);
 });
+
+test("published movements remain accessible for every round, including final placements", async ({
+  page,
+}) => {
+  await page.getByLabel("Jump to a step").selectOption("7");
+  await page
+    .getByRole("button", { name: "Publish round 2", exact: true })
+    .click();
+  await expect(page.locator(".gd-movement-label")).toHaveCount(25);
+  await expect(page.locator(".gd-movement-label.gd-up")).toHaveCount(5);
+  await expect(page.locator(".gd-movement-label.gd-down")).toHaveCount(5);
+  await page
+    .getByRole("button", { name: "Court movements", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Court movements" }),
+  ).toBeVisible();
+  await expect(page.locator(".gd-movement-history .gd-final-row")).toHaveCount(
+    25,
+  );
+  await expect(page.getByRole("main")).toContainText(
+    "Published after round 1 · Assignments for round 2",
+  );
+  const first = await page.locator(".gd-movement-history").innerText();
+  await page.getByLabel("Jump to a step").selectOption("8");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Courts", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Court movements", exact: true })
+    .click();
+  await expect(page.getByRole("main")).toContainText(
+    "Final placement, no additional round",
+  );
+  await page
+    .getByRole("combobox", { name: "Round", exact: true })
+    .selectOption("1");
+  await expect(page.locator(".gd-movement-history")).toHaveText(first, {
+    useInnerText: true,
+  });
+  await expect(
+    page
+      .getByRole("combobox", { name: "Round", exact: true })
+      .locator('option[value="5"]'),
+  ).toHaveCount(0);
+});
+
+test("unfinished round shows progress without publishing phantom movements", async ({
+  page,
+}) => {
+  await page.getByLabel("Jump to a step").selectOption("5");
+  await expect(
+    page.getByRole("region", { name: "Round progress" }),
+  ).toContainText("0 / 20 games complete");
+  await page
+    .getByRole("button", { name: "Court movements", exact: true })
+    .click();
+  await expect(page.getByRole("main")).toContainText(
+    "No movements published for this round",
+  );
+  await expect(page.locator(".gd-movement-history .gd-final-row")).toHaveCount(
+    0,
+  );
+});
+
+test("a player has their next game, opponents and a direct scores action", async ({
+  page,
+}) => {
+  await page.getByLabel("Jump to a step").selectOption("5");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Home", exact: true })
+    .click();
+  const next = page.getByLabel("My next game", { exact: true });
+  await expect(next).toContainText("Round 1 · Game 1");
+  await expect(next).toContainText("Partner:");
+  await expect(next).toContainText("Opponents:");
+  await next.getByRole("button", { name: "My scores", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Scores" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Show games", exact: true }),
+  ).toHaveValue("mine");
+});
+
+test("movement history fits on screen and names remain clickable", async ({
+  page,
+}) => {
+  await page.getByLabel("Jump to a step").selectOption("7");
+  await page
+    .getByRole("button", { name: "Publish round 2", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Court movements", exact: true })
+    .click();
+  const width = await page.evaluate(() => ({
+    content: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }));
+  expect(width.content).toBeLessThanOrEqual(width.viewport + 1);
+  await page
+    .locator(".gd-movement-history")
+    .getByRole("button", { name: "Maya Chen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Maya Chen" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Match history", exact: true }),
+  ).toBeVisible();
+});

@@ -2,11 +2,27 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 const files = readdirSync("dist/assets");
-const startup = files.filter(
-  (f) =>
-    /^(index|App|placement)-/.test(f) &&
-    (f.endsWith(".js") || f.endsWith(".css")),
-);
+// Follow Vite's actual static imports so shared chunks cannot escape the budget or
+// offline shell when Rollup renames them. Heavy dynamic PDF/demo routes stay lazy.
+const manifest: Record<
+  string,
+  { file: string; css?: string[]; imports?: string[] }
+> = JSON.parse(readFileSync("dist/.vite/manifest.json", "utf8"));
+const startupFiles = new Set<string>(),
+  visited = new Set<string>();
+function include(key: string) {
+  if (visited.has(key)) return;
+  visited.add(key);
+  const entry = manifest[key];
+  if (!entry) throw new Error(`Missing build entry: ${key}`);
+  startupFiles.add(entry.file.replace(/^assets\//, ""));
+  for (const file of entry.css ?? [])
+    startupFiles.add(file.replace(/^assets\//, ""));
+  for (const dependency of entry.imports ?? []) include(dependency);
+}
+include("index.html");
+include("src/App.tsx");
+const startup = [...startupFiles].sort();
 const gzip = startup.reduce(
   (n, f) => n + gzipSync(readFileSync("dist/assets/" + f)).length,
   0,

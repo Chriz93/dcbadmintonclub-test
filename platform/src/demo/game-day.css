@@ -1172,3 +1172,56 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Round progress and movements remain readable without relying on colour. */
+.gd-round-status p {
+  margin: 0.6rem 0;
+}
+.gd-round-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.7rem 0 1rem;
+}
+.gd-round-counters span {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #385170;
+  border-radius: 0.4rem;
+}
+.gd-court-players .gd-movement-label {
+  display: block;
+  font-size: 0.65rem;
+  line-height: 1.4;
+  white-space: normal;
+}
+.gd-next-game {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #101f32;
+  border-radius: 0.7rem;
+}
+.gd-personal-movement {
+  border-left: 3px solid #20c5dc;
+  padding: 0.7rem;
+}
+.gd-movement-history .gd-final-row {
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.gd-movement-history .gd-final-row strong {
+  font-size: 0.85rem;
+}
+.gd-movement-history h2 {
+  margin-bottom: 0.8rem;
+}
+.gd-stayed {
+  color: #a9bed4;
+}
+
+.gd-layout.gd-guide-closed {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1050px;
+}
+.gd-guide[hidden] {
+  display: none;
+}

@@ -4,6 +4,11 @@ import { z } from "zod";
 import { supabase } from "../services/auth";
 import { validateScore } from "../domain/courts";
 import { Card } from "./ui";
+import {
+  courtMovements,
+  movementText,
+  roundStatus,
+} from "../domain/round-status";
 const clubSchema = z.object({ id: z.string(), name: z.string() });
 const sessionSchema = z.object({
   id: z.string(),
@@ -64,6 +69,21 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   const [targets, setTargets] = useState(targetsSchema.parse({}));
   const [restartId, setRestartId] = useState<number | null>(null);
   const [round, setRound] = useState(1);
+  const [viewRound, setViewRound] = useState(1);
+  const [viewer, setViewer] = useState("");
+  useEffect(() => {
+    let alive = true;
+    void supabase?.auth.getSession().then(({ data }) => {
+      if (alive) setViewer(data.session?.user.id ?? "");
+    });
+    const sub = supabase?.auth.onAuthStateChange((_event, authSession) => {
+      if (alive) setViewer(authSession?.user.id ?? "");
+    });
+    return () => {
+      alive = false;
+      sub?.data.subscription.unsubscribe();
+    };
+  }, []);
   const [reason, setReason] = useState("");
   const [correctionReason, setCorrectionReason] = useState("");
   const [admin, setAdmin] = useState(false);
@@ -75,6 +95,49 @@ export function SessionWorkspace({ online }: { online: boolean }) {
   const disabled = busy || !online || ready !== selected;
   const name = (id: string) =>
     roster.find((p) => p.user_id === id)?.display_name ?? "Club player";
+  const roundNumbers = [
+    ...new Set([
+      ...matches.map((m) => m.round),
+      ...lineups.map((a) => a.round),
+    ]),
+  ].sort((a, b) => a - b);
+  const savedCourts = (r: number) =>
+    courts.map((c) =>
+      lineups
+        .filter((a) => a.round === r && a.court_id === c.id)
+        .sort(
+          (a, b) =>
+            (a.ordinal ?? 1000) - (b.ordinal ?? 1000) ||
+            a.user_id.localeCompare(b.user_id),
+        )
+        .map((a) => a.user_id),
+    );
+  const roundProgress = (r: number) => {
+    const saved = savedCourts(r);
+    return roundStatus(
+      saved,
+      matches
+        .filter((m) => m.round === r)
+        .map((m) => ({
+          id: m.id,
+          court: courts.findIndex((c) => c.id === m.court_id) + 1,
+          a: m.side_a,
+          b: m.side_b,
+          rest:
+            saved[courts.findIndex((c) => c.id === m.court_id)]?.filter(
+              (id) => ![...m.side_a, ...m.side_b].includes(id),
+            ) ?? [],
+          target: m.target,
+          scoreA: m.score_a,
+          scoreB: m.score_b,
+        })),
+      targets,
+    );
+  };
+  const progress = roundNumbers.length ? roundProgress(viewRound) : null;
+  const movements = roundNumbers.includes(viewRound + 1)
+    ? courtMovements(savedCourts(viewRound), savedCourts(viewRound + 1))
+    : [];
   async function loadClubs() {
     if (!supabase) return;
     setBusy(true);
@@ -176,7 +239,9 @@ export function SessionWorkspace({ online }: { online: boolean }) {
       ]);
       if (results.some((r) => r.error)) throw new Error();
       setCourts(z.array(courtSchema).parse(results[0].data));
-      setMatches(z.array(matchSchema).parse(results[1].data));
+      const loadedMatches = z.array(matchSchema).parse(results[1].data);
+      setMatches(loadedMatches);
+      setViewRound(Math.max(1, ...loadedMatches.map((m) => m.round)));
       setLineups(
         z
           .array(
@@ -624,7 +689,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                     onClick={async () => {
                       if (
                         !window.confirm(
-                          "Save the reviewed assignments and queue notices for opted-in players?",
+                          "Publish the reviewed court assignments for players?",
                         )
                       )
                         return;
@@ -782,6 +847,90 @@ export function SessionWorkspace({ online }: { online: boolean }) {
             </details>
           )}
           <h3>Matches and rotations</h3>
+          {roundNumbers.length > 0 && (
+            <>
+              <label>
+                View round
+                <select
+                  value={viewRound}
+                  onChange={(e) => setViewRound(Number(e.target.value))}
+                >
+                  {roundNumbers.map((r) => (
+                    <option key={r} value={r}>
+                      Round {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {progress && (
+                <section aria-label="Round progress">
+                  <h4>
+                    Round {viewRound}: {progress.completed} /{" "}
+                    {progress.expected} games complete
+                  </h4>
+                  <p>
+                    {movements.length
+                      ? "Next-round assignments published. Open Court movements below."
+                      : progress.state === "invalid"
+                        ? `This round needs administrator repair: ${progress.error}`
+                        : progress.state === "ready"
+                          ? session.status === "completed"
+                            ? "Session completed. Results are official."
+                            : "All courts finished. Wait for Christy to review and publish movement or close the session."
+                          : "Finish every game on every active court. A finished court waits for the others."}
+                  </p>
+                  <p>
+                    {progress.courts
+                      .filter((c) => c.expected)
+                      .map(
+                        (c) =>
+                          `C${courts[c.court - 1].number}: ${c.completed}/${c.expected}`,
+                      )
+                      .join(" · ")}
+                  </p>
+                </section>
+              )}
+              <details>
+                <summary>Court movements after round {viewRound}</summary>
+                {movements.length ? (
+                  <>
+                    <p>
+                      Published assignments for round {viewRound + 1}. Score
+                      corrections do not rewrite played courts.
+                    </p>
+                    <ul>
+                      {movements.map((m) => (
+                        <li key={m.id}>
+                          <strong>
+                            {name(m.id)}
+                            {m.id === viewer ? " (you)" : ""}
+                          </strong>{" "}
+                          —{" "}
+                          {movementText({
+                            ...m,
+                            from:
+                              m.from === null
+                                ? null
+                                : courts[m.from - 1].number,
+                            to: m.to === null ? null : courts[m.to - 1].number,
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p>
+                    No next-round assignments have been published. Closing a
+                    session does not create an extra round.
+                  </p>
+                )}
+              </details>
+              <p>
+                Players can submit their own games once. Christy can correct a
+                saved result with a reason.
+              </p>
+            </>
+          )}
           {matches.length === 0 ? (
             <p>No games assigned yet.</p>
           ) : (
@@ -789,7 +938,9 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               <section key={court.id}>
                 <h4>Court {court.number}</h4>
                 {matches
-                  .filter((m) => m.court_id === court.id)
+                  .filter(
+                    (m) => m.court_id === court.id && m.round === viewRound,
+                  )
                   .map((m) => (
                     <MatchScore
                       key={`${m.id}/${m.revision}`}
@@ -810,7 +961,8 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                       )}
                       disabled={
                         disabled ||
-                        !scorekeeper ||
+                        (!scorekeeper &&
+                          ![...m.side_a, ...m.side_b].includes(viewer)) ||
                         (!admin && m.score_a !== null) ||
                         (!["scheduled", "active"].includes(session.status) &&
                           !(admin && session.status === "completed")) ||
@@ -845,6 +997,23 @@ export function SessionWorkspace({ online }: { online: boolean }) {
                             "Score not confirmed. Refresh to reconcile the current score before retrying.",
                           );
                         }
+                        if (
+                          admin &&
+                          m.score_a !== null &&
+                          session.status === "active"
+                        ) {
+                          setPlan([]);
+                          setSessions((rows) =>
+                            rows.map((s) =>
+                              s.id === selected
+                                ? { ...s, revision: s.revision + 1 }
+                                : s,
+                            ),
+                          );
+                          setMessage(
+                            "Score corrected. Review court movement again before publishing.",
+                          );
+                        }
                         setMatches((rows) =>
                           rows.map((x) =>
                             x.id === m.id
@@ -877,7 +1046,7 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               disabled={
                 disabled ||
                 !matches.length ||
-                matches.some((m) => m.score_a === null)
+                roundNumbers.some((r) => roundProgress(r).state !== "ready")
               }
               onClick={async () => {
                 if (
