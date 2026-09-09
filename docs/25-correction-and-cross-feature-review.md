@@ -27,3 +27,12 @@ Christy reported that correction requests were not working and questioned the co
 The TEST preview is not a claim that every production feature is proven. The gates in [23-connected-product-release.md](23-connected-product-release.md) remain: independently authenticated real member/guardian/admin signing and scoring acceptance, actual remote backup restoration into an isolated destination, reviewed agreement publication, deferred reminder/unsubscribe credentials and delivery tests, and final roster/production reconciliation. No reminder credentials were requested again and no verification email was sent in this review.
 
 The repository-root legacy project is being changed independently. This release stages and deploys only the platform app and this report.
+
+## Published result
+
+- Source commit: `9c51bb7bff82c87a45004725d778f1e94532026d`.
+- [Clean GitHub quality run](https://github.com/Chriz93/dcbadmintonclub-test/actions/runs/34418251203) passed all gates, including the complete 108-case desktop/mobile suite, 1,202 unit/database tests, lint, build and dependency audit.
+- Cloudflare confirmed success in **Preview**, name `league-release`: https://league-release.maplewood-league-test.pages.dev/ . Production was not selected.
+- Upload: 28 public compiled files; archive `/tmp/maplewood-correction-release-20260909.zip`; SHA-256 `e0afb1152d4d56830e1b851bcc4b5a492f8ba92b4e2f8184b1ce1c3185a5ed7f`.
+- Fresh hosted demo loaded `assets/index-DtVK_dtu.js`, matching the TEST build. In the browser, Maya saved Court 4/Game 1 as 21–10, requested 10–21, saw pending status, and Christy's admin view accepted it with a decision reason. The queue showed accepted, zero pending, and the current score 10–21. No browser error logs were reported.
+- The previously open signed-in tab was preserved. It still needs its first reload to receive this release; doing so requires signing in again. No real participant correction or private account permission was modified by the hosted fictional walkthrough.
