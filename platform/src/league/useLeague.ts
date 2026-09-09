@@ -186,12 +186,19 @@ export function useLeague(userId: string) {
     setEditEpoch((n) => n + 1);
     void refresh(true);
   };
-  const canLeave = useCallback(
-    () =>
-      !dirty.current.size ||
-      window.confirm("Discard your unsaved score edits?"),
-    [],
-  );
+  const canLeave = useCallback(() => {
+    if (!dirty.current.size) return true;
+    if (!window.confirm("Discard your unsaved score edits?")) return false;
+    dirty.current.clear();
+    if (pending.current) {
+      setData(pending.current);
+      version.current = pending.current.version;
+      pending.current = null;
+    }
+    setChanged(false);
+    setEditEpoch((n) => n + 1);
+    return true;
+  }, []);
   return {
     choices,
     season,

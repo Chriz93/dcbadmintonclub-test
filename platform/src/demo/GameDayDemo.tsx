@@ -32,6 +32,8 @@ import {
   players,
   publishMovement,
   recordScore,
+  requestDemoCorrection,
+  resolveDemoCorrection,
   scoreCurrentRound,
   scored,
   statsFor,
@@ -44,6 +46,7 @@ import {
   CourtRoster,
   RoundOverview,
 } from "../components/MatchDayViews";
+import { ScoreCorrectionQueue } from "../components/ScoreCorrectionQueue";
 import "./game-day.css";
 
 type Screen =
@@ -165,18 +168,26 @@ function ScoreCard({
   match: m,
   allowed,
   correction,
+  canRequest,
+  pending,
+  onRequest,
   onSave,
   onOpen,
 }: {
   match: Match;
   allowed: boolean;
   correction: boolean;
+  canRequest: boolean;
+  pending: boolean;
+  onRequest: (a: number, b: number, reason: string) => void;
   onSave: (a: number, b: number, reason: string) => void;
   onOpen: (id: string) => void;
 }) {
   const [a, setA] = useState(m.scoreA?.toString() ?? ""),
     [b, setB] = useState(m.scoreB?.toString() ?? ""),
-    [reason, setReason] = useState("");
+    [reason, setReason] = useState(""),
+    [request, setRequest] = useState(false),
+    [error, setError] = useState("");
   return (
     <article className="gd-match">
       <div className="gd-row">
@@ -203,10 +214,32 @@ function ScoreCard({
       {m.rest.length > 0 && (
         <p className="gd-rest">Resting: {m.rest.map(playerName).join(", ")}</p>
       )}
+      {pending && (
+        <p className="gd-note">
+          Correction requested. Awaiting Christy’s review.{" "}
+          <a href="#correction-requests">View your request</a>
+        </p>
+      )}
+      {canRequest && !pending && !request && (
+        <button className="gd-button" onClick={() => setRequest(true)}>
+          Request a correction
+        </button>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSave(Number(a), Number(b), reason);
+          setError("");
+          try {
+            if (request) {
+              onRequest(Number(a), Number(b), reason);
+              setA(String(m.scoreA));
+              setB(String(m.scoreB));
+              setRequest(false);
+              setReason("");
+            } else onSave(Number(a), Number(b), reason);
+          } catch (error) {
+            setError((error as Error).message);
+          }
         }}
       >
         <div className="gd-score-entry">
@@ -220,7 +253,7 @@ function ScoreCard({
               value={a}
               onChange={(e) => setA(e.target.value)}
               required
-              disabled={!allowed}
+              disabled={!allowed && !request}
             />
           </label>
           <span>–</span>
@@ -234,14 +267,21 @@ function ScoreCard({
               value={b}
               onChange={(e) => setB(e.target.value)}
               required
-              disabled={!allowed}
+              disabled={!allowed && !request}
             />
           </label>
-          <button className="gd-button gd-primary" disabled={!allowed}>
-            {scored(m) ? "Correct result" : "Save result"}
+          <button
+            className="gd-button gd-primary"
+            disabled={!allowed && !request}
+          >
+            {request
+              ? "Send correction request"
+              : scored(m)
+                ? "Correct result"
+                : "Save result"}
           </button>
         </div>
-        {correction && scored(m) && (
+        {(correction || request) && scored(m) && (
           <label className="gd-label">
             Correction reason
             <input
@@ -260,7 +300,22 @@ function ScoreCard({
               : "Only participants or an authorized scorekeeper can score this match."}
           </small>
         )}
+        {request && (
+          <button
+            type="button"
+            className="gd-button"
+            onClick={() => {
+              setRequest(false);
+              setReason("");
+              setA(String(m.scoreA));
+              setB(String(m.scoreB));
+            }}
+          >
+            Cancel request
+          </button>
+        )}
       </form>
+      {error && <p role="alert">{error}</p>}
     </article>
   );
 }
@@ -1327,6 +1382,33 @@ export default function GameDayDemo() {
                     key={`${m.id}-${m.revision}-${role}`}
                     match={m}
                     correction={role === "admin"}
+                    canRequest={
+                      role === "player" &&
+                      scored(m) &&
+                      [...m.a, ...m.b].includes(viewer)
+                    }
+                    pending={state.reviews.some(
+                      (q) =>
+                        q.matchId === m.id &&
+                        q.userId === viewer &&
+                        q.status === "open",
+                    )}
+                    onRequest={(a, b, reason) => {
+                      setState(
+                        requestDemoCorrection(
+                          state,
+                          m.id,
+                          viewer,
+                          a,
+                          b,
+                          reason,
+                          m.revision,
+                        ),
+                      );
+                      setNotice(
+                        "Correction requested in the demo. Switch to Christy to review it.",
+                      );
+                    }}
                     allowed={
                       role === "admin" ||
                       (!scored(m) && [...m.a, ...m.b].includes(viewer))
@@ -1350,6 +1432,36 @@ export default function GameDayDemo() {
                     }
                   />
                 ))}
+              <ScoreCorrectionQueue
+                admin={role === "admin"}
+                reviews={state.reviews
+                  .filter((q) => role === "admin" || q.userId === viewer)
+                  .map((q) => {
+                    const m = allMatches(state).find(
+                      (m) => m.id === q.matchId,
+                    )!;
+                    return {
+                      id: q.id,
+                      title: `Session ${m.session} · Round ${m.round} · Court ${m.court} · Game ${m.id.split("-g")[1]}`,
+                      requestedBy: playerName(q.userId),
+                      proposed: `${q.a}–${q.b}`,
+                      current: `${m.scoreA}–${m.scoreB}`,
+                      message: q.message,
+                      status: q.status,
+                      resolution: q.resolution,
+                    };
+                  })}
+                onResolve={async (id, accept, reason) => {
+                  setState(
+                    resolveDemoCorrection(state, id, accept, reason, role),
+                  );
+                  setNotice(
+                    accept
+                      ? "Correction accepted. Demo results and ELO updated."
+                      : "Correction declined with explanation.",
+                  );
+                }}
+              />
               {!active.complete && role === "admin" && (
                 <div className="gd-actions">
                   <button

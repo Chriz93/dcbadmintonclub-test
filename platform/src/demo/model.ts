@@ -70,6 +70,17 @@ export interface DemoSession {
 export interface DemoState {
   sessions: DemoSession[];
   audit: string[];
+  reviews: {
+    id: string;
+    matchId: string;
+    userId: string;
+    matchRevision: number;
+    a: number;
+    b: number;
+    message: string;
+    status: "open" | "accepted" | "declined";
+    resolution: string | null;
+  }[];
 }
 export const baseline = (): Ratings =>
   Object.fromEntries(players.map((p) => [p.id, p.initialRating]));
@@ -208,6 +219,7 @@ export function makeDemo(): DemoState {
   }
   return {
     sessions,
+    reviews: [],
     audit: [
       "Demo loaded: three completed sessions; session four is ready to play. All identities and results are fictional.",
     ],
@@ -272,6 +284,77 @@ export function scoreCurrentRound(state: DemoState): DemoState {
   s.rounds[s.rounds.length - 1] = fillRound(s.rounds.at(-1)!);
   copy.audit.unshift(
     `Demo results filled: session 4, round ${s.rounds.length}, 20 of 20 games scored.`,
+  );
+  return copy;
+}
+export function requestDemoCorrection(
+  state: DemoState,
+  matchId: string,
+  userId: string,
+  a: number,
+  b: number,
+  message: string,
+  expectedRevision: number,
+): DemoState {
+  const m = allMatches(state).find((m) => m.id === matchId);
+  if (!m || !scored(m) || ![...m.a, ...m.b].includes(userId))
+    throw new Error("Request a correction only for a saved game you played.");
+  if (m.revision !== expectedRevision)
+    throw new Error("This result changed. Review the latest score first.");
+  validateScore(a, b, m.target);
+  if (message.trim().length < 5 || message.trim().length > 500)
+    throw new Error("Explain the correction in 5–500 characters.");
+  if (
+    state.reviews.some(
+      (q) =>
+        q.matchId === matchId && q.userId === userId && q.status === "open",
+    )
+  )
+    throw new Error("Your correction request is already awaiting review.");
+  const copy = structuredClone(state);
+  copy.reviews.push({
+    id: `demo-review-${copy.reviews.length + 1}`,
+    matchId,
+    userId,
+    matchRevision: expectedRevision,
+    a,
+    b,
+    message: message.trim(),
+    status: "open",
+    resolution: null,
+  });
+  return copy;
+}
+export function resolveDemoCorrection(
+  state: DemoState,
+  id: string,
+  accept: boolean,
+  reason: string,
+  role: "player" | "admin",
+): DemoState {
+  if (role !== "admin") throw new Error("Only Christy can review corrections.");
+  const req = state.reviews.find((q) => q.id === id);
+  if (!req || req.status !== "open")
+    throw new Error("This request was already reviewed.");
+  if (reason.trim().length < 5 || reason.trim().length > 500)
+    throw new Error("Explain the decision in 5–500 characters.");
+  const copy = accept
+    ? recordScore(
+        state,
+        req.matchId,
+        req.a,
+        req.b,
+        "admin",
+        req.userId,
+        reason,
+        req.matchRevision,
+      )
+    : structuredClone(state);
+  const updated = copy.reviews.find((q) => q.id === id)!;
+  updated.status = accept ? "accepted" : "declined";
+  updated.resolution = reason.trim();
+  copy.audit.unshift(
+    `Christy (demo): correction ${id} ${updated.status}. ${reason.trim()}`,
   );
   return copy;
 }

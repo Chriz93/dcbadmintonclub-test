@@ -372,9 +372,14 @@ function SignedInLeague({
           !error && (
             <>
               {active &&
-                ["home", "courts", "scores", "standings", "help"].includes(
-                  current,
-                ) && (
+                [
+                  "home",
+                  "courts",
+                  "scores",
+                  "standings",
+                  "help",
+                  "schedule",
+                ].includes(current) && (
                   <LeagueExperience
                     page={current as LeaguePage}
                     userId={userId}
@@ -430,7 +435,7 @@ function SignedInLeague({
                   {courts}
                 </>
               )}
-              {current === "schedule" && schedule}
+              {current === "schedule" && !active && schedule}
               {current === "admin" && (
                 <>
                   <div className="admin-shortcut">

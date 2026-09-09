@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import { AppUpdateNotice } from "./components/AppUpdateNotice";
 const demo =
   new URLSearchParams(window.location.search).get("demo") === "game-day";
 // The synthetic tour never imports the connected app or its authentication client.
@@ -9,6 +10,7 @@ const App = React.lazy(() =>
 );
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <AppUpdateNotice />
     <React.Suspense fallback={<p role="status">Opening Maplewood…</p>}>
       <App />
     </React.Suspense>

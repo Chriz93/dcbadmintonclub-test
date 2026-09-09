@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
@@ -356,4 +357,57 @@ test("movement history fits on screen and names remain clickable", async ({
   await expect(
     page.getByRole("heading", { name: "Match history", exact: true }),
   ).toBeVisible();
+});
+
+test("player requests a correction, Christy accepts it, and player sees the resolved request", async ({
+  page,
+}) => {
+  await page.getByLabel("Jump to a step").selectOption("6");
+  const card = page.locator(".gd-match").first(),
+    a = card.locator('input[aria-label$="Team A score"]'),
+    b = card.locator('input[aria-label$="Team B score"]');
+  const target = (await a.getAttribute("max"))!;
+  await a.fill(target);
+  await b.fill("10");
+  await card.getByRole("button", { name: "Save result", exact: true }).click();
+  await card
+    .getByRole("button", { name: "Request a correction", exact: true })
+    .click();
+  await a.fill("10");
+  await b.fill(target);
+  await card
+    .getByLabel("Correction reason")
+    .fill("The winners were entered backwards");
+  await card.getByRole("button", { name: "Send correction request" }).click();
+  const queue = page.getByRole("region", {
+    name: "Correction requests",
+    exact: true,
+  });
+  await expect(queue).toContainText("1 pending");
+  expect(
+    (await new AxeBuilder({ page }).include("#correction-requests").analyze())
+      .violations,
+  ).toEqual([]);
+  await expect(card).toContainText("Correction requested.");
+  await expect(a).toHaveValue(target);
+  await page
+    .getByText("Explore as another player or as Christy", { exact: true })
+    .click();
+  await page.getByLabel("Demo viewpoint").selectOption("admin");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Scores", exact: true })
+    .click();
+  await queue.getByLabel("Review decision").fill("Confirmed with both teams");
+  await queue.getByRole("button", { name: "Accept & correct score" }).click();
+  await expect(queue).toContainText("Accepted · score corrected");
+  await page.getByLabel("Demo viewpoint").selectOption("player");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Scores", exact: true })
+    .click();
+  await expect(queue).toContainText("Accepted · score corrected");
+  await expect(
+    page.getByRole("button", { name: "Accept & correct score" }),
+  ).toHaveCount(0);
 });

@@ -1337,3 +1337,23 @@ form button {
   gap: 0.5rem;
   margin: 1rem 0;
 }
+.app-update-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px;
+  background: #fff0ba;
+  color: #172738;
+  border-bottom: 1px solid #bea654;
+  font-size: 14px;
+}
+.app-update-notice button {
+  border: 1px solid #172738;
+  border-radius: 6px;
+  padding: 8px;
+  color: #fff;
+  background: #172738;
+  cursor: pointer;
+}

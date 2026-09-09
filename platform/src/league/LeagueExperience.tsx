@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../services/auth";
 import { validateScore } from "../domain/courts";
 import { movementText } from "../domain/round-status";
+import { LeagueSchedule } from "./LeagueSchedule";
 import { useLeague } from "./useLeague";
 import {
   completed,
@@ -27,8 +28,10 @@ import {
   CourtRoster,
   RoundOverview,
 } from "../components/MatchDayViews";
+import { ScoreCorrectionQueue } from "../components/ScoreCorrectionQueue";
 import "./league.css";
-export type LeaguePage = "home" | "courts" | "scores" | "standings" | "help";
+export type LeaguePage =
+  "home" | "courts" | "scores" | "standings" | "help" | "schedule";
 const pct = (v: number) => `${(100 * v).toFixed(0)}%`;
 const rating = (v: number) => v.toFixed(1);
 
@@ -59,7 +62,10 @@ function ScoreEditor({
     [error, setError] = useState("");
   const mine = participant(m, viewer),
     canSave = admin || (!completed(m) && mine),
-    canReview = completed(m) && mine && !admin;
+    pendingReview = data.reviews.find(
+      (q) => q.match_id === m.id && q.user_id === viewer && q.status === "open",
+    ),
+    canReview = completed(m) && mine && !admin && !pendingReview;
   const active =
     data.sessions.find((s) => s.id === m.session_id)?.status === "active" ||
     data.sessions.find((s) => s.id === m.session_id)?.status === "scheduled";
@@ -108,6 +114,12 @@ function ScoreEditor({
           Request a correction
         </button>
       )}
+      {pendingReview && (
+        <p className="lp-status">
+          Correction requested: {pendingReview.a}–{pendingReview.b}. Awaiting
+          Christy’s review. <a href="#correction-requests">View your request</a>
+        </p>
+      )}
       {(canSave || request) && (
         <form
           onSubmit={async (e) => {
@@ -125,6 +137,7 @@ function ScoreEditor({
               else await onSave(Number(a), Number(b), reason.trim());
               onDirty(m.id, false);
               setRequest(false);
+              setReason("");
             } catch (error) {
               setError((error as Error).message);
             } finally {
@@ -190,7 +203,9 @@ function ScoreEditor({
             <button
               type="button"
               className="button"
+              disabled={busy}
               onClick={() => {
+                setReason("");
                 onDirty(m.id, false);
                 setRequest(false);
                 setA(m.scoreA?.toString() ?? "");
@@ -458,7 +473,6 @@ export function LeagueExperience({
     [copy, setCopy] = useState(""),
     [question, setQuestion] = useState(""),
     [answer, setAnswer] = useState<Record<string, string>>({}),
-    [resolution, setResolution] = useState<Record<string, string>>({}),
     [mutating, setMutating] = useState(false);
   useEffect(() => {
     registerLeaveGuard(() => !mutating && league.canLeave());
@@ -526,6 +540,7 @@ export function LeagueExperience({
     scores: "Scores",
     standings: "Standings",
     help: "League questions",
+    schedule: "Season schedule",
   }[page];
   if (league.loaded && !league.choices.length)
     return (
@@ -697,6 +712,8 @@ export function LeagueExperience({
             onChange={(e) => {
               if (!league.canLeave()) return;
               setProfile(null);
+              setScoreFilter("mine");
+              setDetailCourt(null);
               setSelected("");
               setRound(0);
               league.setSeason(e.target.value);
@@ -756,6 +773,19 @@ export function LeagueExperience({
         />
       ) : (
         <>
+          {page === "schedule" && (
+            <LeagueSchedule
+              key={league.club}
+              data={data}
+              club={league.club}
+              onOpen={(id) => {
+                setSelected(id);
+                setRound(0);
+                setDetailCourt(null);
+                onNavigate("courts");
+              }}
+            />
+          )}
           {page === "home" && (
             <section className="lp-card lp-home">
               <h1>Your league night.</h1>
@@ -847,7 +877,10 @@ export function LeagueExperience({
                     </button>
                     <button
                       className="button"
-                      onClick={() => onNavigate("scores")}
+                      onClick={() => {
+                        setScoreFilter("mine");
+                        onNavigate("scores");
+                      }}
                     >
                       My scores
                     </button>
@@ -1137,70 +1170,51 @@ export function LeagueExperience({
                     }}
                   />
                 ))}
-              {scoreFilter === "mine" &&
+              {!league.admin &&
                 !roundMatches.some((m) => participant(m, userId)) && (
                   <p>
-                    You have no games in this round. Open Courts to see the
-                    assignments.
+                    You are viewing this round as a spectator. You can read all
+                    results; score entry and correction requests are available
+                    only for games you played.
                   </p>
                 )}
-              <details className="lp-card">
-                <summary>Correction requests ({data.reviews.length})</summary>
-                {data.reviews.map((q) => (
-                  <article className="lp-match" key={q.id}>
-                    <strong>
-                      {q.status} · proposed {q.a}–{q.b}
-                    </strong>
-                    <p>{q.message}</p>
-                    {q.resolution && <p>Christy: {q.resolution}</p>}
-                    {league.admin && q.status === "open" && (
-                      <>
-                        <label>
-                          Review decision
-                          <input
-                            value={resolution[q.id] ?? ""}
-                            onChange={(e) =>
-                              setResolution({
-                                ...resolution,
-                                [q.id]: e.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        {[true, false].map((accept) => (
-                          <button
-                            key={String(accept)}
-                            className="button"
-                            disabled={
-                              disabled ||
-                              (resolution[q.id]?.trim().length ?? 0) < 5
-                            }
-                            onClick={() =>
-                              void action(
-                                "resolve_match_review",
-                                {
-                                  c: league.club,
-                                  entry: q.id,
-                                  expected_revision: q.revision,
-                                  accept,
-                                  reason: resolution[q.id],
-                                },
-                                accept
-                                  ? "Correction accepted."
-                                  : "Request declined with explanation.",
-                              )
-                            }
-                          >
-                            {accept
-                              ? "Accept & correct score"
-                              : "Decline request"}
-                          </button>
-                        ))}
-                      </>
-                    )}
-                  </article>
-                ))}
-              </details>
+              <ScoreCorrectionQueue
+                admin={league.admin}
+                disabled={disabled}
+                reviews={data.reviews.map((q) => {
+                  const m = data.matches.find((m) => m.id === q.match_id),
+                    s = data.sessions.find((s) => s.id === m?.session_id);
+                  return {
+                    id: q.id,
+                    title: m
+                      ? `${s ? dateLabel(s.starts_at) : "Session"} · Round ${m.round} · Court ${data.courts.find((c) => c.id === m.court_id)?.number} · Game ${m.game}`
+                      : "Previous match",
+                    requestedBy: nameOf(data, q.user_id),
+                    proposed: `${q.a}–${q.b}`,
+                    current: m ? `${m.scoreA}–${m.scoreB}` : "Unavailable",
+                    message: q.message,
+                    status: q.status,
+                    resolution: q.resolution,
+                  };
+                })}
+                onResolve={async (id, accept, reason) => {
+                  const q = data.reviews.find((q) => q.id === id)!;
+                  await mutate(
+                    "resolve_match_review",
+                    {
+                      c: league.club,
+                      entry: id,
+                      expected_revision: q.revision,
+                      accept,
+                      reason,
+                    },
+                    accept
+                      ? "Correction accepted. Results and ELO updated."
+                      : "Request declined with explanation.",
+                  );
+                  await league.refresh(true);
+                }}
+              />
             </>
           )}
           {page === "standings" && (

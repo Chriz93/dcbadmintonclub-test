@@ -1,0 +1,38 @@
+.score-correction-queue {
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--border, #78909a55);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+.score-correction-queue h2 {
+  font-size: 18px;
+}
+.score-correction-queue h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.score-correction-queue p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.score-correction {
+  border-top: 1px solid var(--border, #78909a55);
+  padding: 16px 0;
+}
+.score-correction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.score-correction-queue input {
+  width: 100%;
+}
+.score-correction-queue [role="alert"] {
+  border-left: 3px solid #ed8d64;
+  padding-left: 10px;
+}
+.md-layout .score-correction-queue {
+  background: var(--md-bg);
+  border-color: var(--md-border);
+}

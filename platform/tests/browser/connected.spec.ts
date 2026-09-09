@@ -1,3 +1,4 @@
+import { leagueFixture } from "./league-fixture";
 import { mockSignIn, signIn } from "./auth-fixture";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -22,6 +23,23 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
     status: "scheduled",
     revision: 0,
   };
+  const league = leagueFixture();
+  const scheduleSessions = () => [
+    {
+      ...session,
+      ends_at: "2026-09-16T02:15:00Z",
+      calendar_uid: "30000000-0000-4000-8000-000000000001",
+    },
+    {
+      ...session,
+      id: "session-2",
+      starts_at: "2026-09-23T00:15:00Z",
+      ends_at: "2026-09-23T02:15:00Z",
+      status: "cancelled",
+      revision: 1,
+      calendar_uid: "30000000-0000-4000-8000-000000000002",
+    },
+  ];
   let assigned: { court_id: string; players: string[] }[] = [];
   let matches: Record<string, unknown>[] = [];
   const scores: unknown[] = [];
@@ -33,12 +51,32 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
       let data: unknown;
       switch (path) {
         case "clubs":
-          data = [{ id: club, name: "Synthetic Club" }];
+          data = route.request().headers().accept?.includes("object")
+            ? { slug: "synthetic-club" }
+            : [{ id: club, name: "Synthetic Club" }];
+          break;
+        case "seasons":
+          data = [{ id: "season", club_id: club, name: league.season.name }];
+          break;
+        case "venues":
+          data = [
+            {
+              id: "venue-1",
+              name: "Synthetic Gym",
+              address: "TEST",
+              rooms: "Six courts",
+            },
+          ];
+          break;
+        case "rpc/league_snapshot":
+          data = { ...league, sessions: scheduleSessions() };
           break;
         case "sessions":
           data = route.request().headers().accept?.includes("object")
             ? session
-            : [session];
+            : url.searchParams.has("season_id")
+              ? scheduleSessions()
+              : [session];
           break;
         case "rpc/public_schedule":
           data = [
@@ -212,9 +250,14 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
     { c: club, m: "match-5-0", a: 15, b: 12, expected_revision: 0 },
   ]);
   await page.getByRole("button", { name: "Schedule", exact: true }).click();
-  await expect(page.locator(".schedule-row.active")).toHaveCount(1);
-  await expect(page.locator(".schedule-row.cancelled")).toHaveCount(1);
-  await expect(page.getByRole("status")).toContainText(
-    "Current test schedule loaded.",
+  await expect(page.locator(".lp-schedule .lp-card")).toHaveCount(2);
+  await expect(page.locator(".lp-schedule .lp-card").first()).toContainText(
+    "In progress",
   );
+  await expect(page.locator(".lp-schedule .lp-card").last()).toContainText(
+    "Cancelled · No play",
+  );
+  await expect(
+    page.getByRole("button", { name: "Download season calendar" }),
+  ).toBeEnabled();
 });

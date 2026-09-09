@@ -224,3 +224,125 @@ test("a failed first league load keeps the page title and recovers through Retry
   await expect(page.locator(".lp-home")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 });
+
+test("court-filter cancellation preserves edits; confirmed discard resets surviving editors; Home My scores resets court", async ({
+  page,
+}) => {
+  const state = await openLeague(page);
+  await nav(page, "Scores");
+  const m = state.data.matches.find(
+    (m) => m.round === 2 && m.a.includes(mockUser.id),
+  )!;
+  const score = page.getByLabel(`${m.id} Team A score`),
+    filter = page.getByRole("combobox", {
+      name: "Select Your Court",
+      exact: true,
+    });
+  await score.fill("7");
+  page.once("dialog", (d) => d.dismiss());
+  await filter.selectOption("all");
+  await expect(filter).toHaveValue(m.court_id);
+  await expect(score).toHaveValue("7");
+  page.once("dialog", (d) => d.accept());
+  await filter.selectOption("all");
+  await expect(score).toHaveValue("");
+  await filter.selectOption("court-1");
+  await nav(page, "Home");
+  await page.getByRole("button", { name: "My scores", exact: true }).click();
+  await expect(filter).toHaveValue(m.court_id);
+  await expect(score).toBeVisible();
+});
+
+test("a spectator sees why scoring is unavailable and an informative empty correction queue", async ({
+  page,
+}) => {
+  const state = await openLeague(page);
+  state.data.matches.forEach((m) => {
+    m.a = m.a.map((id) => (id === mockUser.id ? "spectator-replacement" : id));
+    m.b = m.b.map((id) => (id === mockUser.id ? "spectator-replacement" : id));
+  });
+  state.data.version = "spectator";
+  await page
+    .getByRole("button", { name: "Refresh league", exact: true })
+    .click();
+  await nav(page, "Scores");
+  await expect(
+    page.getByText("You are viewing this round as a spectator.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Correction requests", exact: true }),
+  ).toContainText("No correction requests yet.");
+  await expect(
+    page.getByRole("button", { name: "Request a correction", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("Schedule follows the selected season, recovers metadata failures and explains facility cancellations", async ({
+  page,
+}) => {
+  const state = await openLeague(page);
+  let fail = true;
+  await page.route("**/rest/v1/venues?**", (route) =>
+    route.fulfill({
+      status: fail ? 400 : 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        fail
+          ? {}
+          : [
+              {
+                id: "venue",
+                name: "Selected season gym",
+                address: "Test address",
+                rooms: "Six courts",
+              },
+            ],
+      ),
+    }),
+  );
+  await page.route("**/rest/v1/sessions?**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify([
+        { id: "session", calendar_uid: "stable-calendar-id" },
+      ]),
+    }),
+  );
+  await page.route("**/rest/v1/clubs?**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ slug: "test-season" }),
+    }),
+  );
+  state.data.sessions[0].status = "cancelled";
+  state.data.version = "cancelled";
+  await page
+    .getByRole("button", { name: "Refresh league", exact: true })
+    .click();
+  await nav(page, "Schedule");
+  await expect(
+    page.getByRole("button", { name: "Retry calendar details" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download season calendar" }),
+  ).toBeDisabled();
+  await expect(page.locator(".lp-schedule")).toContainText(
+    "Venue details unavailable",
+  );
+  fail = false;
+  await page.getByRole("button", { name: "Retry calendar details" }).click();
+  await expect(
+    page.getByRole("button", { name: "Download season calendar" }),
+  ).toBeEnabled();
+  await expect(page.locator(".lp-schedule")).toContainText(
+    "Selected season gym",
+  );
+  await expect(page.locator(".lp-schedule")).toContainText(
+    "confirmed paid spares receive a $20 refund",
+  );
+  await expect(
+    page.getByRole("button", { name: /View courts for/ }),
+  ).toHaveCount(0);
+});

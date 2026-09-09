@@ -48,6 +48,10 @@ worker = worker.replace(
     createHash("sha256").update(startup.join(",")).digest("hex").slice(0, 12),
 );
 writeFileSync("dist/sw.js", worker);
+writeFileSync(
+  "dist/app-version.json",
+  JSON.stringify({ entry: manifest["index.html"].file.split("/").at(-1) }),
+);
 console.log(
   `Startup assets: ${(gzip / 1024).toFixed(1)} KiB gzip; public shell precache generated; no server secret markers.`,
 );

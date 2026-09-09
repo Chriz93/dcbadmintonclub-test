@@ -13,6 +13,8 @@ export async function mockSignIn(
   role = "member",
   status = "active",
   club = "club",
+  user = mockUser,
+  aal = "aal1",
 ) {
   const token = [
     Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString(
@@ -20,10 +22,10 @@ export async function mockSignIn(
     ),
     Buffer.from(
       JSON.stringify({
-        sub: mockUser.id,
+        sub: user.id,
         aud: "authenticated",
         role: "authenticated",
-        aal: "aal1",
+        aal,
         exp: Math.floor(Date.now() / 1000) + 3600,
       }),
     ).toString("base64url"),
@@ -39,10 +41,10 @@ export async function mockSignIn(
             refresh_token: "synthetic-refresh",
             token_type: "bearer",
             expires_in: 3600,
-            user: mockUser,
+            user,
           }
         : path.endsWith("/user")
-          ? mockUser
+          ? user
           : {};
       await route.fulfill({
         contentType: "application/json",
