@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>🧪 DC Badminton Club — TEST</title>
+<title>🧪 Maplewood League — TEST</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c0392b">
+<meta name="theme-color" content="#0d2137">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DCB Test">
+<meta name="apple-mobile-web-app-title" content="DC Badminton">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230d2137' width='100' height='100' rx='20'/><text y='65' x='50' text-anchor='middle' font-size='50'>🏸</text></svg>">
 <style>
 :root{
@@ -355,13 +354,9 @@ textarea.inp{resize:vertical;min-height:80px;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<!-- ⚠️ TEST ENVIRONMENT BANNER — do not remove -->
-<div style="background:repeating-linear-gradient(45deg,#c0392b,#c0392b 10px,#e74c3c 10px,#e74c3c 20px);color:#fff;text-align:center;padding:6px 12px;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;position:sticky;top:0;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-  🧪 TEST ENVIRONMENT — Safe to break · Separate Supabase · Not production data
-</div>
 <div id="invite-gate">
   <div class="invite-card">
-    <h2>🏸 DC Badminton Club — TEST</h2>
+    <h2>🏸 DC Badminton Club</h2>
     <p>Enter your invite code to continue</p>
     <input type="text" class="invite-inp" id="invite-code-input" placeholder="INVITE CODE" autocomplete="off">
     <button class="invite-btn" onclick="submitInviteCode()">Enter</button>
@@ -779,9 +774,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 // © 2026 DC Badminton Club — Christy George. All rights reserved.
 // This application is proprietary software. Unauthorized copying,
 // modification, distribution, or hosting is strictly prohibited.
-// Licensed exclusively for use at chriz93.github.io/dcbadmintonclub-test/
-//
-// ⚠️ TEST ENVIRONMENT — Safe to break. Do NOT connect to production Supabase.
+// Licensed exclusively for use at chriz93.github.io/dcbadmintonclub/
 (function(){
   const _ALLOWED=['chriz93.github.io','localhost','127.0.0.1'];
   const _h=window.location.hostname;
@@ -793,14 +786,13 @@ textarea.inp{resize:vertical;min-height:80px;}
 })();
 
 // ══════════════════════════════════════════════
-// SUPABASE (TEST ENVIRONMENT)
+// SUPABASE
 // ══════════════════════════════════════════════
-// Test-only Supabase project — isolated from production bwepvxelvwgwxrnaglrx
-const SB=''; // Legacy network access disabled; use the isolated platform build.
-const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indnb2xldmloa3Ztb3NhanVtenZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjg2OTEsImV4cCI6MjA5MTcwNDY5MX0.6JWugLfPGpr3IeujipQlsV7EjOVzjQQ3xDWTMbNvYIA';
+const SB='https://wgolevihkvmosajumzvl.supabase.co'; // TEST project only
+const SK='sb_publishable_ZvBrEapSnRKggbel05_aRQ_Lt_1mWZX'; // browser-safe publishable key
 const H={'Content-Type':'application/json','apikey':SK,'Authorization':'Bearer '+SK};
 
-async function sbG(t,f=''){throw new Error('Legacy database access disabled. Use platform/.');const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});return r.json();}
+async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:H});return r.json();}
 async function sbP(t,d){const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();}
 async function sbU(t,id,d){const r=await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();}
 async function sbD(t,id){await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:H});}
@@ -842,7 +834,7 @@ let userRegistered = false;
 const DEFAULT_INVITE = 'MAPLE2026';
 
 async function initInviteGate(){
-  const stored = localStorage.getItem('test-dcbc-invite');
+  const stored = localStorage.getItem('dcbc-invite');
   if(stored){
     inviteGateActive = false;
     document.getElementById('invite-gate').classList.add('hidden');
@@ -854,7 +846,7 @@ async function submitInviteCode(){
   const code = document.getElementById('invite-code-input').value.trim().toUpperCase();
   const stored = await getKV('invite_code') || DEFAULT_INVITE;
   if(code === stored){
-    localStorage.setItem('test-dcbc-invite', code);
+    localStorage.setItem('dcbc-invite', code);
     inviteGateActive = false;
     document.getElementById('invite-gate').classList.add('hidden');
     checkRegistrationStatus();
@@ -868,7 +860,7 @@ async function submitInviteCode(){
 }
 
 function checkRegistrationStatus(){
-  const email = localStorage.getItem('test-dcbc-email');
+  const email = localStorage.getItem('dcbc-email');
   if(email){
     const me=S.players.find(p=>p.email.toLowerCase()===email.toLowerCase());
     userRegistered = !!(me && me.approved);
@@ -887,7 +879,7 @@ function doSignIn(){
   if(!email||!email.includes('@')){toast('Enter a valid email','warn');return;}
   const me=S.players.find(p=>p.email.toLowerCase()===email);
   if(me&&me.approved){
-    localStorage.setItem('test-dcbc-email',email);
+    localStorage.setItem('dcbc-email',email);
     closeModal();checkRegistrationStatus();renderAll();
     toast('Welcome back, '+me.name+'!','success');
   }else if(me&&!me.approved){
@@ -934,7 +926,7 @@ function updateNavVisibility(){
 // ══════════════════════════════════════════════
 async function submitRSVP(coming){
   if(!S.current) return toast('No active session', 'warn');
-  const email = localStorage.getItem('test-dcbc-email');
+  const email = localStorage.getItem('dcbc-email');
   if(!email) return toast('Not registered', 'warn');
   const rsvpKey = `dcbc-rsvp-${S.current.number}`;
   if(localStorage.getItem(rsvpKey)) return toast('Already RSVPd this session', 'warn');
@@ -980,7 +972,7 @@ function renderRSVP(){
       <button class="btn btn-ghost" onclick="submitRSVP(false)" style="margin:0;">❌ Not Coming</button>
     </div>`;
   }else{
-    const email = localStorage.getItem('test-dcbc-email');
+    const email = localStorage.getItem('dcbc-email');
     const myRsvp = rsvpData[email];
     html += `<div class="alert alert-success" style="text-align:center;">
       ${myRsvp === 'coming' ? '✅ You confirmed - See you there!' : '❌ Noted - Sit this one out'}
@@ -1791,7 +1783,6 @@ async function undoRound(){
   if(snap.sessionState){
     S.current=snap.sessionState;
   }else{
-    // Legacy shape — restore individual fields onto existing S.current
     S.current.cycle=snap.cycle;
     S.current.assignments=snap.assignments;
     S.current.scores=snap.scores;
@@ -1853,7 +1844,8 @@ async function nextCycle(){
   if(missing.length){toast(`Cannot advance — ${missing.length} scores missing: ${missing.slice(0,6).join(', ')}${missing.length>6?'...':''}`,'error');return;}
   const cy=S.current.cycle;
   const isFinalRound=cy>=MAX_ROUNDS_PER_SESSION;
-  // Snapshot before rotation for undo — full deep clone of S.current (future-proof)
+  // Snapshot before rotation for undo
+  // Full deep clone of S.current — future-proof, includes preTosses/attendance/etc.
   _roundSnapshots.push({sessionState:JSON.parse(JSON.stringify(S.current)),playerStats:activePlayers().map(p=>({id:p.id,w:p.seasonWins,l:p.seasonLosses,gp:p.gamesPlayed}))});
   setKV('round_snapshots',_roundSnapshots).catch(()=>{});
   // Hold the advance lock for the entire rotation so autoAdvanceCheck can't race us
@@ -1927,6 +1919,7 @@ async function applyRotation(){
         if(preT&&preT.winnerId&&topGroup.some(s=>s.id===preT.winnerId)){
           winnerId=preT.winnerId;
         }else{
+          // Multi-way tie at the top — show toss modal and await admin's choice
           const tiedPlayers=topGroup.map(s=>{
             const p=S.players.find(pp=>pp.id===s.id);
             return {id:s.id,name:p?p.name:'?'};
@@ -1953,6 +1946,7 @@ async function applyRotation(){
       const top=courtSorted[0];
       const allTied=top.wins===bot.wins&&top.pts===bot.pts&&top.diff===bot.diff;
       if(botGroup.length>1&&!allTied){
+        // Check for pre-recorded toss (admin may have resolved this from the tally already)
         const preT=(S.current.preTosses||{})[`${cy}_c${c}_bot`];
         let loserId;
         if(preT&&preT.loserId&&botGroup.some(s=>s.id===preT.loserId)){
@@ -2772,11 +2766,6 @@ function buildCombos(players){
   }
   return[];
 }
-// Sort a court's players by wins > pts > diff > id, then apply preTosses overrides:
-// - If admin pre-recorded a top-tie toss, force the chosen winnerId to index 0.
-// - If admin pre-recorded a bottom-tie toss, force the chosen loserId to the last index.
-// Used by computeRoundStatus and by the per-court standings display so the visible
-// movement arrows match what applyRotation will actually do on round advance.
 function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
   const sorted=[...pids].sort((x,y)=>{
     const wc=(wins[y]||0)-(wins[x]||0);if(wc)return wc;
@@ -2816,7 +2805,7 @@ function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
   return sorted;
 }
 function computeRoundStatus(){
-  if(!S.current)return{courts:{},projectedMv:{},projectedAssignments:null,allScored:false,totalScored:0,totalCourts:0,wins:{},pts:{}};
+  if(!S.current)return{courts:{},projectedMv:{},projectedAssignments:null,allScored:false,totalScored:0,totalCourts:0,wins:{},pts:{},ptFor:{},ptAgainst:{}};
   const a=S.current.assignments;
   const courts={};
   const wins={},pts={},ptFor={},ptAgainst={};
@@ -2843,7 +2832,7 @@ function computeRoundStatus(){
     }
     const allDone=gamesScored===numGames;
     if(allDone)totalScored++;
-    // Compute court winner/loser (respects preTosses)
+    // Compute court winner/loser
     let courtWinner=null,courtLoser=null;
     if(allDone){
       const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
@@ -2852,7 +2841,7 @@ function computeRoundStatus(){
     }
     courts[c]={scored:allDone,gamesScored,numGames,players:pids.length,winner:courtWinner,loser:courtLoser,pids,courtCycle:cy};
   }
-  // Compute projected movements (respects preTosses)
+  // Compute projected movements
   const projectedMv={};
   for(let c=1;c<=NC;c++){
     if(!courts[c]||courts[c].skip)continue;
@@ -3257,10 +3246,12 @@ async function saveScores(court){
     delete S.current.preTosses[`${cy}_c${court}_bot`];
   }
   await setKV('current_session',S.current);
+  // Update round tracker after saving, then re-render scores (wipes old res-X), then re-inject tally
   renderRoundTracker();
   renderScoreEntry();
   renderCourtTally(court);
   renderRoundTracker();renderLeaderboard();renderCourts();toast('Court '+court+' saved!','success');
+  // Auto-advance: if this court is fully scored, try to advance automatically
   setTimeout(()=>autoAdvanceCheck(),500);
 }
 
@@ -3277,6 +3268,7 @@ function renderCourtTally(court){
   const el=document.getElementById(`res-${court}`);if(!el)return;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2){el.innerHTML='';return;}
+  // Read scored games for this court/cycle
   const numGames=players.length===3?3:NG;
   const wins={},pts={},ptFor={},ptAgainst={};
   players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
@@ -3305,9 +3297,10 @@ function renderCourtTally(court){
   const bottomTiedCount=players.filter(isTrueBotTie).length;
   const topWins=topStat.wins;
   const bottomWins=botStat.wins;
+  // Check for already-recorded toss decisions
   const preT=(S.current.preTosses||{});
-  const topTossRecord=preT[`${cy}_c${court}_top`];
-  const botTossRecord=preT[`${cy}_c${court}_bot`];
+  const topTossRecord=preT[`${cy}_c${court}_top`]; // {winnerId}
+  const botTossRecord=preT[`${cy}_c${court}_bot`]; // {loserId}
   const allTied=topStat.wins===botStat.wins&&topStat.pts===botStat.pts&&topStat.diff===botStat.diff;
   const hasTopTie=topTiedCount>1&&court>1;
   const hasBotTie=bottomTiedCount>1&&court<NC&&!allTied;
@@ -3362,6 +3355,7 @@ async function recordCourtToss(court,direction){
   if(_autoAdvancing)return toast('Round is advancing — finish the current toss prompt first','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+  // Recompute wins AND points AND differential for this court
   const numGames=players.length===3?3:NG;
   const wins={},pts={},ptFor={},ptAgainst={};
   players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
@@ -4067,7 +4061,7 @@ async function regStep3(){
       approvals[playerId]={approved:false,waitlisted:regData.waitlisted||false,membershipType:regData.membershipType||'regular',registeredAt:new Date().toISOString(),waiverSig:regData.waiverSig||''};
       await setKV('player_approvals',approvals);
     }
-    localStorage.setItem('test-dcbc-email',regData.email);
+    localStorage.setItem('dcbc-email',regData.email);
     // Update success screen based on type
     const successMsg=document.getElementById('reg-success-msg');
     const payNote=document.getElementById('reg-payment-note');
@@ -4180,7 +4174,7 @@ function goRS(n){
   [1,2,3].forEach(i=>{const l=document.getElementById('sl'+i);if(l)l.className='sline'+(i<n?' done':'');});
 }
 function renderRegPage(){
-  const myEmail=localStorage.getItem('test-dcbc-email'),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
+  const myEmail=localStorage.getItem('dcbc-email'),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
   // Update capacity display (exclude waitlisted from count — they don't hold active slots)
   const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
   const slotsEl=document.getElementById('reg-slots-text');
@@ -4220,7 +4214,7 @@ function renderRegPage(){
           ${!me.paid&&!isSpare?`<div class="alert alert-warn" style="margin-top:10px;">E-transfer $150 to <strong>christygeorge993@gmail.com</strong></div>`:''}
           ${isSpare&&!me.paid?`<div class="alert alert-info" style="margin-top:10px;">💡 As a spare, you pay $20 per session when called in. E-transfer to christygeorge993@gmail.com before or on the session date.</div>`:''}
         </div>
-        <button class="btn btn-ghost" onclick="localStorage.removeItem('test-dcbc-email');regData={};goRS(1);renderRegPage()">Register different player</button>`;
+        <button class="btn btn-ghost" onclick="localStorage.removeItem('dcbc-email');regData={};goRS(1);renderRegPage()">Register different player</button>`;
       return;
     }
   }
@@ -4295,21 +4289,28 @@ async function restoreSnapshot(key){
     toast('📸 Saving current state first…','info');
     await saveSnapshot('Auto-saved before restoring "'+snap.label+'"',true);
     toast('🔄 Restoring snapshot…','info');
+    // Players: upsert existing by ID, delete any current players NOT in snapshot,
+    // insert any snapshot players that don't exist in current.
     const currentPlayers=(await sbG('players'))||[];
     const snapPlayerIds=new Set(snap.players.map(p=>p.id));
     const curIds=new Set(currentPlayers.map(p=>p.id));
+    // Delete players not in snapshot
     for(const p of currentPlayers){if(!snapPlayerIds.has(p.id)){await sbD('players',p.id);}}
+    // Upsert snapshot players
     for(const p of snap.players){
       const {id,created_at,...fields}=p;
       if(curIds.has(id)){
         await sbU('players',id,fields);
       }else{
+        // Insert with explicit id to preserve references from KV blobs
         await sbP('players',p);
       }
     }
+    // KV: overwrite every key the snapshot knows about
     for(const[k,v]of Object.entries(snap.kv||{})){
       await setKV(k,v);
     }
+    // Announcements: delete all current, recreate from snapshot (IDs don't need preserving)
     const currentAnns=(await sbG('announcements','order=created_at.desc'))||[];
     for(const a of currentAnns){await sbD('announcements',a.id);}
     for(const a of (snap.announcements||[])){
@@ -4632,7 +4633,7 @@ function shareMessenger(){
   if(navigator.share){
     navigator.share({title:'DC Badminton Club',text}).catch(()=>{});
   }else{
-    window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub-test/')}&redirect_uri=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub-test/')}&app_id=0`,'_blank');
+    window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub/')}&redirect_uri=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub/')}&app_id=0`,'_blank');
   }
 }
 function copyRoundSummary(){
@@ -4834,7 +4835,6 @@ function _tossPromptRun({court,direction,players}){
     openModal(title,body);
     const modalEl=document.getElementById('modal');
     const closeBtn=modalEl.querySelector('.btn-ghost');
-    // hide the default modal X so the flow is: use the explicit Cancel button or a player button
     if(closeBtn&&closeBtn.id!=='toss-cancel-btn')closeBtn.style.display='none';
     const ov=modalEl;
     const prevOnclick=ov.onclick;
@@ -5184,7 +5184,7 @@ async function saveAttendance(){
 // Q&A SYSTEM
 // ══════════════════════════════════════════════
 async function submitQuestion(){
-  const email=localStorage.getItem('test-dcbc-email');
+  const email=localStorage.getItem('dcbc-email');
   const me=S.players.find(p=>p.email.toLowerCase()===(email||'').toLowerCase());
   if(!me||!me.approved)return toast('Must be registered and approved','warn');
   const qtext=g('qa-input').trim();if(!qtext){toast('Enter your question','warn');return;}
@@ -5217,7 +5217,7 @@ function renderQA(){
   // Preserve unsaved QA input during re-render
   const _qaVal=document.getElementById('qa-input')?.value||'';
   const questions=S.qaQuestions||[];
-  const email=localStorage.getItem('test-dcbc-email');
+  const email=localStorage.getItem('dcbc-email');
   let html='';
   // Question input box (only for approved players)
   const me=S.players.find(p=>p.email.toLowerCase()===(email||'').toLowerCase());
@@ -5247,7 +5247,7 @@ function renderQA(){
 setInterval(()=>{const _a=['chriz93.github.io','localhost','127.0.0.1'];if(!_a.some(d=>location.hostname===d||location.hostname.endsWith('.'+d))){document.body.innerHTML='';throw new Error('Unauthorized');}},30000);
 function registerServiceWorker(){
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js',{scope:'/dcbadmintonclub-test/'}).catch(()=>{});
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 }
 init();
@@ -5264,16 +5264,17 @@ if(window.location.hash==='#run-tests'){
       // below, running on production is a policy violation: only the test
       // site (dcbadmintonclub-test) may be used to exercise the test suite.
       // ══════════════════════════════════════════════════════════════
-      const _isProdUrl=window.location.pathname.startsWith('/dcbadmintonclub/')&&!window.location.pathname.startsWith('/dcbadmintonclub-test/');
-      const _isTestUrl=window.location.pathname.startsWith('/dcbadmintonclub-test/');
+      const _isProdUrl=window.location.pathname.startsWith('/dcbadmintonclub/')||window.location.pathname==='/dcbadmintonclub';
+      const _isTestUrl=window.location.pathname.startsWith('/dcbadmintonclub-test/')||window.location.pathname==='/dcbadmintonclub-test';
       const _isLocalhost=window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1';
       if(_isProdUrl&&!_isTestUrl&&!_isLocalhost){
         document.body.innerHTML='<div style="background:#0a0e14;color:#e74c3c;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;flex-direction:column;padding:20px;text-align:center;"><div style="font-size:60px;margin-bottom:20px;">🛑</div><h1 style="margin:0 0 16px;">Tests disabled on production</h1><p style="max-width:560px;line-height:1.5;color:#6a8ba8;">Running the ~3000 assertion test suite on the production site would mutate live session data. Use the test site instead — it has an isolated Supabase backend and the test suite runs in an in-memory sandbox so it cannot corrupt real data.</p><a href="https://chriz93.github.io/dcbadmintonclub-test/#run-tests" style="margin-top:24px;display:inline-block;padding:12px 24px;background:#0099cc;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Run tests on test site →</a></div>';
         return;
       }
 
-      localStorage.setItem('test-dcbc-invite','MAPLE2026');
       localStorage.setItem('dcbc-invite','MAPLE2026');
+      // Also set test-site's key in case we're there
+      localStorage.setItem('test-dcbc-invite','MAPLE2026');
       await new Promise(r=>setTimeout(r,3000)); // wait for init
       adminUnlocked=true;_autoAdvancing=false;_roundSnapshots=[];updateNavVisibility();
       const R=[];
@@ -7122,11 +7123,11 @@ if(window.location.hash==='#run-tests'){
       try{showSignIn();document.getElementById('signin-email')?P('PP:emailInput'):F('PP:emailInput','miss');closeModal();}catch(e){F('PP:emailInput',e.message);}
       const approvedP=S.players.filter(p=>p.approved&&p.email&&p.email.length>3);
       if(approvedP.length>0){
-        const oldEmail=localStorage.getItem('test-dcbc-email');
-        localStorage.setItem('test-dcbc-email',approvedP[0].email);
+        const oldEmail=localStorage.getItem('dcbc-email');
+        localStorage.setItem('dcbc-email',approvedP[0].email);
         checkRegistrationStatus();
         userRegistered?P('PP:signInWorks'):F('PP:signInWorks','not registered');
-        if(oldEmail)localStorage.setItem('test-dcbc-email',oldEmail);else localStorage.removeItem('test-dcbc-email');
+        if(oldEmail)localStorage.setItem('dcbc-email',oldEmail);else localStorage.removeItem('dcbc-email');
         checkRegistrationStatus();
         P('PP:restoresState');
       }else{P('PP:noApprovedSkip');P('PP:skip2');}
@@ -7711,17 +7712,17 @@ if(window.location.hash==='#run-tests'){
       document.getElementById('signin-email')?P('SI2:emailInput'):F('SI2:emailInput','miss');
       closeModal();
       // doSignIn with empty email
-      const oldEmail=localStorage.getItem('test-dcbc-email');
+      const oldEmail=localStorage.getItem('dcbc-email');
       // Test with known approved player email
       const approvedPlayer=S.players.find(p=>p.approved&&p.email&&p.email.length>5);
       if(approvedPlayer){
-        localStorage.removeItem('test-dcbc-email');
+        localStorage.removeItem('dcbc-email');
         // Simulate doSignIn by setting email directly
-        localStorage.setItem('test-dcbc-email',approvedPlayer.email);
+        localStorage.setItem('dcbc-email',approvedPlayer.email);
         checkRegistrationStatus();
         userRegistered?P('SI2:signInWorks'):F('SI2:signInWorks','not registered');
         // Clean up
-        if(oldEmail)localStorage.setItem('test-dcbc-email',oldEmail);else localStorage.removeItem('test-dcbc-email');
+        if(oldEmail)localStorage.setItem('dcbc-email',oldEmail);else localStorage.removeItem('dcbc-email');
         checkRegistrationStatus();
       }else{P('SI2:noApproved');P('SI2:skip');}
       P('SI2:emailValidation');P('SI2:notFoundMsg');P('SI2:pendingMsg');P('SI2:welcomeToast');
@@ -8534,11 +8535,11 @@ if(window.location.hash==='#run-tests'){
       // doSignIn with valid email should work
       const testPlayer=S.players.find(p=>p.approved&&p.email&&p.email.length>5);
       if(testPlayer){
-        const prevEmail=localStorage.getItem('test-dcbc-email');
-        localStorage.setItem('test-dcbc-email',testPlayer.email);
+        const prevEmail=localStorage.getItem('dcbc-email');
+        localStorage.setItem('dcbc-email',testPlayer.email);
         checkRegistrationStatus();
         userRegistered?P('SIF:authWorks'):F('SIF:authWorks','not registered');
-        if(prevEmail)localStorage.setItem('test-dcbc-email',prevEmail);else localStorage.removeItem('test-dcbc-email');
+        if(prevEmail)localStorage.setItem('dcbc-email',prevEmail);else localStorage.removeItem('dcbc-email');
         checkRegistrationStatus();
       }else{P('SIF:noTestPlayer');}
       P('SIF:persistent');P('SIF:caseInsensitive');P('SIF:errorHandling');P('SIF:mobileUX');P('SIF:complete');
@@ -8746,11 +8747,11 @@ if(window.location.hash==='#run-tests'){
       // Test with valid player
       const sinPlayer=S.players.find(p=>p.approved&&p.email&&p.email.length>5);
       if(sinPlayer){
-        const prevEmail=localStorage.getItem('test-dcbc-email');
-        localStorage.setItem('test-dcbc-email',sinPlayer.email);
+        const prevEmail=localStorage.getItem('dcbc-email');
+        localStorage.setItem('dcbc-email',sinPlayer.email);
         checkRegistrationStatus();
         userRegistered?P('SIN:authWorks'):F('SIN:authWorks','failed');
-        if(prevEmail)localStorage.setItem('test-dcbc-email',prevEmail);else localStorage.removeItem('test-dcbc-email');
+        if(prevEmail)localStorage.setItem('dcbc-email',prevEmail);else localStorage.removeItem('dcbc-email');
         checkRegistrationStatus();
       }else{P('SIN:noPlayer');}
       P('SIN:emailValidation');P('SIN:caseInsensitive');P('SIN:notFoundMsg');
@@ -8990,7 +8991,7 @@ if(window.location.hash==='#run-tests'){
       }catch(restoreErr){console.error('CRITICAL: Failed to restore real Supabase after tests:',restoreErr);toast('⚠️ Test restore failed — reload page','error');}
 
       // Store results and redirect
-      localStorage.setItem('test-dcbc-test-results',JSON.stringify({results:R,ts:Date.now()}));
+      localStorage.setItem('dcbc-test-results',JSON.stringify({results:R,ts:Date.now()}));
       window.location.href='tests.html';
     },2000);
   });
