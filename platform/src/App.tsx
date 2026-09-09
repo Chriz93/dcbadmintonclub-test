@@ -79,10 +79,43 @@ export default function App() {
     localStorage.setItem("clubcourt-test-theme", dark ? "dark" : "light");
   }, [dark]);
   useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
+    let active = true,
+      revision = 0;
+    const sync = async () => {
+      const current = ++revision;
+      if (!navigator.onLine) {
+        setOnline(false);
+        return;
+      }
+      if (!navigator.serviceWorker?.controller) {
+        setOnline(true);
+        return;
+      }
+      // A cached reload can report navigator.onLine=true while requests fail.
+      // Query URLs bypass our service-worker cache, so this probes the public host.
+      try {
+        const response = await fetch(
+          `${import.meta.env.BASE_URL}manifest.webmanifest?connectivity=1`,
+          {
+            cache: "no-store",
+            credentials: "omit",
+            signal: AbortSignal.timeout(4000),
+          },
+        );
+        if (active && current === revision) setOnline(response.ok);
+      } catch {
+        if (active && current === revision) setOnline(false);
+      }
+    };
+    void sync();
     window.addEventListener("online", sync);
     window.addEventListener("offline", sync);
+    const timer = window.setInterval(() => {
+      if (navigator.serviceWorker?.controller) void sync();
+    }, 30000);
     return () => {
+      active = false;
+      window.clearInterval(timer);
       window.removeEventListener("online", sync);
       window.removeEventListener("offline", sync);
     };

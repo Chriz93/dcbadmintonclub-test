@@ -3,7 +3,9 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 const files = readdirSync("dist/assets");
 const startup = files.filter(
-  (f) => f.startsWith("index-") && (f.endsWith(".js") || f.endsWith(".css")),
+  (f) =>
+    /^(index|App|placement)-/.test(f) &&
+    (f.endsWith(".js") || f.endsWith(".css")),
 );
 const gzip = startup.reduce(
   (n, f) => n + gzipSync(readFileSync("dist/assets/" + f)).length,
