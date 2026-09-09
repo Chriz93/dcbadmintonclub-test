@@ -79,6 +79,7 @@ select 'RULES PASS' as result;
 
 \i legacy/migrations/L03_scores_and_season.sql
 \i legacy/migrations/L05_rollover_registration.sql
+\i legacy/migrations/L06_stats_rebuild.sql
 -- Court-scoped score entry: player 1 is on court 1 of the active session; player 2 is not.
 update public.app_state set value='{"number":4,"cycle":1,"assignments":{"1":[1,2],"6":[3]},"scores":{}}',version=7 where key='current_session';
 set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"test-player-01@example.invalid"}',false);
@@ -91,8 +92,17 @@ do $$ declare v int; begin
  begin perform public.save_court_scores(1,1,'{"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":3,"w":"A"}}'::jsonb,7); raise exception 'stale accepted'; exception when serialization_failure then null; end;
  begin perform public.save_court_scores(1,2,'{"c1_y2_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":3,"w":"A"}}'::jsonb,8); raise exception 'wrong round accepted'; exception when serialization_failure then null; end;
 end $$;
--- Season rollover (organizer with second factor): archive created, stats zeroed, approval withdrawn.
+-- Statistics rebuild: completed sessions count fully; only rotated rounds of the live session count; ties count as played.
 select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare r jsonb; begin
+ perform public.set_state('completed_sessions','[{"id":9,"scores":{"c1_y1_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":10,"w":"A"},"c1_y2_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":15,"sB":15,"w":"T"}},"movements":[{"cycle":1},{"cycle":2}]}]',0);
+ perform public.set_state('current_session','{"number":4,"cycle":2,"assignments":{"1":[1,2]},"movements":[{"cycle":1}],"scores":{"c1_y1_g1":{"a1":2,"a2":null,"b1":1,"b2":null,"sA":21,"sB":5,"w":"A"},"c1_y2_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":7,"w":"A"}}}',8);
+ r=public.rebuild_player_stats();
+ if (select (season_wins,season_losses,games_played) from public.players where id=1)<>(1,1,3) then raise exception 'player 1 stats wrong: %',(select row(season_wins,season_losses,games_played) from public.players where id=1); end if;
+ if (select (season_wins,season_losses,games_played) from public.players where id=2)<>(1,1,3) then raise exception 'player 2 stats wrong'; end if;
+ r=public.rebuild_player_stats(); if (r->>'players_changed')::int<>0 then raise exception 'rebuild not idempotent'; end if;
+end $$;
+-- Season rollover (organizer with second factor): archive created, stats zeroed, approval withdrawn.
 do $$ declare r jsonb; begin
  begin perform public.start_new_season('2026-27'); raise exception 'rollover with active session accepted'; exception when raise_exception then null; end;
  perform public.delete_state('current_session');

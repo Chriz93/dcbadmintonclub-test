@@ -193,6 +193,23 @@ export async function installMock(page: Page, s: MockState) {
         let n = 0; for (const p of s.players) { Object.assign(p, { season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, paid: false, approved: false, waitlisted: false, registered_at: null }); n++; }
         return json(200, { archived: a.p_label, players_reset: n });
       }
+      if (fn === "rebuild_player_stats") {
+        if (!admin) return deny("Organizer verification required");
+        const sessions = JSON.parse(s.state["completed_sessions"]?.value || "[]") as { scores?: Record<string, { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string }> }[];
+        const cur = s.state["current_session"] ? JSON.parse(s.state["current_session"].value) : null;
+        const counted = new Set<number>((cur?.movements || []).map((m: { cycle: number }) => m.cycle));
+        const games = sessions.flatMap((x) => Object.values(x.scores || {}));
+        if (cur?.scores) for (const [k, sc] of Object.entries(cur.scores as Record<string, never>)) { const m = k.match(/_y(\d+)_/); if (m && counted.has(parseInt(m[1]))) games.push(sc); }
+        const t: Record<number, { g: number; w: number; l: number }> = {};
+        for (const sc of games) {
+          for (const id of [sc.a1, sc.a2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "A") t[id].w++; else if (sc.w === "B") t[id].l++; }
+          for (const id of [sc.b1, sc.b2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "B") t[id].w++; else if (sc.w === "A") t[id].l++; }
+        }
+        let n = 0;
+        for (const p of s.players) { const x = t[p.id] || { g: 0, w: 0, l: 0 }; if (p.season_wins !== x.w || p.season_losses !== x.l || p.games_played !== x.g) { Object.assign(p, { season_wins: x.w, season_losses: x.l, games_played: x.g }); n++; } }
+        s.audit.push({ action: "stats.rebuilt" });
+        return json(200, { players_changed: n });
+      }
       if (fn === "update_my_profile") return json(200, null);
       return json(404, { message: `unknown rpc ${fn}` });
     }

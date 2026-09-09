@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>🧪 Maplewood League — TEST</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d2137">
@@ -437,7 +437,7 @@ textarea.inp{resize:vertical;min-height:80px;}
             <div id="mt-regular-box" class="membership-box active-box" onclick="selectMembership('regular')">
               <div style="font-size:22px;margin-bottom:6px;">🏸</div>
               <div style="font-weight:800;font-size:14px;">Regular</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:3px;">$150 · Full season</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">$400 · Full season</div>
               <div style="font-size:11px;margin-top:4px;" id="reg-slots-text">Loading...</div>
             </div>
           </label>
@@ -519,7 +519,7 @@ textarea.inp{resize:vertical;min-height:80px;}
           <input type="checkbox" id="w1">
           <span style="font-weight:700;">I have read and agree to <strong>all sections above</strong> including: liability waiver & release, assumption of risk, OCDSB facility rules, non-refundable payment policy, media consent, privacy policy, and e-transfer responsibility. If registering a minor, I accept full responsibility as parent/guardian.</span>
         </div>
-        <div class="chk-row" id="w5-row" style="display:none;"><input type="checkbox" id="w5"><span>I acknowledge the e-transfer payment of <strong>$150</strong> to <strong>christygeorge993@gmail.com</strong> is required to complete my registration.</span></div>
+        <div class="chk-row" id="w5-row" style="display:none;"><input type="checkbox" id="w5"><span>I acknowledge the e-transfer payment of <strong>$400</strong> to <strong>christygeorge993@gmail.com</strong> is required to complete my registration.</span></div>
         <div class="chk-row" id="w6-row" style="display:none;"><input type="checkbox" id="w6"><span>I understand spare players are charged <strong>$20 per session</strong> via e-transfer to <strong>christygeorge993@gmail.com</strong> before or on the session date.</span></div>
         <label class="lbl" style="margin-top:8px;">Digital Signature (type full name) *</label>
         <input class="inp" id="r-sig" placeholder="Your full name as signature">
@@ -569,7 +569,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div style="font-size:56px;margin-bottom:16px;">🎉</div>
         <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Registration Submitted!</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="reg-success-msg">Your registration is pending admin approval.</div>
-        <div class="alert alert-warn" id="reg-payment-note">⚠️ E-transfer $150 to:<br><strong>christygeorge993@gmail.com</strong><br><small>Use your name as the message</small></div>
+        <div class="alert alert-warn" id="reg-payment-note">⚠️ E-transfer $400 to:<br><strong>christygeorge993@gmail.com</strong><br><small>Use your name as the message</small></div>
         <div class="alert alert-info" id="reg-spare-payment-note" style="display:none;">💡 As a spare, you pay <strong>$20 per session</strong> when called in.<br>E-transfer to <strong>christygeorge993@gmail.com</strong> before or on the session date.</div>
         <div class="alert alert-info">📍 Maplewood Secondary School<br>700 Cope Drive, Stittsville · Gym 127C & 127D</div>
         <div class="alert alert-success">✅ First session: <strong>Tuesday September 15, 2026 at 8:00 PM</strong></div>
@@ -644,7 +644,7 @@ textarea.inp{resize:vertical;min-height:80px;}
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">8:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Start</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">10:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">End</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">6</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Courts</div></div>
-      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$150</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Season</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$400</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Season</div></div>
     </div>
   </div>
   <div id="sched-list"></div>
@@ -693,7 +693,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <label class="lbl">Full Name</label><input class="inp" id="np-name" placeholder="Full name">
         <label class="lbl">Membership Type</label>
         <select class="inp" id="np-membership">
-          <option value="regular">🏸 Regular ($150/season)</option>
+          <option value="regular">🏸 Regular ($400/season)</option>
           <option value="spare">🔄 Spare ($20/session)</option>
         </select>
         <label class="lbl">Starting Court</label>
@@ -860,6 +860,8 @@ async function mirrorApprovals(v){
 }
 async function setKV(k,v){try{const nv=await rpc('set_state',{k,v:JSON.stringify(v),expected:_stateVersion[k]||0});_stateVersion[k]=nv;if(k==='player_approvals')await mirrorApprovals(v);}catch(e){if(e.code==='40001'||/Stale state/.test(e.message||'')){toast('⚠️ Someone else saved newer changes — reloading','warn');await loadAll();renderAll();throw e;}console.error('setKV failed:',k,e);toast('⚠️ Save failed: '+String(e.message||'check connection').substring(0,80),'error');throw e;}}
 async function deleteKV(k){await rpc('delete_state',{k});delete _stateVersion[k];}
+// Season wins/losses/games are derived from the stored scores by the database; never incremented in the browser.
+async function rebuildStats(){try{await rpc('rebuild_player_stats');}catch(e){toast('Statistics not rebuilt: '+(e.message||'refresh and retry'),'error');}}
 
 // ══════════════════════════════════════════════
 // STATE
@@ -1016,6 +1018,12 @@ function renderRSVPInto(el,compact){
       <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${notComing}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Not Coming</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--muted);">${notResponded}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">No Reply</div></div>
     </div>`;
+  const startAt=FD[S.current.number-1];
+  if(startAt){
+    const cutoff=new Date(startAt.getTime()-FEES.absenceNoticeHours*3600000);
+    const open=Date.now()<=cutoff.getTime();
+    html += `<div style="font-size:11px;color:${open?'var(--muted)':'var(--yellow2)'};margin-bottom:8px;">${open?`$${FEES.absenceRefund} refund if you decline by ${cutoff.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} (72 hours before play).`:`The 72-hour refund window closed ${cutoff.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}; you can still update your answer.`}</div>`;
+  }
   if(me){
     html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <button class="btn ${myRsvp==='coming'?'btn-success':'btn-ghost'}" onclick="submitRSVP(true)" style="margin:0;">✅ I'm Coming</button>
@@ -1726,7 +1734,7 @@ function renderPayments(){
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;">${esc(p.name)}${isSpare?'<span class="spare-badge" style="margin-left:6px;">SPARE</span>':''}</div>
         <div style="font-size:11px;color:${p.paid?'var(--green2)':'var(--yellow2)'};">
-          ${p.paid?(isSpare?'✅ $20 session fee paid':'✅ Paid $150'):(isSpare?'⏳ $20 session fee pending':'⏳ $150 e-transfer pending')}
+          ${p.paid?(isSpare?'✅ $20 session fee paid':'✅ Paid $400'):(isSpare?'⏳ $20 session fee pending':'⏳ $400 e-transfer pending')}
         </div>
       </div>
       <button class="btn ${p.paid?'btn-ghost':'btn-success'} btn-sm" onclick="togglePaid(${p.id})">${p.paid?'Undo':'Mark Paid'}</button>
@@ -1827,7 +1835,7 @@ async function autoAdvanceCheck(){
     if(_scSel)_scSel.value='';
     const _scArea=document.getElementById('score-area');
     if(_scArea)_scArea.innerHTML='';
-    await setKV('current_session',S.current);await loadAll();renderAll();
+    await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();
     if(isFinalRound)toast('🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds. Click "End Session" to finalize standings.','success');
   }
   catch(e){
@@ -1858,11 +1866,9 @@ async function undoRound(){
   }
   // If the session was marked complete by the final round, undo that too — admin can re-enter scores
   if(S.current.completed)delete S.current.completed;
-  // Revert player DB stats
-  const reverts=snap.playerStats.map(ps=>sbU('players',ps.id,{season_wins:ps.w,season_losses:ps.l,games_played:ps.gp}));
-  if(reverts.length)await Promise.all(reverts);
   await setKV('current_session',S.current);
   await setKV('round_snapshots',_roundSnapshots);
+  await rebuildStats(); // statistics follow the restored scores/movements
   await loadAll();renderAll();
   toast('Reverted to Round '+S.current.cycle+' — scores, tosses, and stats restored','success');
 }
@@ -1889,12 +1895,11 @@ async function resetSession(){
         sb.forEach(id=>{if(!rebuilt[id])return;rebuilt[id].gp++;if(bWin)rebuilt[id].w++;else if(aWin)rebuilt[id].l++;});
       });
     });
-    const resets=activePlayers().map(p=>sbU('players',p.id,{season_wins:rebuilt[p.id].w,season_losses:rebuilt[p.id].l,games_played:rebuilt[p.id].gp}));
-    if(resets.length)await Promise.all(resets);
+    void rebuilt; // statistics are rebuilt from completed sessions after the reset is saved
     S.current.cycle=1;S.current.scores={};S.current.movements=[];S.current.courtCycles=null;
     S.current.attendance={};S.current.latePlayers=[];S.current.birdDistribution={};
     delete S.current.completed;
-    await setKV('current_session',S.current);await loadAll();renderAll();
+    await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();
     toast('Session reset — current session cleared, completed session stats preserved','success');
   }finally{_autoAdvancing=false;}
 }
@@ -1944,7 +1949,7 @@ async function nextCycle(){
     if(_scSel)_scSel.value='';
     const _scArea=document.getElementById('score-area');
     if(_scArea)_scArea.innerHTML='';
-    await setKV('current_session',S.current);await loadAll();renderAll();
+    await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();
     toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
   }finally{_autoAdvancing=false;}
 }
@@ -2089,17 +2094,8 @@ async function applyRotation(){
   if(S.current.preTosses){
     Object.keys(S.current.preTosses).forEach(k=>{if(k.startsWith(`${cy}_`))delete S.current.preTosses[k];});
   }
-  // Update DB with actual games played this cycle per player
-  const rotationStatUpdates=[];
-  Object.entries(wins).forEach(([id,w])=>{
-    const pid=parseInt(id);
-    const p=S.players.find(x=>x.id===pid);
-    if(!p)return;
-    const played=gamesPlayedCycle[pid]||0;
-    if(played===0)return; // player had no games this cycle (absent)
-    rotationStatUpdates.push(sbU('players',pid,{season_wins:p.seasonWins+w,season_losses:p.seasonLosses+(played-w),games_played:p.gamesPlayed+played}));
-  });
-  if(rotationStatUpdates.length) await Promise.all(rotationStatUpdates);
+  // Statistics are rebuilt from stored scores once the session state is saved (see rebuildStats).
+  void gamesPlayedCycle;
 }
 async function endSession(){
   if(!S.current)return toast('No active session','warn');
@@ -2119,18 +2115,7 @@ async function endSession(){
     side_b.forEach(id=>{finalGamesPlayed[id]=(finalGamesPlayed[id]||0)+1;finalPts[id]=(finalPts[id]||0)+sc.sB;finalPtFor[id]=(finalPtFor[id]||0)+sc.sB;finalPtAgainst[id]=(finalPtAgainst[id]||0)+sc.sA;});
   }
   // Apply last cycle's W/L to season stats (only if not already processed by nextCycle)
-  if(!alreadyProcessed){
-    const statUpdates=[];
-    Object.entries(finalWins).forEach(([id,w])=>{
-      const pid=parseInt(id);
-      const p=S.players.find(x=>x.id===pid);
-      if(!p)return;
-      const played=finalGamesPlayed[pid]||0;
-      if(played===0)return;
-      statUpdates.push(sbU('players',pid,{season_wins:p.seasonWins+w,season_losses:p.seasonLosses+(played-w),games_played:p.gamesPlayed+played}));
-    });
-    if(statUpdates.length) await Promise.all(statUpdates);
-  }
+  // Final-round statistics are rebuilt from the saved session below; nothing is incremented here.
   // ── Compute movement map for last cycle (so arrows display correctly) ──
   // Delegate to sortCourtRanking so the sort order matches applyRotation exactly
   // (wins → pts → diff → toss → id). The previous local sort used pts/diff only,
@@ -2188,9 +2173,11 @@ async function endSession(){
     const p=S.players.find(x=>x.id===id);
     if(p){
       const newCount=(p.noShowCount||0)+1;
-      const demotedCourt=Math.min(NC, (p.currentCourt||1)+1);
+      let fromCourt=0;for(let c=1;c<=NC;c++)if((S.current.assignments[c]||[]).includes(id)){fromCourt=c;break;}
+      if(!fromCourt)fromCourt=p.currentCourt||NC;
+      const demotedCourt=Math.min(NC, fromCourt+1);
       demotionUpdates.push(sbU('players',id,{no_show_count:newCount, current_court:demotedCourt}));
-      toast(`⚠️ ${p.name} absent — court moved C${p.currentCourt}→C${demotedCourt} next session`,'warn');
+      toast(`⚠️ ${p.name} absent — court moved C${fromCourt}→C${demotedCourt} next session`,'warn');
     }
   });
   if(demotionUpdates.length) await Promise.all(demotionUpdates);
@@ -2233,7 +2220,8 @@ async function endSession(){
   // Build session summary BEFORE saving
   const summary=buildSessionSummary(S.current);
   await setKV('completed_sessions',[...S.sessions,JSON.parse(JSON.stringify(S.current))]);
-  await setKV('current_session',null);
+  await deleteKV('current_session');
+  await rebuildStats();
   await loadAll();renderAll();
   // Show summary modal
   showSessionSummary(summary);
@@ -3600,13 +3588,8 @@ function renderLeaderboard(){
   }).join('');
 }
 function computeEloRatings(){
-  // Performance-weighted ELO: winning on higher courts earns more, losing on lower costs more
+  // Start from the seeding court (peak court reached, else current, else bottom): 1500 on Court 1 down to 1000 on Court 6.
   const elo={};
-  // Starting ELO reflects the player's PEAK achieved court, not their current
-  // absence status. A C1 player who misses a session shouldn't get a C6 baseline
-  // (1000) and have every historical W/L re-applied from there — that caused
-  // reports of "my ELO went down too low". highestCourt is preserved across
-  // sessions and tracks the best (lowest-numbered) court the player has reached.
   leaderboardPlayers().forEach(p=>{
     let startCourt;
     if(p.highestCourt&&p.highestCourt>0&&p.highestCourt<=NC)startCourt=p.highestCourt;
@@ -3614,61 +3597,28 @@ function computeEloRatings(){
     else startCourt=NC;
     elo[p.id]=1500-((startCourt-1)*100);
   });
-  // Process all completed sessions
-  const allSess=[...S.sessions].filter(Boolean);
+  const rating=id=>elo[id]??1000;
+  // Every completed session, then the live one, round by round in order. Ratings are frozen within a round.
+  const allSess=[...(S.sessions||[])].filter(Boolean);
   if(S.current)allSess.push(S.current);
   allSess.forEach(sess=>{
-    if(!sess)return;
-    (sess.movements||[]).forEach(mv=>{
-      const cycle=mv.cycle;
-      // For each court in this round, compute ELO changes
-      for(let c=1;c<=NC;c++){
-        const pids=(sess.assignments?.[c]||[]);
-        if(pids.length<2)continue;
-        // Court difficulty factor: higher court = harder = more reward
-        const courtFactor=(NC-c+1)/NC; // C1=1.0, C2=0.83, ..., C6=0.17
-        pids.forEach(pid=>{
-          const wins=mv.wins?.[pid]||0;
-          const pts=mv.pts?.[pid]||0;
-          if(wins===0&&pts===0)return; // didn't play
-          // Expected performance based on court level
-          const numGames=pids.length===3?2:3;
-          const expectedWinRate=0.5; // equal opponents
-          const actualWinRate=numGames>0?wins/numGames:0;
-          // K-factor scales with court difficulty
-          // Winning on Court 1 (hardest) = +25 per win above expected
-          // Winning on Court 6 (easiest) = +8 per win above expected
-          const K=8+Math.round(courtFactor*17); // ranges 8 to 25
-          const delta=Math.round(K*(actualWinRate-expectedWinRate)*numGames);
-          elo[pid]=(elo[pid]||1000)+delta;
-        });
-      }
+    const cycles=new Set();
+    Object.keys(sess.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)cycles.add(parseInt(m[1]));});
+    [...cycles].sort((a,b)=>a-b).forEach(cy=>{
+      const sum={},cnt={};
+      Object.entries(sess.scores).forEach(([k,sc])=>{
+        if(!k.includes(`_y${cy}_`)||!sc||(sc.w!=='A'&&sc.w!=='B'))return;
+        const A=[sc.a1,sc.a2].filter(x=>x!=null),B=[sc.b1,sc.b2].filter(x=>x!=null);
+        if(!A.length||!B.length)return;
+        const ra=A.reduce((t,id)=>t+rating(id),0)/A.length,rb=B.reduce((t,id)=>t+rating(id),0)/B.length;
+        const ea=1/(1+Math.pow(10,(rb-ra)/400));
+        A.forEach(id=>{sum[id]=(sum[id]||0)+((sc.w==='A'?1:0)-ea);cnt[id]=(cnt[id]||0)+1;});
+        B.forEach(id=>{sum[id]=(sum[id]||0)+((sc.w==='B'?1:0)-(1-ea));cnt[id]=(cnt[id]||0)+1;});
+      });
+      Object.keys(sum).forEach(id=>{elo[id]=rating(id)+32*(sum[id]/cnt[id]);});
     });
-    // Also process current round's live scores for active session
-    if(sess===S.current){
-      const cy=sess.cycle;
-      for(let c=1;c<=NC;c++){
-        const pids=(sess.assignments[c]||[]);if(pids.length<2)continue;
-        const courtFactor=(NC-c+1)/NC;
-        const K=8+Math.round(courtFactor*17);
-        let courtWins={};pids.forEach(id=>courtWins[id]=0);
-        let gamesPlayed=0;
-        for(let g=1;g<=MAXG;g++){
-          const sc=sess.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
-          gamesPlayed++;
-          const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);
-          if(sc.w==='A')sa.forEach(id=>{if(courtWins[id]!==undefined)courtWins[id]++;});
-          else if(sc.w==='B')sb.forEach(id=>{if(courtWins[id]!==undefined)courtWins[id]++;});
-        }
-        if(gamesPlayed===0)continue;
-        pids.forEach(pid=>{
-          const w=courtWins[pid]||0;
-          const wr=gamesPlayed>0?w/gamesPlayed:0;
-          elo[pid]=(elo[pid]||1000)+Math.round(K*(wr-0.5)*gamesPlayed);
-        });
-      }
-    }
   });
+  Object.keys(elo).forEach(id=>{elo[id]=Math.round(elo[id]);});
   return elo;
 }
 function renderRankings(){
@@ -4305,7 +4255,7 @@ function renderRegPage(){
           <div style="font-size:12px;">Membership: <strong>${isSpare?'Spare Player':'Regular Member'}</strong></div>
           <div style="font-size:12px;margin-top:4px;">Waiver: <span style="color:var(--green2);">✓ Signed</span></div>
           ${me.approved&&me.currentCourt>0?`<div style="font-size:12px;margin-top:4px;">Court: <strong>Court ${me.currentCourt}</strong></div>`:(me.approved?'<div style="font-size:12px;margin-top:4px;color:var(--muted);">Court: <em>Pending admin assignment</em></div>':'')}
-          ${!me.paid&&!isSpare?`<div class="alert alert-warn" style="margin-top:10px;">E-transfer $150 to <strong>christygeorge993@gmail.com</strong></div>`:''}
+          ${!me.paid&&!isSpare?`<div class="alert alert-warn" style="margin-top:10px;">E-transfer $400 to <strong>christygeorge993@gmail.com</strong></div>`:''}
           ${isSpare&&!me.paid?`<div class="alert alert-info" style="margin-top:10px;">💡 As a spare, you pay $20 per session when called in. E-transfer to christygeorge993@gmail.com before or on the session date.</div>`:''}
         </div>
         <button class="btn btn-ghost" onclick="localStorage.removeItem('dcbc-email');regData={};goRS(1);renderRegPage()">Register different player</button>`;
@@ -4322,13 +4272,13 @@ async function undoScore(){
   if(!S.lastUndo||!S.current)return toast('Nothing to undo','warn');
   if(S.current.cycle!==S.lastUndo.cy)return toast('Cannot undo — round advanced','warn');
   S.lastUndo.keys.forEach(k=>delete S.current.scores[k]);S.lastUndo=null;
-  await setKV('current_session',S.current);await loadAll();renderAll();toast('Scores undone','success');
+  await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();toast('Scores undone','success');
 }
 async function clearCycleScores(){
   if(!S.current)return toast('No session','warn');
   if(!confirm('Clear all scores for round '+S.current.cycle+'?'))return;
   const cy=S.current.cycle;Object.keys(S.current.scores).forEach(k=>{if(k.includes(`_y${cy}_`))delete S.current.scores[k];});
-  S.lastUndo=null;await setKV('current_session',S.current);await loadAll();renderAll();toast('Scores cleared','warn');
+  S.lastUndo=null;await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();toast('Scores cleared','warn');
 }
 function exportData(){
   const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
@@ -4674,7 +4624,7 @@ Medical Conditions: ${p.medical||'None disclosed'}
 
 REGISTRATION DETAILS
 Date Registered: ${p.registeredAt?new Date(p.registeredAt).toLocaleString():'Unknown'}
-Membership Type: ${p.membershipType==='spare'?'Spare ($20/session)':'Regular ($150/season)'}
+Membership Type: ${p.membershipType==='spare'?'Spare ($20/session)':'Regular ($400/season)'}
 Approved: ${p.approved?'YES':'PENDING'}
 Payment Status: ${p.paid?'PAID':'UNPAID'}
 
@@ -6361,7 +6311,7 @@ if(window.location.hash==='#run-tests'){
       schedHtml.includes('Session 8')?P('Sched:sess8'):F('Sched:sess8','miss');
       schedHtml.includes('Tuesday')?P('Sched:dayName'):F('Sched:dayName','miss');
       schedHtml.includes('Maplewood')||schedHtml.includes('700 Cope')?P('Sched:venue'):F('Sched:venue','miss');
-      schedHtml.includes('$150')?P('Sched:price'):F('Sched:price','miss');
+      schedHtml.includes('$400')?P('Sched:price'):F('Sched:price','miss');
       schedHtml.includes('6')?P('Sched:courts'):F('Sched:courts','miss');
       P('Sched:8sessions');P('Sched:formatted');P('Sched:activeMarker');P('Sched:responsive');P('Sched:complete');
 
