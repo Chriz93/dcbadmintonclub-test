@@ -181,6 +181,7 @@ export function AdminTools() {
       setBusy(false);
     }
   }
+  const [panel, setPanel] = useState("Players");
   return (
     <Card>
       <h2>Verified administrator access</h2>
@@ -233,178 +234,229 @@ export function AdminTools() {
           >
             Load club records
           </button>
-          <LeagueOperations club={club} />
-          <ClubSetup club={club} />
-          <Invitations key={club + "invitations"} club={club} />
-          <EligibilityReview key={club + "eligibility"} club={club} />
-          <PrivacyReview club={club} />
-          <LegacyAdministration key={club} club={club} />
-          <h3>Payment review</h3>
-          <p>
-            Check your bank record before verifying. A payment claim does not
-            prove receipt or approve membership.
-          </p>
-          <label>
-            Verification note
-            <input
-              value={paymentReason}
-              minLength={5}
-              maxLength={500}
-              disabled={busy}
-              onChange={(e) => setPaymentReason(e.target.value)}
-            />
-          </label>
-          {intakes.map((i) => (
-            <div className="admin-record" key={`${i.season_id}/${i.user_id}`}>
+          <nav className="admin-panels" aria-label="Administration sections">
+            {[
+              "Players",
+              "Payments",
+              "Sessions & seeding",
+              "Setup",
+              "History & privacy",
+            ].map((tab) => (
+              <button
+                className={panel === tab ? "button primary" : "button"}
+                aria-current={panel === tab ? "page" : undefined}
+                key={tab}
+                onClick={() => setPanel(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+          {panel === "Sessions & seeding" && <LeagueOperations club={club} />}
+          {panel === "Setup" && <ClubSetup club={club} />}
+          {panel === "Players" && (
+            <>
+              <Invitations key={club + "invitations"} club={club} />
+              <EligibilityReview key={club + "eligibility"} club={club} />
+            </>
+          )}
+          {panel === "History & privacy" && (
+            <>
+              <PrivacyReview club={club} />
+              <LegacyAdministration key={club} club={club} />
+            </>
+          )}
+          {panel === "Payments" && (
+            <>
+              <h3>Payment review</h3>
               <p>
-                {i.legal_name} · {i.kind} · $
-                {(i.claimed_amount_cents / 100).toFixed(2)} claimed ·{" "}
-                {i.payment_status}
-                <br />
-                Reference: {i.payment_reference || "Not supplied"}
+                Check your bank record before verifying. A payment claim does
+                not prove receipt or approve membership.
               </p>
-              <button
-                className="button"
-                disabled={
-                  busy ||
-                  i.payment_status === "verified" ||
-                  paymentReason.trim().length < 5 ||
-                  !navigator.onLine
-                }
-                onClick={async () => {
-                  if (!supabase) return;
-                  setBusy(true);
-                  try {
-                    const { error } = await supabase.rpc(
-                      "verify_intake_payment",
-                      {
-                        c: club,
-                        s: i.season_id,
-                        u: i.user_id,
-                        expected_revision: i.revision,
-                        reason: paymentReason.trim(),
-                      },
-                    );
-                    if (error) throw error;
-                    setIntakes((rows) =>
-                      rows.map((r) =>
-                        r === i
-                          ? {
-                              ...r,
-                              payment_status: "verified",
-                              revision: r.revision + 1,
-                            }
-                          : r,
-                      ),
-                    );
-                    setMessage(
-                      "Payment verified. Review the waiver and membership separately.",
-                    );
-                  } catch {
-                    setMessage(
-                      "Verification not confirmed. Reload records before retrying.",
-                    );
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Confirm bank payment received
-              </button>
-            </div>
-          ))}
-          <h3>Pending registrations</h3>
-          {pending.length === 0 ? (
-            <p>No pending registrations loaded.</p>
-          ) : (
-            pending.map((p) => (
-              <div key={`${p.season_id}/${p.user_id}`} className="admin-record">
-                <span>
-                  {intakes.find(
-                    (i) =>
-                      i.user_id === p.user_id && i.season_id === p.season_id,
-                  )?.legal_name ?? `Member ${p.user_id}`}
-                </span>
-                <button
-                  className="button"
+              <label>
+                Verification note
+                <input
+                  value={paymentReason}
+                  minLength={5}
+                  maxLength={500}
                   disabled={busy}
-                  onClick={async () => {
-                    if (!supabase) return;
-                    setBusy(true);
-                    const { error } = await supabase.rpc("approve_member", {
-                      c: club,
-                      s: p.season_id,
-                      u: p.user_id,
-                    });
-                    setMessage(
-                      error
-                        ? "Review failed; verify waiver and capacity."
-                        : "Membership reviewed. Refresh to see the result.",
-                    );
-                    setBusy(false);
-                  }}
+                  onChange={(e) => setPaymentReason(e.target.value)}
+                />
+              </label>
+              {intakes.map((i) => (
+                <div
+                  className="admin-record"
+                  key={`${i.season_id}/${i.user_id}`}
                 >
-                  Approve / waitlist by capacity
-                </button>
-              </div>
-            ))
+                  <p>
+                    {i.legal_name} · {i.kind} · $
+                    {(i.claimed_amount_cents / 100).toFixed(2)} claimed ·{" "}
+                    {i.payment_status}
+                    <br />
+                    Reference: {i.payment_reference || "Not supplied"}
+                  </p>
+                  <button
+                    className="button"
+                    disabled={
+                      busy ||
+                      i.payment_status === "verified" ||
+                      paymentReason.trim().length < 5 ||
+                      !navigator.onLine
+                    }
+                    onClick={async () => {
+                      if (!supabase) return;
+                      setBusy(true);
+                      try {
+                        const { error } = await supabase.rpc(
+                          "verify_intake_payment",
+                          {
+                            c: club,
+                            s: i.season_id,
+                            u: i.user_id,
+                            expected_revision: i.revision,
+                            reason: paymentReason.trim(),
+                          },
+                        );
+                        if (error) throw error;
+                        setIntakes((rows) =>
+                          rows.map((r) =>
+                            r === i
+                              ? {
+                                  ...r,
+                                  payment_status: "verified",
+                                  revision: r.revision + 1,
+                                }
+                              : r,
+                          ),
+                        );
+                        setMessage(
+                          "Payment verified. Review the waiver and membership separately.",
+                        );
+                      } catch {
+                        setMessage(
+                          "Verification not confirmed. Reload records before retrying.",
+                        );
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Confirm bank payment received
+                  </button>
+                </div>
+              ))}
+            </>
           )}
-          <h3>Session management</h3>
-          {sessions.map((s) => (
-            <div className="admin-record" key={s.id}>
-              <span>
-                {new Date(s.starts_at).toLocaleString()} · {s.status}
-              </span>
-              <button
-                className="button"
-                disabled={
-                  busy || s.status === "cancelled" || s.status === "completed"
-                }
-                onClick={async () => {
-                  if (
-                    !supabase ||
-                    !window.confirm(
-                      "Cancel this session and queue notices for opted-in members?",
-                    )
-                  )
-                    return;
-                  setBusy(true);
-                  const { error } = await supabase.rpc("cancel_session", {
-                    c: club,
-                    s: s.id,
-                    expected_revision: s.revision,
-                  });
-                  setMessage(
-                    error
-                      ? "Cancellation not confirmed. Refresh before retrying."
-                      : "Session cancelled. Refresh to see the result.",
-                  );
-                  setBusy(false);
-                }}
-              >
-                Cancel session
-              </button>
-            </div>
-          ))}
-          <h3>Recent notification deliveries</h3>
-          {deliveries.length ? (
-            deliveries.map((d, i) => (
-              <p key={i}>
-                {d.template} · {d.status} · {d.attempts} attempts
-              </p>
-            ))
-          ) : (
-            <p>No delivery records loaded.</p>
+          {panel === "Players" && (
+            <>
+              <h3>Pending registrations</h3>
+              {pending.length === 0 ? (
+                <p>No pending registrations loaded.</p>
+              ) : (
+                pending.map((p) => (
+                  <div
+                    key={`${p.season_id}/${p.user_id}`}
+                    className="admin-record"
+                  >
+                    <span>
+                      {intakes.find(
+                        (i) =>
+                          i.user_id === p.user_id &&
+                          i.season_id === p.season_id,
+                      )?.legal_name ?? `Member ${p.user_id}`}
+                    </span>
+                    <button
+                      className="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        if (!supabase) return;
+                        setBusy(true);
+                        const { error } = await supabase.rpc("approve_member", {
+                          c: club,
+                          s: p.season_id,
+                          u: p.user_id,
+                        });
+                        setMessage(
+                          error
+                            ? "Review failed; verify waiver and capacity."
+                            : "Membership reviewed. Refresh to see the result.",
+                        );
+                        setBusy(false);
+                      }}
+                    >
+                      Approve / waitlist by capacity
+                    </button>
+                  </div>
+                ))
+              )}
+            </>
           )}
-          <h3>Recent audit events</h3>
-          {events.length ? (
-            events.map((e, i) => (
-              <p key={i}>
-                {e.action} · {new Date(e.created_at).toLocaleString()}
-              </p>
-            ))
-          ) : (
-            <p>No audit events loaded.</p>
+          {panel === "Sessions & seeding" && (
+            <>
+              <h3>Session management</h3>
+              {sessions.map((s) => (
+                <div className="admin-record" key={s.id}>
+                  <span>
+                    {new Date(s.starts_at).toLocaleString()} · {s.status}
+                  </span>
+                  <button
+                    className="button"
+                    disabled={
+                      busy ||
+                      s.status === "cancelled" ||
+                      s.status === "completed"
+                    }
+                    onClick={async () => {
+                      if (
+                        !supabase ||
+                        !window.confirm(
+                          "Cancel this session and queue notices for opted-in members?",
+                        )
+                      )
+                        return;
+                      setBusy(true);
+                      const { error } = await supabase.rpc("cancel_session", {
+                        c: club,
+                        s: s.id,
+                        expected_revision: s.revision,
+                      });
+                      setMessage(
+                        error
+                          ? "Cancellation not confirmed. Refresh before retrying."
+                          : "Session cancelled. Refresh to see the result.",
+                      );
+                      setBusy(false);
+                    }}
+                  >
+                    Cancel session
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+          {panel === "History & privacy" && (
+            <>
+              <h3>Recent notification deliveries</h3>
+              {deliveries.length ? (
+                deliveries.map((d, i) => (
+                  <p key={i}>
+                    {d.template} · {d.status} · {d.attempts} attempts
+                  </p>
+                ))
+              ) : (
+                <p>No delivery records loaded.</p>
+              )}
+              <h3>Recent audit events</h3>
+              {events.length ? (
+                events.map((e, i) => (
+                  <p key={i}>
+                    {e.action} · {new Date(e.created_at).toLocaleString()}
+                  </p>
+                ))
+              ) : (
+                <p>No audit events loaded.</p>
+              )}
+            </>
           )}
         </>
       )}

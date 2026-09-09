@@ -1,3 +1,4 @@
+import { FinalPlacementReview } from "./FinalPlacementReview";
 import { initialPlacement, nextRoundPlacement } from "../domain/placement";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -1040,39 +1041,54 @@ export function SessionWorkspace({ online }: { online: boolean }) {
               </section>
             ))
           )}
-          {admin && session.status === "active" && (
-            <button
-              className="button primary"
-              disabled={
-                disabled ||
-                !matches.length ||
-                roundNumbers.some((r) => roundProgress(r).state !== "ready")
-              }
-              onClick={async () => {
-                if (
-                  !window.confirm(
-                    "Complete this session and rebuild its season results?",
-                  )
-                )
-                  return;
-                setBusy(true);
-                setReady("");
-                const { error } = await supabase!.rpc("complete_session", {
-                  c: club,
-                  s: selected,
-                  expected_revision: session.revision,
-                });
-                setMessage(
-                  error
-                    ? "Completion not confirmed. Refresh before retrying."
-                    : "Session completed. Member results are updated.",
-                );
-                setBusy(false);
-              }}
-            >
-              Complete session
-            </button>
-          )}
+          {admin &&
+            ["active", "completed"].includes(session.status) &&
+            matches.length > 0 &&
+            roundNumbers.every((r) => roundProgress(r).state === "ready") && (
+              <FinalPlacementReview
+                key={
+                  selected +
+                  "/" +
+                  session.revision +
+                  "/" +
+                  matches.map((m) => m.revision).join("-")
+                }
+                club={club}
+                session={selected}
+                revision={session.revision}
+                expectedMatches={Object.fromEntries(
+                  matches.map((m) => [m.id, m.revision]),
+                )}
+                completed={session.status === "completed"}
+                courts={courts}
+                previous={savedCourts(roundNumbers.at(-1)!)}
+                results={matches
+                  .filter((m) => m.round === roundNumbers.at(-1))
+                  .map((m) => ({
+                    game: {
+                      a: m.side_a,
+                      b: m.side_b,
+                      rest: savedCourts(m.round)[
+                        courts.findIndex((c) => c.id === m.court_id)
+                      ].filter(
+                        (id) => ![...m.side_a, ...m.side_b].includes(id),
+                      ),
+                      target: m.target,
+                    },
+                    a: m.score_a!,
+                    b: m.score_b!,
+                  }))}
+                targets={targets}
+                name={name}
+                disabled={disabled}
+                onSaved={async () => {
+                  await refresh();
+                  setMessage(
+                    "Session completed. Final court placements, results and ELO are published.",
+                  );
+                }}
+              />
+            )}
         </>
       )}
       <p role="status">{message}</p>

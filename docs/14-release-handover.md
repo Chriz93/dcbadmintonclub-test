@@ -1,5 +1,8 @@
 # Release handover — September 7, 2026
 
+> **Current release (9 September 2026):** See [Connected product release](23-connected-product-release.md) for the hosted Preview, completed integrations, current checks and deferred launch gates. Earlier status statements below are historical.
+
+
 ## Latest: auth-first workflow alignment (2026-09-08)
 
 See `18-simpler-workflow.md`. Connected TEST now starts with email sign-in and routes new accounts through details, season agreement, and approval status. Active players get five simple tabs; owners/admins retain separate MFA-protected Administration access. Full 34-case browser suite, 161 unit/SQL tests, build and lint passed. This turn’s read-only remote metadata check confirmed the three migration-030 APIs used by the frontend plus assignment ordinal exist. No database writes or email sends were performed. Original production remains unchanged. Source commit `275470f` was published through Cloudflare direct upload to the existing TEST site; Cloudflare reported Success and a fresh browser verified the new sign-in page and matching built asset filenames. See `18-simpler-workflow.md` for exact evidence and verification limits. The final 14 affected registration/guardian cases passed again after preserving entered values between steps.

@@ -75,7 +75,8 @@ export function SessionAccounts({
       <h3>Refunds, shuttle credits and spare booking</h3>
       <p>
         Eligible absence refund: $14 with at least 72 hours’ notice. School
-        cancellations credit two physical shuttlecocks, with no cash refund.
+        cancellations give regular players two physical shuttlecocks, with no
+        cash refund. Confirmed paid spares receive a full $20 refund.
       </p>
       <button
         className="button"

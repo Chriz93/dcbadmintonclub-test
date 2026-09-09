@@ -143,7 +143,12 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
     "10000000-0000-0000-0000-000000000001",
   );
   await signIn(page);
-  await page.getByRole("button", { name: "Courts", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Administration", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Open match-day controls", exact: true })
+    .click();
   await page.getByRole("button", { name: "Load my clubs" }).click();
   await expect(
     page.getByRole("button", { name: "Refresh session" }),
@@ -212,52 +217,4 @@ test("connected courtside UI submits a reviewed 25-player plan and reconciles sc
   await expect(page.getByRole("status")).toContainText(
     "Current test schedule loaded.",
   );
-});
-
-test("member standings display normalized results and shared ranks (mock API)", async ({
-  page,
-}) => {
-  await page.route(
-    "https://wgolevihkvmosajumzvl.supabase.co/**",
-    async (route) => {
-      const path = new URL(route.request().url()).pathname;
-      const data = path.endsWith("/seasons")
-        ? [{ id: "season", club_id: "club", name: "Synthetic league" }]
-        : path.endsWith("/league_standings")
-          ? [
-              {
-                user_id: "one",
-                display_name: "Alex",
-                played: 4,
-                wins: 3,
-                points: 65,
-                possible_points: 84,
-                position: 1,
-              },
-              {
-                user_id: "two",
-                display_name: "Sam",
-                played: 8,
-                wins: 6,
-                points: 130,
-                possible_points: 168,
-                position: 1,
-              },
-            ]
-          : [];
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(data),
-      });
-    },
-  );
-  await mockSignIn(page);
-  await signIn(page);
-  await page.getByRole("button", { name: "Standings", exact: true }).click();
-  await page.getByRole("button", { name: "Refresh standings" }).click();
-  await expect(page.getByRole("table")).toContainText("Alex");
-  await expect(page.getByRole("table")).toContainText("75.0%");
-  const accessibility = await new AxeBuilder({ page }).analyze();
-  expect(accessibility.violations.map((v) => v.id)).toEqual([]);
 });

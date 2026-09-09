@@ -1140,8 +1140,9 @@ export default function GameDayDemo() {
                 <div className="gd-note">
                   Season rules: 72 hours’ notice for a $14 absence refund;
                   verified no-show means one court down; school cancellation
-                  credits two physical shuttlecocks. Fresh agreement every
-                  season. Final agreement review is still pending.
+                  gives regular players two physical shuttlecocks and confirmed
+                  paid spares a full $20 refund. Fresh agreement every season.
+                  Final agreement review is still pending.
                 </div>
                 <label className="gd-check">
                   <input
@@ -2121,9 +2122,9 @@ export default function GameDayDemo() {
                   </p>
                   <div className="gd-note">
                     At least 72 hours’ absence notice: $14. School cancellation:
-                    two physical shuttlecocks under your stated policy. The
-                    existing paid-spare cancellation exception must be resolved
-                    before agreement publication.
+                    regular players receive two physical shuttlecocks with no
+                    cash refund; confirmed paid spares receive a full $20
+                    refund.
                   </div>
                 </section>
               )}

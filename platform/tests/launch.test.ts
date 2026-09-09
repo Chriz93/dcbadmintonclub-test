@@ -345,6 +345,13 @@ it("organizer review queue and member next-session read expose only the right re
 });
 
 it("a confirmed spare gets the full $20 back when the school cancels, not shuttles", async () => {
+  const terms = (
+    await db.query<{ terms: string }>("select club_app.agreement_terms() terms")
+  ).rows[0].terms;
+  expect(terms).toContain(
+    "regular players receive two physical shuttlecocks with no cash refund",
+  );
+  expect(terms).toContain("Confirmed paid spares receive a full $20 refund");
   const sid = "34000000-0000-0000-0000-000000000003";
   await db.exec(
     `delete from club_app.rate_limits;insert into club_app.sessions(id,club_id,season_id,venue_id,starts_at,ends_at,rsvp_deadline,capacity) values('${sid}','${c}','${se}','${venue}',now()+interval '9 days',now()+interval '9 days 2 hours',now()+interval '9 days'-interval '2 hours',25);

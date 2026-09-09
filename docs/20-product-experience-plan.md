@@ -1,5 +1,8 @@
 # Maplewood league experience — proposed delivery plan
 
+> **Current release (9 September 2026):** See [Connected product release](23-connected-product-release.md) for the hosted Preview, completed integrations, current checks and deferred launch gates. Earlier status statements below are historical.
+
+
 Prepared September 8, 2026. **Planning only: no application or deployment changes are made by this document.**
 
 September 9 update: Christy authorized the opponent-based ELO choice. The locally browsable phase-1 experience and spoken tour are documented in `21-narrated-game-day-demo.md`. Hosted integration and the remaining phases are still pending.

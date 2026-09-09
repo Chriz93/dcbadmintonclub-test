@@ -1,10 +1,17 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  type ReactNode,
+} from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   CalendarDays,
   House,
   LayoutGrid,
   Moon,
+  Pencil,
   Settings,
   Sun,
   Trophy,
@@ -14,7 +21,7 @@ import { z } from "zod";
 import { supabase, requestCode, verifyCode } from "../services/auth";
 import { MemberDashboard } from "./MemberDashboard";
 import { RegistrationFlow } from "./RegistrationFlow";
-import { Standings } from "./Standings";
+import { LeagueExperience, type LeaguePage } from "../league/LeagueExperience";
 import { Card } from "./ui";
 
 const membership = z.object({
@@ -25,11 +32,13 @@ const membership = z.object({
 const tabs = [
   ["home", "Home", House],
   ["courts", "Courts", LayoutGrid],
+  ["scores", "Scores", Pencil],
   ["standings", "Standings", Trophy],
   ["schedule", "Schedule", CalendarDays],
   ["account", "My account", UserRound],
 ] as const;
-type Route = (typeof tabs)[number][0] | "registration" | "admin";
+type Route =
+  (typeof tabs)[number][0] | "registration" | "admin" | "matchday" | "help";
 
 /** Navigation is only a convenience; every read and write still uses Supabase RLS. */
 export function LeagueApp({
@@ -238,6 +247,10 @@ function SignedInLeague({
   admin: ReactNode;
 }) {
   const [route, setRoute] = useState<Route>("home");
+  const leaveGuard = useRef<() => boolean>(() => true);
+  const registerLeaveGuard = useCallback((guard: () => boolean) => {
+    leaveGuard.current = guard;
+  }, []);
   const [memberships, setMemberships] = useState<z.infer<typeof membership>[]>(
     [],
   );
@@ -275,12 +288,14 @@ function SignedInLeague({
   );
   // Re-evaluate on each render: losing a role closes an already-open protected screen.
   const current =
-    route === "admin" && !isAdmin
+    ["admin", "matchday"].includes(route) && !isAdmin
       ? "home"
-      : ["courts", "standings", "schedule"].includes(route) && !active
+      : ["courts", "scores", "standings", "schedule", "help"].includes(route) &&
+          !active
         ? "home"
         : route;
   const go = (next: Route) => {
+    if (!leaveGuard.current()) return;
     setRoute(next);
     window.scrollTo({ top: 0 });
     document.getElementById("main")?.focus();
@@ -301,6 +316,7 @@ function SignedInLeague({
           className="text-button"
           disabled={signingOut}
           onClick={async () => {
+            if (!leaveGuard.current()) return;
             setSigningOut(true);
             const { error } = await supabase!.auth.signOut({ scope: "local" });
             if (error) {
@@ -332,7 +348,9 @@ function SignedInLeague({
         id="main"
         tabIndex={-1}
         className={
-          current === "admin" || current === "courts"
+          ["admin", "matchday", "courts", "scores", "standings"].includes(
+            current,
+          )
             ? "league-wide"
             : "league-main"
         }
@@ -353,36 +371,21 @@ function SignedInLeague({
         ) : (
           !error && (
             <>
+              {active &&
+                ["home", "courts", "scores", "standings", "help"].includes(
+                  current,
+                ) && (
+                  <LeagueExperience
+                    page={current as LeaguePage}
+                    userId={userId}
+                    onNavigate={go}
+                    onAdmin={() => go("matchday")}
+                    registerLeaveGuard={registerLeaveGuard}
+                  />
+                )}
               {current === "home" &&
                 (active ? (
-                  <>
-                    <div className="page-heading">
-                      <div>
-                        <p className="eyebrow">WELCOME BACK</p>
-                        <h1>Your league night.</h1>
-                      </div>
-                    </div>
-                    {isAdmin && (
-                      <Card className="admin-shortcut">
-                        <strong>Running tonight’s session?</strong>
-                        <p>
-                          Manage players and payments in Administration. Open
-                          Courts for check-in, assignments, scores and
-                          movements.
-                        </p>
-                        <button
-                          className="button primary"
-                          onClick={() => go("admin")}
-                        >
-                          Manage the league
-                        </button>
-                        <button className="button" onClick={() => go("courts")}>
-                          Run a session
-                        </button>
-                      </Card>
-                    )}
-                    <MemberDashboard key={refreshKey} view="home" />
-                  </>
+                  <MemberDashboard key={refreshKey} view="home" />
                 ) : (
                   <RegistrationFlow
                     onRefresh={() => setRefreshKey((k) => k + 1)}
@@ -409,18 +412,31 @@ function SignedInLeague({
                       Open registration
                     </button>
                   </Card>
+                  {active && (
+                    <button className="button" onClick={() => go("help")}>
+                      League questions & answers
+                    </button>
+                  )}
                   <MemberDashboard view="account" />
                 </>
               )}
-              {current === "courts" && courts}
-              {current === "standings" && <Standings />}
+              {current === "matchday" && (
+                <>
+                  <h1>Run match day</h1>
+                  <p>
+                    Check in players, review assignments, record games, then
+                    publish movements or close the session.
+                  </p>
+                  {courts}
+                </>
+              )}
               {current === "schedule" && schedule}
               {current === "admin" && (
                 <>
                   <div className="admin-shortcut">
                     <button
                       className="button primary"
-                      onClick={() => go("courts")}
+                      onClick={() => go("matchday")}
                     >
                       Open match-day controls
                     </button>

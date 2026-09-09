@@ -353,9 +353,10 @@ export default function App() {
                 <p>
                   Bring indoor non-marking shoes. Warm up safely, call your own
                   lines fairly, and respect every partner. Victor Master 3
-                  shuttles: two per player per session. Give at least 3 days’
-                  notice for an absence refund. Facility cancellations have no
-                  cash refund; the two-bird allotment is returned. Participant
+                  shuttles: two per player per session. Give at least 72 hours’
+                  notice for a $14 absence refund. Facility cancellations give
+                  regular players two physical shuttlecocks with no cash refund;
+                  confirmed paid spares receive a full $20 refund. Participant
                   waiver review is pending.
                 </p>
               </Card>

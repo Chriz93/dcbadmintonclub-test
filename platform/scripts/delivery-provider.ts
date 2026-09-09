@@ -34,7 +34,7 @@ export function notificationText(template: string, appUrl: string) {
     "spare.reconciliation":
       "Your payment needs administrator reconciliation; a place has not been confirmed.",
     "session.cancelled":
-      "The school session has been cancelled. Check the app for your physical shuttlecock credit.",
+      "The school session has been cancelled. Check the app for your shuttlecock credit or spare refund.",
   };
   return `${messages[template] ?? "Your league record has changed. Open the app for details."}\n${appUrl}\nManage reminders in Member hub.`;
 }

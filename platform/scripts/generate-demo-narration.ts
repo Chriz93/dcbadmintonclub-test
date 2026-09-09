@@ -16,6 +16,8 @@ mkdirSync(output, { recursive: true });
 const temporary = mkdtempSync(join(tmpdir(), "maplewood-narration-"));
 try {
   for (const [index, step] of tour.entries()) {
+    // Pass a one-based step number to regenerate only changed narration.
+    if (process.argv[2] && Number(process.argv[2]) !== index + 1) continue;
     const source = join(temporary, `step-${index + 1}.txt`),
       audio = join(temporary, `step-${index + 1}.aiff`);
     writeFileSync(source, step.narration);

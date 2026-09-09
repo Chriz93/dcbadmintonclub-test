@@ -1,5 +1,7 @@
 # Maplewood agreement and automation — September 7, 2026
 
+Current confirmed cancellation policy (9 September 2026): regulars receive two physical shuttlecocks, no cash; confirmed paid spares receive a full $20 refund. See [current release](23-connected-product-release.md).
+
 ## Implemented and applied to TEST
 
 Organizer: **Christy**, acting personally. Maplewood Advanced Badminton League is the league name. No registered legal entity or surname is asserted.

@@ -93,6 +93,6 @@ export const tour = [
     screen: "admin",
     cue: "Browse freely or restart the tour",
     narration:
-      "Your weekly routine becomes: review responses, verify spare payments, check attendance, publish courts, review movements and close the session. Spares qualify after both their response and verified payment, subject to an available place. School cancellation credits two physical shuttlecocks under your policy. This is the interactive demo of the proposed interface. Connecting all these views and player scoring to the hosted app, finishing email delivery, agreement review, independent account checks and a real backup restore are still required before launch. You can now browse every screen or replay any step.",
+      "Your weekly routine becomes: review responses, verify spare payments, check attendance, publish courts, review movements and close the session. Spares qualify after both their response and verified payment, subject to an available place. School cancellations give regular players two physical shuttlecocks and confirmed paid spares a full twenty dollar refund. These league views and player scoring are now connected in the TEST app. This tour uses fictional players so you can practise safely. Email delivery setup, agreement review, independent account checks and a real backup restore still need verification before launch. You can now browse every screen or replay any step.",
   },
 ] as const;

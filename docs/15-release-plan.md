@@ -1,5 +1,8 @@
 # Maplewood phased release plan
 
+> **Current release (9 September 2026):** See [Connected product release](23-connected-product-release.md) for the hosted Preview, completed integrations, current checks and deferred launch gates. Earlier status statements below are historical.
+
+
 The objective is a usable member website with auditable league administration, not a promise of zero defects. Today is the target; failed safety/correctness checks remain release blockers.
 
 | Phase | Deliverable | Exit evidence | Current status |
@@ -17,7 +20,7 @@ The objective is a usable member website with auditable league administration, n
 - 25 regular advanced players; $400 regular season; $20 spare session. Christy verifies e-transfer receipts; a typed payment claim never proves payment.
 - First eligible vote plus verified payment and capacity confirms spare placement. Ratings support court assignment; Christy sets initial seed order only after approved registration and current agreement.
 - Six courts; five-player Court 6 rotation when 25 attend. Scores, rounds, movements, completion and chronological ELO correction/rebuild are guarded and audited.
-- At least 72 elapsed hours' notice qualifies for $14 absence refund. Exactly 72 hours qualifies; one millisecond late does not. Facility cancellation: no cash refund, two physical shuttles. Verified no-show: one court down, reversible by admin; unanswered RSVP alone is not a no-show.
+- At least 72 elapsed hours' notice qualifies for $14 absence refund. Exactly 72 hours qualifies; one millisecond late does not. Facility cancellation: regular players receive two physical shuttles with no cash refund; confirmed paid spares receive a full $20 refund. Verified no-show: one court down, reversible by admin; unanswered RSVP alone is not a no-show.
 - No minimum age. Under-18 participants require separate verified guardian consent. Fresh agreement every season. The legal organizer is Christy; draft agreements are not a guarantee of legal protection and must be reviewed before publication.
 - Permit-based 28 approved sessions and 6 cancelled dates, Tuesday 20:15–22:15 Toronto; finish play 22:05. The permit supersedes the original promotional message.
 - Private historical archive preserves old results without importing old signatures/payments as new entitlement.

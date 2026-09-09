@@ -22,8 +22,9 @@ export function SeasonAgreementRules() {
           and displayed in Toronto time.
         </li>
         <li>
-          School or facility cancellations have no cash refund. Each affected
-          player receives a credit for two physical shuttlecocks.
+          School or facility cancellations give affected regular players two
+          physical shuttlecocks, with no cash refund. Confirmed paid spares
+          receive a full $20 refund.
         </li>
         <li>
           A confirmed no-show moves the player down one court. A missing vote

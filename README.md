@@ -2,7 +2,7 @@
 
 The new application is in [`platform/`](platform/). Production is **unchanged**. No database or mail provider is contacted by the default local preview. The old root client is retained as migration evidence with network access disabled.
 
-Start with [`docs/07-verification.md`](docs/07-verification.md) for tested capabilities and remaining release blockers.
+Start with [`docs/23-connected-product-release.md`](docs/23-connected-product-release.md) for the current hosted preview, tested capabilities and remaining release gates.
 
 - [Product/security audit](docs/00-audit.md)
 - [Migration and rollback plan](docs/01-migration-rollback.md)

@@ -1,5 +1,8 @@
 # Round movements, game-day testing and legacy parity
 
+> **Current release (9 September 2026):** See [Connected product release](23-connected-product-release.md) for the hosted Preview, completed integrations, current checks and deferred launch gates. Earlier status statements below are historical.
+
+
 Verified September 9, 2026. Local source delivery; hosted TEST and production were not changed in this work.
 
 ## Delivered

@@ -100,7 +100,7 @@ export function ClubSetup({ club }: { club: string }) {
               });
             }}
           >
-            <h4>Public club details</h4>
+            <h3>Public club details</h3>
             <label>
               Club display name
               <input

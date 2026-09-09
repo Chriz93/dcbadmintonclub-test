@@ -187,6 +187,10 @@ test("administrator edits public settings with a reason and safely renders annou
     page.getByRole("status").filter({ hasText: "Identity review recorded" }),
   ).toBeVisible();
   await page
+    .getByRole("navigation", { name: "Administration sections" })
+    .getByRole("button", { name: "Setup", exact: true })
+    .click();
+  await page
     .getByText("Club settings, season builder and announcements", {
       exact: true,
     })
