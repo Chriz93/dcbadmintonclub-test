@@ -32,3 +32,12 @@ The list RPC grants execute to authenticated callers and checks administrator MF
 ## Scope
 
 This is the platform TEST preview release, not a production launch claim. The remaining live acceptance gates in report 25 still apply. Reminder credentials remain deferred; no emails were sent in this change. The repository-root legacy project is being modified independently and is not part of this deployment.
+
+## Published release
+
+- Source commit: `ea9ca0df8d9fa984f46fd8f42d50707eb21736ce`.
+- [Clean GitHub quality run](https://github.com/Chriz93/dcbadmintonclub-test/actions/runs/34432888283) passed, including all 110 browser cases, 1,210 unit/database tests, lint, build and dependency audit.
+- Cloudflare confirmed **Success** in **Preview**, name `league-release`: https://league-release.maplewood-league-test.pages.dev/ . The Production environment was not selected.
+- Archive: `/tmp/maplewood-registration-release-20260909.zip`, 28 compiled public files, SHA-256 `31f9245ed8f81266c6b6b24d07440188146c721537d764295b10c5be1bae258d`.
+- A fresh hosted tab loaded `assets/index-DCyHOgrb.js`, matching the TEST build and its version metadata. The live sign-in page explains that new players submit a request after signing in and Christy approves their place. The original signed-in tab was preserved; its running code requires a refresh to receive the new release.
+- This update did not send sign-in codes, grant a real account player/admin access, or publish a real agreement. The new signing/approval rehearsal used isolated synthetic data.
