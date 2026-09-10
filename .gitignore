@@ -13,3 +13,4 @@ platform/playwright-report/
 *.tsbuildinfo
 legacy/tests/e2e/node_modules
 legacy/tests/e2e/screens/
+legacy/automation/node_modules

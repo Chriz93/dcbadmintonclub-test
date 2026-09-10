@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, sessionStart, run } from "./remind.mjs";
+import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, composePush, sessionStart, run } from "./remind.mjs";
 
 test("season file matches the dates compiled into index.html", () => {
   const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
@@ -52,6 +52,18 @@ test("emails carry one-tap links for the right session and the refund note befor
   const s = composeEmail({ name: "Sam Spare", stage: "spare", open_seats: 2 }, 3, "https://x/", "org@x");
   assert.match(s.subject, /Spare seat open/); assert.match(s.text, /2 seats have opened/); assert.match(s.text, /\$20/);
   assert.equal(sessionStart("2026-09-15").getHours(), 20);
+});
+test("push payloads open the one-tap vote link and never leave test mode", async () => {
+  const p = composePush({ name: "Pat", stage: "vote-1" }, 4, "https://site/");
+  assert.equal(p.url, "https://site/?vote=coming&s=4"); assert.equal(p.actions.length, 2);
+  const db = { state: async () => null, targets: async () => [{ player_id: 1, name: "P", email: "p@x", membership_type: "regular", kind: "vote", open_seats: 0 }], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, subscriptions: async () => [{ player_id: 1, endpoint: "https://push/1", p256dh: "k", auth: "a" }], dropSubscription: async () => {} };
+  const pushes = [];
+  const now = sessionStart(SEASON.approved_dates[0]).getTime() - 24 * 3600000;
+  const base = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live", VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv" };
+  const testMode = await run({ ...base, ALLOW_REAL_RECIPIENTS: "false" }, { db, now, log: () => {}, transport: { sendMail: async () => {} }, pusher: { send: async (s, m) => pushes.push(m) } });
+  assert.equal(testMode.sent, 1); assert.equal(testMode.pushed, 0);
+  const live = await run({ ...base, ALLOW_REAL_RECIPIENTS: "true" }, { db, now, log: () => {}, transport: { sendMail: async () => {} }, pusher: { send: async (s, m) => pushes.push(m) } });
+  assert.equal(live.pushed, 1); assert.match(pushes[0].title, /Session 1/);
 });
 test("run: dry run plans without sending; live test mode claims, redirects and caps at three", async () => {
   const claims = [];

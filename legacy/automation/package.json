@@ -3,6 +3,12 @@
   "private": true,
   "type": "module",
   "description": "Scheduled vote reminders and spare-seat invitations for the legacy league site.",
-  "scripts": { "test": "node --test", "remind": "node remind.mjs" },
-  "dependencies": { "nodemailer": "^10.0.0" }
+  "scripts": {
+    "test": "node --test",
+    "remind": "node remind.mjs"
+  },
+  "dependencies": {
+    "nodemailer": "^10.0.1",
+    "web-push": "^3.6.7"
+  }
 }

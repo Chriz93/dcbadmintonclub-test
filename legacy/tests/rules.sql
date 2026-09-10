@@ -156,3 +156,41 @@ do $$ declare n int; begin
  begin insert into public.reminder_log(session_number,player_id,kind) values(7,2,'vote-1'); raise exception 'duplicate reminder logged'; exception when unique_violation then null; end;
 end $$;
 select 'PHASE3 RULES PASS' as result;
+
+-- ── L08: payment ledger and push subscriptions ─────────────────────────────────────────────────
+\i legacy/migrations/L08_payments_and_push.sql
+reset role;
+update public.players set membership_type='regular',paid=false where id=1;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin
+ begin perform public.record_payment(1,'season',400); raise exception 'member recorded a payment'; exception when insufficient_privilege then null; end;
+ perform public.save_push_subscription('https://push.example/abc','p256','auth','Safari');
+ if (select count(*) from public.push_subscriptions where player_id=1)<>1 then raise exception 'subscription not saved'; end if;
+ perform public.save_push_subscription('https://push.example/abc','p256b','auth2','Safari');
+ if (select p256dh from public.push_subscriptions where endpoint='https://push.example/abc')<>'p256b' then raise exception 'subscription not refreshed'; end if;
+ begin perform public.save_push_subscription('http://insecure','x','y'); raise exception 'insecure endpoint accepted'; exception when raise_exception then null; end;
+ if (select count(*) from public.payments)<>0 then raise exception 'member sees payments that do not exist'; end if;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare pid bigint; begin
+ pid=public.record_payment(1,'season',200,null,'2026-09-10','first half');
+ if (select paid from public.players where id=1) then raise exception 'half payment marked paid'; end if;
+ perform public.record_payment(1,'season',200);
+ if not (select paid from public.players where id=1) then raise exception 'full payment not marked paid'; end if;
+ perform public.record_payment(1,'refund',14,3,current_date,'declined 72h before');
+ if not (select paid from public.players where id=1) then raise exception 'refund of an absence should not unpay the season'; end if;
+ perform public.delete_payment(pid);
+ if (select paid from public.players where id=1) then raise exception 'deleting a payment did not refresh the flag'; end if;
+ update public.players set membership_type='spare' where id=3;
+ perform public.record_payment(3,'spare',20,2);
+ if not (select paid from public.players where id=3) then raise exception 'spare fee not marked paid'; end if;
+ if (select count(*) from public.audit_log where action in('payment.recorded','payment.deleted'))<>5 then raise exception 'payment audit incomplete'; end if;
+end $$;
+-- A member sees only their own ledger.
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin
+ if (select count(*) from public.payments)<>2 or exists(select 1 from public.payments where player_id<>1) then raise exception 'member sees another ledger'; end if;
+end $$;
+reset role;
+select 'PHASE4 RULES PASS' as result;

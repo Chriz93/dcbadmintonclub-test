@@ -8,7 +8,8 @@ export default defineConfig({
   testDir: __dirname,
   timeout: 90000,
   retries: 0,
-  use: { baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: existsSync(shell) ? { executablePath: shell } : {} },
+  use: {
+    actionTimeout: 15000, baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: existsSync(shell) ? { executablePath: shell } : {} },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },

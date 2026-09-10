@@ -402,6 +402,7 @@ textarea.inp{resize:vertical;min-height:80px;}
     <div class="countdown" id="countdown"></div>
   </div>
   <div id="home-vote"></div>
+  <div id="my-season"></div>
   <div class="card" id="season-rules-card">
     <div class="card-title">📜 Season rules 2026–27</div>
     <div style="font-size:12px;line-height:1.6;">
@@ -632,6 +633,7 @@ textarea.inp{resize:vertical;min-height:80px;}
     <button class="ptab" onclick="showSec('standings','pstats',this)">📊 Stats</button>
     <button class="ptab" onclick="showSec('standings','sessstand',this)">📋 Sessions</button>
     <button class="ptab" onclick="showSec('standings','hist',this)">📅 History</button>
+      <button class="ptab" onclick="showSec('standings','heat',this)">🔥 Court history</button>
     <button class="ptab" onclick="showSec('standings','vote',this)">📋 RSVP</button>
     <button class="ptab" onclick="showSec('standings','qa',this)">❓ Q&amp;A</button>
   </div>
@@ -885,6 +887,7 @@ const SESSION_TIME_LABEL='8:00–10:00 PM';
 const APPROVED_DATES=['2026-09-15','2026-09-22','2026-09-29','2026-10-06','2026-10-13','2026-10-20','2026-10-27','2026-11-03','2026-11-10','2026-11-17','2026-11-24','2026-12-15','2027-01-05','2027-01-19','2027-01-26','2027-02-02','2027-02-09','2027-02-16','2027-02-23','2027-03-02','2027-03-09','2027-03-23','2027-03-30','2027-04-13','2027-04-20','2027-05-04','2027-05-11','2027-05-18'];
 const CANCELLED_DATES=['2026-12-01','2026-12-08','2027-01-12','2027-04-06','2027-04-27','2027-05-25'];
 const ORGANIZER_ETRANSFER='christygeorge993@gmail.com';
+const VAPID_PUBLIC_KEY='BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE'; // public half only; the private key lives with the reminder job
 const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,facilityShuttles:2};
 function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});}
 const DATES=APPROVED_DATES.map(fmtDate);
@@ -1026,6 +1029,25 @@ async function setEmailReminders(on){
   try{await rpc('set_email_reminders',{p_on:!!on});const me=myPlayer();if(me)me.emailReminders=!!on;toast(on?'Reminders on':'Reminders off','success');}
   catch(e){toast('Preference not saved: '+e.message,'error');}
 }
+// Push notifications: the browser keeps the subscription; the database keeps the endpoint for the reminder job.
+let _pushOn=false;
+function pushSupported(){return !!(VAPID_PUBLIC_KEY&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window);}
+function b64ToBytes(b64){const s=(b64+'='.repeat((4-b64.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(s);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)));}
+async function enablePush(){
+  try{
+    if(!pushSupported())return toast('Notifications are not available in this browser','warn');
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted')return toast('Notifications stay off (permission not granted)','warn');
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(VAPID_PUBLIC_KEY)});
+    await savePushSubscription(sub.toJSON());
+    _pushOn=true;renderRSVP();toast('Notifications on for this phone','success');
+  }catch(e){toast('Notifications not enabled: '+(e.message||e),'error');}
+}
+async function savePushSubscription(j){
+  await rpc('save_push_subscription',{p_endpoint:j.endpoint,p_p256dh:j.keys&&j.keys.p256dh||'',p_auth:j.keys&&j.keys.auth||'',p_user_agent:navigator.userAgent.slice(0,200)});
+}
+async function checkPushState(){try{if(!pushSupported())return;const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();_pushOn=!!sub;}catch(e){}}
 // One-tap vote links from reminder emails: /?vote=coming&s=12 (applied once signed in).
 let _pendingVote=null;
 try{const q=new URLSearchParams(location.search);if(q.get('vote')&&q.get('s')){_pendingVote={vote:q.get('vote')==='coming',session:parseInt(q.get('s'))};history.replaceState(null,'',location.pathname);}}catch(e){}
@@ -1081,6 +1103,7 @@ function renderRSVPInto(el,compact){
     }else if(myRsvp){
       html += `<div class="alert alert-success" style="text-align:center;margin-top:10px;">${myRsvp === 'coming' ? '✅ You confirmed - See you there!' : '❌ Noted - Sit this one out'} · You can change your answer above.</div>`;
     }
+    if(pushSupported())html += `<button class="btn btn-ghost btn-sm push-enable" style="margin-top:10px;" onclick="enablePush()">🔔 ${_pushOn?'Notifications on':'Turn on phone notifications'}</button>`;
     html += `<label class="chk-row" style="margin-top:12px;margin-bottom:0;"><input type="checkbox" class="email-reminders-toggle" ${me.emailReminders!==false?'checked':''} onchange="setEmailReminders(this.checked)"><span style="font-size:12px;color:var(--muted);">Email me a reminder when I have not answered${meSpare?' and when a seat opens':''}</span></label>`;
   }else{
     html += `<div class="alert alert-warn">Your registration must be approved before you can RSVP.</div>`;
@@ -1127,6 +1150,7 @@ async function loadAll(){
       const rows=await sbG('rsvps',`session_number=eq.${sessNo}&select=player_id,response,updated_at&order=updated_at.asc`);
       S.rsvp={};S.rsvpRows=rows||[];(rows||[]).forEach(r=>{S.rsvp[r.player_id]=r.response;});
     }
+    S.payments=(await sbG('payments','select=id,player_id,kind,amount,session_number,method,received_on,note&order=received_on.desc,id.desc'))||[];
     S.qaQuestions=((await sbG('questions','select=id,player_id,asker,question,answer,answered_at,created_at&order=created_at.asc'))||[]).map(q=>({id:q.id,playerId:q.player_id,playerName:q.asker,question:q.question,answer:q.answer,ts:q.created_at,answeredAt:q.answered_at}));
     S.preAttendance=await getKV('pre_session_attendance')||{};
     _roundSnapshots=await getKV('round_snapshots')||[];
@@ -1260,6 +1284,7 @@ function renderHome(){
   if(ah)ah.innerHTML=S.announcements.length?S.announcements.slice(0,3).map(a=>`<div class="ann-card ann-${a.type}"><div class="ann-title">${esc(a.title)}</div><div class="ann-body">${esc(a.body)}</div><div class="ann-time">${new Date(a.created_at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div>`).join(''):'';
   // Player of session
   renderPOS('pos-home');
+  renderMySeason();
   // Admin checklist
   const acl=document.getElementById('admin-checklist-home');
   if(acl&&adminUnlocked){
@@ -1283,6 +1308,48 @@ function renderHome(){
   }else if(acl)acl.innerHTML='';
 }
 
+function mySeasonData(p){
+  const elo=computeEloRatings()[p.id]||0;
+  const played=S.sessions.filter(s=>Object.values(s.scores||{}).some(sc=>[sc.a1,sc.a2,sc.b1,sc.b2].includes(p.id))).length;
+  const wr=p.gamesPlayed>0?Math.round(p.seasonWins/p.gamesPlayed*100):0;
+  const streak=(computePlayerStreakAndImprovement()[p.id]||{}).streak||0;
+  const courts=S.sessions.map(s=>{const fa=sessFinalAssignments(s);for(let c=1;c<=NC;c++)if((fa[c]||[]).includes(p.id))return c;return null;});
+  const rank=[...leaderboardPlayers()].map(x=>({id:x.id,r:computeEloRatings()[x.id]||0})).sort((a,b)=>b.r-a.r).findIndex(x=>x.id===p.id)+1;
+  return{elo,played,held:S.sessions.length,wr,streak,courts,rank,court:p.currentCourt,w:p.seasonWins,l:p.seasonLosses,g:p.gamesPlayed,bal:balanceOf(p)};
+}
+function renderMySeason(){
+  const el=document.getElementById('my-season');if(!el)return;
+  const me=myPlayer();
+  if(!me||!me.approved||(me.gamesPlayed===0&&!S.sessions.length)){el.innerHTML='';return;}
+  const d=mySeasonData(me);
+  const fee=me.membershipType==='spare'?(d.bal.owed?`Spare fees: $${d.bal.paid} paid${d.bal.due?`, $${d.bal.due} owing`:''}`:'Spare fees: none yet'):(d.bal.due===0?'Season fee paid ✅':`Season fee: $${d.bal.due} owing · e-transfer to ${ORGANIZER_ETRANSFER}`);
+  el.innerHTML=`<div class="card" id="my-season-card"><div class="card-title">📈 My season</div>
+    <div class="sgrid" style="margin-top:0;">
+      <div class="sbox"><div class="sv">${d.w}–${d.l}</div><div class="sl">Record · ${d.wr}%</div></div>
+      <div class="sbox"><div class="sv">${d.elo}</div><div class="sl">Elo · #${d.rank||'–'} of ${leaderboardPlayers().length}</div></div>
+      <div class="sbox"><div class="sv">${d.court?'C'+d.court:'—'}</div><div class="sl">Court now</div></div>
+      <div class="sbox"><div class="sv">${d.played}/${d.held}</div><div class="sl">Sessions played</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">${d.streak>0?`🔥 ${d.streak}-session winning streak · `:''}${d.courts.length?'Courts: '+d.courts.map(c=>c||'—').join(' → ')+' · ':''}${fee}</div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="shareMySeason()">📤 Share as image</button>
+  </div>`;
+}
+async function shareMySeason(){
+  const me=myPlayer();if(!me)return;const d=mySeasonData(me);
+  const cv=document.createElement('canvas');cv.width=1080;cv.height=1080;const x=cv.getContext('2d');
+  const grad=x.createLinearGradient(0,0,0,1080);grad.addColorStop(0,'#182240');grad.addColorStop(1,'#070a12');x.fillStyle=grad;x.fillRect(0,0,1080,1080);
+  x.fillStyle='#e9c46a';x.font='bold 64px Inter, system-ui, sans-serif';x.textAlign='center';x.fillText('Maplewood League',540,150);
+  x.fillStyle='#8d98ad';x.font='32px Inter, system-ui, sans-serif';x.fillText(`Season ${SEASON_LABEL} · ${d.held} of ${DATES.length} sessions`,540,210);
+  x.fillStyle='#f2efe6';x.font='bold 72px Inter, system-ui, sans-serif';x.fillText(me.name,540,330);
+  const boxes=[[`${d.w}–${d.l}`,'RECORD'],[`${d.wr}%`,'WIN RATE'],[String(d.elo),`ELO · #${d.rank||'–'}`],[d.court?'Court '+d.court:'—','NOW ON']];
+  boxes.forEach(([v,l],i)=>{const bx=90+(i%2)*470,by=420+Math.floor(i/2)*230;x.fillStyle='rgba(255,255,255,0.06)';x.fillRect(bx,by,430,190);x.fillStyle='#e9c46a';x.font='bold 84px Inter, system-ui, sans-serif';x.fillText(v,bx+215,by+105);x.fillStyle='#8d98ad';x.font='28px Inter, system-ui, sans-serif';x.fillText(l,bx+215,by+160);});
+  x.fillStyle='#8d98ad';x.font='30px Inter, system-ui, sans-serif';x.fillText(d.courts.length?'Courts: '+d.courts.map(c=>c||'—').join(' → '):'',540,930);
+  x.fillText('chriz93.github.io/dcbadmintonclub',540,1010);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  const file=new File([blob],'my-season.png',{type:'image/png'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'My season'});return;}}catch(e){}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='my-season.png';document.body.appendChild(a);a.click();a.remove();
+}
 function renderPOS(elId){
   const el=document.getElementById(elId);if(!el)return;
   // Use last completed session, or current session if it has movement data
@@ -1395,6 +1462,15 @@ async function addPlayer(){
   document.getElementById('np-name').value='';
   await loadAll();renderAll();toast(name+' added as '+mtype+'!','success');
 }
+async function promoteWaitlisted(id){
+  const p=S.players.find(x=>x.id===id);if(!p)return;
+  const regularCount=S.players.filter(x=>x.membershipType!=='spare'&&!x.waitlisted&&x.approved&&x.sig&&x.sig!=='admin'&&x.id!==id).length;
+  if(regularCount>=REGULAR_CAPACITY)return toast('No regular place is free','warn');
+  const approvals=await getKV('player_approvals')||{};
+  approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:false,membershipType:'regular'};
+  await setKV('player_approvals',approvals);
+  await loadAll();renderAll();toast(`${p.name} promoted from the waitlist`,'success');
+}
 async function removePlayer(id){
   if(!confirm('Remove this player permanently?'))return;
   // Clean up session assignments if session active
@@ -1406,7 +1482,44 @@ async function removePlayer(id){
   const pa=await getKV('player_approvals')||{};delete pa[id];await setKV('player_approvals',pa);
   await loadAll();renderAll();
 }
-async function togglePaid(id){const p=S.players.find(x=>x.id===id);if(!p)return;await sbU('players',id,{paid:!p.paid});await loadAll();renderAll();}
+// Ledger helpers. players.paid is derived by the database from these rows (see L08).
+function paymentsOf(id){return (S.payments||[]).filter(x=>x.player_id===id);}
+function seasonPaid(id){return paymentsOf(id).filter(x=>x.kind==='season'||x.kind==='adjustment').reduce((n,x)=>n+Number(x.amount),0);}
+function spareSessionsSeated(id){return S.sessions.filter(s=>Object.values(s.scores||{}).some(sc=>[sc.a1,sc.a2,sc.b1,sc.b2].includes(id))).length;}
+function balanceOf(p){
+  if(p.membershipType==='spare'){const owed=spareSessionsSeated(p.id)*FEES.spareSession;const paid=paymentsOf(p.id).filter(x=>x.kind==='spare').reduce((n,x)=>n+Number(x.amount),0);return{owed,paid,due:Math.max(0,owed-paid)};}
+  const owed=FEES.regularSeason,paid=seasonPaid(p.id);return{owed,paid,due:Math.max(0,owed-paid)};
+}
+function recordPaymentUI(id){
+  const p=S.players.find(x=>x.id===id);if(!p)return;
+  const spare=p.membershipType==='spare';
+  const sessNo=upcomingSessionNumber();
+  openModal(`Record payment — ${esc(p.name)}`,`
+    <label class="lbl">Type</label><select class="inp" id="pay-kind" onchange="document.getElementById('pay-amount').value=this.value==='season'?${FEES.regularSeason}:this.value==='spare'?${FEES.spareSession}:this.value==='refund'?${FEES.absenceRefund}:0">
+      <option value="season" ${spare?'':'selected'}>Season fee ($${FEES.regularSeason})</option>
+      <option value="spare" ${spare?'selected':''}>Spare session fee ($${FEES.spareSession})</option>
+      <option value="refund">Refund paid out ($${FEES.absenceRefund} absence notice)</option>
+      <option value="adjustment">Adjustment / partial payment</option>
+    </select>
+    <label class="lbl">Amount (CAD)</label><input class="inp" id="pay-amount" type="number" min="0" step="0.01" value="${spare?FEES.spareSession:FEES.regularSeason}">
+    <label class="lbl">Session (spare fee or refund)</label><input class="inp" id="pay-session" type="number" min="1" max="${DATES.length}" value="${sessNo}">
+    <label class="lbl">Received on</label><input class="inp" id="pay-date" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <label class="lbl">Note</label><input class="inp" id="pay-note" maxlength="300" placeholder="e-transfer reference, who sent it…">
+    <button class="btn btn-primary" onclick="recordPayment(${id})">Save payment</button>`);
+}
+async function recordPayment(id){
+  const kind=g('pay-kind'),amount=parseFloat(g('pay-amount')),sess=parseInt(g('pay-session')),date=g('pay-date'),note=g('pay-note').trim();
+  if(!(amount>=0))return toast('Enter the amount','warn');
+  try{
+    await rpc('record_payment',{p_player:id,p_kind:kind,p_amount:amount,p_session:(kind==='spare'||kind==='refund')&&sess?sess:null,p_received_on:date||null,p_note:note});
+    closeModal();await loadAll();renderAll();toast('Payment recorded','success');
+  }catch(e){toast('Not recorded: '+e.message,'error');}
+}
+async function deletePayment(pid){
+  if(!confirm('Delete this ledger entry?'))return;
+  try{await rpc('delete_payment',{p_id:pid});await loadAll();renderAll();toast('Entry deleted','warn');}catch(e){toast('Not deleted: '+e.message,'error');}
+}
+async function togglePaid(id){recordPaymentUI(id);}
 let _attSaveTimer=null;
 async function togglePlayerPresence(id){
   const p=S.players.find(x=>x.id===id);
@@ -1441,12 +1554,11 @@ async function markAbsentFromPlayers(id){
     for(let c=1;c<=NC;c++){S.current.assignments[c]=(S.current.assignments[c]||[]).filter(pid=>pid!==id);}
     if(!S.current.attendance)S.current.attendance={};
     S.current.attendance[id]='absent';
+    if(!S.current.absentFrom)S.current.absentFrom={};S.current.absentFrom[id]=oldCourt||NC;
     await setKV('current_session',S.current);
   }
-  // Move to bench (court 0)
-  await sbU('players',id,{current_court:0});
   await loadAll();renderAll();
-  toast(`${p.name} marked absent — moved from Court ${oldCourt} to bench`,'success');
+  toast(`${p.name} marked absent — off Court ${oldCourt} tonight, one court down next week`,'success');
 }
 async function callInSpare(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
@@ -1635,7 +1747,12 @@ function renderRegPlayers(){
   const regRegular=selfReg.filter(p=>p.membershipType!=='spare');
   const regSpare=selfReg.filter(p=>p.membershipType==='spare');
   const totalPlayers=S.players.length;
-  let html=`<div class="card"><div class="card-title">📊 Overview</div>
+  const firstInLine=[...waitlisted].filter(p=>p.approved).sort((a,b)=>String(a.registeredAt).localeCompare(String(b.registeredAt))||a.id-b.id)[0];
+  const freePlaces=Math.max(0,REGULAR_CAPACITY-regularCount);
+  let html=(firstInLine&&freePlaces>0)?`<div class="card" id="waitlist-offer" style="border-color:var(--green);"><div class="card-title" style="color:var(--green2);">🎟️ ${freePlaces} regular place${freePlaces===1?'':'s'} free</div>
+    <div style="font-size:12px;margin-bottom:8px;">${esc(firstInLine.name)} is first on the waitlist (registered ${String(firstInLine.registeredAt).slice(0,10)}). Promoting makes them a regular for the season ($${FEES.regularSeason}).</div>
+    <button class="btn btn-success" onclick="promoteWaitlisted(${firstInLine.id})">Promote ${esc(firstInLine.name.split(' ')[0])} to regular</button></div>`:'';
+  html+=`<div class="card"><div class="card-title">📊 Overview</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin-bottom:10px;">
       <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${totalPlayers}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Total Players</div></div>
       <div><div style="font-size:18px;font-weight:800;color:var(--teal2);">${selfReg.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Registered</div></div>
@@ -1761,13 +1878,16 @@ function renderPayments(){
   const spares=S.players.filter(p=>p.membershipType==='spare');
   const regPaid=regulars.filter(p=>p.paid).length;
   const sparePaid=spares.filter(p=>p.paid).length;
+  const ledger=S.payments||[];
+  const sumKind=k=>ledger.filter(x=>x.kind===k).reduce((n,x)=>n+Number(x.amount),0);
+  const collected=sumKind('season')+sumKind('adjustment')+sumKind('spare'),refunded=sumKind('refund');
   sum.innerHTML=`
     <div style="margin-bottom:12px;">
       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:8px;">Regular Members (${regulars.length}/${REGULAR_CAPACITY})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
         <div><div style="font-size:20px;font-weight:800;color:var(--green2);">${regPaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Paid</div></div>
         <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${regulars.length-regPaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
-        <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$${regPaid*FEES.regularSeason}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Collected</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--teal2);" id="pay-collected">$${collected-refunded}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Net collected</div></div>
       </div>
       <div style="background:var(--s2);border-radius:8px;height:5px;margin-top:8px;overflow:hidden;"><div style="height:100%;background:var(--green);width:${regulars.length>0?Math.round(regPaid/regulars.length*100):0}%;border-radius:8px;"></div></div>
     </div>
@@ -1778,17 +1898,21 @@ function renderPayments(){
         <div><div style="font-size:20px;font-weight:800;color:var(--yellow2);">${spares.length-sparePaid}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
       </div>
     </div>`;
-  // Regular players first, then spares
+  // Regular players first, then spares. Each row shows the ledger balance and the entries behind it.
   const makeRow=(p)=>{
     const isSpare=p.membershipType==='spare';
-    return `<div class="pay-row">
+    const b=balanceOf(p);
+    const rows=paymentsOf(p.id);
+    const status=isSpare
+      ?(b.owed===0?'No spare sessions yet':b.due===0?`✅ ${rows.filter(x=>x.kind==='spare').length} session fee${rows.filter(x=>x.kind==='spare').length===1?'':'s'} paid`:`⏳ $${b.due} owing for ${Math.round(b.due/FEES.spareSession)} session${b.due>FEES.spareSession?'s':''}`)
+      :(b.due===0?`✅ Season fee paid ($${b.paid})`:b.paid>0?`⏳ $${b.due} still owing (paid $${b.paid})`:`⏳ $${FEES.regularSeason} e-transfer pending`);
+    return `<div class="pay-row" style="flex-wrap:wrap;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;">${esc(p.name)}${isSpare?'<span class="spare-badge" style="margin-left:6px;">SPARE</span>':''}</div>
-        <div style="font-size:11px;color:${p.paid?'var(--green2)':'var(--yellow2)'};">
-          ${p.paid?(isSpare?'✅ $20 session fee paid':'✅ Paid $400'):(isSpare?'⏳ $20 session fee pending':'⏳ $400 e-transfer pending')}
-        </div>
+        <div style="font-size:11px;color:${b.due===0&&b.owed>0?'var(--green2)':'var(--yellow2)'};" class="pay-status">${status}</div>
       </div>
-      <button class="btn ${p.paid?'btn-ghost':'btn-success'} btn-sm" onclick="togglePaid(${p.id})">${p.paid?'Undo':'Mark Paid'}</button>
+      <button class="btn btn-success btn-sm" onclick="recordPaymentUI(${p.id})">＋ Record</button>
+      ${rows.length?`<div style="flex-basis:100%;font-size:11px;color:var(--muted);margin-top:6px;">${rows.map(x=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>${x.received_on} · ${x.kind}${x.session_number?' S'+x.session_number:''}${x.note?' · '+esc(x.note):''}</span><span>${x.kind==='refund'?'−':''}$${Number(x.amount)} <a href="#" onclick="deletePayment(${x.id});return false;" style="color:var(--red2);margin-left:6px;">✕</a></span></div>`).join('')}</div>`:''}
     </div>`;
   };
   list.innerHTML=
@@ -2199,12 +2323,8 @@ async function endSession(){
   }
   // ── Process attendance — determine absent players FIRST ──
   const att=S.current.attendance||{};
-  const absentIds=new Set();
-  const assignedIds=new Set();
-  for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>assignedIds.add(id));
-  assignedIds.forEach(id=>{
-    if(att[id]==='absent') absentIds.add(id);
-  });
+  // Every player marked absent tonight, whether or not they were already taken off a court.
+  const absentIds=new Set(Object.entries(att).filter(([,v])=>v==='absent').map(([id])=>parseInt(id)).filter(id=>S.players.some(p=>p.id===id)));
   // ── Update court positions to POST-ROTATION (=_finalA): the next session
   //    should start with each player already on the court they earned. The
   //    courts tab, leaderboard, admin player listings, and every other place
@@ -2224,7 +2344,8 @@ async function endSession(){
     const p=S.players.find(x=>x.id===id);
     if(p){
       const newCount=(p.noShowCount||0)+1;
-      let fromCourt=0;for(let c=1;c<=NC;c++)if((S.current.assignments[c]||[]).includes(id)){fromCourt=c;break;}
+      let fromCourt=(S.current.absentFrom||{})[id]||0;
+      if(!fromCourt)for(let c=1;c<=NC;c++)if((S.current.assignments[c]||[]).includes(id)){fromCourt=c;break;}
       if(!fromCourt)fromCourt=p.currentCourt||NC;
       const demotedCourt=Math.min(NC, fromCourt+1);
       demotionUpdates.push(sbU('players',id,{no_show_count:newCount, current_court:demotedCourt}));
@@ -2243,6 +2364,7 @@ async function endSession(){
   const _seen=new Set();
   for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>_seen.add(id));
   Object.values(S.current.scores||{}).forEach(sc=>{[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)_seen.add(id);});});
+  Object.keys(S.current.attendance||{}).forEach(id=>_seen.add(parseInt(id))); // absent players keep their name in history too
   _seen.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p)_playerNames[id]=p.name;});
   S.current.playerNames=_playerNames;
   // 2. finalAssignments: already computed earlier (used for current_court DB
@@ -4552,17 +4674,18 @@ function generateSeasonPDF(){
     // Table header
     doc.setFillColor(230,240,255);doc.rect(mg,y-4,W-mg*2,7,'F');
     doc.setFontSize(9);doc.setFont(undefined,'bold');doc.setTextColor(50,50,50);
-    const cols=[mg,mg+6,mg+60,mg+95,mg+115,mg+135,mg+158];
-    ['#','Name','Membership','Wins','Losses','Win%','Best Court'].forEach((h,i)=>doc.text(h,cols[i],y));
+    const cols=[mg,mg+6,mg+52,mg+80,mg+96,mg+112,mg+130,mg+150,mg+166];
+    ['#','Name','Type','W','L','Win%','Court','Best','Elo'].forEach((h,i)=>doc.text(h,cols[i],y));
+    const eloAll=computeEloRatings();
     y+=lh;
-    const sorted=[...activePlayers()].sort((a,b)=>b.seasonWins-a.seasonWins||(b.gamesPlayed>0?b.seasonWins/b.gamesPlayed:0)-(a.gamesPlayed>0?a.seasonWins/a.gamesPlayed:0));
+    const sorted=[...activePlayers()].sort((a,b)=>(eloAll[b.id]||0)-(eloAll[a.id]||0)||b.seasonWins-a.seasonWins);
     doc.setFont(undefined,'normal');doc.setFontSize(9);
     sorted.forEach((p,i)=>{
       if(y>270){doc.addPage();y=mg;}
       if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mg,y-4,W-mg*2,7,'F');}
       doc.setTextColor(50,50,50);
       const wr=p.gamesPlayed>0?Math.round(p.seasonWins/p.gamesPlayed*100):0;
-      const rowData=[String(i+1),p.name.length>20?p.name.substring(0,19)+'…':p.name,p.membershipType==='spare'?'Spare':'Regular',String(p.seasonWins),String(p.seasonLosses),wr+'%','C'+p.highestCourt];
+      const rowData=[String(i+1),p.name.length>18?p.name.substring(0,17)+'…':p.name,p.membershipType==='spare'?'Spare':'Regular',String(p.seasonWins),String(p.seasonLosses),wr+'%','C'+p.currentCourt,'C'+p.highestCourt,String(eloAll[p.id]||'')];
       rowData.forEach((v,ci)=>doc.text(v,cols[ci],y));
       y+=lh;
     });
@@ -5008,7 +5131,7 @@ async function init(){
       }
       if(dirty)setKV('current_session',S.current);
     }
-    checkRegistrationStatus();renderAll();startSync();setInterval(renderHome,30000);registerServiceWorker();registrationFirst();applyPendingVote();
+    checkRegistrationStatus();renderAll();startSync();setInterval(renderHome,30000);registerServiceWorker();registrationFirst();applyPendingVote();checkPushState().then(()=>renderRSVP());
   }
   else{setSS('err');toast('Cannot connect to database','error');}
 }
@@ -5248,10 +5371,10 @@ async function markAttForTab(id,status,court){
   if(status==='absent'&&court){
     if(S.current){
       S.current.assignments[court]=(S.current.assignments[court]||[]).filter(pid=>pid!==id);
+      if(!S.current.absentFrom)S.current.absentFrom={};S.current.absentFrom[id]=court; // remembered for the demotion at session end
       await setKV('current_session',S.current);
     }
-    await sbU('players',id,{current_court:0});
-    toast(S.players.find(p=>p.id===id)?.name.split(' ')[0]+' marked absent — removed from Court '+court,'warn');
+    toast(S.players.find(p=>p.id===id)?.name.split(' ')[0]+' marked absent — off Court '+court+' tonight, one court down next week','warn');
   }else if(status==='present'){
     toast(S.players.find(p=>p.id===id)?.name.split(' ')[0]+' confirmed present','success');
   }

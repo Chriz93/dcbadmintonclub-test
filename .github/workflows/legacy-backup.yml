@@ -1,0 +1,36 @@
+name: Legacy site weekly backup (TEST)
+# Exports every league table to a JSON artifact kept for 90 days. Needs SUPABASE_SERVICE_ROLE_KEY.
+on:
+  schedule:
+    - cron: "30 11 * * 3" # Wednesdays 07:30 Ottawa, the morning after play
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check operator secret
+        id: gate
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SERVICE_KEY" ]; then echo "ready=false" >> "$GITHUB_OUTPUT"; echo "Secret not configured; skipping."; else echo "ready=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Export
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_DIR: backup
+        run: node legacy/automation/export-backup.mjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('backup/*.json') != '' }}
+        with:
+          name: league-backup-${{ github.run_id }}
+          path: backup/*.json
+          retention-days: 90

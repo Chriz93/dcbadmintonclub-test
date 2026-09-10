@@ -20,6 +20,8 @@ export interface MockState {
   announcements: { id: number; content: string; created_at: string }[];
   state: Record<string, { value: string; version: number }>;
   rsvps: { session_number: number; player_id: number; response: string; note: string; updated_at: string }[];
+  payments: { id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
+  pushSubs: { player_id: number; endpoint: string; p256dh: string; auth: string }[];
   questions: { id: number; player_id: number | null; asker: string; question: string; answer: string | null; answered_at: string | null; created_at: string }[];
   invitations: Record<string, string>;
   admins: string[];
@@ -46,6 +48,11 @@ function claims(req: { headers(): Record<string, string> }, state: MockState) {
   }
 }
 
+function refreshPaid(s: MockState, playerId: number) {
+  const p = s.players.find((x) => x.id === playerId); if (!p) return;
+  const rows = s.payments.filter((x) => x.player_id === playerId);
+  p.paid = p.membership_type === "spare" ? rows.some((x) => x.kind === "spare") : rows.filter((x) => x.kind === "season" || x.kind === "adjustment").reduce((n, x) => n + x.amount, 0) >= 400;
+}
 export function seedPlayers(n = 25): Player[] {
   const rows: Player[] = [];
   for (let i = 1; i <= n; i++)
@@ -60,7 +67,7 @@ export function seedPlayers(n = 25): Player[] {
 }
 export function freshState(): MockState {
   return {
-    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [],
+    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [],
     invitations: { "christygeorge993+regular@gmail.com": "regular", "christygeorge993+spare@gmail.com": "spare" },
     admins: [ORGANIZER], users: { [ORGANIZER]: "00000000-0000-4000-8000-000000000001" }, factors: {}, audit: [], requests: [],
   };
@@ -211,6 +218,15 @@ export async function installMock(page: Page, s: MockState) {
         return json(200, { players_changed: n });
       }
       if (fn === "set_email_reminders") { const p = s.players.find((x) => x.id === me); if (!p) return deny("No player record"); p.email_reminders = !!a.p_on; return json(200, null); }
+      if (fn === "record_payment") {
+        if (!admin) return deny("Organizer verification required");
+        const id = s.payments.length + 1;
+        s.payments.push({ id, player_id: a.p_player, kind: a.p_kind, amount: Number(a.p_amount), session_number: a.p_session ?? null, method: "e-transfer", received_on: a.p_received_on || new Date().toISOString().slice(0, 10), note: a.p_note || "" });
+        refreshPaid(s, a.p_player); s.audit.push({ action: "payment.recorded", subject: String(a.p_player) });
+        return json(200, id);
+      }
+      if (fn === "delete_payment") { if (!admin) return deny("Organizer verification required"); const row = s.payments.find((x) => x.id === a.p_id); s.payments = s.payments.filter((x) => x.id !== a.p_id); if (row) refreshPaid(s, row.player_id); return json(200, null); }
+      if (fn === "save_push_subscription") { if (!me) return deny("No player record"); if (!String(a.p_endpoint).startsWith("https://")) return json(400, { message: "Invalid subscription" }); s.pushSubs = s.pushSubs.filter((x) => x.endpoint !== a.p_endpoint); s.pushSubs.push({ player_id: me, endpoint: a.p_endpoint, p256dh: a.p_p256dh, auth: a.p_auth }); return json(200, null); }
       if (fn === "update_my_profile") return json(200, null);
       return json(404, { message: `unknown rpc ${fn}` });
     }
@@ -235,6 +251,7 @@ export async function installMock(page: Page, s: MockState) {
       return json(200, rows.filter((r) => matches(r, f)));
     }
     if (table === "rsvps" && method === "GET") return json(200, s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)));
+    if (table === "payments" && method === "GET") return json(200, s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)));
     if (table === "questions") {
       if (method === "GET") return json(200, s.questions);
       if (method === "POST") { const b = body(); if (b.player_id !== me) return json(403, { message: "permission denied", code: "42501" }); const row = { id: s.questions.length + 1, player_id: b.player_id, asker: b.asker, question: b.question, answer: null, answered_at: null, created_at: new Date().toISOString() }; s.questions.push(row); return json(201, [row]); }
