@@ -1,3 +1,4 @@
+import season from "../../automation/season.json";
 /**
  * In-memory stand-in for the TEST Supabase project, mirroring the rules in legacy/migrations L01–L03
  * closely enough to drive the whole site headlessly: sign-in codes, organizer second factor, row-level
@@ -11,7 +12,7 @@ export const ORGANIZER = "christygeorge993@gmail.com";
 
 export interface Player {
   id: number; name: string; email: string; phone: string; emergency: string; medical: string; sig: string;
-  waiver_signed: boolean; paid: boolean; email_reminders?: boolean; current_court: number; highest_court: number; season_wins: number;
+  waiver_signed: boolean; paid: boolean; email_reminders?: boolean; declared_payment?: string; current_court: number; highest_court: number; season_wins: number;
   season_losses: number; games_played: number; no_show_count: number; membership_type: string; created_at: string;
   approved: boolean; waitlisted: boolean; registered_at: string | null; admin_note: string; user_id: string | null;
 }
@@ -22,6 +23,7 @@ export interface MockState {
   rsvps: { session_number: number; player_id: number; response: string; note: string; updated_at: string }[];
   payments: { id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
   pushSubs: { player_id: number; endpoint: string; p256dh: string; auth: string }[];
+  nowMs?: number; // fake "now" for the database clock (voting lock)
   questions: { id: number; player_id: number | null; asker: string; question: string; answer: string | null; answered_at: string | null; created_at: string }[];
   invitations: Record<string, string>;
   admins: string[];
@@ -156,6 +158,10 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "delete_state") { if (!admin) return deny("Organizer verification required"); delete s.state[a.k]; return json(200, null); }
       if (fn === "set_rsvp") {
         if (a.p_player !== me && !admin) return deny("You can only answer for yourself");
+        const target = s.players.find((x) => x.id === a.p_player);
+        const startIso = season.approved_dates[a.p_session - 1];
+        const startMs = startIso ? new Date(`${startIso}T20:00:00-04:00`).getTime() : 0; // Ottawa (EDT during the test dates)
+        if (!admin && target && target.membership_type !== "spare" && startMs && (s.nowMs ?? Date.now()) > startMs - 48 * 3600000) return deny("Voting closed 48 hours before play. Message the admin in the group to change your answer.");
         const ex = s.rsvps.find((r) => r.session_number === a.p_session && r.player_id === a.p_player);
         if (ex) { ex.response = a.p_response; ex.updated_at = new Date().toISOString(); } else s.rsvps.push({ session_number: a.p_session, player_id: a.p_player, response: a.p_response, note: a.p_note || "", updated_at: new Date().toISOString() });
         return json(200, null);
@@ -164,9 +170,10 @@ export async function installMock(page: Page, s: MockState) {
         const inv = s.invitations[c.email];
         const existing = s.players.find((x) => x.user_id === c.uid) || s.players.find((x) => !x.user_id && x.email.toLowerCase() === c.email);
         if (!existing && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
-        if (existing) { Object.assign(existing, { name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); return json(200, existing.id); }
+        const declared = ["paid_full", "will_pay", "per_session"].includes(a.p_payment) ? a.p_payment : "";
+        if (existing) { Object.assign(existing, { declared_payment: declared || existing.declared_payment || "", name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); return json(200, existing.id); }
         const id = Math.max(0, ...s.players.map((p) => p.id)) + 1;
-        s.players.push({ id, name: a.p_name, email: c.email, phone: a.p_phone || "", emergency: a.p_emergency || "", medical: a.p_medical || "", sig: a.p_sig || "", waiver_signed: !!a.p_sig, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: inv || a.p_membership || "regular", created_at: new Date().toISOString(), approved: false, waitlisted: false, registered_at: new Date().toISOString(), admin_note: "", user_id: c.uid });
+        s.players.push({ id, name: a.p_name, email: c.email, phone: a.p_phone || "", emergency: a.p_emergency || "", medical: a.p_medical || "", sig: a.p_sig || "", waiver_signed: !!a.p_sig, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: inv || a.p_membership || "regular", declared_payment: declared, created_at: new Date().toISOString(), approved: false, waitlisted: false, registered_at: new Date().toISOString(), admin_note: "", user_id: c.uid });
         return json(200, id);
       }
       if (fn === "save_court_scores") {

@@ -2,8 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 import { installMock, freshState, ORGANIZER, type MockState } from "./mock-supabase";
 import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, wl, shot, type Sess } from "./helpers";
 
-async function registerSelf(page: Page, name: string) {
+async function registerSelf(page: Page, name: string, payment?: "paid_full" | "will_pay" | "per_session") {
   await expect(page.locator("#page-register")).toHaveClass(/active/);
+  if (payment) await page.check(`input[name="pay-decl"][value="${payment}"]`);
   await page.fill("#r-name", name);
   await page.fill("#r-phone", "613-555-0100");
   await page.fill("#r-emergency", "Emergency Person 613-555-0101");
@@ -184,6 +185,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#bnav-courts")).toBeHidden();
     await expect(page.locator("#r-email")).toHaveValue("christygeorge993+regular@gmail.com");
     await expect(page.locator("#r-email")).toHaveAttribute("readonly", "");
+    await page.check('input[name="pay-decl"][value="paid_full"]');
     await page.fill("#r-name", "Regular Tester");
     await page.fill("#r-phone", "613-555-0100");
     await page.fill("#r-emergency", "Emergency Person 613-555-0101");
@@ -197,7 +199,12 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect.poll(() => state.players.find((p) => p.email === "christygeorge993+regular@gmail.com")?.approved).toBe(false);
     const newId = state.players.find((p) => p.email === "christygeorge993+regular@gmail.com")!.id;
     expect(state.players.find((p) => p.id === newId)!.membership_type).toBe("regular");
+    expect(state.players.find((p) => p.id === newId)!.declared_payment).toBe("paid_full");
+    await expect(page.locator("#rs4")).toContainText("already sent");
+    await page.evaluate(async () => { await loadAll(); renderAll(); });
     await expect(page.locator("#reg-already")).toContainText("pending");
+    await expect(page.locator("#reg-fee-line")).toContainText("You reported it sent");
+    await expect(page.locator("#reg-already")).not.toContainText("E-transfer $400 to");
 
     // A player cannot write shared state or someone else's answer; the database refuses.
     const forged = await page.evaluate(async (other) => { try { await rpc("set_rsvp", { p_session: 1, p_player: other, p_response: "coming" }); return "accepted"; } catch (e) { return (e as Error).message; } }, 3);
@@ -403,5 +410,34 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect.poll(() => state.pushSubs.length).toBe(1);
     expect(state.pushSubs[0].player_id).toBe(1);
     expect(state.payments.filter((x) => x.player_id !== 1)).toHaveLength(0);
+  });
+  test("voting is final 48 hours before play: players are locked out, spares keep claiming, the admin can override", async ({ page }) => {
+    const frozen = new Date("2026-09-14T10:00:00-04:00"); // Monday morning before Session 1 (deadline was Sunday 8 PM)
+    state.nowMs = frozen.getTime();
+    await page.clock.setFixedTime(frozen);
+    Object.assign(state.players[0], { email: "christygeorge993+regular@gmail.com", user_id: null });
+    state.rsvps.push({ session_number: 1, player_id: 1, response: "coming", note: "", updated_at: "2026-09-12T10:00:00Z" });
+    await signIn(page, "christygeorge993+regular@gmail.com");
+    await expect(page.locator("#home-vote .vote-timing")).toContainText("Voting closed");
+    await expect(page.locator("#home-vote .vote-locked")).toContainText("your answer is coming");
+    await expect(page.locator("#home-vote button", { hasText: "Not Coming" })).toBeDisabled();
+    const direct = await page.evaluate(async () => { try { await rpc("set_rsvp", { p_session: 1, p_player: 1, p_response: "notcoming" }); return "accepted"; } catch (e) { return (e as Error).message; } });
+    expect(direct).toContain("Voting closed");
+    expect(state.rsvps.find((r) => r.player_id === 1)!.response).toBe("coming");
+    // A spare can still claim a seat after the deadline.
+    await page.evaluate(() => signOut());
+    Object.assign(state.players[24], { email: "christygeorge993+spare@gmail.com", user_id: null, membership_type: "spare", current_court: 0 });
+    state.rsvps.push({ session_number: 1, player_id: 2, response: "notcoming", note: "", updated_at: "2026-09-12T11:00:00Z" });
+    await signIn(page, "christygeorge993+spare@gmail.com");
+    await expect(page.locator("#home-vote button", { hasText: "I'm available" })).toBeEnabled();
+    await page.locator("#home-vote button", { hasText: "I'm available" }).click();
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === 25)?.response).toBe("coming");
+    // The admin changes the regular's answer after a message in the group.
+    await page.evaluate(() => signOut());
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await page.evaluate(() => { nav("standings"); showSec("standings", "vote"); });
+    await page.locator("#sec-vote .admin-vote[title='Set not coming']").first().click();
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === 1)!.response).toBe("notcoming");
   });
 });

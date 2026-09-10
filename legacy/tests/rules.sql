@@ -211,3 +211,27 @@ do $$ declare pid bigint; begin
 end $$;
 reset role;
 select 'PHASE5 RULES PASS' as result;
+
+-- ── L10: payment declaration at registration; regulars cannot change a vote inside 48 hours ────────
+\i legacy/migrations/L10_payment_declaration_and_vote_lock.sql
+reset role;
+insert into public.season_dates(session_number,play_on,start_at) values(7,current_date,now()+interval '10 hours') on conflict(session_number) do update set start_at=excluded.start_at;
+insert into public.season_dates(session_number,play_on,start_at) values(8,current_date+7,now()+interval '7 days') on conflict(session_number) do update set start_at=excluded.start_at;
+update public.players set membership_type='regular' where id=1; update public.players set membership_type='spare' where id=3;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin
+ perform public.register_me('Alice Real','613','Bob','','data:sig','regular','paid_full');
+ if (select declared_payment from public.players where id=1)<>'paid_full' then raise exception 'declaration not stored'; end if;
+ perform public.set_rsvp(8,1,'coming'); -- a week out: fine
+ begin perform public.set_rsvp(7,1,'notcoming'); raise exception 'vote changed inside 48 hours'; exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000003',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"carl@example.invalid"}',false);
+reset role;
+update public.players set user_id='a0000000-0000-0000-0000-000000000003' where id=3;
+set role authenticated;
+do $$ begin perform public.set_rsvp(7,3,'coming'); end $$; -- spares keep claiming seats
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ begin perform public.set_rsvp(7,1,'notcoming'); if (select response from public.rsvps where session_number=7 and player_id=1)<>'notcoming' then raise exception 'admin override failed'; end if; end $$;
+reset role;
+select 'PHASE6 RULES PASS' as result;
