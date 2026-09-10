@@ -205,6 +205,9 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#reg-already")).toContainText("pending");
     await expect(page.locator("#reg-fee-line")).toContainText("You reported it sent");
     await expect(page.locator("#reg-already")).not.toContainText("E-transfer $400 to");
+    // Home tells a pending player why the vote is not open yet.
+    await page.click("#bnav-home");
+    await expect(page.locator("#home-vote-pending")).toContainText("waiting for the admin");
 
     // A player cannot write shared state or someone else's answer; the database refuses.
     const forged = await page.evaluate(async (other) => { try { await rpc("set_rsvp", { p_session: 1, p_player: other, p_response: "coming" }); return "accepted"; } catch (e) { return (e as Error).message; } }, 3);
