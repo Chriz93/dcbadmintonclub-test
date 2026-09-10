@@ -34,7 +34,7 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.gate.outputs.ready == 'true'
-        run: npm install --no-audit --no-fund --omit=dev
+        run: npm install --no-audit --no-fund --omit=dev nodemailer@10 web-push@3
       - if: steps.gate.outputs.ready == 'true'
         run: node --test
       - name: Reminder pass
@@ -50,4 +50,6 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           TEST_INBOX: maplewoodbadmintonleague@gmail.com
           ORGANIZER_EMAIL: christygeorge993@gmail.com
+          VAPID_PUBLIC_KEY: BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
         run: node remind.mjs
