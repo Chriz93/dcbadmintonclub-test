@@ -89,7 +89,8 @@ const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // ── Supabase access (service role, server only) ─────────────────────────────────────────────────
 function api(env) {
   const base = env.SUPABASE_URL.replace(/\/$/, ""), key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const h = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
+  // Either key format works: a new-style secret key (sb_secret_…) goes in apikey alone; a legacy service_role JWT also needs Bearer.
+  const h = key.startsWith("sb_secret_") ? { apikey: key, "Content-Type": "application/json" } : { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
   return {
     async state(k) { const r = await fetch(`${base}/rest/v1/app_state?key=eq.${k}&select=value`, { headers: h }); if (!r.ok) throw new Error(`app_state ${k}: ${r.status}`); const rows = await r.json(); return rows[0] ? JSON.parse(rows[0].value) : null; },
     async targets(session) { const r = await fetch(`${base}/rest/v1/rpc/reminder_targets`, { method: "POST", headers: h, body: JSON.stringify({ p_session: session }) }); if (!r.ok) throw new Error(`reminder_targets: ${r.status}`); return r.json(); },

@@ -4,7 +4,7 @@
 // (workflow artifacts) and can also be committed to a private repository. Restore = docs/21-backup-restore.md.
 const need = (k) => { if (!process.env[k]) throw new Error(`${k} is required`); return process.env[k]; };
 const base = need("SUPABASE_URL").replace(/\/$/, ""), key = need("SUPABASE_SERVICE_ROLE_KEY");
-const h = { apikey: key, Authorization: `Bearer ${key}` };
+const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
 const TABLES = ["players", "app_state", "announcements", "rsvps", "questions", "invitations", "app_admins", "reminder_log", "audit_log"];
 export async function exportAll() {
   const out = { exported_at: new Date().toISOString(), project: base, tables: {} };

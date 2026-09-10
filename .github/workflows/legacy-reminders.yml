@@ -1,5 +1,6 @@
 name: Legacy site vote reminders (TEST)
-# Hourly. Sends nothing until DELIVERY_MODE is live AND the two operator secrets exist; addresses real players only
+# Hourly. SUPABASE_SERVICE_ROLE_KEY may be a new-style secret key (sb_secret_…) or a legacy service_role JWT.
+# Sends nothing until DELIVERY_MODE is live AND the two operator secrets exist; addresses real players only
 # when the repository variable ALLOW_REAL_RECIPIENTS is "true". Otherwise messages go to the league inbox, max 3/run.
 on:
   schedule:
