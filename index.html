@@ -762,7 +762,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div class="card-title">✉️ Email reminders</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">The scheduled job checks every 10 minutes. These buttons ask it to act on the next check instead of waiting for the weekly window.</div>
         <div id="reminder-status" style="font-size:12px;margin-bottom:10px;"></div>
-        <button class="btn btn-ghost" onclick="requestReminderRun('smoke')">📧 Send a test email to the league inbox</button>
+        <button class="btn btn-ghost" onclick="requestReminderRun('smoke')">📧 Send a test email to me</button>
         <button class="btn btn-primary" onclick="requestReminderRun('vote')">🔔 Send vote reminders now</button>
       </div>
       <div class="card">
@@ -1591,9 +1591,9 @@ async function requestReminderRun(kind){
   const n=upcomingSessionNumber();
   if(kind==='vote'&&!confirm(`Send vote reminders for Session ${n} to everyone who has not answered?\n\nWhile the league is in test mode these go to the league inbox, not to players.`))return;
   try{
-    await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail()});
+    await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail(),to:myEmail()});
     await loadAll();renderAll();
-    toast(kind==='smoke'?'Test email queued — sent within about 10 minutes':`Reminders for Session ${n} queued — sent within about 10 minutes`,'success');
+    toast(kind==='smoke'?`Test email queued for ${myEmail()} — sent within about 10 minutes`:`Reminders for Session ${n} queued — sent within about 10 minutes`,'success');
   }catch(e){toast('Not queued: '+e.message,'error');}
 }
 function renderReminderTools(){

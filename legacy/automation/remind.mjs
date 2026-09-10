@@ -83,6 +83,23 @@ export function composeDigest(rows, players) {
   });
   return { subject: `${rows.length} vote change${rows.length === 1 ? "" : "s"}${late ? ` (${late} after the deadline)` : ""}`, text: `Vote changes since the last digest:\n\n${lines.join("\n")}\n\nOpen the admin Home for the full list.`, late };
 }
+/** Who still has to vote, and exactly what one of them would receive. Used by the admin's test email. */
+export async function previewReminder(db, env) {
+  try {
+    const completed = (await db.state("completed_sessions")) || [];
+    const up = upcomingSession(completed.length, await db.state("current_session"));
+    if (up.complete) return { who: "The season is complete.", text: "", html: "" };
+    const voters = (await db.targets(up.number)).filter((t) => t.kind === "vote");
+    if (!voters.length) return { who: `Everyone has answered for Session ${up.number}.`, text: "", html: "" };
+    const names = voters.map((t) => t.name);
+    const who = `${voters.length} player${voters.length === 1 ? "" : "s"} have not voted for Session ${up.number}: ${names.slice(0, 8).join(", ")}${names.length > 8 ? `, and ${names.length - 8} more` : ""}. Only these players are emailed.`;
+    const m = composeEmail({ ...voters[0], stage: "vote-1" }, up.number, env.SITE_URL, env.ORGANIZER_EMAIL || env.GMAIL_USER);
+    return { who, text: `\n\nThis is the reminder ${voters[0].name} would receive.\n\nSubject: ${m.subject}\n\n${m.text}`,
+      html: `<hr><p><em>This is the reminder ${esc(voters[0].name)} would receive.</em><br>Subject: <strong>${esc(m.subject)}</strong></p>${m.html}` };
+  } catch (e) {
+    return { who: `Could not read the league state: ${e.message}`, text: "", html: "" };
+  }
+}
 const BTN = "display:inline-block;padding:12px 20px;border-radius:10px;color:#fff;font-weight:700;text-decoration:none;";
 const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -124,13 +141,20 @@ export async function run(env = process.env, deps = {}) {
     if (request && db.setState) await db.setState("reminder_request", null);
     return out;
   };
-  // A test email only ever goes to the league inbox, so it is sent whatever the delivery mode says.
+  // A test email only ever goes to an address this league already owns, so it is sent whatever the delivery mode says.
   if (env.SMOKE_TEST === "true" || (request && request.kind === "smoke")) {
-    const to = env.TEST_INBOX || env.GMAIL_USER;
+    const allowed = [env.TEST_INBOX, env.ORGANIZER_EMAIL, env.GMAIL_USER].filter(Boolean).map((x) => x.toLowerCase());
+    const asked = String((request && request.to) || "").toLowerCase();
+    const to = allowed.includes(asked) ? asked : env.TEST_INBOX || env.GMAIL_USER;
+    const p = await previewReminder(db, env);
     const transport = deps.transport || (await gmail(env));
-    await transport.sendMail({ from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: "Reminder job test email", text: `The reminder job can send email. Sent ${new Date(now).toString()} from GitHub Actions. No player was contacted.` });
+    await transport.sendMail({
+      from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: "Reminder job test email",
+      text: `The reminder job can send email. Sent ${new Date(now).toString()} from GitHub Actions. No player was contacted.\n\n${p.who}${p.text}`,
+      html: `<p>The reminder job can send email. Sent ${new Date(now).toString()} from GitHub Actions. <strong>No player was contacted.</strong></p><p>${esc(p.who)}</p>${p.html}`,
+    });
     log(`Test email sent to ${to}`);
-    return finish({ sent: 1, planned: 1, smoke: true, note: `Test email delivered to ${to}. No player was contacted.` });
+    return finish({ sent: 1, planned: 1, smoke: true, note: `Test email delivered to ${to}. ${p.who}` });
   }
   const forced = !!(request && request.kind === "vote");
   const completed = (await db.state("completed_sessions")) || [];

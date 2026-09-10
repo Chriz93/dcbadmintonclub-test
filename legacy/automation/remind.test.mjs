@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, composePush, composeDigest, sessionStart, run } from "./remind.mjs";
+import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, composePush, composeDigest, previewReminder, sessionStart, run } from "./remind.mjs";
 
 test("season file matches the dates compiled into index.html", () => {
   const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
@@ -89,7 +89,7 @@ test("a requested test email always reaches the league inbox and clears the requ
   assert.deepEqual(sent, ["inbox@x"]); // dry-run mode does not block a test that never touches a player
   assert.equal(out.sent, 1); assert.equal(out.mode, "dry-run");
   assert.deepEqual(writes.map((w) => w[0]), ["reminder_last_run", "reminder_request"]);
-  assert.equal(writes[0][1].requested, "smoke"); assert.match(writes[0][1].note, /No player was contacted/);
+  assert.equal(writes[0][1].requested, "smoke"); assert.match(writes[0][1].note, /Test email delivered to inbox@x/);
   assert.equal(writes[1][1], null); // request cleared
 });
 test("a requested reminder run ignores the timing bands, sends once per player, and records the result", async () => {
@@ -110,6 +110,28 @@ test("a requested reminder run ignores the timing bands, sends once per player, 
   sent.length = 0;
   const again = await run(env, { db: mk(new Set(["1:manual-77", "2:manual-77"])), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
   assert.equal(again.planned, 0); assert.deepEqual(sent, []); assert.match(again.note, /Nobody needed a reminder/);
+});
+test("the test email names the players who have not voted and previews what one of them gets", async () => {
+  const db = { state: async (k) => (k === "completed_sessions" ? [] : null),
+    targets: async () => [
+      { player_id: 1, name: "Ann Lee", email: "ann@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+      { player_id: 2, name: "Ben Ray", email: "ben@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+      { player_id: 9, name: "Sam Spare", email: "s@x", membership_type: "spare", kind: "spare", open_seats: 1 },
+    ] };
+  const p = await previewReminder(db, { SITE_URL: "https://site/", ORGANIZER_EMAIL: "org@x" });
+  assert.match(p.who, /2 players have not voted for Session 1: Ann Lee, Ben Ray/);
+  assert.doesNotMatch(p.who, /Sam Spare/);
+  assert.match(p.text, /This is the reminder Ann Lee would receive/);
+  assert.match(p.text, /Hi Ann,/);
+  assert.match(p.text, /\?vote=coming&s=1/);
+});
+test("a requested test email only goes to an address the league owns", async () => {
+  const sent = [], writes = [];
+  const mk = (to) => ({ state: async (k) => (k === "reminder_request" ? { kind: "smoke", id: "1", to } : k === "completed_sessions" ? [] : null), targets: async () => [], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, setState: async (k, v) => writes.push([k, v]) });
+  const env = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", ORGANIZER_EMAIL: "organizer@x" };
+  await run(env, { db: mk("organizer@x"), log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  await run(env, { db: mk("someone-else@evil.example"), log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.deepEqual(sent, ["organizer@x", "inbox@x"]);
 });
 test("run: dry run plans without sending; live test mode claims, redirects and caps at three", async () => {
   const claims = [];
