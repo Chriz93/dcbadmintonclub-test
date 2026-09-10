@@ -195,3 +195,13 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   set any player's answer from the RSVP list.
 - Tests: 13 browser scenarios (one with the clock frozen after the deadline), SQL rehearsal PHASE6 RULES PASS,
   production migration includes L10, verify.sql updated.
+
+## Status — 2026-09-10 (Phase 9: refunds list, vote-change log, Sunday 10 PM deadline)
+
+- Deadline is Sunday 10:00 PM (46 hours before play) in the app, the database rule (L11) and the reminder job.
+- Pay tab → "Refunds owed": regulars who declined by Saturday 8:00 PM per session, with "Mark refunded" writing a
+  $14 refund row to the ledger; provisional until the cutoff passes.
+- Every vote change is logged (`rsvp_log`, trigger on `rsvps`): admin Home shows the latest changes with
+  "after deadline" and "by admin" flags; the hourly job emails the admin a digest of new changes (test-inbox rules
+  apply), watermark in `app_state.vote_digest_last_id`.
+- Tests: 13 browser scenarios, 9 unit tests, SQL rehearsal PHASE7 RULES PASS.

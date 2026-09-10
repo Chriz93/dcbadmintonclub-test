@@ -24,6 +24,7 @@ export interface MockState {
   payments: { id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
   pushSubs: { player_id: number; endpoint: string; p256dh: string; auth: string }[];
   nowMs?: number; // fake "now" for the database clock (voting lock)
+  rsvpLog: { id: number; session_number: number; player_id: number; old_response: string | null; new_response: string; by_admin: boolean; changed_at: string }[];
   questions: { id: number; player_id: number | null; asker: string; question: string; answer: string | null; answered_at: string | null; created_at: string }[];
   invitations: Record<string, string>;
   admins: string[];
@@ -69,7 +70,7 @@ export function seedPlayers(n = 25): Player[] {
 }
 export function freshState(): MockState {
   return {
-    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [],
+    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [], rsvpLog: [],
     invitations: { "christygeorge993+regular@gmail.com": "regular", "christygeorge993+spare@gmail.com": "spare" },
     admins: [ORGANIZER], users: { [ORGANIZER]: "00000000-0000-4000-8000-000000000001" }, factors: {}, audit: [], requests: [],
   };
@@ -161,9 +162,11 @@ export async function installMock(page: Page, s: MockState) {
         const target = s.players.find((x) => x.id === a.p_player);
         const startIso = season.approved_dates[a.p_session - 1];
         const startMs = startIso ? new Date(`${startIso}T20:00:00-04:00`).getTime() : 0; // Ottawa (EDT during the test dates)
-        if (!admin && target && target.membership_type !== "spare" && startMs && (s.nowMs ?? Date.now()) > startMs - 48 * 3600000) return deny("Voting closed 48 hours before play. Message the admin in the group to change your answer.");
+        if (!admin && target && target.membership_type !== "spare" && startMs && (s.nowMs ?? Date.now()) > startMs - 46 * 3600000) return deny("Voting closed Sunday 10:00 PM. Message the admin in the group to change your answer.");
         const ex = s.rsvps.find((r) => r.session_number === a.p_session && r.player_id === a.p_player);
-        if (ex) { ex.response = a.p_response; ex.updated_at = new Date().toISOString(); } else s.rsvps.push({ session_number: a.p_session, player_id: a.p_player, response: a.p_response, note: a.p_note || "", updated_at: new Date().toISOString() });
+        const nowIso = new Date(s.nowMs ?? Date.now()).toISOString();
+        if (!ex || ex.response !== a.p_response) s.rsvpLog.push({ id: s.rsvpLog.length + 1, session_number: a.p_session, player_id: a.p_player, old_response: ex ? ex.response : null, new_response: a.p_response, by_admin: admin, changed_at: nowIso });
+        if (ex) { ex.response = a.p_response; ex.updated_at = nowIso; } else s.rsvps.push({ session_number: a.p_session, player_id: a.p_player, response: a.p_response, note: a.p_note || "", updated_at: nowIso });
         return json(200, null);
       }
       if (fn === "register_me") {
@@ -264,6 +267,7 @@ export async function installMock(page: Page, s: MockState) {
       return json(200, rows.filter((r) => matches(r, f)));
     }
     if (table === "rsvps" && method === "GET") return json(200, s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)));
+    if (table === "rsvp_log" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.rsvpLog].reverse()); }
     if (table === "payments" && method === "GET") return json(200, s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)));
     if (table === "questions") {
       if (method === "GET") return json(200, s.questions);

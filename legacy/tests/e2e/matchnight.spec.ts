@@ -442,5 +442,18 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.evaluate(() => { nav("standings"); showSec("standings", "vote"); });
     await page.locator("#sec-vote .admin-vote[title='Set not coming']").first().click();
     await expect.poll(() => state.rsvps.find((r) => r.player_id === 1)!.response).toBe("notcoming");
+    // The admin's Home lists the change (by admin), and the spare's late claim is not flagged.
+    await page.click("#bnav-home");
+    await expect(page.locator("#vote-changes")).toContainText("TEST Player 01: coming → not coming · S1");
+    await expect(page.locator("#vote-changes")).toContainText("by admin");
+    // Refunds: player 2 declined on Saturday morning (before the Saturday 8 PM cutoff) → owed $14; player 1's admin change came too late.
+    await page.evaluate(() => { nav("admin"); showSec("admin", "a-pay"); });
+    await expect(page.locator("#refunds-owed")).toContainText("1 refund to send · $14");
+    await expect(page.locator("#refunds-card")).toContainText("TEST Player 02");
+    await expect(page.locator("#refunds-card")).not.toContainText("TEST Player 01");
+    await page.locator("#refunds-card button", { hasText: "Mark refunded" }).click();
+    await expect.poll(() => state.payments.find((x) => x.kind === "refund" && x.player_id === 2)?.session_number).toBe(1);
+    await expect(page.locator("#refunds-card")).toContainText("refunded");
+    await expect(page.locator("#refunds-owed")).toContainText("Nothing owed");
   });
 });

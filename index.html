@@ -409,7 +409,7 @@ textarea.inp{resize:vertical;min-height:80px;}
     <div style="font-size:12px;line-height:1.6;">
       • 28 Tuesdays, 8:00–10:00 PM, Maplewood SS gyms 127C & 127D. Six courts.<br>
       • Regular season $400 (25 players). Spare session $20, confirmed once the admin verifies the e-transfer.<br>
-      • Everyone votes on the app every week — Home → “I'm coming” / “Not coming”, or the one-tap link in the reminder email — by <strong>Sunday 8:00 PM</strong> (48 hours before play); after that the answer is final and only the admin can change it (message the group). Decline by Saturday 8:00 PM (72 hours before) for the $14 refund; later notice or a no-show earns no refund.<br>
+      • Everyone votes on the app every week — Home → “I'm coming” / “Not coming”, or the one-tap link in the reminder email — by <strong>Sunday 10:00 PM</strong> (46 hours before play); after that the answer is final and only the admin can change it (message the group). Decline by Saturday 8:00 PM (72 hours before) for the $14 refund; later notice or a no-show earns no refund.<br>
       • Spares are asked from Saturday 8:00 PM (3 days before) whenever a regular has declined; seats go in the order spares answer.<br>
       • Your vote is your attendance: “coming” seats you for the night, “not coming” excuses you without a court penalty. Only an unannounced no-show drops a court.<br>
       • Six Tuesdays are already cancelled by the school (see Schedule). If the school cancels any of the 28 approved dates later, there is no cash refund: regulars receive two shuttlecocks, a paid spare gets the $20 back.<br>
@@ -897,7 +897,7 @@ const APPROVED_DATES=['2026-09-15','2026-09-22','2026-09-29','2026-10-06','2026-
 const CANCELLED_DATES=['2026-12-01','2026-12-08','2027-01-12','2027-04-06','2027-04-27','2027-05-25'];
 const ORGANIZER_ETRANSFER='christygeorge993@gmail.com';
 const VAPID_PUBLIC_KEY='BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE'; // public half only; the private key lives with the reminder job
-const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,voteDeadlineHours:48,spareAskHours:72,facilityShuttles:2};
+const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,voteDeadlineHours:46,spareAskHours:72,facilityShuttles:2};
 function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});}
 const DATES=APPROVED_DATES.map(fmtDate);
 // Local wall-clock 8:00 PM on each date (players are in the Ottawa time zone; DST handled by the browser).
@@ -1018,7 +1018,7 @@ async function submitRSVP(coming){
   if(seasonComplete()) return toast('The season is complete', 'warn');
   const me=myPlayer();
   if(!me) return toast('Not registered', 'warn');
-  if(voteLocked(me)) return toast('Voting closed 48 hours before play. Message the admin in the group to change your answer.', 'warn');
+  if(voteLocked(me)) return toast('Voting closed Sunday 10:00 PM. Message the admin in the group to change your answer.', 'warn');
   const response=coming?'coming':'notcoming';
   try{
     await rpc('set_rsvp',{p_session:upcomingSessionNumber(),p_player:me.id,p_response:response});
@@ -1124,7 +1124,7 @@ function renderRSVPInto(el,compact){
       html += `<div class="vote-timing" style="font-size:11px;color:var(--muted);margin-bottom:8px;">${now<spareAsk.getTime()?`Spares are asked from ${fmt(spareAsk)} (3 days before play) whenever a regular declines. You can already say if you are available.`:`Seats open as regulars decline; answer early — seats go in the order spares reply.`}</div>`;
     }else{
       const beforeDeadline=now<=deadline.getTime(),beforeCutoff=now<=cutoff.getTime();
-      html += `<div class="vote-timing" style="font-size:11px;color:${beforeDeadline?'var(--muted)':'var(--yellow2)'};margin-bottom:8px;">${beforeDeadline?`Vote by <strong>${fmt(deadline)}</strong> (48 hours before play) — after that your answer is final. `:`Voting closed ${fmt(deadline)}. To change your answer, message the admin in the group — only the admin can update it now. `}${beforeCutoff?`$${FEES.absenceRefund} refund if you decline by ${fmt(cutoff)}.`:`The 72-hour refund window closed ${fmt(cutoff)}.`}</div>`;
+      html += `<div class="vote-timing" style="font-size:11px;color:${beforeDeadline?'var(--muted)':'var(--yellow2)'};margin-bottom:8px;">${beforeDeadline?`Vote by <strong>${fmt(deadline)}</strong> (Sunday 10:00 PM) — after that your answer is final. `:`Voting closed ${fmt(deadline)}. To change your answer, message the admin in the group — only the admin can update it now. `}${beforeCutoff?`$${FEES.absenceRefund} refund if you decline by ${fmt(cutoff)}.`:`The 72-hour refund window closed ${fmt(cutoff)}.`}</div>`;
     }
   }
   if(me&&me.approved){
@@ -1188,6 +1188,8 @@ async function loadAll(){
       const rows=await sbG('rsvps',`session_number=eq.${sessNo}&select=player_id,response,updated_at&order=updated_at.asc`);
       S.rsvp={};S.rsvpRows=rows||[];(rows||[]).forEach(r=>{S.rsvp[r.player_id]=r.response;});
     }
+    S.rsvpAll=(S_me.organizer&&S_me.verified)?((await sbG('rsvps','select=session_number,player_id,response,updated_at&order=updated_at.asc'))||[]):[];
+    S.rsvpLog=(S_me.organizer&&S_me.verified)?((await sbG('rsvp_log','select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.desc&limit=100'))||[]):[];
     S.invitations=(S_me.organizer&&S_me.verified)?((await sbG('invitations','select=email,membership_type,note,created_at&order=created_at.desc'))||[]):[];
     S.payments=(await sbG('payments','select=id,player_id,kind,amount,session_number,method,received_on,note&order=received_on.desc,id.desc'))||[];
     S.qaQuestions=((await sbG('questions','select=id,player_id,asker,question,answer,answered_at,created_at&order=created_at.asc'))||[]).map(q=>({id:q.id,playerId:q.player_id,playerName:q.asker,question:q.question,answer:q.answer,ts:q.created_at,answeredAt:q.answered_at}));
@@ -1343,7 +1345,7 @@ function renderHome(){
       <div class="checklist-item"><div class="chk-icon ${S.current?'chk-ok':'chk-no'}">${S.current?'✓':'✗'}</div><div style="flex:1;font-size:13px;">Session: <strong>${S.current?'Active — '+S.current.date:'Not started'}</strong></div></div>
       <div class="checklist-item"><div class="chk-icon ${assigned>0?'chk-ok':'chk-no'}">${assigned>0?'✓':'✗'}</div><div style="flex:1;font-size:13px;">Court assignments: <strong>${assigned} players</strong></div></div>
       ${selfReg.length>0?`<div class="checklist-item" style="border:none;"><div class="chk-icon ${pendingReg.length>0?'chk-warn':'chk-ok'}">${pendingReg.length>0?'!':'✓'}</div><div style="flex:1;font-size:13px;">Registrations: <strong>${selfReg.length} registered</strong>${pendingReg.length>0?` · <span style="color:var(--yellow2);">${pendingReg.length} pending approval</span>`:''}</div></div>`:''}
-    </div>`;
+    </div>`+renderVoteChanges();
   }else if(acl)acl.innerHTML='';
 }
 
@@ -1574,6 +1576,59 @@ async function deletePayment(pid){
   try{await rpc('delete_payment',{p_id:pid});await loadAll();renderAll();toast('Entry deleted','warn');}catch(e){toast('Not deleted: '+e.message,'error');}
 }
 async function togglePaid(id){recordPaymentUI(id);}
+// Refunds: a regular who declined by the Saturday 8 PM cutoff (72 h before play) is owed $14 for that session.
+function refundEligibility(){
+  const out=[];const last=upcomingSessionNumber();
+  for(let n=1;n<=last;n++){
+    const startAt=FD[n-1];if(!startAt)continue;
+    const cutoff=new Date(startAt.getTime()-FEES.absenceNoticeHours*3600000);
+    const players=(S.rsvpAll||[]).filter(r=>r.session_number===n&&r.response==='notcoming'&&new Date(r.updated_at).getTime()<=cutoff.getTime())
+      .map(r=>({r,p:S.players.find(x=>x.id===r.player_id)})).filter(x=>x.p&&x.p.membershipType!=='spare')
+      .map(({r,p})=>({id:p.id,name:p.name,decidedAt:new Date(r.updated_at),refund:(S.payments||[]).find(x=>x.kind==='refund'&&x.player_id===p.id&&x.session_number===n)||null}));
+    if(players.length||n===last)out.push({n,date:DATES[n-1],cutoff,closed:Date.now()>cutoff.getTime(),players});
+  }
+  return out;
+}
+async function markRefunded(id,n){
+  try{await rpc('record_payment',{p_player:id,p_kind:'refund',p_amount:FEES.absenceRefund,p_session:n,p_received_on:new Date().toISOString().slice(0,10),p_note:'Declined by the 72-hour cutoff'});await loadAll();renderAll();toast(`$${FEES.absenceRefund} refund recorded`,'success');}
+  catch(e){toast('Not recorded: '+e.message,'error');}
+}
+function renderRefundsCard(){
+  const fmt=d=>d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const sessions=refundEligibility();
+  const owed=sessions.reduce((n,s)=>n+s.players.filter(x=>!x.refund).length,0);
+  let html=`<div class="card" id="refunds-card"><div class="card-title">💸 Refunds owed ($${FEES.absenceRefund} per declined session)</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Regulars who said “not coming” by Saturday 8:00 PM (72 hours before play) are listed automatically. Mark each one once you have sent the e-transfer.</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;" id="refunds-owed">${owed?`${owed} refund${owed===1?'':'s'} to send · $${owed*FEES.absenceRefund}`:'Nothing owed right now'}</div>`;
+  sessions.slice().reverse().forEach(sess=>{
+    html+=`<div style="font-size:11px;font-weight:800;color:var(--teal);margin:8px 0 4px;">Session ${sess.n} — ${sess.date} ${sess.closed?'':'<span class="tag tg-yellow">cutoff '+fmt(sess.cutoff)+' — provisional</span>'}</div>`;
+    if(!sess.players.length){html+=`<div style="font-size:11px;color:var(--muted);">No eligible declines.</div>`;return;}
+    sess.players.forEach(x=>{
+      html+=`<div class="refund-row" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+        <span><strong>${esc(x.name)}</strong> <span style="color:var(--muted);">declined ${fmt(x.decidedAt)}</span></span>
+        ${x.refund?`<span class="tag tg-green">refunded ${x.refund.received_on}</span>`:`<button class="btn btn-success btn-sm" onclick="markRefunded(${x.id},${sess.n})">Mark refunded</button>`}
+      </div>`;
+    });
+  });
+  return html+`</div>`;
+}
+// Admin Home: who changed their vote, when, and whether it was after the deadline or by the admin.
+function renderVoteChanges(){
+  const rows=(S.rsvpLog||[]).slice(0,20);
+  const fmt=d=>d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const word=v=>v==='coming'?'coming':v==='notcoming'?'not coming':(v||'—');
+  let html=`<div class="card" id="vote-changes"><div class="card-title">🔔 Vote changes</div>`;
+  if(!rows.length)return html+`<div style="font-size:12px;color:var(--muted);">No votes yet.</div></div>`;
+  rows.forEach(r=>{
+    const p=S.players.find(x=>x.id===r.player_id);const at=new Date(r.changed_at);
+    const startAt=FD[r.session_number-1];const late=startAt&&at.getTime()>startAt.getTime()-FEES.voteDeadlineHours*3600000&&!r.by_admin;
+    html+=`<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <span><strong>${esc(p?p.name:'#'+r.player_id)}</strong>: ${word(r.old_response)} → <strong>${word(r.new_response)}</strong> · S${r.session_number}${late?' <span class="tag tg-red">after deadline</span>':''}${r.by_admin?' <span class="tag tg-teal">by admin</span>':''}</span>
+      <span style="color:var(--muted);white-space:nowrap;">${fmt(at)}</span>
+    </div>`;
+  });
+  return html+`</div>`;
+}
 let _attSaveTimer=null;
 async function togglePlayerPresence(id){
   const p=S.players.find(x=>x.id===id);
@@ -1982,7 +2037,7 @@ function renderPayments(){
       ${rows.length?`<div style="flex-basis:100%;font-size:11px;color:var(--muted);margin-top:6px;">${rows.map(x=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>${x.received_on} · ${x.kind}${x.session_number?' S'+x.session_number:''}${x.note?' · '+esc(x.note):''}</span><span>${x.kind==='refund'?'−':''}$${Number(x.amount)} <a href="#" onclick="deletePayment(${x.id});return false;" style="color:var(--red2);margin-left:6px;">✕</a></span></div>`).join('')}</div>`:''}
     </div>`;
   };
-  list.innerHTML=
+  list.innerHTML=renderRefundsCard()+
     (regulars.length?`<div style="font-size:10px;color:var(--muted);font-weight:700;padding:8px 0 4px;letter-spacing:1px;text-transform:uppercase;">Regular Members</div>`+regulars.map(makeRow).join(''):'')
     +(spares.length?`<div style="font-size:10px;color:var(--yellow2);font-weight:700;padding:12px 0 4px;letter-spacing:1px;text-transform:uppercase;">Spare Players</div>`+spares.map(makeRow).join(''):'');
 }

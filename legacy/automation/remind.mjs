@@ -27,7 +27,7 @@ export function upcomingSession(completedCount, current) {
 export const STAGES = [
   { kind: "vote-1", from: 120, to: 108, label: "first reminder" },   // Thu 8 PM – Fri 8 AM
   { kind: "vote-2", from: 84, to: 72, label: "before the refund cutoff" }, // Sat 8 AM – Sat 8 PM
-  { kind: "vote-3", from: 60, to: 48, label: "final reminder before the Sunday 8 PM deadline" }, // Sun 8 AM – Sun 8 PM
+  { kind: "vote-3", from: 58, to: 46, label: "final reminder before the Sunday 10 PM deadline" }, // Sun 10 AM – Sun 10 PM
 ];
 export function voteStage(hoursUntil) { return STAGES.find((s) => hoursUntil < s.from && hoursUntil >= s.to) || null; }
 export function spareWindow(hoursUntil) { return hoursUntil < SEASON.fees.spare_ask_hours && hoursUntil >= 3; } // spares are asked from 3 days before
@@ -57,10 +57,10 @@ export function composeEmail(t, session, siteUrl, organizerEmail) {
       html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>A regular player can't make <strong>Session ${session} on ${date}</strong>, so ${seats}. Seats go to spares in the order they answer.</p><p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm available</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Not available</a></p><p>A confirmed seat costs $${SEASON.fees.spare_session} by e-transfer to ${esc(organizerEmail)}. If you are on standby you will be emailed the moment a seat opens.</p><p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the vote card on the site.</p>`,
     };
   }
-  const refund = t.stage === "vote-2" ? `Decline by 8:00 PM Saturday (${cutoffHours} hours before play) to keep the $${SEASON.fees.absence_refund} refund. ` : t.stage === "vote-3" ? "Votes close Sunday 8:00 PM (48 hours before play). " : "";
+  const refund = t.stage === "vote-2" ? `Decline by 8:00 PM Saturday (${cutoffHours} hours before play) to keep the $${SEASON.fees.absence_refund} refund. ` : t.stage === "vote-3" ? "Votes close Sunday 10:00 PM. " : "";
   return {
     subject: `Are you playing Session ${session}? (${date})`,
-    text: `Hi ${t.name.split(" ")[0]},\n\nYou haven't answered for Session ${session} on ${date} (8:00–10:00 PM). Everyone votes by Sunday 8:00 PM. ${refund}One tap:\n\nI'm coming: ${yes}\nNot coming: ${no}\n\n— Maplewood League\nTurn these emails off from the vote card on the site.`,
+    text: `Hi ${t.name.split(" ")[0]},\n\nYou haven't answered for Session ${session} on ${date} (8:00–10:00 PM). Everyone votes by Sunday 10:00 PM. ${refund}One tap:\n\nI'm coming: ${yes}\nNot coming: ${no}\n\n— Maplewood League\nTurn these emails off from the vote card on the site.`,
     html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>You haven't answered for <strong>Session ${session} on ${date}</strong> (8:00–10:00 PM). ${esc(refund)}One tap:</p><p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm coming</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Not coming</a></p><p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the vote card on the site.</p>`,
   };
 }
@@ -68,6 +68,20 @@ export function composePush(t, session, siteUrl) {
   const date = new Date(sessionStart(SEASON.approved_dates[session - 1])).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
   if (t.stage === "spare") return { title: `Spare seat open — Session ${session}`, body: `${date}: a regular can't make it. Tap to claim the seat ($${SEASON.fees.spare_session}).`, url: `${siteUrl}?vote=coming&s=${session}` };
   return { title: `Are you playing Session ${session}?`, body: `${date}, 8:00 PM. Tap to answer in one step.`, url: `${siteUrl}?vote=coming&s=${session}`, actions: [{ action: "coming", title: "I'm coming" }, { action: "notcoming", title: "Not coming" }] };
+}
+/** Digest of vote changes since the last run for the admin; late (after the deadline) and by-admin changes are flagged. */
+export function composeDigest(rows, players) {
+  const name = (id) => players.find((p) => p.id === id)?.name || `#${id}`;
+  const word = (v) => (v === "coming" ? "coming" : v === "notcoming" ? "not coming" : v || "—");
+  let late = 0;
+  const lines = rows.map((r) => {
+    const start = sessionStart(SEASON.approved_dates[r.session_number - 1]);
+    const isLate = start && new Date(r.changed_at).getTime() > start.getTime() - SEASON.fees.vote_deadline_hours * 3600000 && !r.by_admin;
+    if (isLate) late++;
+    const when = new Date(r.changed_at).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return `${when} · Session ${r.session_number} · ${name(r.player_id)}: ${word(r.old_response)} → ${word(r.new_response)}${isLate ? "  ⚠ AFTER THE DEADLINE" : ""}${r.by_admin ? "  (by admin)" : ""}`;
+  });
+  return { subject: `${rows.length} vote change${rows.length === 1 ? "" : "s"}${late ? ` (${late} after the deadline)` : ""}`, text: `Vote changes since the last digest:\n\n${lines.join("\n")}\n\nOpen the admin Home for the full list.`, late };
 }
 const BTN = "display:inline-block;padding:12px 20px;border-radius:10px;color:#fff;font-weight:700;text-decoration:none;";
 const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -82,6 +96,9 @@ function api(env) {
     async logged(session) { const r = await fetch(`${base}/rest/v1/reminder_log?session_number=eq.${session}&select=player_id,kind`, { headers: h }); if (!r.ok) throw new Error(`reminder_log: ${r.status}`); return new Set((await r.json()).map((x) => `${x.player_id}:${x.kind}`)); },
     async claim(session, player, kind) { const r = await fetch(`${base}/rest/v1/reminder_log`, { method: "POST", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify({ session_number: session, player_id: player, kind }) }); return r.status === 201; },
     async unclaim(session, player, kind) { await fetch(`${base}/rest/v1/reminder_log?session_number=eq.${session}&player_id=eq.${player}&kind=eq.${kind}`, { method: "DELETE", headers: h }); },
+    async voteLog(sinceId) { const r = await fetch(`${base}/rest/v1/rsvp_log?id=gt.${sinceId}&select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.asc&limit=200`, { headers: h }); return r.ok ? r.json() : []; },
+    async playersBrief() { const r = await fetch(`${base}/rest/v1/players?select=id,name,email,membership_type`, { headers: h }); return r.ok ? r.json() : []; },
+    async setState(k, v) { await fetch(`${base}/rest/v1/app_state?on_conflict=key`, { method: "POST", headers: { ...h, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: k, value: JSON.stringify(v) }) }); },
     async subscriptions(playerIds) { if (!playerIds.length) return []; const r = await fetch(`${base}/rest/v1/push_subscriptions?player_id=in.(${playerIds.join(",")})&select=player_id,endpoint,p256dh,auth`, { headers: h }); return r.ok ? r.json() : []; },
     async dropSubscription(endpoint) { await fetch(`${base}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, { method: "DELETE", headers: h }); },
   };
@@ -129,7 +146,23 @@ export async function run(env = process.env, deps = {}) {
       log(`Send failed for player ${t.player_id} (${e.message}); claim released for retry.`);
     }
   }
-  return { sent, pushed, planned: plan.length };
+  // ── Admin digest of vote changes ───────────────────────────────────────────────────────────────
+  let digest = 0;
+  if (db.voteLog) {
+    const last = Number((await db.state("vote_digest_last_id")) || 0);
+    const rows = await db.voteLog(last);
+    if (rows.length) {
+      const d = composeDigest(rows, await db.playersBrief());
+      const to = env.ALLOW_REAL_RECIPIENTS === "true" ? env.ORGANIZER_EMAIL || env.GMAIL_USER : env.TEST_INBOX || env.GMAIL_USER;
+      if (!live) log(`DRY RUN digest → ${to}: ${d.subject}`);
+      else {
+        await transport.sendMail({ from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: `[Admin] ${d.subject}`, text: d.text });
+        await db.setState("vote_digest_last_id", rows[rows.length - 1].id);
+        digest = rows.length; log(`Digest of ${rows.length} vote change(s) sent to the admin${d.late ? ` (${d.late} after the deadline)` : ""}`);
+      }
+    }
+  }
+  return { sent, pushed, planned: plan.length, digest };
 }
 async function webPush(env) {
   const wp = (await import("web-push")).default;

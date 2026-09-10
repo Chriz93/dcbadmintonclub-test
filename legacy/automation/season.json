@@ -45,7 +45,7 @@
     "spare_session": 20,
     "absence_refund": 14,
     "absence_notice_hours": 72,
-    "vote_deadline_hours": 48,
+    "vote_deadline_hours": 46,
     "spare_ask_hours": 72
   }
 }

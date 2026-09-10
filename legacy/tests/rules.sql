@@ -235,3 +235,23 @@ select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001'
 do $$ begin perform public.set_rsvp(7,1,'notcoming'); if (select response from public.rsvps where session_number=7 and player_id=1)<>'notcoming' then raise exception 'admin override failed'; end if; end $$;
 reset role;
 select 'PHASE6 RULES PASS' as result;
+
+-- ── L11: every vote change is logged; only the admin reads the log ─────────────────────────────
+\i legacy/migrations/L11_vote_log.sql
+reset role;
+delete from public.rsvp_log;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000003',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"carl@example.invalid"}',false);
+do $$ begin
+ perform public.set_rsvp(8,3,'coming'); perform public.set_rsvp(8,3,'notcoming'); perform public.set_rsvp(8,3,'notcoming');
+ if (select count(*) from public.rsvp_log)<>0 then raise exception 'member can read the vote log'; end if;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ begin
+ perform public.set_rsvp(8,1,'coming');
+ if (select count(*) from public.rsvp_log where player_id=3 and session_number=8)<>2 then raise exception 'log rows %',(select count(*) from public.rsvp_log where player_id=3); end if;
+ if (select new_response from public.rsvp_log where player_id=3 and session_number=8 order by id desc limit 1)<>'notcoming' then raise exception 'last change wrong'; end if;
+ if not (select by_admin from public.rsvp_log where player_id=1 and session_number=8 order by id desc limit 1) then raise exception 'admin change not flagged'; end if;
+end $$;
+reset role;
+select 'PHASE7 RULES PASS' as result;

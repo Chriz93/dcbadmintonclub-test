@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, composePush, sessionStart, run } from "./remind.mjs";
+import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirectRecipient, composeEmail, composePush, composeDigest, sessionStart, run } from "./remind.mjs";
 
 test("season file matches the dates compiled into index.html", () => {
   const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
@@ -10,8 +10,8 @@ test("season file matches the dates compiled into index.html", () => {
   assert.deepEqual(SEASON.cancelled_dates, pick("CANCELLED_DATES"));
   assert.equal(SEASON.approved_dates.length, 28);
   assert.equal(SEASON.cancelled_dates.length, 6);
-  assert.match(html, /absenceNoticeHours:72/); assert.match(html, /voteDeadlineHours:48/); assert.match(html, /spareAskHours:72/);
-  assert.equal(SEASON.fees.vote_deadline_hours, 48); assert.equal(SEASON.fees.spare_ask_hours, 72);
+  assert.match(html, /absenceNoticeHours:72/); assert.match(html, /voteDeadlineHours:46/); assert.match(html, /spareAskHours:72/);
+  assert.equal(SEASON.fees.vote_deadline_hours, 46); assert.equal(SEASON.fees.spare_ask_hours, 72);
 });
 test("upcoming session follows completed sessions, then the active night", () => {
   assert.deepEqual(upcomingSession(0, null), { number: 1, started: false, complete: false });
@@ -25,7 +25,7 @@ test("stage bands: Thursday night, Saturday before the cutoff, Monday afternoon;
   assert.equal(voteStage(80).kind, "vote-2");
   assert.equal(voteStage(72).kind, "vote-2");
   assert.equal(voteStage(71.9), null);
-  assert.equal(voteStage(50).kind, "vote-3"); // Sunday afternoon, before the 8 PM deadline
+  assert.equal(voteStage(50).kind, "vote-3"); // Sunday afternoon, before the 10 PM deadline
   assert.equal(voteStage(24), null); // after the deadline nobody is nagged
   assert.equal(voteStage(2), null);
   assert.equal(spareWindow(2), false); assert.equal(spareWindow(5), true); assert.equal(spareWindow(71), true); assert.equal(spareWindow(72), false); assert.equal(spareWindow(200), false);
@@ -66,6 +66,21 @@ test("push payloads open the one-tap vote link and never leave test mode", async
   assert.equal(testMode.sent, 1); assert.equal(testMode.pushed, 0);
   const live = await run({ ...base, ALLOW_REAL_RECIPIENTS: "true" }, { db, now, log: () => {}, transport: { sendMail: async () => {} }, pusher: { send: async (s, m) => pushes.push(m) } });
   assert.equal(live.pushed, 1); assert.match(pushes[0].title, /Session 1/);
+});
+test("admin digest lists vote changes and flags the late ones", async () => {
+  const start = sessionStart(SEASON.approved_dates[0]);
+  const rows = [
+    { id: 1, session_number: 1, player_id: 1, old_response: "coming", new_response: "notcoming", by_admin: false, changed_at: new Date(start.getTime() - 60 * 3600000).toISOString() },
+    { id: 2, session_number: 1, player_id: 2, old_response: null, new_response: "coming", by_admin: false, changed_at: new Date(start.getTime() - 20 * 3600000).toISOString() },
+    { id: 3, session_number: 1, player_id: 3, old_response: "coming", new_response: "notcoming", by_admin: true, changed_at: new Date(start.getTime() - 10 * 3600000).toISOString() },
+  ];
+  const d = composeDigest(rows, [{ id: 1, name: "Ann" }, { id: 2, name: "Ben" }, { id: 3, name: "Cy" }]);
+  assert.equal(d.subject, "3 vote changes (1 after the deadline)");
+  assert.match(d.text, /Ann: coming → not coming\n/); assert.match(d.text, /Ben: — → coming  ⚠ AFTER THE DEADLINE/); assert.match(d.text, /Cy: coming → not coming  \(by admin\)/);
+  const sent = [];
+  const db = { state: async (k) => (k === "vote_digest_last_id" ? 2 : null), targets: async () => [], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, voteLog: async (since) => rows.filter((r) => r.id > since), playersBrief: async () => [{ id: 3, name: "Cy" }], setState: async (k, v) => sent.push(`${k}=${v}`) };
+  const out = await run({ SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live" }, { db, now: start.getTime() - 100 * 3600000, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to + ": " + m.subject) } });
+  assert.equal(out.digest, 1); assert.deepEqual(sent, ["inbox@x: [Admin] 1 vote change", "vote_digest_last_id=3"]);
 });
 test("run: dry run plans without sending; live test mode claims, redirects and caps at three", async () => {
   const claims = [];
