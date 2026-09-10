@@ -255,3 +255,19 @@ do $$ begin
 end $$;
 reset role;
 select 'PHASE7 RULES PASS' as result;
+
+-- ── L12: the scheduled jobs can read every table the backup exports ────────────────────────────
+do $$ begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role; end if; end $$;
+grant usage on schema public to service_role;
+\i legacy/migrations/L12_service_role_grants.sql
+reset role;
+set role service_role;
+do $$ declare t text; n int; begin
+ foreach t in array array['players','announcements','app_state','rsvps','questions','invitations','app_admins','audit_log','reminder_log','rsvp_log','payments','push_subscriptions','season_dates'] loop
+  execute format('select count(*) from public.%I',t) into n;
+ end loop;
+ insert into public.reminder_log(session_number,player_id,kind) values(9,1,'probe');
+ delete from public.reminder_log where kind='probe';
+end $$;
+reset role;
+select 'PHASE8 RULES PASS' as result;
