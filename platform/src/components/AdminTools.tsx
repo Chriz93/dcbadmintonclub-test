@@ -1,5 +1,5 @@
 import { EligibilityReview } from "./EligibilityReview";
-import { Invitations } from "./Invitations";
+import { PlayerRegistrations } from "./PlayerRegistrations";
 import { LegacyAdministration } from "./LegacyAdministration";
 import { PrivacyReview } from "./PrivacyReview";
 import { ClubSetup } from "./ClubSetup";
@@ -13,11 +13,6 @@ const session = z.object({
   starts_at: z.string(),
   status: z.string(),
   revision: z.number(),
-});
-const registration = z.object({
-  user_id: z.string(),
-  season_id: z.string(),
-  status: z.string(),
 });
 const intakeSchema = z.object({
   user_id: z.string(),
@@ -38,10 +33,11 @@ const delivery = z.object({
 export function AdminTools() {
   const [intakes, setIntakes] = useState<z.infer<typeof intakeSchema>[]>([]);
   const [paymentReason, setPaymentReason] = useState("");
+  const [playersRefresh, setPlayersRefresh] = useState(0),
+    [identityOpen, setIdentityOpen] = useState(false);
   const [club, setClub] = useState(""),
     [clubs, setClubs] = useState<{ id: string; name: string }[]>([]),
     [sessions, setSessions] = useState<z.infer<typeof session>[]>([]),
-    [pending, setPending] = useState<z.infer<typeof registration>[]>([]),
     [events, setEvents] = useState<z.infer<typeof audit>[]>([]),
     [deliveries, setDeliveries] = useState<z.infer<typeof delivery>[]>([]),
     [message, setMessage] = useState(""),
@@ -169,7 +165,7 @@ export function AdminTools() {
       if (results.some((r) => r.error)) throw new Error();
       setIntakes(z.array(intakeSchema).parse(results[4].data));
       setSessions(z.array(session).parse(results[0].data));
-      setPending(z.array(registration).parse(results[1].data));
+      setPlayersRefresh((n) => n + 1);
       setEvents(z.array(audit).parse(results[2].data));
       setDeliveries(z.array(delivery).parse(results[3].data));
       setMessage("Club records refreshed.");
@@ -219,7 +215,17 @@ export function AdminTools() {
         <>
           <label>
             Club
-            <select value={club} onChange={(e) => setClub(e.target.value)}>
+            <select
+              value={club}
+              onChange={(e) => {
+                setClub(e.target.value);
+                setIntakes([]);
+                setSessions([]);
+                setEvents([]);
+                setDeliveries([]);
+                setIdentityOpen(false);
+              }}
+            >
               {clubs.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -256,8 +262,29 @@ export function AdminTools() {
           {panel === "Setup" && <ClubSetup club={club} />}
           {panel === "Players" && (
             <>
-              <Invitations key={club + "invitations"} club={club} />
-              <EligibilityReview key={club + "eligibility"} club={club} />
+              <PlayerRegistrations
+                key={club}
+                club={club}
+                refreshKey={playersRefresh}
+                onPayments={() => {
+                  setPanel("Payments");
+                  void load();
+                }}
+                onIdentity={() => {
+                  setIdentityOpen(true);
+                  requestAnimationFrame(() =>
+                    document
+                      .getElementById("eligibility-review")
+                      ?.scrollIntoView({ block: "start" }),
+                  );
+                }}
+              />
+              <EligibilityReview
+                key={club + "eligibility"}
+                club={club}
+                open={identityOpen}
+                onReviewed={() => setPlayersRefresh((n) => n + 1)}
+              />
             </>
           )}
           {panel === "History & privacy" && (
@@ -345,50 +372,6 @@ export function AdminTools() {
                   </button>
                 </div>
               ))}
-            </>
-          )}
-          {panel === "Players" && (
-            <>
-              <h3>Pending registrations</h3>
-              {pending.length === 0 ? (
-                <p>No pending registrations loaded.</p>
-              ) : (
-                pending.map((p) => (
-                  <div
-                    key={`${p.season_id}/${p.user_id}`}
-                    className="admin-record"
-                  >
-                    <span>
-                      {intakes.find(
-                        (i) =>
-                          i.user_id === p.user_id &&
-                          i.season_id === p.season_id,
-                      )?.legal_name ?? `Member ${p.user_id}`}
-                    </span>
-                    <button
-                      className="button"
-                      disabled={busy}
-                      onClick={async () => {
-                        if (!supabase) return;
-                        setBusy(true);
-                        const { error } = await supabase.rpc("approve_member", {
-                          c: club,
-                          s: p.season_id,
-                          u: p.user_id,
-                        });
-                        setMessage(
-                          error
-                            ? "Review failed; verify waiver and capacity."
-                            : "Membership reviewed. Refresh to see the result.",
-                        );
-                        setBusy(false);
-                      }}
-                    >
-                      Approve / waitlist by capacity
-                    </button>
-                  </div>
-                ))
-              )}
             </>
           )}
           {panel === "Sessions & seeding" && (

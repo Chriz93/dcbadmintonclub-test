@@ -22,9 +22,9 @@ export function RegistrationFlow({ onRefresh }: { onRefresh: () => void }) {
         </div>
       </div>
       <p>
-        Complete these steps for this season. Christy reviews eligibility and
-        payment before approving your place and setting your initial ladder
-        seed.
+        Enter your information and submit a registration request. Sign this
+        season’s agreement, then wait for Christy to approve your place. Christy
+        sets your initial ladder seed after approval.
       </p>
       <nav className="registration-steps" aria-label="Registration steps">
         {[
@@ -92,9 +92,11 @@ function RegistrationStatus({
   onDetails: () => void;
 }) {
   const [rows, setRows] = useState<{ season: string; status: string }[]>([]);
+  const [retry, setRetry] = useState(0);
   const [message, setMessage] = useState("Loading your registration status…");
   useEffect(() => {
     let alive = true;
+    setMessage("Loading your registration status…");
     void (async () => {
       const {
         data: { user },
@@ -104,7 +106,8 @@ function RegistrationStatus({
       const result = await supabase!
         .from("registrations")
         .select("status,season:seasons(name)")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .abortSignal(AbortSignal.timeout(12000));
       if (result.error) throw result.error;
       const data = z
         .array(
@@ -136,7 +139,7 @@ function RegistrationStatus({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [retry]);
   return (
     <Card>
       <h2>Approval status</h2>
@@ -156,7 +159,13 @@ function RegistrationStatus({
         Once approved, Home shows your sessions and previous matches. Standings
         shows your ELO once Christy saves the initial seeding.
       </p>
-      <button className="button primary" onClick={onRefresh}>
+      <button
+        className="button primary"
+        onClick={() => {
+          setRetry((n) => n + 1);
+          onRefresh();
+        }}
+      >
         Refresh my membership
       </button>
       <button className="text-button" onClick={onDetails}>

@@ -1,0 +1,47 @@
+.player-list-controls,
+.player-list-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
+  margin: 16px 0;
+}
+.player-list-controls label {
+  flex: 1;
+  min-width: 180px;
+}
+.player-registration {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.player-registration header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+.player-registration h3 {
+  margin: 0;
+}
+.player-registration p {
+  margin: 8px 0;
+}
+.player-registration-details {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.player-registration-details dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 2fr;
+  gap: 8px 14px;
+}
+.player-registration-details dd {
+  margin: 0;
+}
+.player-registration-details dt {
+  font-weight: 600;
+}

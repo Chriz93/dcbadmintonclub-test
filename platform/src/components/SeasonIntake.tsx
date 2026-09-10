@@ -19,19 +19,32 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
     [reference, setReference] = useState(""),
     [amount, setAmount] = useState("0"),
     [revision, setRevision] = useState(0),
-    [invited, setInvited] = useState("");
+    [email, setEmail] = useState(""),
+    [loaded, setLoaded] = useState(false),
+    [reviewed, setReviewed] = useState(false),
+    [reload, setReload] = useState(0),
+    [setupRetry, setSetupRetry] = useState(0);
   useEffect(() => {
     let alive = true;
     void (async () => {
       if (!supabase) return;
-      const { data, error } = await supabase.rpc("intake_options", {
-        club_slug: import.meta.env.VITE_CLUB_SLUG || "dc-badminton",
-      });
+      const { data, error } = await supabase
+        .rpc("intake_options", {
+          club_slug: import.meta.env.VITE_CLUB_SLUG || "dc-badminton",
+        })
+        .abortSignal(AbortSignal.timeout(12000));
       if (error) throw error;
       const rows = z.array(option).parse(data);
       if (alive) {
         setOptions(rows);
-        setSelected(rows[0]?.season_id ?? "");
+        setSelected((current) =>
+          rows.some((r) => r.season_id === current)
+            ? current
+            : (rows[0]?.season_id ?? ""),
+        );
+        setMessage(
+          rows.length ? "" : "No season is available for registration yet.",
+        );
       }
     })().catch(() => {
       if (alive)
@@ -42,37 +55,125 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [setupRetry]);
   const choice = options.find((o) => o.season_id === selected);
   useEffect(() => {
     if (!supabase || !choice) return;
-    let alive = true;
-    setInvited("");
-    void supabase
-      .rpc("my_invitation", { c: choice.club_id, s: choice.season_id })
-      .then(({ data, error }) => {
-        if (!alive) return;
-        const status = error ? "unknown" : String(data ?? "none");
-        setInvited(status);
-        if (status === "regular" || status === "spare") setKind(status);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+      setBusy(false);
+      setMessage(
+        "Loading your details timed out. Reload saved details to retry.",
+      );
+    }, 12000);
+    setLoaded(false);
+    setBusy(true);
+    setReviewed(false);
+    setRevision(0);
+    setName("");
+    setDisplay("");
+    setPhone("");
+    setEmergency("");
+    setReference("");
+    setAmount("0");
+    setKind("regular");
+    void (async () => {
+      const auth = await supabase!.auth.getUser();
+      if (auth.error || !auth.data.user) throw new Error();
+      const user = auth.data.user;
+      const [intake, profile, registration] = await Promise.all([
+        supabase!
+          .from("member_intake")
+          .select(
+            "legal_name,kind,emergency_contact,payment_reference,claimed_amount_cents,revision,payment_status",
+          )
+          .eq("club_id", choice.club_id)
+          .eq("season_id", choice.season_id)
+          .eq("user_id", user.id)
+          .abortSignal(controller.signal)
+          .maybeSingle(),
+        supabase!
+          .from("members")
+          .select("display_name,phone")
+          .eq("id", user.id)
+          .abortSignal(controller.signal)
+          .maybeSingle(),
+        supabase!
+          .from("registrations")
+          .select("status")
+          .eq("club_id", choice.club_id)
+          .eq("season_id", choice.season_id)
+          .eq("user_id", user.id)
+          .abortSignal(controller.signal)
+          .maybeSingle(),
+      ]);
+      if (controller.signal.aborted) return;
+      if (intake.error || profile.error || registration.error)
+        throw new Error();
+      const row = z
+        .object({
+          legal_name: z.string(),
+          kind: z.string(),
+          emergency_contact: z.string(),
+          payment_reference: z.string(),
+          claimed_amount_cents: z.number(),
+          revision: z.number(),
+          payment_status: z.string(),
+        })
+        .nullable()
+        .parse(intake.data);
+      const person = z
+        .object({ display_name: z.string(), phone: z.string().nullable() })
+        .nullable()
+        .parse(profile.data);
+      const status = z
+        .object({ status: z.string() })
+        .nullable()
+        .parse(registration.data)?.status;
+      setEmail(user.email ?? "");
+      setDisplay(person?.display_name ?? "");
+      setPhone(person?.phone ?? "");
+      if (row) {
+        setName(row.legal_name);
+        setKind(row.kind);
+        setEmergency(row.emergency_contact);
+        setReference(row.payment_reference);
+        setAmount(String(row.claimed_amount_cents / 100));
+        setRevision(row.revision);
+      }
+      setReviewed(
+        (!!status && status !== "pending") ||
+          row?.payment_status === "verified",
+      );
+      setLoaded(true);
+      setMessage(
+        status === "approved"
+          ? "Your registration is approved. Contact Christy if your details need changing."
+          : row
+            ? "Your registration request is saved. Christy will review it after your season agreement and required checks are complete."
+            : "",
+      );
+    })()
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setMessage(
+            "Could not load your details. Retry before submitting so an earlier request is not overwritten.",
+          );
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (!controller.signal.aborted) setBusy(false);
       });
     return () => {
-      alive = false;
+      clearTimeout(timeout);
+      controller.abort();
     };
-  }, [choice]);
-  const closed = invited === "none";
-  const lockedKind = invited === "regular" || invited === "spare";
+  }, [choice, reload]);
+  const disabled = busy || !loaded || reviewed;
   return (
     <section>
       <h2>Complete your league details</h2>
-      {closed && (
-        <p role="alert">
-          Registration is closed. This link completes onboarding only for
-          players Christy has already confirmed by email. If you were accepted
-          and still see this message, contact the organizer so your sign-in
-          email can be added.
-        </p>
-      )}
       <p>
         We collect contact details for league operations and emergencies. Your
         legal name, contact and payment details are private to you and
@@ -81,20 +182,24 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
       </p>
       <p>
         Maplewood Advanced League · 25 regular players · $400 season · $20 per
-        spare session. Regular registration is closed; this form is for players
-        already accepted by Christy and spare applicants. Submitting does not
-        reserve a place.
+        spare session. Submit your information for Christy’s review. A request
+        does not reserve a place or mark you paid.
       </p>
       <p>
         E-transfer: Christygeorge993@gmail.com. Enter only the payment reference
         and amount; never bank passwords or security answers. Christy verifies
         payments separately. Waiver acceptance is a separate step.
       </p>
-      {choice && !closed && (
+      {!choice && (
+        <button className="button" onClick={() => setSetupRetry((n) => n + 1)}>
+          Retry registration setup
+        </button>
+      )}
+      {choice && (
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!supabase) return;
+            if (!supabase || disabled) return;
             const cents = Number(amount) * 100;
             if (
               !Number.isSafeInteger(Math.round(cents)) ||
@@ -109,23 +214,25 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
             }
             setBusy(true);
             try {
-              const { data, error } = await supabase.rpc("submit_intake", {
-                c: choice.club_id,
-                s: choice.season_id,
-                legal_name: name,
-                display_name: display,
-                phone,
-                emergency_contact: emergency,
-                kind,
-                payment_reference: reference,
-                claimed_amount_cents: Math.round(cents),
-                expected_revision: revision,
-              });
+              const { data, error } = await supabase
+                .rpc("submit_intake", {
+                  c: choice.club_id,
+                  s: choice.season_id,
+                  legal_name: name,
+                  display_name: display,
+                  phone,
+                  emergency_contact: emergency,
+                  kind,
+                  payment_reference: reference,
+                  claimed_amount_cents: Math.round(cents),
+                  expected_revision: revision,
+                })
+                .abortSignal(AbortSignal.timeout(15000));
               if (error) throw error;
               setRevision(z.number().parse(data));
               onSaved?.();
               setMessage(
-                "Details saved. Your place, payment and waiver still require review; you are not marked paid automatically.",
+                "Registration request submitted. Complete the season agreement; Christy will review your request.",
               );
             } catch {
               setMessage(
@@ -142,6 +249,8 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
               value={selected}
               disabled={busy}
               onChange={(e) => {
+                setLoaded(false);
+                setBusy(true);
                 setSelected(e.target.value);
                 setRevision(0);
               }}
@@ -157,79 +266,26 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
             type="button"
             className="button"
             disabled={busy}
-            onClick={async () => {
-              if (!supabase) return;
+            onClick={() => {
+              setLoaded(false);
               setBusy(true);
-              try {
-                const {
-                  data: { user },
-                } = await supabase.auth.getUser();
-                if (!user) throw new Error();
-                const { data, error } = await supabase
-                  .from("member_intake")
-                  .select(
-                    "legal_name,kind,emergency_contact,payment_reference,claimed_amount_cents,revision,payment_status",
-                  )
-                  .eq("club_id", choice.club_id)
-                  .eq("season_id", choice.season_id)
-                  .eq("user_id", user.id)
-                  .maybeSingle();
-                if (error) throw error;
-                if (!data) {
-                  setRevision(0);
-                  setMessage("No saved intake yet.");
-                  return;
-                }
-                const row = z
-                  .object({
-                    legal_name: z.string(),
-                    kind: z.string(),
-                    emergency_contact: z.string(),
-                    payment_reference: z.string(),
-                    claimed_amount_cents: z.number(),
-                    revision: z.number(),
-                    payment_status: z.string(),
-                  })
-                  .parse(data);
-                const profileResult = await supabase
-                  .from("members")
-                  .select("display_name,phone")
-                  .eq("id", user.id)
-                  .single();
-                if (profileResult.error) throw profileResult.error;
-                const profile = z
-                  .object({
-                    display_name: z.string(),
-                    phone: z.string().nullable(),
-                  })
-                  .parse(profileResult.data);
-                setDisplay(profile.display_name);
-                setPhone(profile.phone ?? "");
-                setName(row.legal_name);
-                setKind(row.kind);
-                setEmergency(row.emergency_contact);
-                setReference(row.payment_reference);
-                setAmount(String(row.claimed_amount_cents / 100));
-                setRevision(row.revision);
-                setMessage(
-                  `Saved details loaded. Payment: ${row.payment_status}.`,
-                );
-              } catch {
-                setMessage("Unable to load saved details. Sign in and retry.");
-              } finally {
-                setBusy(false);
-              }
+              setMessage("Loading your saved details…");
+              setReload((n) => n + 1);
             }}
           >
-            Load saved details
+            Reload saved details
           </button>
+          <label>
+            Signed-in email
+            <input type="email" value={email} readOnly autoComplete="email" />
+          </label>
           <label>
             Full legal name
             <input
               required
               maxLength={150}
               value={name}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setName(e.target.value)}
             />
           </label>
@@ -239,7 +295,7 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
               required
               maxLength={100}
               value={display}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setDisplay(e.target.value)}
             />
           </label>
@@ -251,7 +307,7 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
               minLength={5}
               maxLength={40}
               value={phone}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setPhone(e.target.value)}
             />
           </label>
@@ -261,7 +317,7 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
               required
               maxLength={200}
               value={emergency}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setEmergency(e.target.value)}
             />
           </label>
@@ -269,12 +325,10 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
             Player type
             <select
               value={kind}
-              disabled={busy || lockedKind}
+              disabled={disabled}
               onChange={(e) => setKind(e.target.value)}
             >
-              <option value="regular">
-                Accepted regular player — $400 season
-              </option>
+              <option value="regular">Regular player — $400 season</option>
               <option value="spare">Spare applicant — $20 per session</option>
             </select>
           </label>
@@ -287,7 +341,7 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
               step="0.01"
               required
               value={amount}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setAmount(e.target.value)}
             />
           </label>
@@ -296,15 +350,19 @@ export function SeasonIntake({ onSaved }: { onSaved?: () => void }) {
             <input
               maxLength={200}
               value={reference}
-              disabled={busy}
+              disabled={disabled}
               onChange={(e) => setReference(e.target.value)}
             />
           </label>
           <button
             className="button primary"
-            disabled={busy || !navigator.onLine}
+            disabled={disabled || !navigator.onLine}
           >
-            Save my details for review
+            {busy
+              ? "Loading…"
+              : revision
+                ? "Save registration changes"
+                : "Submit registration request"}
           </button>
         </form>
       )}

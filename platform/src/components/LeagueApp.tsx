@@ -225,8 +225,8 @@ function SignIn({ online }: { online: boolean }) {
         <strong>New player, returning player, or guardian?</strong>
         <p>
           Use your own email. Guardians sign in separately to sign for a child.
-          Registration is closed to new regular players; accepted players can
-          finish their details after signing in.
+          New players complete a registration request after signing in. Christy
+          reviews and approves every player before their place is confirmed.
         </p>
       </div>
     </Card>

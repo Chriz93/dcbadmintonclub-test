@@ -121,14 +121,14 @@ test("new player progresses from details to the agreement, then waits for server
   await page
     .getByLabel("E-transfer reference (optional)")
     .fill("SYNTHETIC-ONLY");
-  await expect(page.getByLabel("Player type")).toBeDisabled();
+  await expect(page.getByLabel("Player type")).toBeEnabled();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({
     path: `test-results/workflow-${test.info().line}-${test.info().project.name}.png`,
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Save my details for review" })
+    .getByRole("button", { name: "Submit registration request" })
     .click();
   await expect(
     page.getByRole("button", { name: "2 Season agreement" }),
@@ -159,7 +159,7 @@ test("new player progresses from details to the agreement, then waits for server
   ).toBe(true);
 });
 
-test("a closed registration still allows guardian signing without creating a player", async ({
+test("the shared link allows an application or separate guardian signing without an invitation", async ({
   page,
 }) => {
   await page.route(
@@ -181,15 +181,15 @@ test("a closed registration still allows guardian signing without creating a pla
   );
   await mockSignIn(page, "member", "none");
   await signIn(page);
-  await expect(page.getByRole("alert")).toContainText("Registration is closed");
-  await expect(page.getByLabel("Full legal name", { exact: true })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByLabel("Full legal name", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Go to guardian signing" }).click();
   await expect(page.locator("#participant-signing")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Save my details for review" }),
-  ).toHaveCount(0);
+    page.getByRole("button", { name: "Submit registration request" }),
+  ).toBeHidden();
 });
 
 test("membership failures fail closed and retry; regular members can sign out and lose private navigation", async ({

@@ -55,72 +55,41 @@ beforeAll(async () => {
 }, 60000);
 afterAll(async () => await db?.close());
 
-it("closed registration only admits sign-in emails Christy confirmed, with the confirmed player type", async () => {
-  const intake = (user: string, kind: string, season = se) =>
+it("a shared link accepts pending requests without invitation; only an administrator can confirm a place", async () => {
+  const intake = (kind: string, revision = 0, season = se) =>
     as(
-      user,
-      `select club_app.submit_intake('${c}','${season}','Legal Name','Display','6135550100','Contact 613','${kind}','',0,0)`,
+      stranger,
+      `select club_app.submit_intake('${c}','${season}','Legal Name','Display','6135550100','Contact 613','${kind}','',0,${revision})`,
     );
   expect(
     (await as(stranger, `select club_app.my_invitation('${c}','${se}') k`))[0]
       .rows[0],
   ).toEqual({ k: "none" });
-  await expect(intake(stranger, "regular")).rejects.toThrow(
-    "Registration is closed",
-  );
+  expect((await intake("regular"))[0].rows).toEqual([{ submit_intake: 1 }]);
+  expect(
+    (
+      await db.query(
+        `select status from club_app.registrations where club_id='${c}' and season_id='${se}' and user_id='${stranger}'`,
+      )
+    ).rows,
+  ).toEqual([{ status: "pending" }]);
   await expect(
     as(
       stranger,
-      `select club_app.invite_participants('${c}','${se}',array['launch4@example.invalid'],'regular','Self invite')`,
+      `select club_app.approve_member('${c}','${se}','${stranger}')`,
     ),
   ).rejects.toThrow("MFA");
   await expect(
-    as(
-      admin,
-      `select club_app.invite_participants('${c}','${se}',array['not an email'],'regular','Bad address')`,
-      "aal2",
-    ),
-  ).rejects.toThrow("Invalid email");
-  expect(
-    (
-      await as(
-        admin,
-        `select club_app.invite_participants('${c}','${se}',array[' Launch4@Example.invalid ','other@example.invalid'],'spare','Confirmed spare applicants') n`,
-        "aal2",
-      )
-    )[0].rows[0],
-  ).toEqual({ n: 2 });
-  expect(
-    (await as(stranger, `select club_app.my_invitation('${c}','${se}') k`))[0]
-      .rows[0],
-  ).toEqual({ k: "spare" });
-  await expect(intake(stranger, "regular")).rejects.toThrow(
-    "player type Christy confirmed",
-  );
-  expect((await intake(stranger, "spare"))[0].rows).toEqual([
-    { submit_intake: 1 },
-  ]);
-  await as(
-    admin,
-    `select club_app.revoke_invitation('${c}','${se}','launch4@example.invalid','No longer accepted')`,
-    "aal2",
-  );
-  await expect(intake(stranger, "spare")).rejects.toThrow(
-    "Registration is closed",
-  );
-  expect((await intake(stranger, "regular", openSeason))[0].rows).toEqual([
+    as(stranger, `select club_app.registration_review_list('${c}')`),
+  ).rejects.toThrow("MFA");
+  await expect(intake("regular")).rejects.toThrow("Revision conflict");
+  expect((await intake("spare", 1))[0].rows).toEqual([{ submit_intake: 2 }]);
+  expect((await intake("regular", 0, openSeason))[0].rows).toEqual([
     { submit_intake: 1 },
   ]);
   expect(
     (await as(stranger, "select * from club_app.season_invitations"))[0].rows,
   ).toHaveLength(0);
-  expect(
-    (
-      await db.query(
-        `select action from club_app.audit_events where club_id='${c}' and action like 'invitation.%' order by id`,
-      )
-    ).rows,
-  ).toEqual([{ action: "invitation.added" }, { action: "invitation.revoked" }]);
 });
 
 it("planning courts keeps the session open for spares; the first recorded score starts play", async () => {

@@ -29,7 +29,7 @@ export async function mockSignIn(
         exp: Math.floor(Date.now() / 1000) + 3600,
       }),
     ).toString("base64url"),
-    "synthetic",
+    Buffer.from("synthetic-signature").toString("base64url"),
   ].join(".");
   await page.route(
     "https://wgolevihkvmosajumzvl.supabase.co/auth/v1/**",

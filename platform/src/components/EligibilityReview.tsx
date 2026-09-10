@@ -21,7 +21,15 @@ const reviewLabel = (r: z.infer<typeof schema>) =>
     : r.reviewed_at
       ? "details changed since review"
       : "needs review";
-export function EligibilityReview({ club }: { club: string }) {
+export function EligibilityReview({
+  club,
+  open,
+  onReviewed,
+}: {
+  club: string;
+  open?: boolean;
+  onReviewed?: () => void;
+}) {
   const [rows, setRows] = useState<Entry[]>([]),
     [selected, setSelected] = useState(""),
     [guardian, setGuardian] = useState(""),
@@ -56,7 +64,7 @@ export function EligibilityReview({ club }: { club: string }) {
     }
   }
   return (
-    <details className="panel">
+    <details className="panel" id="eligibility-review" open={open}>
       <summary>Participant and guardian identity review</summary>
       <p>
         Check each participant’s date of birth directly. For anyone under 18,
@@ -156,6 +164,7 @@ export function EligibilityReview({ club }: { club: string }) {
                   "Identity review recorded. The reviewed guardian may now sign; registration approval remains a separate step.",
                 );
                 setConfirmed(false);
+                onReviewed?.();
               } catch {
                 setMessage(
                   "Review not saved. Reload details to check for changes and confirm administrator MFA.",

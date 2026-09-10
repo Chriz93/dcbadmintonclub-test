@@ -278,8 +278,8 @@ export default function App() {
                     </div>
                   </div>
                   <p>
-                    Registration is closed. Confirmed players can complete their
-                    details in Member hub. Regular season: $400. Spares: $20 per
+                    Sign in to submit your registration and season agreement for
+                    Christy’s approval. Regular season: $400. Spares: $20 per
                     session.
                   </p>
                   <button
