@@ -758,6 +758,13 @@ textarea.inp{resize:vertical;min-height:80px;}
         <button class="btn btn-warn" onclick="clearCycleScores()">🔄 Clear This Round's Scores</button>
         <button class="btn btn-ghost" onclick="exportData()">📤 Export JSON Backup</button>
       </div>
+      <div class="card" id="reminder-tools-card">
+        <div class="card-title">✉️ Email reminders</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">The scheduled job checks every 10 minutes. These buttons ask it to act on the next check instead of waiting for the weekly window.</div>
+        <div id="reminder-status" style="font-size:12px;margin-bottom:10px;"></div>
+        <button class="btn btn-ghost" onclick="requestReminderRun('smoke')">📧 Send a test email to the league inbox</button>
+        <button class="btn btn-primary" onclick="requestReminderRun('vote')">🔔 Send vote reminders now</button>
+      </div>
       <div class="card">
         <div class="card-title">📸 Snapshots — Save &amp; Restore</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4;">Save a full backup of all players, sessions, scores, standings and settings to Supabase. One-click restore any snapshot — the current state is auto-saved first so nothing is ever lost.</div>
@@ -1188,6 +1195,8 @@ async function loadAll(){
       const rows=await sbG('rsvps',`session_number=eq.${sessNo}&select=player_id,response,updated_at&order=updated_at.asc`);
       S.rsvp={};S.rsvpRows=rows||[];(rows||[]).forEach(r=>{S.rsvp[r.player_id]=r.response;});
     }
+    S.reminderRequest=(S_me.organizer&&S_me.verified)?(await getKV('reminder_request')):null;
+    S.reminderLastRun=(S_me.organizer&&S_me.verified)?(await getKV('reminder_last_run')):null;
     S.rsvpAll=(S_me.organizer&&S_me.verified)?((await sbG('rsvps','select=session_number,player_id,response,updated_at&order=updated_at.asc'))||[]):[];
     S.rsvpLog=(S_me.organizer&&S_me.verified)?((await sbG('rsvp_log','select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.desc&limit=100'))||[]):[];
     S.invitations=(S_me.organizer&&S_me.verified)?((await sbG('invitations','select=email,membership_type,note,created_at&order=created_at.desc'))||[]):[];
@@ -1576,6 +1585,29 @@ async function deletePayment(pid){
   try{await rpc('delete_payment',{p_id:pid});await loadAll();renderAll();toast('Entry deleted','warn');}catch(e){toast('Not deleted: '+e.message,'error');}
 }
 async function togglePaid(id){recordPaymentUI(id);}
+// Email is sent by the scheduled job, never by the browser: these buttons only queue the request.
+async function requestReminderRun(kind){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const n=upcomingSessionNumber();
+  if(kind==='vote'&&!confirm(`Send vote reminders for Session ${n} to everyone who has not answered?\n\nWhile the league is in test mode these go to the league inbox, not to players.`))return;
+  try{
+    await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail()});
+    await loadAll();renderAll();
+    toast(kind==='smoke'?'Test email queued — sent within about 10 minutes':`Reminders for Session ${n} queued — sent within about 10 minutes`,'success');
+  }catch(e){toast('Not queued: '+e.message,'error');}
+}
+function renderReminderTools(){
+  const el=document.getElementById('reminder-status');if(!el)return;
+  const req=S.reminderRequest,last=S.reminderLastRun;
+  const fmt=x=>{const d=new Date(x);return isNaN(d)?String(x):d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
+  let html='';
+  if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — waiting for the next check (within about 10 minutes).</div>`;
+  if(last&&last.at){
+    const mode=last.mode==='live'?'<span style="color:var(--green2);">live — players receive these</span>':last.mode==='test-inbox'?'<span style="color:var(--yellow2);">test — everything goes to the league inbox</span>':'<span style="color:var(--muted);">dry run — nothing is sent</span>';
+    html+=`<div id="reminder-last">Last check <strong>${fmt(last.at)}</strong> · ${mode}<br>${last.sent||0} email${last.sent===1?'':'s'} sent${last.planned!==undefined?` of ${last.planned} planned`:''}${last.note?`<br><span style="color:var(--muted);">${esc(last.note)}</span>`:''}</div>`;
+  }else html+='<div id="reminder-last" style="color:var(--muted);">No check recorded yet.</div>';
+  el.innerHTML=html;
+}
 // Refunds: a regular who declined by the Saturday 8 PM cutoff (72 h before play) is owed $14 for that session.
 function refundEligibility(){
   const out=[];const last=upcomingSessionNumber();
@@ -5228,7 +5260,7 @@ function renderAll(){
   renderHome();renderRegPage();renderCourts();renderRoundTracker();renderSchedule();
   renderLeaderboard();renderRankings();renderPlayerStats();renderHeatmap();renderSessionStandings();renderHistory();renderRSVP();renderQA();
   renderPOS('pos-standings');
-  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();}
+  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();}
   // Skip score re-render during background sync to preserve unsaved input values
   if(!_isSyncing){const sel=document.getElementById('sc-sel');if(sel&&sel.value)renderScoreEntry();}
   // Check if all courts scored — trigger notification

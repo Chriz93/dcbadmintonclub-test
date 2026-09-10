@@ -456,4 +456,24 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#refunds-card")).toContainText("refunded");
     await expect(page.locator("#refunds-owed")).toContainText("Nothing owed");
   });
+
+  test("the admin queues email from Tools; the browser never holds a mail password", async ({ page }) => {
+    state.state["reminder_last_run"] = { value: JSON.stringify({ at: "2026-09-10T14:00:00-04:00", mode: "test-inbox", sent: 3, planned: 24, note: "Sent to the league inbox instead of players (at most 3 per run)." }), version: 1 };
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await page.evaluate(() => showSec("admin", "a-tools"));
+    await expect(page.locator("#reminder-last")).toContainText("3 emails sent of 24 planned");
+    await expect(page.locator("#reminder-last")).toContainText("test — everything goes to the league inbox");
+    // Test email: one queued request, nothing sent from the page itself.
+    await page.click("#reminder-tools-card button:has-text('test email')");
+    await expect.poll(() => JSON.parse(state.state["reminder_request"]?.value || "null")?.kind).toBe("smoke");
+    await expect(page.locator("#reminder-pending")).toContainText("Test email requested");
+    // Vote reminders for the upcoming session.
+    await page.click("#reminder-tools-card button:has-text('vote reminders now')");
+    await expect.poll(() => JSON.parse(state.state["reminder_request"]?.value || "null")?.kind).toBe("vote");
+    expect(JSON.parse(state.state["reminder_request"].value).session).toBe(1);
+    // The page only wrote the request: it carries no mail transport and names no SMTP host.
+    expect(state.requests.filter((r) => r.includes("/rpc/set_state")).length).toBeGreaterThan(0);
+    expect(await page.evaluate(() => /smtp\.|nodemailer/i.test(document.documentElement.innerHTML))).toBe(false);
+  });
 });

@@ -82,6 +82,35 @@ test("admin digest lists vote changes and flags the late ones", async () => {
   const out = await run({ SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live" }, { db, now: start.getTime() - 100 * 3600000, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to + ": " + m.subject) } });
   assert.equal(out.digest, 1); assert.deepEqual(sent, ["inbox@x: [Admin] 1 vote change", "vote_digest_last_id=3"]);
 });
+test("a requested test email always reaches the league inbox and clears the request", async () => {
+  const writes = [], sent = [];
+  const db = { state: async (k) => (k === "reminder_request" ? { kind: "smoke", id: "9", at: "2026-09-10T18:00:00Z" } : null), targets: async () => [], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, setState: async (k, v) => writes.push([k, v]) };
+  const out = await run({ SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x" }, { db, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.deepEqual(sent, ["inbox@x"]); // dry-run mode does not block a test that never touches a player
+  assert.equal(out.sent, 1); assert.equal(out.mode, "dry-run");
+  assert.deepEqual(writes.map((w) => w[0]), ["reminder_last_run", "reminder_request"]);
+  assert.equal(writes[0][1].requested, "smoke"); assert.match(writes[0][1].note, /No player was contacted/);
+  assert.equal(writes[1][1], null); // request cleared
+});
+test("a requested reminder run ignores the timing bands, sends once per player, and records the result", async () => {
+  const writes = [], claims = [], sent = [];
+  const targets = [
+    { player_id: 1, name: "A B", email: "a@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+    { player_id: 2, name: "C D", email: "c@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+    { player_id: 9, name: "S P", email: "s@x", membership_type: "spare", kind: "spare", open_seats: 0 },
+  ];
+  const mk = (logged) => ({ state: async (k) => (k === "reminder_request" ? { kind: "vote", id: "77", session: 1 } : null), targets: async () => targets, logged: async () => logged, claim: async (s, p, k) => { claims.push(`${p}:${k}`); return true; }, unclaim: async () => {}, setState: async (k, v) => writes.push([k, v]) });
+  const env = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live", ALLOW_REAL_RECIPIENTS: "true" };
+  const now = sessionStart(SEASON.approved_dates[0]).getTime() - 300 * 3600000; // far outside every band
+  const out = await run(env, { db: mk(new Set()), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.equal(out.planned, 2); assert.equal(out.sent, 2); // both regulars; the spare has no open seat
+  assert.deepEqual(sent, ["a@x", "c@x"]); assert.deepEqual(claims, ["1:manual-77", "2:manual-77"]);
+  assert.equal(writes[0][0], "reminder_last_run"); assert.equal(writes[0][1].mode, "live");
+  // The same request never sends twice: the claim log already holds those rows.
+  sent.length = 0;
+  const again = await run(env, { db: mk(new Set(["1:manual-77", "2:manual-77"])), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.equal(again.planned, 0); assert.deepEqual(sent, []); assert.match(again.note, /Nobody needed a reminder/);
+});
 test("run: dry run plans without sending; live test mode claims, redirects and caps at three", async () => {
   const claims = [];
   const db = {

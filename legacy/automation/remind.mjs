@@ -99,7 +99,11 @@ function api(env) {
     async unclaim(session, player, kind) { await fetch(`${base}/rest/v1/reminder_log?session_number=eq.${session}&player_id=eq.${player}&kind=eq.${kind}`, { method: "DELETE", headers: h }); },
     async voteLog(sinceId) { const r = await fetch(`${base}/rest/v1/rsvp_log?id=gt.${sinceId}&select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.asc&limit=200`, { headers: h }); return r.ok ? r.json() : []; },
     async playersBrief() { const r = await fetch(`${base}/rest/v1/players?select=id,name,email,membership_type`, { headers: h }); return r.ok ? r.json() : []; },
-    async setState(k, v) { await fetch(`${base}/rest/v1/app_state?on_conflict=key`, { method: "POST", headers: { ...h, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: k, value: JSON.stringify(v) }) }); },
+    async setState(k, v) {
+      const cur = await fetch(`${base}/rest/v1/app_state?key=eq.${k}&select=version`, { headers: h });
+      const version = cur.ok ? (((await cur.json())[0] || {}).version || 0) + 1 : 1;
+      await fetch(`${base}/rest/v1/app_state?on_conflict=key`, { method: "POST", headers: { ...h, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: k, value: JSON.stringify(v), version }) });
+    },
     async subscriptions(playerIds) { if (!playerIds.length) return []; const r = await fetch(`${base}/rest/v1/push_subscriptions?player_id=in.(${playerIds.join(",")})&select=player_id,endpoint,p256dh,auth`, { headers: h }); return r.ok ? r.json() : []; },
     async dropSubscription(endpoint) { await fetch(`${base}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, { method: "DELETE", headers: h }); },
   };
@@ -109,26 +113,41 @@ export async function run(env = process.env, deps = {}) {
   const log = deps.log || ((...a) => console.log(...a));
   for (const k of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SITE_URL", "GMAIL_USER"]) if (!env[k]) throw new Error(`${k} is required`);
   const db = deps.db || api(env);
-  if (env.SMOKE_TEST === "true") { // one message to the league inbox, never to a player
-    const transport = deps.transport || (await gmail(env));
+  const live = env.DELIVERY_MODE === "live";
+  const testMode = env.ALLOW_REAL_RECIPIENTS !== "true";
+  const now = deps.now || Date.now();
+  // The admin's Tools screen queues a request here; the browser never holds a mail password.
+  const request = db.state ? await db.state("reminder_request").catch(() => null) : null;
+  const finish = async (result) => {
+    const out = { ...result, mode: live ? (testMode ? "test-inbox" : "live") : "dry-run" };
+    if (db.setState && (request || result.sent)) await db.setState("reminder_last_run", { at: new Date(now).toISOString(), requested: request ? request.kind : null, ...out });
+    if (request && db.setState) await db.setState("reminder_request", null);
+    return out;
+  };
+  // A test email only ever goes to the league inbox, so it is sent whatever the delivery mode says.
+  if (env.SMOKE_TEST === "true" || (request && request.kind === "smoke")) {
     const to = env.TEST_INBOX || env.GMAIL_USER;
-    await transport.sendMail({ from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: "Reminder job smoke test", text: `The reminder job can send email. Sent ${new Date().toString()} from GitHub Actions. Nothing was sent to players.` });
-    log(`Smoke test email sent to ${to}`); return { sent: 1, smoke: true };
+    const transport = deps.transport || (await gmail(env));
+    await transport.sendMail({ from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: "Reminder job test email", text: `The reminder job can send email. Sent ${new Date(now).toString()} from GitHub Actions. No player was contacted.` });
+    log(`Test email sent to ${to}`);
+    return finish({ sent: 1, planned: 1, smoke: true, note: `Test email delivered to ${to}. No player was contacted.` });
   }
+  const forced = !!(request && request.kind === "vote");
   const completed = (await db.state("completed_sessions")) || [];
   const current = await db.state("current_session");
   const up = upcomingSession(completed.length, current);
-  if (up.complete) { log("Season complete; nothing to send."); return { sent: 0 }; }
+  if (up.complete) { log("Season complete; nothing to send."); return finish({ sent: 0, planned: 0, note: "The season is complete." }); }
   const start = sessionStart(SEASON.approved_dates[up.number - 1]);
-  const hoursUntil = (start.getTime() - (deps.now || Date.now())) / 3600000;
-  log(`Upcoming: Session ${up.number} on ${SEASON.approved_dates[up.number - 1]} (${hoursUntil.toFixed(1)} h away${up.started ? ", already started" : ""})`);
-  if (up.started || hoursUntil < 0) { log("Session started or past; nothing to send."); return { sent: 0 }; }
+  const hoursUntil = (start.getTime() - now) / 3600000;
+  log(`Upcoming: Session ${up.number} on ${SEASON.approved_dates[up.number - 1]} (${hoursUntil.toFixed(1)} h away${up.started ? ", already started" : ""})${forced ? " — reminders requested by the admin" : ""}`);
+  if (up.started || hoursUntil < 0) { log("Session started or past; nothing to send."); return finish({ sent: 0, planned: 0, note: `Session ${up.number} has already started, so there is nothing to remind about.` }); }
   const targets = await db.targets(up.number);
   const logged = await db.logged(up.number);
-  const plan = planReminders(targets, hoursUntil, logged);
-  log(`${targets.length} target(s) from the database, ${plan.length} to send now (stage ${voteStage(hoursUntil)?.kind || "none"}, spare window ${spareWindow(hoursUntil)}).`);
-  const live = env.DELIVERY_MODE === "live";
-  const testMode = env.ALLOW_REAL_RECIPIENTS !== "true";
+  // A requested run ignores the timing bands but still sends each player at most one message per request.
+  const plan = forced
+    ? targets.filter((t) => t.kind === "vote" || t.open_seats > 0).map((t) => ({ ...t, stage: `manual-${request.id || "0"}`, label: "requested by the admin" })).filter((t) => !logged.has(`${t.player_id}:${t.stage}`))
+    : planReminders(targets, hoursUntil, logged);
+  log(`${targets.length} target(s) from the database, ${plan.length} to send now (stage ${forced ? "requested" : voteStage(hoursUntil)?.kind || "none"}, spare window ${spareWindow(hoursUntil)}).`);
   const cap = testMode ? 3 : Infinity;
   let sent = 0;
   const transport = live ? (deps.transport || (await gmail(env))) : null;
@@ -169,7 +188,11 @@ export async function run(env = process.env, deps = {}) {
       }
     }
   }
-  return { sent, pushed, planned: plan.length, digest };
+  const note = !live ? `Delivery mode is dry-run: ${plan.length} reminder(s) planned, nothing sent. Set LEGACY_DELIVERY_MODE=live to send.`
+    : plan.length === 0 ? "Nobody needed a reminder."
+    : testMode ? `Sent to the league inbox instead of players (at most ${cap} per run).`
+    : `Sent to ${sent} player(s).`;
+  return finish({ sent, pushed, planned: plan.length, digest, note });
 }
 async function webPush(env) {
   const wp = (await import("web-push")).default;

@@ -4,7 +4,7 @@ name: Legacy site vote reminders (TEST)
 # when the repository variable ALLOW_REAL_RECIPIENTS is "true". Otherwise messages go to the league inbox, max 3/run.
 on:
   schedule:
-    - cron: "12 * * * *"
+    - cron: "*/10 * * * *"
   workflow_dispatch:
     inputs:
       smoke_test:
