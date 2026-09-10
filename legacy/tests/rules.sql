@@ -194,3 +194,20 @@ do $$ begin
 end $$;
 reset role;
 select 'PHASE4 RULES PASS' as result;
+
+-- ── L09: organizers register themselves; invitations still gate everyone else ───────────────────
+\i legacy/migrations/L09_invites.sql
+reset role;
+insert into auth.users values('a0000000-0000-0000-0000-000000000009','nobody@example.invalid',now()) on conflict do nothing;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000009',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"nobody@example.invalid"}',false);
+do $$ begin
+ begin perform public.register_me('Nobody Here','','','','data:sig','regular'); raise exception 'stranger registered'; exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"christygeorge993@gmail.com"}',false);
+do $$ declare pid bigint; begin
+ pid=public.register_me('Christy Organizer','613','x','','data:sig','regular');
+ if (select email from public.players where id=pid)<>'christygeorge993@gmail.com' then raise exception 'organizer row wrong'; end if;
+end $$;
+reset role;
+select 'PHASE5 RULES PASS' as result;

@@ -163,7 +163,7 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "register_me") {
         const inv = s.invitations[c.email];
         const existing = s.players.find((x) => x.user_id === c.uid) || s.players.find((x) => !x.user_id && x.email.toLowerCase() === c.email);
-        if (!existing && !inv) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
+        if (!existing && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
         if (existing) { Object.assign(existing, { name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); return json(200, existing.id); }
         const id = Math.max(0, ...s.players.map((p) => p.id)) + 1;
         s.players.push({ id, name: a.p_name, email: c.email, phone: a.p_phone || "", emergency: a.p_emergency || "", medical: a.p_medical || "", sig: a.p_sig || "", waiver_signed: !!a.p_sig, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: inv || a.p_membership || "regular", created_at: new Date().toISOString(), approved: false, waitlisted: false, registered_at: new Date().toISOString(), admin_note: "", user_id: c.uid });
@@ -240,6 +240,12 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "DELETE") { s.players = s.players.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
     }
     if (table === "players_public" && method === "GET") return json(200, s.players.map(publicRow).filter((r) => matches(r, f)));
+    if (table === "invitations") {
+      if (!admin) return json(403, { message: "permission denied", code: "42501" });
+      if (method === "GET") return json(200, Object.entries(s.invitations).map(([email, membership_type]) => ({ email, membership_type, note: "", created_at: "2026-09-01T00:00:00Z" })));
+      if (method === "POST") { const b = body(); s.invitations[b.email] = b.membership_type; return json(201, [b]); }
+      if (method === "DELETE") { const em = decodeURIComponent(String(f.email || "").replace(/^eq\./, "")); delete s.invitations[em]; return route.fulfill({ status: 204, body: "" }); }
+    }
     if (table === "announcements") {
       if (method === "GET") return json(200, [...s.announcements].reverse());
       if (!admin) return json(403, { message: "permission denied", code: "42501" });

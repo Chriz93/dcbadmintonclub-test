@@ -231,6 +231,23 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect.poll(() => state.rsvps.find((r) => r.player_id === newId && r.session_number === 2)?.response).toBe("notcoming");
     await expect(page.locator("#home-vote")).toContainText("Sit this one out");
 
+    // The organizer invites a new player from the Registered tab, and can register as a player without an invitation.
+    await page.evaluate(() => signOut());
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await page.evaluate(() => showSec("admin", "a-reg"));
+    await page.fill("#inv-email", "Newbie@Example.invalid"); await page.selectOption("#inv-type", "spare");
+    await page.click("#invite-card button:has-text('Send invitation')");
+    await expect.poll(() => state.invitations["newbie@example.invalid"]).toBe("spare");
+    await expect(page.locator("#invite-card")).toContainText("newbie@example.invalid");
+    await page.evaluate(() => nav("register"));
+    await registerSelf(page, "Christy Organizer");
+    await expect.poll(() => state.players.find((p) => p.email === ORGANIZER)?.name).toBe("Christy Organizer");
+    await expect(page.locator("#rs4")).toHaveClass(/active/);
+    await page.evaluate(() => signOut());
+    await signIn(page, "newbie@example.invalid");
+    await registerSelf(page, "Newbie Spare");
+    await expect.poll(() => state.players.find((p) => p.email === "newbie@example.invalid")?.membership_type).toBe("spare");
     // Uninvited stranger: no registration.
     await page.evaluate(() => signOut());
     await signIn(page, "stranger@example.invalid");
