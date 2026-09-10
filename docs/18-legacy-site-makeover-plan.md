@@ -158,3 +158,19 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 - Production kit ready: `PROD_2026-27.sql`, `P00_organizer.sql`, `verify.sql`, `ROLLBACK_reopen_anon.sql`,
   `build-production.py`, `docs/20-production-cutover.md`.
 - Open: organizer's real sign-in check on TEST; credential rotation; backup/restore drill; secrets for the reminder job.
+
+## Status — 2026-09-09 (end of Phase 5)
+
+- `legacy/tests/e2e/season.spec.ts`: ten sessions driven through the real UI against an independent model of the
+  rules (ranking, tie-break, rotation, seating, statistics, Elo, Player of the Session), one no-show in Session 5.
+  Checked after every session: courts earned, statistics, no-show counts, frozen session record, Leaders, Rankings,
+  per-player game history, Stats, Sessions (arrows and per-session records), History, Court history, Home, Schedule.
+- Defect found and fixed by the simulation design: a player marked absent had their court zeroed, so they were never
+  demoted or counted as a no-show and vanished from the next lineup (`p12`). The court-history heatmap had no tab.
+- Enhancements delivered (`L08`, `p13`): payment ledger with derived paid flag, waitlist promotion, My season card
+  with shareable image, Elo/court in the season PDF, push notifications (service worker + reminder job), Court
+  history tab; weekly backup export workflow and restore generator (`docs/21`).
+- L08 applied to TEST. Full suite: 11 passed (desktop + mobile), simulation on desktop; SQL rehearsal PHASE4 PASS;
+  reminder job 8 unit tests.
+- Secrets: `VAPID_PRIVATE_KEY` set in the test repository; still needed from the organizer: rotated
+  `SUPABASE_SERVICE_ROLE_KEY` and `GMAIL_APP_PASSWORD`.
