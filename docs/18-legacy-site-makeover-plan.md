@@ -205,3 +205,15 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   "after deadline" and "by admin" flags; the hourly job emails the admin a digest of new changes (test-inbox rules
   apply), watermark in `app_state.vote_digest_last_id`.
 - Tests: 13 browser scenarios, 9 unit tests, SQL rehearsal PHASE7 RULES PASS.
+
+## Status — 2026-09-10 (Phase 10: admin-triggered email, backup drill, TEST reset)
+
+- TEST reset for the organizer's own run: leftover Session 2 and the one completed session cleared (snapshots kept
+  in `snapshot_test_session2_20260910` and `snapshot_test_history_20260910`), statistics zeroed, Session 1 upcoming.
+- Admin → Tools → Email reminders: buttons queue `reminder_request` in `app_state`; the job (now every 10 minutes)
+  sends, writes `reminder_last_run`, and clears the request. Verified end to end against the TEST database: the
+  queued request produced a real email and the result was written back.
+- Backup drill found two real defects, both fixed: service_role had no table privileges (L12), and the export
+  assumed every table has an `id`. The run now exports 13 tables (33 players, 28 season dates) to a 90-day artifact.
+- Docs added: `22-master-prompt.md` (self-contained handover), `23-organizer-test-script.md` (the organizer's own
+  end-to-end walkthrough).
