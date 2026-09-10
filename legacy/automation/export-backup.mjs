@@ -5,13 +5,18 @@
 const need = (k) => { if (!process.env[k]) throw new Error(`${k} is required`); return process.env[k]; };
 const base = need("SUPABASE_URL").replace(/\/$/, ""), key = need("SUPABASE_SERVICE_ROLE_KEY");
 const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
-const TABLES = ["players", "app_state", "announcements", "rsvps", "questions", "invitations", "app_admins", "reminder_log", "audit_log"];
+// Every league table, with the column that gives each one a stable paging order (not all have an id).
+const TABLES = {
+  players: "id", app_state: "id", announcements: "id", questions: "id", audit_log: "id",
+  reminder_log: "id", rsvp_log: "id", payments: "id", push_subscriptions: "id",
+  rsvps: "session_number,player_id", invitations: "email", app_admins: "user_id", season_dates: "session_number",
+};
 export async function exportAll() {
   const out = { exported_at: new Date().toISOString(), project: base, tables: {} };
-  for (const t of TABLES) {
+  for (const [t, order] of Object.entries(TABLES)) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const r = await fetch(`${base}/rest/v1/${t}?select=*&order=${t === "rsvps" ? "session_number,player_id" : "id"}&offset=${from}&limit=1000`, { headers: h });
+      const r = await fetch(`${base}/rest/v1/${t}?select=*&order=${order}&offset=${from}&limit=1000`, { headers: h });
       if (!r.ok) throw new Error(`${t}: ${r.status} ${await r.text()}`);
       const page = await r.json(); rows.push(...page); if (page.length < 1000) break;
     }
