@@ -109,6 +109,12 @@ export async function run(env = process.env, deps = {}) {
   const log = deps.log || ((...a) => console.log(...a));
   for (const k of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SITE_URL", "GMAIL_USER"]) if (!env[k]) throw new Error(`${k} is required`);
   const db = deps.db || api(env);
+  if (env.SMOKE_TEST === "true") { // one message to the league inbox, never to a player
+    const transport = deps.transport || (await gmail(env));
+    const to = env.TEST_INBOX || env.GMAIL_USER;
+    await transport.sendMail({ from: `"Maplewood League" <${env.GMAIL_USER}>`, to, subject: "Reminder job smoke test", text: `The reminder job can send email. Sent ${new Date().toString()} from GitHub Actions. Nothing was sent to players.` });
+    log(`Smoke test email sent to ${to}`); return { sent: 1, smoke: true };
+  }
   const completed = (await db.state("completed_sessions")) || [];
   const current = await db.state("current_session");
   const up = upcomingSession(completed.length, current);

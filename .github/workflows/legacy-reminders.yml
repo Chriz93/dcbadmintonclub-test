@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "12 * * * *"
   workflow_dispatch:
+    inputs:
+      smoke_test:
+        description: Send one test email to the league inbox to prove SMTP works (no players involved)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -53,4 +58,5 @@ jobs:
           ORGANIZER_EMAIL: christygeorge993@gmail.com
           VAPID_PUBLIC_KEY: BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          SMOKE_TEST: ${{ inputs.smoke_test == true && 'true' || 'false' }}
         run: node remind.mjs
