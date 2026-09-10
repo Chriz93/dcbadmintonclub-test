@@ -184,3 +184,14 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   `declined`, no court penalty, listed under "Not playing tonight" with a Seat-anyway control), pre-marks "coming"
   players present. Only an unannounced no-show (`absent`) drops a court.
 - Wording: "the admin" instead of the organizer's first name in rules, hints and toasts.
+
+## Status — 2026-09-10 (Phase 8: registration declaration and the voting lock)
+
+- Registration asks for membership (regular/spare) and the season-fee status (already sent / will pay / spare per
+  session); stored as `players.declared_payment`, shown on the success screen, the status card and the Pay tab. The
+  status card no longer shows e-transfer instructions.
+- Voting is final 48 hours before play for regulars (`L10`: `season_dates` table, `set_rsvp` refuses changes; the
+  app disables the buttons and says to message the admin in the group). Spares keep claiming seats; the admin can
+  set any player's answer from the RSVP list.
+- Tests: 13 browser scenarios (one with the clock frozen after the deadline), SQL rehearsal PHASE6 RULES PASS,
+  production migration includes L10, verify.sql updated.
