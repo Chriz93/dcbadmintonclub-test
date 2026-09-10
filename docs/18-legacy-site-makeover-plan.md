@@ -174,3 +174,13 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   reminder job 8 unit tests.
 - Secrets: `VAPID_PRIVATE_KEY` set in the test repository; still needed from the organizer: rotated
   `SUPABASE_SERVICE_ROLE_KEY` and `GMAIL_APP_PASSWORD`.
+
+## Status — 2026-09-09 (Phase 7: votes drive attendance)
+
+- Rule: everyone votes on the app (Home card or one-tap email link) by Sunday 8:00 PM, 48 hours before play; spares
+  are asked from Saturday 8:00 PM (72 hours) whenever a regular has declined. Constants `FEES.voteDeadlineHours=48`,
+  `FEES.spareAskHours=72`; reminder stages Thursday evening, Saturday morning (refund cutoff), Sunday (deadline).
+- Starting the night seats "coming" regulars and confirmed spares, excuses "not coming" regulars (attendance
+  `declined`, no court penalty, listed under "Not playing tonight" with a Seat-anyway control), pre-marks "coming"
+  players present. Only an unannounced no-show (`absent`) drops a court.
+- Wording: "the admin" instead of the organizer's first name in rules, hints and toasts.

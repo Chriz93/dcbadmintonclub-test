@@ -10,7 +10,8 @@ test("season file matches the dates compiled into index.html", () => {
   assert.deepEqual(SEASON.cancelled_dates, pick("CANCELLED_DATES"));
   assert.equal(SEASON.approved_dates.length, 28);
   assert.equal(SEASON.cancelled_dates.length, 6);
-  assert.match(html, /absenceNoticeHours:72/);
+  assert.match(html, /absenceNoticeHours:72/); assert.match(html, /voteDeadlineHours:48/); assert.match(html, /spareAskHours:72/);
+  assert.equal(SEASON.fees.vote_deadline_hours, 48); assert.equal(SEASON.fees.spare_ask_hours, 72);
 });
 test("upcoming session follows completed sessions, then the active night", () => {
   assert.deepEqual(upcomingSession(0, null), { number: 1, started: false, complete: false });
@@ -24,9 +25,10 @@ test("stage bands: Thursday night, Saturday before the cutoff, Monday afternoon;
   assert.equal(voteStage(80).kind, "vote-2");
   assert.equal(voteStage(72).kind, "vote-2");
   assert.equal(voteStage(71.9), null);
-  assert.equal(voteStage(24).kind, "vote-3");
+  assert.equal(voteStage(50).kind, "vote-3"); // Sunday afternoon, before the 8 PM deadline
+  assert.equal(voteStage(24), null); // after the deadline nobody is nagged
   assert.equal(voteStage(2), null);
-  assert.equal(spareWindow(2), false); assert.equal(spareWindow(5), true); assert.equal(spareWindow(200), false);
+  assert.equal(spareWindow(2), false); assert.equal(spareWindow(5), true); assert.equal(spareWindow(71), true); assert.equal(spareWindow(72), false); assert.equal(spareWindow(200), false);
 });
 test("plan: one message per player per stage, spares only while seats are open", () => {
   const targets = [
@@ -36,9 +38,9 @@ test("plan: one message per player per stage, spares only while seats are open",
     { player_id: 10, name: "S Q", email: "q@x", membership_type: "spare", kind: "spare", open_seats: 0 },
   ];
   const plan = planReminders(targets, 80, new Set(["1:vote-2"]));
-  assert.deepEqual(plan.map((p) => `${p.player_id}:${p.stage}`), ["2:vote-2", "9:spare"]);
-  assert.deepEqual(planReminders(targets, 100, new Set()).map((p) => p.stage), ["spare"]); // between bands, spares still invited
-  assert.deepEqual(planReminders(targets, 100, new Set(["9:spare"])), []);
+  assert.deepEqual(plan.map((p) => `${p.player_id}:${p.stage}`), ["2:vote-2"]); // Saturday morning: regulars only, spares are asked from Saturday 8 PM
+  assert.deepEqual(planReminders(targets, 65, new Set()).map((p) => p.stage), ["spare"]); // between bands, spares still invited once seats are open
+  assert.deepEqual(planReminders(targets, 100, new Set()), []); // spares are not asked before Saturday 8 PM
 });
 test("test mode never addresses a player", () => {
   const t = { name: "Real Person", email: "real@example.com" };
@@ -58,7 +60,7 @@ test("push payloads open the one-tap vote link and never leave test mode", async
   assert.equal(p.url, "https://site/?vote=coming&s=4"); assert.equal(p.actions.length, 2);
   const db = { state: async () => null, targets: async () => [{ player_id: 1, name: "P", email: "p@x", membership_type: "regular", kind: "vote", open_seats: 0 }], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, subscriptions: async () => [{ player_id: 1, endpoint: "https://push/1", p256dh: "k", auth: "a" }], dropSubscription: async () => {} };
   const pushes = [];
-  const now = sessionStart(SEASON.approved_dates[0]).getTime() - 24 * 3600000;
+  const now = sessionStart(SEASON.approved_dates[0]).getTime() - 50 * 3600000;
   const base = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live", VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv" };
   const testMode = await run({ ...base, ALLOW_REAL_RECIPIENTS: "false" }, { db, now, log: () => {}, transport: { sendMail: async () => {} }, pusher: { send: async (s, m) => pushes.push(m) } });
   assert.equal(testMode.sent, 1); assert.equal(testMode.pushed, 0);

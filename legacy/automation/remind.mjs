@@ -27,10 +27,10 @@ export function upcomingSession(completedCount, current) {
 export const STAGES = [
   { kind: "vote-1", from: 120, to: 108, label: "first reminder" },   // Thu 8 PM – Fri 8 AM
   { kind: "vote-2", from: 84, to: 72, label: "before the refund cutoff" }, // Sat 8 AM – Sat 8 PM
-  { kind: "vote-3", from: 30, to: 18, label: "final reminder" },      // Mon 2 PM – Tue 2 AM
+  { kind: "vote-3", from: 60, to: 48, label: "final reminder before the Sunday 8 PM deadline" }, // Sun 8 AM – Sun 8 PM
 ];
 export function voteStage(hoursUntil) { return STAGES.find((s) => hoursUntil < s.from && hoursUntil >= s.to) || null; }
-export function spareWindow(hoursUntil) { return hoursUntil < 168 && hoursUntil >= 3; }
+export function spareWindow(hoursUntil) { return hoursUntil < SEASON.fees.spare_ask_hours && hoursUntil >= 3; } // spares are asked from 3 days before
 /** Decide what to send. targets = rows from reminder_targets(); logged = Set of `${player_id}:${kind}` already claimed. */
 export function planReminders(targets, hoursUntil, logged) {
   const stage = voteStage(hoursUntil);
@@ -57,10 +57,10 @@ export function composeEmail(t, session, siteUrl, organizerEmail) {
       html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>A regular player can't make <strong>Session ${session} on ${date}</strong>, so ${seats}. Seats go to spares in the order they answer.</p><p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm available</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Not available</a></p><p>A confirmed seat costs $${SEASON.fees.spare_session} by e-transfer to ${esc(organizerEmail)}. If you are on standby you will be emailed the moment a seat opens.</p><p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the vote card on the site.</p>`,
     };
   }
-  const refund = t.stage === "vote-2" ? `Decline by 8:00 PM Saturday (${cutoffHours} hours before play) to keep the $${SEASON.fees.absence_refund} refund. ` : "";
+  const refund = t.stage === "vote-2" ? `Decline by 8:00 PM Saturday (${cutoffHours} hours before play) to keep the $${SEASON.fees.absence_refund} refund. ` : t.stage === "vote-3" ? "Votes close Sunday 8:00 PM (48 hours before play). " : "";
   return {
     subject: `Are you playing Session ${session}? (${date})`,
-    text: `Hi ${t.name.split(" ")[0]},\n\nYou haven't answered for Session ${session} on ${date} (8:00–10:00 PM). ${refund}One tap:\n\nI'm coming: ${yes}\nNot coming: ${no}\n\n— Maplewood League\nTurn these emails off from the vote card on the site.`,
+    text: `Hi ${t.name.split(" ")[0]},\n\nYou haven't answered for Session ${session} on ${date} (8:00–10:00 PM). Everyone votes by Sunday 8:00 PM. ${refund}One tap:\n\nI'm coming: ${yes}\nNot coming: ${no}\n\n— Maplewood League\nTurn these emails off from the vote card on the site.`,
     html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>You haven't answered for <strong>Session ${session} on ${date}</strong> (8:00–10:00 PM). ${esc(refund)}One tap:</p><p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm coming</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Not coming</a></p><p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the vote card on the site.</p>`,
   };
 }

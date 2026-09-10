@@ -337,6 +337,24 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#confirmed-spares")).toContainText("1 regular declined · 1 confirmed · 0 standby");
     await expect(page.locator("#confirmed-spares")).toContainText("Spare Tester");
     await expect(page.locator("#confirmed-spares button", { hasText: "Seat" })).toBeVisible();
+    // Starting the night: the declined regular is excused (no court penalty), the confirmed spare is seated, votes pre-fill attendance.
+    await page.evaluate(() => startSession());
+    await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
+    const lineup = await page.evaluate(() => S.current.assignments as Record<string, number[]>);
+    const seated = Object.values(lineup).flat();
+    expect(seated).not.toContain(1); expect(seated).toContain(spareId); expect(seated).toHaveLength(25);
+    expect(lineup["6"]).toContain(spareId);
+    const att = await page.evaluate(() => S.current.attendance as Record<string, string>);
+    expect(att["1"]).toBe("declined"); expect(att[String(spareId)]).toBe("present");
+    await page.evaluate(() => showSec("admin", "a-att"));
+    await expect(page.locator("#excused-tonight")).toContainText("TEST Player 01");
+    await expect(page.locator("#excused-tonight")).toContainText("excused");
+    await expect(page.locator("#confirmed-spares")).toContainText("seated");
+    // Ending the night without scores: the excused regular keeps Court 1 and no no-show is recorded.
+    await page.evaluate(() => endSession());
+    await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 15000 }).toBe(1);
+    expect(state.players.find((p) => p.id === 1)!.current_court).toBe(1);
+    expect(state.players.find((p) => p.id === 1)!.no_show_count).toBe(0);
   });
   test("payment ledger drives the paid flag; waitlist promotion; my-season card; push opt-in", async ({ page }) => {
     // 25 self-registered regulars fill the league; one more is approved onto the waitlist.
