@@ -360,6 +360,10 @@ textarea.inp{resize:vertical;min-height:80px;}
 .pl-num{width:24px;height:24px;border-radius:50%;background:var(--s3);color:var(--muted);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 /* Watermark */
 .watermark{position:fixed;bottom:76px;right:8px;font-size:10px;color:rgba(95,111,102,0.45);letter-spacing:0.5px;pointer-events:none;z-index:100;font-weight:600;}
+#undo-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom));z-index:250;max-width:92vw;}
+.undo-btn{display:flex;align-items:center;gap:8px;background:#0f1f16;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(15,31,22,.35);cursor:pointer;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font);}
+.undo-btn .undo-ic{font-size:17px;line-height:1;}
+body.has-undo{padding-bottom:140px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -754,13 +758,14 @@ textarea.inp{resize:vertical;min-height:80px;}
     <div id="sec-a-tools" class="section">
       <div class="card">
         <div class="card-title">🛠 Tools</div>
-        <button class="btn btn-warn" onclick="undoScore()">↩ Undo Last Score Entry</button>
+        <button class="btn btn-warn" id="undo-tools-btn" onclick="undoLast()">↶ Undo last action</button>
+        <div id="undo-history" style="font-size:12px;margin:6px 0 4px;"></div>
         <button class="btn btn-warn" onclick="clearCycleScores()">🔄 Clear This Round's Scores</button>
         <button class="btn btn-ghost" onclick="exportData()">📤 Export JSON Backup</button>
       </div>
       <div class="card" id="reminder-tools-card">
         <div class="card-title">✉️ Email reminders</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">The scheduled job checks every 10 minutes. These buttons ask it to act on the next check instead of waiting for the weekly window.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">A scheduled check runs through the day. GitHub often starts it late, so allow up to a couple of hours. These buttons ask it to act on its next check instead of waiting for the weekly window.</div>
         <div id="reminder-status" style="font-size:12px;margin-bottom:10px;"></div>
         <button class="btn btn-ghost" onclick="requestReminderRun('smoke')">📧 Send a test email to me</button>
         <button class="btn btn-primary" onclick="requestReminderRun('vote')">🔔 Send vote reminders now</button>
@@ -797,6 +802,7 @@ textarea.inp{resize:vertical;min-height:80px;}
   </div>
 </div>
 
+<div id="undo-pill" hidden><button class="undo-btn" onclick="undoLast()" title="Undo the last admin step"><span class="undo-ic">↶</span><span><strong>Undo</strong> · <span id="undo-label"></span></span></button></div>
 <div class="watermark">DC Badminton Club · Christy George</div>
 <nav class="bnav" id="bottom-nav">
   <button class="bnav-btn active" id="bnav-home" onclick="nav('home',this)"><span class="bi">🏠</span>Home</button>
@@ -1197,6 +1203,7 @@ async function loadAll(){
     }
     S.reminderRequest=(S_me.organizer&&S_me.verified)?(await getKV('reminder_request')):null;
     S.reminderLastRun=(S_me.organizer&&S_me.verified)?(await getKV('reminder_last_run')):null;
+    await loadUndo();
     S.rsvpAll=(S_me.organizer&&S_me.verified)?((await sbG('rsvps','select=session_number,player_id,response,updated_at&order=updated_at.asc'))||[]):[];
     S.rsvpLog=(S_me.organizer&&S_me.verified)?((await sbG('rsvp_log','select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.desc&limit=100'))||[]):[];
     S.invitations=(S_me.organizer&&S_me.verified)?((await sbG('invitations','select=email,membership_type,note,created_at&order=created_at.desc'))||[]):[];
@@ -1518,7 +1525,7 @@ async function invitePlayer(){
   if(S.players.some(p=>(p.email||'').toLowerCase()===email))return toast('That email already belongs to a player — they can sign in and register','info');
   const r=await sbP('invitations',{email,membership_type,note});
   if(r&&r.code)return toast('Invitation not saved: '+(r.message||r.code),'error');
-  document.getElementById('inv-email').value='';document.getElementById('inv-note').value='';
+  if(g('inv-email').trim().toLowerCase()===email){document.getElementById('inv-email').value='';document.getElementById('inv-note').value='';} // keep anything typed meanwhile
   await loadAll();renderAll();toast(`Invited ${email} as ${membership_type}. They sign in with that email and register.`,'success');
 }
 async function deleteInvitation(email){
@@ -1585,6 +1592,87 @@ async function deletePayment(pid){
   try{await rpc('delete_payment',{p_id:pid});await loadAll();renderAll();toast('Entry deleted','warn');}catch(e){toast('Not deleted: '+e.message,'error');}
 }
 async function togglePaid(id){recordPaymentUI(id);}
+// ── Undo ─────────────────────────────────────────────────────────────────────────────────────────
+// Every wrapped admin action gets a database checkpoint first; if the action changed nothing the checkpoint is
+// discarded. Score saves are journaled by the database itself. undoLast() restores the latest checkpoint exactly.
+const UNDOABLE={"startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","recordCourtToss":"Record toss","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","restoreSnapshot":"Restore snapshot","saveEditRegistration":"Edit registration"};
+let _ckDepth=0,_undoing=false,_undoEpoch=0;
+function undoLabel(name,args){
+  const pn=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'player';};
+  switch(name){
+    case 'startSession':return `Start session ${S.sessions.length+1}`;
+    case 'endSession':return S.current?`End session ${S.current.number}`:'End session';
+    case 'nextCycle':case 'autoAdvanceCheck':return S.current?(S.current.cycle>=MAX_ROUNDS_PER_SESSION?`Finish round ${S.current.cycle}`:`Advance to round ${S.current.cycle+1}`):'Advance round';
+    case 'setPlayerCourt':return `Move ${pn(args[0])} to Court ${args[1]}`;
+    case 'markAttForTab':return `Mark ${pn(args[0])} ${args[1]}`;
+    case 'callInSpare':return `Seat ${pn(args[0])}`;
+    case 'approvePlayer':return `Approve ${pn(args[0])}`;
+    case 'rejectPlayer':return `Reject ${pn(args[0])}`;
+    case 'promoteWaitlisted':case 'promoteFromWaitlist':return `Promote ${pn(args[0])}`;
+    case 'markAbsentFromPlayers':return `Mark ${pn(args[0])} absent`;
+    case 'removePlayerFromCourtNow':return `Remove ${pn(args[0])} from Court ${args[1]}`;
+    default:return UNDOABLE[name]||'Admin action';
+  }
+}
+function installUndoCheckpoints(){
+  Object.keys(UNDOABLE).forEach(name=>{
+    const orig=window[name];if(typeof orig!=='function'||orig.__ck)return;
+    const wrapped=async function(...args){
+      if(name==='autoAdvanceCheck'&&_undoing)return; // never advance in the middle of an undo
+      if(!adminUnlocked||_ckDepth>0||_undoing)return orig.apply(this,args);
+      if(name==='autoAdvanceCheck'&&!(S.current&&!S.current.completed&&allCourtsDone()))return orig.apply(this,args); // runs after every score save; only a real rotation is a step
+      _ckDepth++;let id=null;
+      try{
+        try{id=await rpc('checkpoint',{p_label:undoLabel(name,args)});}catch(e){toast('Note: this step could not be saved for undo ('+(e.message||'offline')+')','warn');}
+        return await orig.apply(this,args);
+      }finally{
+        _ckDepth--;
+        if(id){try{await rpc('checkpoint_settle',{p_id:id});}catch(e){}try{await loadUndo();renderUndo();}catch(e){}}
+      }
+    };
+    wrapped.__ck=true;window[name]=wrapped;
+  });
+}
+async function loadUndo(){
+  if(!(S_me.organizer&&S_me.verified)){S.undoList=[];S.undoTop=null;return;}
+  S.undoList=(await sbG('undo_journal','select=id,created_at,actor_email,label&order=id.desc&limit=10'))||[];
+  S.undoTop=S.undoList[0]||null;
+}
+function renderAdvanceBanner(){
+  const area=document.getElementById('score-area');if(!area||!area.parentNode)return;
+  let b=document.getElementById('advance-banner');
+  if(!b){b=document.createElement('div');b.id='advance-banner';area.parentNode.insertBefore(b,area);}
+  const show=!!(adminUnlocked&&S.current&&!S.current.completed&&allCourtsDone());
+  b.innerHTML=show?`<div class="alert alert-info" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><span>Round ${S.current.cycle} is complete. Correct any score first, then move on.</span><button class="btn btn-primary btn-sm" onclick="nextCycle()">${S.current.cycle>=MAX_ROUNDS_PER_SESSION?'Finish the round':'Next round'} →</button></div>`:'';
+}
+function renderUndo(){
+  const pill=document.getElementById('undo-pill');if(!pill)return;
+  const top=adminUnlocked?S.undoTop:null;
+  const at=d=>new Date(d).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'});
+  pill.hidden=!top;document.body.classList.toggle('has-undo',!!top);
+  if(top)document.getElementById('undo-label').textContent=`${top.label} · ${at(top.created_at)}`;
+  const tb=document.getElementById('undo-tools-btn');if(tb){tb.disabled=!top;tb.textContent=top?`↶ Undo: ${top.label}`:'↶ Nothing to undo';}
+  const h=document.getElementById('undo-history');
+  if(h)h.innerHTML=(S.undoList||[]).length?`<div style="color:var(--muted);margin-bottom:4px;">Recent steps (newest first) — each press of Undo goes back one:</div>`+(S.undoList||[]).map((u,i)=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);${i===0?'font-weight:700;':''}"><span>${esc(u.label)}</span><span style="color:var(--muted);white-space:nowrap;">${at(u.created_at)}</span></div>`).join(''):'<div style="color:var(--muted);">No steps recorded yet.</div>';
+}
+async function undoLast(){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  if(_undoing)return;
+  const top=S.undoTop;if(!top)return toast('Nothing to undo','info');
+  if(!confirm(`Undo "${top.label}"?\n\nThe session, courts and standings go back to exactly how they were just before this step.`))return;
+  _undoing=true;
+  try{
+    const r=await rpc('undo_last');
+    _undoEpoch++; // any round-advance scheduled before the undo is void
+    if(r&&r.skipped){await loadAll();renderAll();toast(`“${r.skipped}” changed nothing, so there was nothing to reverse`,'info');return;}
+    _roundSnapshots=[];
+    const sel=document.getElementById('sc-sel');if(sel)sel.value='';
+    const area=document.getElementById('score-area');if(area)area.innerHTML='';
+    await loadAll();renderAll();
+    toast(`Undone: ${r&&r.undone?r.undone:top.label}`,'success');
+  }catch(e){toast('Not undone: '+e.message,'error');}
+  finally{_undoing=false;}
+}
 // Email is sent by the scheduled job, never by the browser: these buttons only queue the request.
 async function requestReminderRun(kind){
   if(!adminUnlocked)return toast('Organizer verification required','warn');
@@ -1593,7 +1681,7 @@ async function requestReminderRun(kind){
   try{
     await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail(),to:myEmail()});
     await loadAll();renderAll();
-    toast(kind==='smoke'?`Test email queued for ${myEmail()} — sent within about 10 minutes`:`Reminders for Session ${n} queued — sent within about 10 minutes`,'success');
+    toast(kind==='smoke'?`Test email queued for ${myEmail()} — sent on the next scheduled check (usually within an hour or two)`:`Reminders for Session ${n} queued — sent on the next scheduled check (usually within an hour or two)`,'success');
   }catch(e){toast('Not queued: '+e.message,'error');}
 }
 function renderReminderTools(){
@@ -1601,7 +1689,7 @@ function renderReminderTools(){
   const req=S.reminderRequest,last=S.reminderLastRun;
   const fmt=x=>{const d=new Date(x);return isNaN(d)?String(x):d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
   let html='';
-  if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — waiting for the next check (within about 10 minutes).</div>`;
+  if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — waiting for the next scheduled check (usually within an hour or two).</div>`;
   if(last&&last.at){
     const mode=last.mode==='live'?'<span style="color:var(--green2);">live — players receive these</span>':last.mode==='test-inbox'?'<span style="color:var(--yellow2);">test — everything goes to the league inbox</span>':'<span style="color:var(--muted);">dry run — nothing is sent</span>';
     html+=`<div id="reminder-last">Last check <strong>${fmt(last.at)}</strong> · ${mode}<br>${last.sent||0} email${last.sent===1?'':'s'} sent${last.planned!==undefined?` of ${last.planned} planned`:''}${last.note?`<br><span style="color:var(--muted);">${esc(last.note)}</span>`:''}</div>`;
@@ -2798,7 +2886,7 @@ function renderSessionAdmin(){
     <div class="card"><div class="card-title">Controls</div>
       <button class="btn btn-primary" onclick="nextCycle()">⏭ Next Round (Rotate)</button>
       <button class="btn btn-success" onclick="endSession()">✅ End & Save Session</button>
-      <button class="btn btn-ghost" onclick="undoRound()" ${_roundSnapshots.length?'':'disabled'}>↩ Undo Last Round${_roundSnapshots.length?' ('+_roundSnapshots.length+' available)':''}</button>
+      <button class="btn btn-ghost" onclick="undoLast()" ${S.undoTop?'':'disabled'}>↶ Undo${S.undoTop?': '+esc(S.undoTop.label):' — nothing to undo'}</button>
       <button class="btn btn-warn" onclick="resetSession()">🔄 Reset Session (Clear Scores)</button>
       <button class="btn btn-danger" onclick="cancelSession()">✕ Cancel Session</button>
     </div>
@@ -3640,10 +3728,11 @@ async function saveGameScore(court,gameNum){
   {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(v.error,'warn');return;}}
   const key=`c${court}_y${cy}_g${gameNum}`;
   const entry={a1:combo.a1,a2:combo.a2,b1:combo.b1,b2:combo.b2,sA:sa,sB:sb,w:sa>sb?'A':'B'};
+  const wasDone=allCourtsDone(),ep=_undoEpoch;
   if(!(await persistCourtScores(court,cy,{[key]:entry})))return;
   renderScoreEntry();renderRoundTracker();renderLeaderboard();toast(`Game ${gameNum} saved!`,'success');
-  // Auto-advance if all games for this court are done
-  setTimeout(()=>autoAdvanceCheck(),500);
+  // Only the save that completes the round advances it; corrections to a complete round wait for Next round.
+  if(!wasDone)setTimeout(()=>{if(ep===_undoEpoch)autoAdvanceCheck();},500);
 }
 
 async function saveScores(court){
@@ -3666,14 +3755,15 @@ async function saveScores(court){
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving...';}
   S.lastUndo={court,cy,keys:entries.map(e=>`c${court}_y${cy}_g${e.g}`)};
   const payload={};entries.forEach(e=>{payload[`c${court}_y${cy}_g${e.g}`]={a1:e.a1,a2:e.a2,b1:e.b1,b2:e.b2,sA:e.sA,sB:e.sB,w:e.w};});
+  const wasDone=allCourtsDone(),ep=_undoEpoch;
   if(!(await persistCourtScores(court,cy,payload))){if(btn){btn.disabled=false;btn.innerHTML='💾 Save All Court '+court+' Scores';}return;}
   // Update round tracker after saving, then re-render scores (wipes old res-X), then re-inject tally
   renderRoundTracker();
   renderScoreEntry();
   renderCourtTally(court);
   renderRoundTracker();renderLeaderboard();renderCourts();toast('Court '+court+' saved!','success');
-  // Auto-advance: if this court is fully scored, try to advance automatically
-  setTimeout(()=>autoAdvanceCheck(),500);
+  // Only the save that completes the round advances it; corrections to a complete round wait for Next round.
+  if(!wasDone)setTimeout(()=>{if(ep===_undoEpoch)autoAdvanceCheck();},500);
 }
 
 // ══════════════════════════════════════════════
@@ -3929,13 +4019,18 @@ function renderLeaderboard(){
   }).join('');
 }
 function computeEloRatings(){
-  // Start from the seeding court (peak court reached, else current, else bottom): 1500 on Court 1 down to 1000 on Court 6.
+  // Start from the court each player first played on this season: 1500 on Court 1 down to 1000 on Court 6.
+  // Players who have not played yet start from their current court. (Seeding from the peak court instead would hand
+  // every climber a retroactive +100 on top of the rating they earned by winning.)
   const elo={};
+  const seasonSess=[...(S.sessions||[])].filter(Boolean);if(S.current)seasonSess.push(S.current);
+  const firstCourt={};
+  seasonSess.forEach(sess=>{
+    Object.keys(sess.scores||{}).map(k=>{const m=k.match(/^c(\d+)_y(\d+)_g/);return m?{k,c:+m[1],y:+m[2]}:null;}).filter(Boolean)
+      .sort((a,b)=>a.y-b.y||a.c-b.c).forEach(({k,c})=>{const sc=sess.scores[k];[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&firstCourt[id]===undefined)firstCourt[id]=c;});});
+  });
   leaderboardPlayers().forEach(p=>{
-    let startCourt;
-    if(p.highestCourt&&p.highestCourt>0&&p.highestCourt<=NC)startCourt=p.highestCourt;
-    else if(p.currentCourt>0)startCourt=p.currentCourt;
-    else startCourt=NC;
+    const startCourt=firstCourt[p.id]||(p.currentCourt>0&&p.currentCourt<=NC?p.currentCourt:NC);
     elo[p.id]=1500-((startCourt-1)*100);
   });
   const rating=id=>elo[id]??1000;
@@ -3978,7 +4073,7 @@ function renderRankings(){
     return{...p,courtPos,totalW,totalL,totalGP,wr,rating,isActive};
   }).sort((a,b)=>b.rating-a.rating); // Sort purely by ELO rating
   let html=`<div class="card"><div class="card-title">🎯 Player Rankings (ELO)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Elo rating. Everyone starts from their court (Court 1 = 1500 … Court 6 = 1000). Each round, beating a stronger pair earns more than beating a weaker one, and losses cost the same the other way (K = 32). A lower-court player can out-rank a higher-court player through consistent wins.</div>`;
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Elo rating. Everyone starts from the court they first played on this season (Court 1 = 1500 … Court 6 = 1000). Each round, beating a stronger pair earns more than beating a weaker one, and losses cost the same the other way (K = 32). A lower-court player can out-rank a higher-court player through consistent wins.</div>`;
   ranked.forEach((p,i)=>{
     const ratingColor=p.rating>=1500?'var(--gold)':p.rating>=1300?'var(--green2)':p.rating>=1100?'var(--teal2)':'var(--muted)';
     const courtCls=p.courtPos===1?'var(--gold)':p.courtPos===2?'var(--silver)':p.courtPos===3?'var(--bronze)':'var(--teal2)';
@@ -5260,6 +5355,7 @@ function renderAll(){
   renderHome();renderRegPage();renderCourts();renderRoundTracker();renderSchedule();
   renderLeaderboard();renderRankings();renderPlayerStats();renderHeatmap();renderSessionStandings();renderHistory();renderRSVP();renderQA();
   renderPOS('pos-standings');
+  renderUndo();renderAdvanceBanner();
   if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();}
   // Skip score re-render during background sync to preserve unsaved input values
   if(!_isSyncing){const sel=document.getElementById('sc-sel');if(sel&&sel.value)renderScoreEntry();}
@@ -5271,6 +5367,7 @@ function renderAll(){
 // INIT
 // ══════════════════════════════════════════════
 async function init(){
+  installUndoCheckpoints();
   signInReset();
   const signed=await initAuth();
   if(!signed){setSS('err');updateNavVisibility();registerServiceWorker();return;}

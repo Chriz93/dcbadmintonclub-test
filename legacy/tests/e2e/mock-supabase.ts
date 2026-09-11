@@ -24,6 +24,7 @@ export interface MockState {
   payments: { id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
   pushSubs: { player_id: number; endpoint: string; p256dh: string; auth: string }[];
   nowMs?: number; // fake "now" for the database clock (voting lock)
+  undo: { id: number; created_at: string; label: string; actor_email: string; snapshot: string }[];
   rsvpLog: { id: number; session_number: number; player_id: number; old_response: string | null; new_response: string; by_admin: boolean; changed_at: string }[];
   questions: { id: number; player_id: number | null; asker: string; question: string; answer: string | null; answered_at: string | null; created_at: string }[];
   invitations: Record<string, string>;
@@ -56,6 +57,13 @@ function refreshPaid(s: MockState, playerId: number) {
   const rows = s.payments.filter((x) => x.player_id === playerId);
   p.paid = p.membership_type === "spare" ? rows.some((x) => x.kind === "spare") : rows.filter((x) => x.kind === "season" || x.kind === "adjustment").reduce((n, x) => n + x.amount, 0) >= 400;
 }
+const TRACKED = ["current_session", "completed_sessions", "player_approvals", "membership_overrides", "pre_session_attendance"];
+export function captureState(s: MockState) {
+  return JSON.stringify({
+    app_state: Object.fromEntries(TRACKED.filter((k) => s.state[k]).map((k) => [k, s.state[k].value])),
+    players: [...s.players].sort((a, b) => a.id - b.id).map((p) => ({ id: p.id, current_court: p.current_court, highest_court: p.highest_court, no_show_count: p.no_show_count, approved: p.approved, waitlisted: p.waitlisted, membership_type: p.membership_type, season_wins: p.season_wins, season_losses: p.season_losses, games_played: p.games_played })),
+  });
+}
 export function seedPlayers(n = 25): Player[] {
   const rows: Player[] = [];
   for (let i = 1; i <= n; i++)
@@ -70,7 +78,7 @@ export function seedPlayers(n = 25): Player[] {
 }
 export function freshState(): MockState {
   return {
-    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [], rsvpLog: [],
+    players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [], rsvpLog: [], undo: [],
     invitations: { "christygeorge993+regular@gmail.com": "regular", "christygeorge993+spare@gmail.com": "spare" },
     admins: [ORGANIZER], users: { [ORGANIZER]: "00000000-0000-4000-8000-000000000001" }, factors: {}, audit: [], requests: [],
   };
@@ -197,6 +205,7 @@ export async function installMock(page: Page, s: MockState) {
           cur.scores = cur.scores || {}; cur.scores[k] = sc; cnt++;
         }
         if (!cnt) return json(400, { message: "No scores supplied" });
+        s.undo.push({ id: (s.undo.at(-1)?.id || 0) + 1, created_at: new Date().toISOString(), label: `Scores: Court ${a.p_court}, Round ${a.p_cycle}`, actor_email: c.email, snapshot: captureState(s) });
         st.value = JSON.stringify(cur); st.version += 1; s.audit.push({ action: "scores.saved", subject: `court ${a.p_court}` });
         return json(200, st.version);
       }
@@ -237,6 +246,18 @@ export async function installMock(page: Page, s: MockState) {
       }
       if (fn === "delete_payment") { if (!admin) return deny("Organizer verification required"); const row = s.payments.find((x) => x.id === a.p_id); s.payments = s.payments.filter((x) => x.id !== a.p_id); if (row) refreshPaid(s, row.player_id); return json(200, null); }
       if (fn === "save_push_subscription") { if (!me) return deny("No player record"); if (!String(a.p_endpoint).startsWith("https://")) return json(400, { message: "Invalid subscription" }); s.pushSubs = s.pushSubs.filter((x) => x.endpoint !== a.p_endpoint); s.pushSubs.push({ player_id: me, endpoint: a.p_endpoint, p256dh: a.p_p256dh, auth: a.p_auth }); return json(200, null); }
+      if (fn === "checkpoint") { if (!admin) return deny("Organizer verification required"); const id = (s.undo.at(-1)?.id || 0) + 1; s.undo.push({ id, created_at: new Date().toISOString(), label: String(a.p_label || "Admin action").slice(0, 120), actor_email: c.email, snapshot: captureState(s) }); return json(200, id); }
+      if (fn === "checkpoint_settle") { if (!admin) return deny("Organizer verification required"); const e = s.undo.find((x) => x.id === a.p_id); if (e && e.snapshot === captureState(s)) { s.undo = s.undo.filter((x) => x.id !== a.p_id); return json(200, true); } return json(200, false); }
+      if (fn === "undo_last") {
+        if (!admin) return deny("Organizer verification required");
+        const e = s.undo.pop(); if (!e) return json(400, { message: "Nothing to undo" });
+        if (e.snapshot === captureState(s)) return json(200, { undone: null, skipped: e.label, taken_at: e.created_at, remaining: s.undo.length });
+        const snap = JSON.parse(e.snapshot);
+        for (const k of TRACKED) { if (k in snap.app_state) s.state[k] = { value: snap.app_state[k], version: (s.state[k]?.version || 0) + 1 }; else delete s.state[k]; }
+        for (const x of snap.players) { const p = s.players.find((q) => q.id === x.id); if (p) Object.assign(p, x); }
+        s.audit.push({ action: "undo", subject: e.label });
+        return json(200, { undone: e.label, taken_at: e.created_at, remaining: s.undo.length });
+      }
       if (fn === "update_my_profile") return json(200, null);
       return json(404, { message: `unknown rpc ${fn}` });
     }
@@ -267,6 +288,7 @@ export async function installMock(page: Page, s: MockState) {
       return json(200, rows.filter((r) => matches(r, f)));
     }
     if (table === "rsvps" && method === "GET") return json(200, s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)));
+    if (table === "undo_journal" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.undo].reverse().slice(0, 10).map(({ snapshot, ...rest }) => rest)); }
     if (table === "rsvp_log" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.rsvpLog].reverse()); }
     if (table === "payments" && method === "GET") return json(200, s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)));
     if (table === "questions") {

@@ -80,7 +80,8 @@ test("admin digest lists vote changes and flags the late ones", async () => {
   const sent = [];
   const db = { state: async (k) => (k === "vote_digest_last_id" ? 2 : null), targets: async () => [], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, voteLog: async (since) => rows.filter((r) => r.id > since), playersBrief: async () => [{ id: 3, name: "Cy" }], setState: async (k, v) => sent.push(`${k}=${v}`) };
   const out = await run({ SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live" }, { db, now: start.getTime() - 100 * 3600000, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to + ": " + m.subject) } });
-  assert.equal(out.digest, 1); assert.deepEqual(sent, ["inbox@x: [Admin] 1 vote change", "vote_digest_last_id=3"]);
+  assert.equal(out.digest, 1); assert.deepEqual(sent.filter((x) => !x.startsWith("reminder_last_run")), ["inbox@x: [Admin] 1 vote change", "vote_digest_last_id=3"]);
+  assert.ok(sent.some((x) => x.startsWith("reminder_last_run")), "every run is recorded");
 });
 test("a requested test email always reaches the league inbox and clears the request", async () => {
   const writes = [], sent = [];

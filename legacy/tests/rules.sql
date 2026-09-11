@@ -271,3 +271,53 @@ do $$ declare t text; n int; begin
 end $$;
 reset role;
 select 'PHASE8 RULES PASS' as result;
+
+-- ── L13: universal undo for match-night and roster actions ─────────────────────────────────────
+\i legacy/migrations/L13_undo.sql
+reset role;
+delete from public.undo_journal;
+delete from public.app_state where key in ('current_session','completed_sessions');
+update public.players set current_court=1,highest_court=1,approved=true,waitlisted=false where id in (1,2);
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin
+ begin perform public.checkpoint('x'); raise exception 'member checkpointed'; exception when insufficient_privilege then null; end;
+ begin perform public.undo_last(); raise exception 'member undid'; exception when insufficient_privilege then null; end;
+ if (select count(*) from public.undo_journal)<>0 then raise exception 'member reads the journal'; end if;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare id1 bigint; v int; r jsonb; begin
+ begin perform public.undo_last(); raise exception 'undo on an empty journal'; exception when raise_exception then if sqlerrm<>'Nothing to undo' then raise; end if; end;
+ id1=public.checkpoint('Nothing happens');
+ if not public.checkpoint_settle(id1) then raise exception 'no-op checkpoint kept'; end if;
+ perform public.checkpoint('Phantom');
+ r=public.undo_last();
+ if r->>'skipped'<>'Phantom' or r->>'undone' is not null then raise exception 'phantom step not skipped %',r; end if;
+ perform public.checkpoint('Start session 1');
+ perform public.set_state('current_session','{"number":1,"cycle":1,"assignments":{"1":[1,2]},"scores":{},"movements":[]}',0);
+ r=public.undo_last();
+ if r->>'undone'<>'Start session 1' then raise exception 'wrong label %',r; end if;
+ if exists(select 1 from public.app_state where key='current_session') then raise exception 'session not removed by undo'; end if;
+ perform public.set_state('current_session','{"number":1,"cycle":1,"assignments":{"1":[1,2]},"scores":{},"movements":[]}',0);
+ select version into v from public.app_state where key='current_session';
+ perform public.save_court_scores(1,1,'{"c1_y1_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":15,"w":"A"}}'::jsonb,v);
+ if (select label from public.undo_journal order by id desc limit 1) not like 'Scores: Court 1, Round 1%' then raise exception 'score save not journaled'; end if;
+ perform public.undo_last();
+ if (select value::jsonb->'scores' from public.app_state where key='current_session')<>'{}'::jsonb then raise exception 'scores not reverted'; end if;
+ perform public.checkpoint('End session 1');
+ update public.players set current_court=3 where id=1;
+ perform public.delete_state('current_session');
+ perform public.undo_last();
+ if (select current_court from public.players where id=1)<>1 then raise exception 'court not restored'; end if;
+ if not exists(select 1 from public.app_state where key='current_session') then raise exception 'session not restored'; end if;
+end $$;
+reset role;
+insert into public.undo_journal(label,snapshot,created_at) values('old',public.capture_state(),now()-interval '1 hour');
+insert into public.audit_log(action,subject) values('season.started','2099');
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ begin
+ begin perform public.undo_last(); raise exception 'undo crossed a season rollover'; exception when raise_exception then if sqlerrm not like '%new season%' then raise; end if; end;
+end $$;
+reset role;
+select 'PHASE9 RULES PASS' as result;

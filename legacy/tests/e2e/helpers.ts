@@ -9,6 +9,24 @@ export async function signIn(page: Page, email: string) {
   await page.click("#signin-btn");
   await expect(page.locator("#invite-gate")).toBeHidden();
 }
+export async function registerSelf(page: Page, name: string, opt: string | { payment?: string; spare?: boolean; phone?: string } = {}) {
+  const o = typeof opt === "string" ? { payment: opt } : opt;
+  await expect(page.locator("#page-register")).toHaveClass(/active/);
+  if (o.spare) await page.click("#mt-spare-box");
+  if (o.payment) await page.check(`input[name="pay-decl"][value="${o.payment}"]`);
+  await page.fill("#r-name", name);
+  await page.fill("#r-phone", o.phone || "613-555-0100");
+  await page.fill("#r-emergency", "Emergency Person 613-555-0101");
+  await page.click("text=Continue →");
+  await page.check("#w1");
+  if (await page.locator("#w5-row").isVisible()) await page.check("#w5");
+  if (await page.locator("#w6-row").isVisible()) await page.check("#w6");
+  await page.fill("#r-sig", name);
+  await page.click("#reg-btn");
+  await page.check("#lf-all");
+  await page.fill("#r-sig-lf", name);
+  await page.click("#reg-btn-lf");
+}
 export async function unlockOrganizer(page: Page) {
   await page.click("#bnav-admin");
   await expect(page.locator("#admin-lock-msg")).toContainText(/authenticator|Enter the 6-digit/i);
@@ -36,11 +54,22 @@ export async function scoreCourt(page: Page, court: number, scores: [number, num
 }
 export type Score = { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string; sA: number; sB: number };
 export type Sess = { scores: Record<string, Score> };
+/** The court each player first played on this season, from the score keys (round order, then court order). */
+export function firstCourts(sessions: Sess[]): Record<number, number> {
+  const first: Record<number, number> = {};
+  for (const sess of sessions) {
+    const keys = Object.keys(sess.scores).map((k) => { const m = k.match(/^c(\d+)_y(\d+)_g/); return m ? { k, c: +m[1], y: +m[2] } : null; })
+      .filter((x): x is { k: string; c: number; y: number } => !!x).sort((a, b) => a.y - b.y || a.c - b.c);
+    for (const { k, c } of keys) { const sc = sess.scores[k]; for (const id of [sc.a1, sc.a2, sc.b1, sc.b2]) if (id != null && first[id] === undefined) first[id] = c; }
+  }
+  return first;
+}
 // Independent Elo reference (team-average expectation, K = 32, mean change per round, ratings frozen within a round).
 export function eloReference(players: MockState["players"], sessions: Sess[]): Record<number, number> {
   const elo: Record<number, number> = {};
+  const first = firstCourts(sessions);
   for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
-    const seed = p.highest_court > 0 && p.highest_court <= 6 ? p.highest_court : p.current_court > 0 ? p.current_court : 6;
+    const seed = first[p.id] ?? (p.current_court > 0 && p.current_court <= 6 ? p.current_court : 6);
     elo[p.id] = 1500 - (seed - 1) * 100;
   }
   const r = (id: number) => elo[id] ?? 1000;

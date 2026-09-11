@@ -1,23 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installMock, freshState, ORGANIZER, type MockState } from "./mock-supabase";
-import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, wl, shot, type Sess } from "./helpers";
+import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, firstCourts, registerSelf, wl, shot, type Sess } from "./helpers";
 
-async function registerSelf(page: Page, name: string, payment?: "paid_full" | "will_pay" | "per_session") {
-  await expect(page.locator("#page-register")).toHaveClass(/active/);
-  if (payment) await page.check(`input[name="pay-decl"][value="${payment}"]`);
-  await page.fill("#r-name", name);
-  await page.fill("#r-phone", "613-555-0100");
-  await page.fill("#r-emergency", "Emergency Person 613-555-0101");
-  await page.click("text=Continue →");
-  await page.check("#w1");
-  if (await page.locator("#w5-row").isVisible()) await page.check("#w5");
-  if (await page.locator("#w6-row").isVisible()) await page.check("#w6");
-  await page.fill("#r-sig", name);
-  await page.click("#reg-btn");
-  await page.check("#lf-all");
-  await page.fill("#r-sig-lf", name);
-  await page.click("#reg-btn-lf");
-}
 const FOUR: [number, number][] = [[21, 15], [21, 10], [18, 21]]; // A top on points, D bottom
 const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A/B fully tied, C/D fully tied
 const FIVE: [number, number][] = [[15, 10], [15, 9], [15, 12], [15, 8], [15, 11]];
@@ -126,7 +110,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     expect([...shown].sort((a, b) => b - a)).toEqual(shown);
     expect(new Set(shown)).toEqual(new Set(Object.values(appElo)));
     for (const p of state.players) { // rating moved in the direction of the player's record, never further than 32 per round
-      const seed = 1500 - (p.highest_court - 1) * 100;
+      const seed = 1500 - ((firstCourts(done)[p.id] ?? p.current_court) - 1) * 100;
       expect(Math.abs(appElo[p.id] - seed)).toBeLessThanOrEqual(64);
       if (p.season_wins === p.games_played) expect(appElo[p.id]).toBeGreaterThan(seed);
       if (p.season_losses === p.games_played) expect(appElo[p.id]).toBeLessThan(seed);
@@ -475,5 +459,57 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     // The page only wrote the request: it carries no mail transport and names no SMTP host.
     expect(state.requests.filter((r) => r.includes("/rpc/set_state")).length).toBeGreaterThan(0);
     expect(await page.evaluate(() => /smtp\.|nodemailer/i.test(document.documentElement.innerHTML))).toBe(false);
+  });
+  test("one Undo reverses any match-night step, one step at a time", async ({ page }) => {
+    await signIn(page, ORGANIZER);
+    await unlockOrganizer(page);
+    await expect(page.locator("#undo-pill")).toBeHidden();
+    await page.evaluate(() => startSession());
+    await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
+    await expect(page.locator("#undo-label")).toContainText("Start session 1");
+    // A refused step leaves nothing behind: advancing with scores missing is blocked, and its checkpoint discarded.
+    await page.evaluate(() => nextCycle());
+    await expect.poll(() => state.undo.map((u) => u.label)).toEqual(["Start session 1"]);
+    await page.click("#bnav-scores");
+    for (let c = 1; c <= 6; c++) {
+      const games = await courtGames(page, c);
+      await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 5 + i] : [21, 10 + i])) as [number, number][]);
+    }
+    await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
+    await expect(page.locator("#undo-label")).toContainText("Advance to round 2");
+    const r2Lineup = await page.evaluate(() => JSON.stringify(S.current.assignments));
+    // Last season's accident: the round moved on too soon. One Undo returns to round 1 with every score intact.
+    await page.locator("#undo-pill button").click();
+    await expect.poll(() => page.evaluate(() => S.current.cycle)).toBe(1);
+    expect(await page.evaluate(() => Object.keys(S.current.scores).length)).toBe(20);
+    expect(await page.evaluate(() => S.current.movements.length)).toBe(0);
+    await expect(page.locator("#undo-label")).toContainText("Scores: Court 6, Round 1");
+    await page.waitForTimeout(1500); // an advance scheduled before the Undo must not fire after it
+    expect(await page.evaluate(() => S.current.cycle)).toBe(1);
+    await expect(page.locator("#advance-banner")).toContainText("Round 1 is complete");
+    // A second Undo removes only the last court's five games.
+    await page.locator("#undo-pill button").click();
+    await expect.poll(() => page.evaluate(() => Object.keys(S.current.scores).length)).toBe(15);
+    // Re-score Court 6: the round advances again to exactly the same lineup.
+    const games6 = await courtGames(page, 6);
+    await scoreCourt(page, 6, games6.map((_, i) => [15, 5 + i]) as [number, number][]);
+    await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
+    expect(await page.evaluate(() => JSON.stringify(S.current.assignments))).toBe(r2Lineup);
+    // Finish the night, then undo End Session: the night is live again and every court and statistic is as it was.
+    for (let c = 1; c <= 6; c++) {
+      const games = await courtGames(page, c);
+      await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 6 + i] : [21, 11 + i])) as [number, number][]);
+    }
+    await expect.poll(() => page.evaluate(() => S.current.completed === true), { timeout: 20000 }).toBe(true);
+    const before = JSON.stringify(state.players.map((p) => [p.id, p.current_court, p.highest_court, p.season_wins, p.season_losses, p.games_played]));
+    await page.evaluate(() => endSession());
+    await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 20000 }).toBe(1);
+    await page.evaluate(() => closeModal());
+    await expect(page.locator("#undo-label")).toContainText("End session 1");
+    await page.locator("#undo-pill button").click();
+    await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
+    expect(state.state["completed_sessions"]).toBeUndefined();
+    expect(JSON.stringify(state.players.map((p) => [p.id, p.current_court, p.highest_court, p.season_wins, p.season_losses, p.games_played]))).toBe(before);
+    expect(state.audit.filter((a) => a.action === "undo").map((a) => a.subject)).toEqual(["Advance to round 2", "Scores: Court 6, Round 1", "End session 1"]);
   });
 });

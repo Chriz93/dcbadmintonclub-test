@@ -137,7 +137,7 @@ export async function run(env = process.env, deps = {}) {
   const request = db.state ? await db.state("reminder_request").catch(() => null) : null;
   const finish = async (result) => {
     const out = { ...result, mode: live ? (testMode ? "test-inbox" : "live") : "dry-run" };
-    if (db.setState && (request || result.sent)) await db.setState("reminder_last_run", { at: new Date(now).toISOString(), requested: request ? request.kind : null, ...out });
+    if (db.setState) await db.setState("reminder_last_run", { at: new Date(now).toISOString(), requested: request ? request.kind : null, ...out });
     if (request && db.setState) await db.setState("reminder_request", null);
     return out;
   };
