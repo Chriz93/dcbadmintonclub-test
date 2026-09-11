@@ -216,3 +216,28 @@ wrong key and used `disable trigger all`, which Supabase refuses; both fixed, wi
 | Restore drill (local) | 14 / 14 tables identical after restore |
 | TEST database after L15 | `verify.sql` 25 / 25 OK; function bodies match the rehearsal; timer still reaches GitHub |
 | Patch replay | p30 + p31 + p32 applied to the previous commit reproduce `index.html` exactly |
+
+## The app does the coin toss (September 11, 2026) — patch p33
+
+Players still tied on wins, points and point difference at the top of a court (who moves up) or the bottom (who moves
+down) are decided by a coin toss the app draws itself. Before, an unrecorded tie was quietly settled by head-to-head,
+then player number — not the written rule — unless the admin opened "Record Toss — Who Won?" and picked someone by
+hand; that popup and its Redo are gone.
+
+- **How it draws.** `tossOrder()` shuffles the tied players with a generator seeded by the night's start time (the
+  session id), the round, the court and the tied players. Every phone shows the same result as soon as the court's
+  last game is saved; nobody can know it before the night starts; Undo followed by advancing again gives the same
+  result, so a toss can never be redrawn.
+- **Where it shows.** The court tally tags the winner "🪙 Won toss — ⬆️" (or the loser "🪙 Lost toss — ⬇️") with a line
+  "🪙 Coin toss by the app … moves up", the projected next round follows it, the round's movements record it
+  (`tossChoices`, `by: "app"`), and History marks the round "🪙 Toss used".
+- **One ranking everywhere.** The rotation, the tally, the projections and End Session all use `sortCourtRanking`
+  (wins, points, point difference, toss). When a whole court is tied, one toss order decides both who moves up and who
+  moves down (the tally used to say "stays" while the rotation still moved someone down).
+- **Checks.** Over 60,000 draws each tied player wins a fair share (pairs 50.3 / 49.7 %; three-way 33.3 / 33.9 / 32.8 %;
+  five-way 19.7–20.3 %); the same tie listed in any order gives the same result; the test model's independent
+  `tossOrder` agrees with the app on 5,000 of 5,000 random ties. The toss suite (100 cases) now checks the tags, the
+  note, the move, the recorded toss, and that Undo plus advancing again moves the same player.
+- **Results.** All generated suites 3,905 / 3,905 (desktop and phone); match night, season and opener 18 passed,
+  2 skipped by design — the ten-session season agrees with the rules model's own toss round by round. p33 applied to the
+  previous commit reproduces `index.html` exactly.

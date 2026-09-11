@@ -3,7 +3,8 @@ import { installMock, freshState, ORGANIZER, type MockState } from "./mock-supab
 import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, firstCourts, registerSelf, wl, shot, type Sess } from "./helpers";
 
 const FOUR: [number, number][] = [[21, 15], [21, 10], [18, 21]]; // A top on points, D bottom
-const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A/B fully tied, C/D fully tied
+import { tossOrder } from "./rules-model";
+const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A, B and D finish 2–1 fully tied; C has no wins
 const FIVE: [number, number][] = [[15, 10], [15, 9], [15, 12], [15, 8], [15, 11]];
 
 test.describe.serial("2026–27 match night on the test copy (mocked database rules)", () => {
@@ -15,7 +16,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.goto("/");
   });
 
-  test("organizer runs a 25-player night: five-player Court 6, strict scores, deterministic ties, statistics", async ({ page }) => {
+  test("organizer runs a 25-player night: five-player Court 6, strict scores, the app's coin toss for ties, statistics", async ({ page }) => {
     await signIn(page, ORGANIZER);
     await expect(page.locator("#page-home")).toHaveClass(/active/);
     await expect(page.locator("#season-rules-card")).toContainText("Court 6 first, then Court 5, then Court 4");
@@ -60,13 +61,16 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     const r2 = await page.evaluate(() => JSON.parse(JSON.stringify(S.current.assignments)));
     expect(Object.values(r2).map((a) => (a as number[]).length)).toEqual([4, 4, 4, 4, 4, 5]);
     expect(new Set(Object.values(r2).flat()).size).toBe(25);
-    // Court 2: A, B and D finish 2–1 with equal points and differential; head-to-head and points conceded
-    // are also level, so registration order (lowest id) decides: A (5) moves up, C (7, no wins) moves down.
-    expect(r2["1"]).toContain(5); expect(r2["1"]).not.toContain(4); // court-1 loser (4) went down
+    // Court 2: A, B and D (5, 6, 8) finish 2–1 with equal points and differential, so the app's coin toss (seeded by
+    // this night's start time) decides who moves up; C (7, no wins) moves down.
+    const sid = await page.evaluate(() => S.current.id), tossWinner = tossOrder(sid, 1, 2, [5, 6, 8])[0];
+    expect(r2["1"]).toContain(tossWinner); expect(r2["1"]).not.toContain(4); // court-1 loser (4) went down
     expect(r2["2"]).toContain(4); expect(r2["3"]).toContain(7);
     expect(r2["5"]).toContain(23); expect(r2["6"]).not.toContain(23); // five-player court: C tops on points then differential
     const mv = await page.evaluate(() => S.current.movements[0].mv);
-    expect(mv[5]).toBe("up"); expect(mv[7]).toBe("down"); expect(mv[23]).toBe("up"); expect(mv[4]).toBe("down");
+    expect(mv[tossWinner]).toBe("up"); expect(mv[7]).toBe("down"); expect(mv[23]).toBe("up"); expect(mv[4]).toBe("down");
+    for (const id of [5, 6, 8].filter((x) => x !== tossWinner)) expect(mv[id], "the other tied players stay").toBe("stay");
+    expect(await page.evaluate(() => S.current.movements[0].tossChoices.top_2), "the toss is recorded").toEqual({ group: [5, 6, 8], direction: "up", winnerId: tossWinner, by: "app" });
     expect(Object.values(mv).filter((m) => m === "up")).toHaveLength(5); expect(Object.values(mv).filter((m) => m === "down")).toHaveLength(5);
 
     // Round 2 with whatever lineups resulted; then the session completes after the second round.

@@ -422,7 +422,7 @@ body.has-undo{padding-bottom:140px;}
       • Courts hold four. When more than 24 play (all 26 regulars, or a spare joins), the extra players become a fifth player on the bottom courts — Court 6 first, then Court 5, then Court 4. With fewer than 24, nobody plays alone: a single leftover player joins the last court in use as its fifth player, and a court left with two or three plays singles. A court of five plays five doubles games to <strong>15 points</strong> and each player sits out one; a court of four plays three games to 21.<br>
       • Games end at the target: first to 21 (15 on a court of five) wins, even at 20–20 — no deuce. Arrive 5 minutes early; more than 5 minutes late moves you to the last court.<br>
       • Every session is <strong>two ladder rounds</strong>. After the second round the courts are free for casual games or drills (use old shuttlecocks).<br>
-      • The admin sets the initial seeding. After each round the player with the most wins on a court moves up one court and the fewest moves down; ties go to points, then point difference, then a coin toss. Nobody moves down from the last court in use.
+      • The admin sets the initial seeding. After each round the player with the most wins on a court moves up one court and the fewest moves down; ties go to points, then point difference, then a coin toss that the app does by itself (the same result on every phone). Nobody moves down from the last court in use.
     </div>
   </div>
   <div id="pos-home"></div>
@@ -565,7 +565,7 @@ body.has-undo{padding-bottom:140px;}
           <li style="font-size:13px;line-height:1.5;">Each court is allotted 8 shuttlecocks (2 per player). Extra shuttlecocks must be provided by players.</li>
           <li style="font-size:13px;line-height:1.5;">Games are played to 21 points — 15 on a court of five. First to reach the target wins, even at 20-20 (14-14 on a court of five). No deuce.</li>
           <li style="font-size:13px;line-height:1.5;">Scores are entered by one person per court after confirming with all players. The app shows exactly who plays who in each game (Game 1: A+B vs C+D · Game 2: A+C vs B+D · Game 3: A+D vs B+C).</li>
-          <li style="font-size:13px;line-height:1.5;">After each round, the player with the most wins on each court moves UP one court and the player with the fewest moves DOWN (ties: points, then point difference, then a coin toss). Nobody moves down from the last court in use.</li>
+          <li style="font-size:13px;line-height:1.5;">After each round, the player with the most wins on each court moves UP one court and the player with the fewest moves DOWN (ties: points, then point difference, then a coin toss done by the app). Nobody moves down from the last court in use.</li>
           <li style="font-size:13px;line-height:1.5;">Remaining shuttlecocks are distributed to top scorers per court starting from Court 1.</li>
           <li style="font-size:13px;line-height:1.5;">New shuttlecocks are ONLY for official ladder matches. Use old/used shuttlecocks while waiting between rounds or during casual play.</li>
           <li style="font-size:13px;line-height:1.5;">The court where you finish each session is your starting court the following week. Court positions carry over week to week.</li>
@@ -1607,7 +1607,7 @@ async function togglePaid(id){recordPaymentUI(id);}
 // ── Undo ─────────────────────────────────────────────────────────────────────────────────────────
 // Every wrapped admin action gets a database checkpoint first; if the action changed nothing the checkpoint is
 // discarded. Score saves are journaled by the database itself. undoLast() restores the latest checkpoint exactly.
-const UNDOABLE={"startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","recordCourtToss":"Record toss","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","restoreSnapshot":"Restore snapshot","saveEditRegistration":"Edit registration"};
+const UNDOABLE={"startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","restoreSnapshot":"Restore snapshot","saveEditRegistration":"Edit registration"};
 let _ckDepth=0,_undoing=false,_undoEpoch=0;
 function undoLabel(name,args){
   const pn=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'player';};
@@ -2376,7 +2376,7 @@ async function resetSession(){
 }
 async function nextCycle(){
   if(!S.current)return toast('No active session','warn');
-  if(_autoAdvancing)return toast('Round advance already in progress — finish the toss prompt first','warn');
+  if(_autoAdvancing)return toast('Round advance already in progress','warn');
   if(S.current.completed){toast('Session already complete — click End Session to finalize','warn');return;}
   const missing=[];
   for(let c=1;c<=NC;c++){
@@ -2424,18 +2424,15 @@ async function nextCycle(){
     toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
   }finally{_autoAdvancing=false;}
 }
-// Deterministic tie-break inside a court: head-to-head games won between the tied players,
-// then fewer points conceded, then lower player id (earlier registration). Same rule everywhere.
-function tieOrder(ids,cy,ptAgainst){
-  const h2h={};ids.forEach(i=>h2h[i]=0);
-  for(let c=1;c<=NC;c++)for(let g=1;g<=MAXG;g++){
-    const sc=S.current?.scores?.[`c${c}_y${cy}_g${g}`];if(!sc)continue;
-    const A=[sc.a1,sc.a2].filter(x=>x!=null),B=[sc.b1,sc.b2].filter(x=>x!=null);
-    const tiedA=A.filter(i=>ids.includes(i)),tiedB=B.filter(i=>ids.includes(i));
-    if(!tiedA.length||!tiedB.length)continue; // only games where tied players opposed each other
-    if(sc.w==='A')tiedA.forEach(i=>h2h[i]++);else if(sc.w==='B')tiedB.forEach(i=>h2h[i]++);
-  }
-  return[...ids].sort((x,y)=>h2h[y]-h2h[x]||(ptAgainst[x]||0)-(ptAgainst[y]||0)||x-y);
+// The coin toss for players still tied on wins, points and point difference: the app draws it. The draw is seeded by
+// this night's start time, the round, the court and the tied players, so every phone shows the same result, nobody can
+// know it before the night starts, and Undo cannot redraw it. Returns the tied players in toss order (first wins).
+function tossOrder(ids,cy,c){
+  const g=[...ids].sort((x,y)=>x-y);let h=2166136261;
+  for(const ch of `${S.current?.id||0}|${cy}|${c}|${g.join(',')}`){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
+  let a=h|0;const rnd=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  for(let i=g.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[g[i],g[j]]=[g[j],g[i]];}
+  return g;
 }
 async function applyRotation(){
   const cy=S.current.cycle,a=S.current.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
@@ -2450,106 +2447,19 @@ async function applyRotation(){
     side_a.forEach(id=>{pts[id]=(pts[id]||0)+sc.sA;ptFor[id]=(ptFor[id]||0)+sc.sA;ptAgainst[id]=(ptAgainst[id]||0)+sc.sB;gamesPlayedCycle[id]=(gamesPlayedCycle[id]||0)+1;});
     side_b.forEach(id=>{pts[id]=(pts[id]||0)+sc.sB;ptFor[id]=(ptFor[id]||0)+sc.sB;ptAgainst[id]=(ptAgainst[id]||0)+sc.sA;gamesPlayedCycle[id]=(gamesPlayedCycle[id]||0)+1;});
   }
-  // Detect ties (by WINS first, then points as secondary) and resolve via toss before sorting.
-  // Valid win distributions in 4p round-robin doubles are {3,1,1,1} or {2,2,2,0} — so ties
-  // happen frequently and MUST be tossed. Ordered rotation by wins matches real badminton ladder rules.
-  const tossResults={};
-  const tossChoices={}; // {c: {group, direction, winnerId, loserIds}} — for audit/display later
-  for(let c=1;c<=NC;c++){
-    const pids=a[c]||[];if(pids.length<2)continue;
-    // Sort the court's players by wins DESC, then pts DESC, then diff DESC, then id ASC
-    const courtSorted=[...pids].map(id=>({
-      id,
-      wins:wins[id]||0,
-      pts:pts[id]||0,
-      diff:(ptFor[id]||0)-(ptAgainst[id]||0)
-    })).sort((x,y)=>y.wins-x.wins||y.pts-x.pts||y.diff-x.diff||x.id-y.id);
-    // TOP TIE: only real if wins AND points AND differential all match — if pts/diff
-    // resolve the tie, no toss needed (the sort tiebreakers decide movement).
-    if(c>1){
-      const top=courtSorted[0];
-      const topGroup=courtSorted.filter(s=>s.wins===top.wins&&s.pts===top.pts&&s.diff===top.diff);
-      if(topGroup.length>1){
-        // Check for pre-recorded toss (admin may have resolved this from the tally already)
-        const preT=(S.current.preTosses||{})[`${cy}_c${c}_top`];
-        let winnerId;
-        if(preT&&preT.winnerId&&topGroup.some(s=>s.id===preT.winnerId)){
-          winnerId=preT.winnerId;
-        }else{
-          // Multi-way tie at the top — show toss modal and await admin's choice
-          const tiedPlayers=topGroup.map(s=>{
-            const p=S.players.find(pp=>pp.id===s.id);
-            return {id:s.id,name:p?p.name:'?'};
-          });
-          void tiedPlayers;
-          winnerId=tieOrder(topGroup.map(s=>s.id),cy,ptAgainst)[0];
-        }
-        // Record toss: winnerId beats every other tied player at the top
-        topGroup.forEach(s=>{
-          if(s.id!==winnerId){
-            tossResults[winnerId+'_'+s.id]=winnerId;
-            tossResults[s.id+'_'+winnerId]=winnerId;
-          }
-        });
-        tossChoices['top_'+c]={group:topGroup.map(s=>s.id),direction:'up',winnerId,loserIds:topGroup.filter(s=>s.id!==winnerId).map(s=>s.id)};
-      }
-    }
-    // BOTTOM TIE: only real if wins AND points AND differential all match — and only
-    // matters if there's an actual bottom group distinct from the top (otherwise everyone
-    // on the court is tied, nobody moves).
-    if(hasPlayersBelow(c)){
-      const bot=courtSorted[courtSorted.length-1];
-      const botGroup=courtSorted.filter(s=>s.wins===bot.wins&&s.pts===bot.pts&&s.diff===bot.diff);
-      const top=courtSorted[0];
-      const allTied=top.wins===bot.wins&&top.pts===bot.pts&&top.diff===bot.diff;
-      if(botGroup.length>1&&!allTied){
-        // Check for pre-recorded toss (admin may have resolved this from the tally already)
-        const preT=(S.current.preTosses||{})[`${cy}_c${c}_bot`];
-        let loserId;
-        if(preT&&preT.loserId&&botGroup.some(s=>s.id===preT.loserId)){
-          loserId=preT.loserId;
-        }else{
-          const tiedPlayers=botGroup.map(s=>{
-            const p=S.players.find(pp=>pp.id===s.id);
-            return {id:s.id,name:p?p.name:'?'};
-          });
-          void tiedPlayers;
-          loserId=tieOrder(botGroup.map(s=>s.id),cy,ptAgainst).slice(-1)[0];
-        }
-        // Record toss: every other tied player beats loserId at the bottom
-        botGroup.forEach(s=>{
-          if(s.id!==loserId){
-            tossResults[loserId+'_'+s.id]=s.id;
-            tossResults[s.id+'_'+loserId]=s.id;
-          }
-        });
-        tossChoices['bot_'+c]={group:botGroup.map(s=>s.id),direction:'down',loserId,winnerIds:botGroup.filter(s=>s.id!==loserId).map(s=>s.id)};
-      }
-    }
-  }
+  // Each court ranks its players with sortCourtRanking (wins, points, point difference, then the app's coin toss).
+  // The first moves up, the last moves down into a court that has players; every toss that decided a move is recorded.
+  const tossResults={},tossChoices={};
+  const key=id=>[wins[id]||0,pts[id]||0,(ptFor[id]||0)-(ptAgainst[id]||0)].join('/');
   const mv={},na={};for(let c=1;c<=NC;c++)na[c]=[];
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>mv[id]='stay');continue;}
-    const sorted=[...pids].sort((a,b)=>{
-      // Tiebreaker order must match sortCourtRanking (display) and recordCourtToss
-      // (which only allows a toss when wins+pts+diff all match). Previously tossResults
-      // was checked after wins only — causing rotation to override pts/diff even though
-      // the display and recording flow treated toss as a last resort. Now: wins → pts →
-      // diff → toss → id. Toss is only applied when the "real" stats are fully tied.
-      const winsCmp=(wins[b]||0)-(wins[a]||0);
-      if(winsCmp!==0)return winsCmp;
-      const ptCmp=(pts[b]||0)-(pts[a]||0);
-      if(ptCmp!==0)return ptCmp;
-      const ptDiff_a=(ptFor[a]||0)-(ptAgainst[a]||0);
-      const ptDiff_b=(ptFor[b]||0)-(ptAgainst[b]||0);
-      if(ptDiff_a!==ptDiff_b)return ptDiff_b-ptDiff_a;
-      // Fully tied on wins+pts+diff — use toss if admin recorded/prompted one
-      const tKey1=a+'_'+b,tKey2=b+'_'+a;
-      if(tossResults[tKey1])return tossResults[tKey1]===a?-1:1;
-      if(tossResults[tKey2])return tossResults[tKey2]===a?-1:1;
-      return a-b; // final fallback (shouldn't happen once toss is resolved)
-    });
-    sorted.forEach((id,i)=>{if(i===0&&c>1)mv[id]='up';else if(i===sorted.length-1&&hasPlayersBelow(c))mv[id]='down';else mv[id]='stay';});
+    const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
+    const up=c>1?sorted[0]:null,down=hasPlayersBelow(c)?sorted[sorted.length-1]:null;
+    const topG=pids.filter(id=>key(id)===key(sorted[0])).sort((x,y)=>x-y),botG=pids.filter(id=>key(id)===key(sorted[sorted.length-1])).sort((x,y)=>x-y);
+    if(up!=null&&topG.length>1){tossChoices['top_'+c]={group:topG,direction:'up',winnerId:up,by:'app'};tossResults['top_'+c]=up;}
+    if(down!=null&&botG.length>1){tossChoices['bot_'+c]={group:botG,direction:'down',loserId:down,by:'app'};tossResults['bot_'+c]=down;}
+    sorted.forEach(id=>{mv[id]=id===up?'up':id===down?'down':'stay';});
   }
   Object.entries(mv).forEach(([id,m])=>{
     const pid=parseInt(id);let from=null;
@@ -3309,41 +3219,16 @@ function buildCombos(players){
   return[];
 }
 function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
-  const sorted=[...pids].sort((x,y)=>{
-    const wc=(wins[y]||0)-(wins[x]||0);if(wc)return wc;
-    const pc=(pts[y]||0)-(pts[x]||0);if(pc)return pc;
-    const dx=(ptFor[x]||0)-(ptAgainst[x]||0);
-    const dy=(ptFor[y]||0)-(ptAgainst[y]||0);
-    if(dx!==dy)return dy-dx;
-    const o=tieOrder([x,y],cy,ptAgainst);return o[0]===x?-1:1;
-  });
-  const pT=preTosses||{};
-  const topT=pT[`${cy}_c${c}_top`];
-  const botT=pT[`${cy}_c${c}_bot`];
-  const _diff=id=>(ptFor[id]||0)-(ptAgainst[id]||0);
-  if(topT&&topT.winnerId){
-    const top=sorted[0];
-    const topTied=sorted.filter(id=>(wins[id]||0)===(wins[top]||0)&&(pts[id]||0)===(pts[top]||0)&&_diff(id)===_diff(top));
-    if(topTied.length>1&&topTied.includes(topT.winnerId)){
-      const rest=sorted.filter(id=>id!==topT.winnerId);
-      sorted.length=0;sorted.push(topT.winnerId,...rest);
-    }
-  }
-  if(botT&&botT.loserId){
-    const bot=sorted[sorted.length-1];
-    const topForTie=sorted[0];
-    // If the WHOLE court is tied on wins+pts+diff, applyRotation skips the bot toss
-    // (only the top toss decides who moves up; everyone else stays). Mirror that
-    // here so the display never shows a "↓" arrow that won't actually happen.
-    const allTiedCourt=(wins[topForTie]||0)===(wins[bot]||0)&&(pts[topForTie]||0)===(pts[bot]||0)&&_diff(topForTie)===_diff(bot);
-    if(!allTiedCourt){
-      const botTied=sorted.filter(id=>(wins[id]||0)===(wins[bot]||0)&&(pts[id]||0)===(pts[bot]||0)&&_diff(id)===_diff(bot));
-      if(botTied.length>1&&botTied.includes(botT.loserId)){
-        const rest=sorted.filter(id=>id!==botT.loserId);
-        sorted.length=0;sorted.push(...rest,botT.loserId);
-      }
-    }
-  }
+  const key=id=>[wins[id]||0,pts[id]||0,(ptFor[id]||0)-(ptAgainst[id]||0)];
+  const same=(x,y)=>{const p=key(x),q=key(y);return p[0]===q[0]&&p[1]===q[1]&&p[2]===q[2];};
+  const sorted=[...pids].sort((x,y)=>{const p=key(x),q=key(y);return q[0]-p[0]||q[1]-p[1]||q[2]-p[2]||x-y;});
+  if(sorted.length<2)return sorted;
+  // Still tied on wins, points and point difference at the top or the bottom: the app's coin toss decides (tossOrder).
+  // A toss recorded by hand in an older session (preTosses) is kept.
+  const pT=preTosses||{},topT=pT[`${cy}_c${c}_top`],botT=pT[`${cy}_c${c}_bot`];
+  const topG=sorted.filter(id=>same(id,sorted[0])),botG=sorted.filter(id=>same(id,sorted[sorted.length-1]));
+  if(topG.length>1){const w=topT&&topG.includes(topT.winnerId)?topT.winnerId:tossOrder(topG,cy,c)[0];sorted.splice(sorted.indexOf(w),1);sorted.unshift(w);}
+  if(botG.length>1){const l=botT&&botG.includes(botT.loserId)&&botT.loserId!==sorted[0]?botT.loserId:tossOrder(botG,cy,c).filter(id=>id!==sorted[0]).slice(-1)[0];sorted.splice(sorted.indexOf(l),1);sorted.push(l);}
   return sorted;
 }
 function computeRoundStatus(){
@@ -3718,7 +3603,7 @@ function renderScoreEntry(){
   // cross-cycle transition and refuse to preserve cross-cycle DOM values.
   el.dataset.cy=String(cy);
   el.dataset.court=String(court);
-  // Populate the tally card (shows the Record Toss button if a tie exists)
+  // Populate the tally card (movement tags, and the app's coin toss when players are still tied)
   renderCourtTally(court);
 }
 function liveW(c,g){
@@ -3757,7 +3642,7 @@ async function persistCourtScores(court,cy,scores){
 }
 async function saveGameScore(court,gameNum){
   if(!S.current)return toast('No session','warn');
-  if(_autoAdvancing)return toast('Round is advancing — resolve the toss prompt before saving new scores','warn');
+  if(_autoAdvancing)return toast('Round is advancing — save again in a moment','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2)return toast('Need at least 2 players on this court','warn');
@@ -3777,7 +3662,7 @@ async function saveGameScore(court,gameNum){
 
 async function saveScores(court){
   if(!S.current)return toast('No session','warn');
-  if(_autoAdvancing)return toast('Round is advancing — resolve the toss prompt before saving new scores','warn');
+  if(_autoAdvancing)return toast('Round is advancing — save again in a moment','warn');
   const cy=S.current.cycle;
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2)return toast('Need at least 2 players','warn');
@@ -3808,10 +3693,9 @@ async function saveScores(court){
 
 // ══════════════════════════════════════════════
 // COURT TALLY — standalone renderer, can be called any time after scores
-// are saved. Reads scores + preTosses from S.current and writes the tally
-// card into #res-${court}. Shows a "🪙 Record Toss Result" button when a
-// tie is detected and no toss has been recorded yet; shows the resolved
-// movement (with a 🪙 badge) once admin has recorded the toss decision.
+// are saved. Writes the tally card into #res-${court}: each player's
+// movement and, once the court is finished, the app's coin toss for
+// players still tied on wins, points and point difference (tossOrder).
 // ══════════════════════════════════════════════
 function renderCourtTally(court){
   if(!S.current)return;
@@ -3839,49 +3723,30 @@ function renderCourtTally(court){
   const sortedIds=sortCourtRanking(players.map(p=>p.id),wins,pts,ptFor,ptAgainst,cy,court,S.current.preTosses);
   const sorted=sortedIds.map(id=>players.find(p=>p.id===id));
   const maxWins=players.length===5?4:players.length===3?2:3;   // on a court of five each player plays four of the five games
-  const topStat={wins:wins[sorted[0].id]||0,pts:pts[sorted[0].id]||0,diff:(ptFor[sorted[0].id]||0)-(ptAgainst[sorted[0].id]||0)};
-  const botStat={wins:wins[sorted[sorted.length-1].id]||0,pts:pts[sorted[sorted.length-1].id]||0,diff:(ptFor[sorted[sorted.length-1].id]||0)-(ptAgainst[sorted[sorted.length-1].id]||0)};
-  // True tie = wins AND points AND differential all equal
-  const isTrueTopTie=(p)=>(wins[p.id]||0)===topStat.wins&&(pts[p.id]||0)===topStat.pts&&((ptFor[p.id]||0)-(ptAgainst[p.id]||0))===topStat.diff;
-  const isTrueBotTie=(p)=>(wins[p.id]||0)===botStat.wins&&(pts[p.id]||0)===botStat.pts&&((ptFor[p.id]||0)-(ptAgainst[p.id]||0))===botStat.diff;
-  const topTiedCount=players.filter(isTrueTopTie).length;
-  const bottomTiedCount=players.filter(isTrueBotTie).length;
-  const topWins=topStat.wins;
-  const bottomWins=botStat.wins;
-  // Check for already-recorded toss decisions
-  const preT=(S.current.preTosses||{});
-  const topTossRecord=preT[`${cy}_c${court}_top`]; // {winnerId}
-  const botTossRecord=preT[`${cy}_c${court}_bot`]; // {loserId}
-  const allTied=topStat.wins===botStat.wins&&topStat.pts===botStat.pts&&topStat.diff===botStat.diff;
-  const hasTopTie=topTiedCount>1&&court>1;
-  const hasBotTie=bottomTiedCount>1&&hasPlayersBelow(court)&&!allTied;
+  const done=gamesScored===numGames,last=sorted.length-1;
+  const key=id=>[wins[id]||0,pts[id]||0,(ptFor[id]||0)-(ptAgainst[id]||0)].join('/');
+  // Tied on wins, points and point difference with the top (or bottom) player: the app's coin toss decides who moves.
+  const topTied=p=>key(p.id)===key(sorted[0].id),botTied=p=>key(p.id)===key(sorted[last].id);
+  const hasTopTie=court>1&&players.filter(topTied).length>1;
+  const hasBotTie=hasPlayersBelow(court)&&players.filter(botTied).length>1;
+  const tag=(cls,txt)=>`<span class="tag ${cls}" style="margin-left:4px;font-size:11px;">${txt}</span>`;
   const tallyHtml=`<div class="card" style="border-color:var(--teal2);"><div class="card-title">✅ Court ${court} Tally${players.length<4?' (Singles)':''}</div>
     ${sorted.map((p,i)=>{
       const pw=wins[p.id];
-      const isTopTied=isTrueTopTie(p)&&topTiedCount>1;
-      const isBotTied=isTrueBotTie(p)&&bottomTiedCount>1&&!allTied;
       const movementTag=(()=>{
-        // Top-court top player — no up-movement possible
-        if(i===0&&court===1)return '<span class="tag tg-gold" style="margin-left:4px;font-size:11px;">👑 Top court</span>';
-        // Top-tie: every player in the tie group shows toss state (any could win)
-        if(court>1&&isTopTied){
-          if(topTossRecord&&topTossRecord.winnerId===p.id)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">🪙 Won toss — ⬆️ C'+(court-1)+'</span>';
-          if(topTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Lost toss — Stays C'+court+'</span>';
-          return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↑ C'+(court-1)+'</span>';
+        if(i===0&&court===1)return tag('tg-gold','👑 Top court');
+        if(hasTopTie&&topTied(p)&&!(hasBotTie&&i===last)){
+          if(!done)return tag('tg-yellow','🪙 Toss for ↑ C'+(court-1));
+          return i===0?tag('tg-green','🪙 Won toss — ⬆️ C'+(court-1)):tag('tg-teal','🪙 Lost toss — Stays C'+court);
         }
-        // Clean top (no tie) — only i===0 moves up
-        if(i===0&&court>1)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to C'+(court-1)+'</span>';
-        // Bottom-court bottom player — no down-movement possible
-        if(i===sorted.length-1&&!hasPlayersBelow(court)&&!allTied)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
-        // Bottom-tie: every player in the tie group shows toss state (any could lose)
-        if(hasPlayersBelow(court)&&isBotTied){
-          if(botTossRecord&&botTossRecord.loserId===p.id)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">🪙 Lost toss — ⬇️ C'+(court+1)+'</span>';
-          if(botTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Won toss — Stays C'+court+'</span>';
-          return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↓ C'+(court+1)+'</span>';
+        if(i===0&&court>1)return tag('tg-green','⬆️ Moves to C'+(court-1));
+        if(hasBotTie&&botTied(p)){
+          if(!done)return tag('tg-yellow','🪙 Toss for ↓ C'+(court+1));
+          return i===last?tag('tg-red','🪙 Lost toss — ⬇️ C'+(court+1)):tag('tg-teal','🪙 Won toss — Stays C'+court);
         }
-        // Clean bottom (no tie) — only i===sorted.length-1 moves down
-        if(i===sorted.length-1&&hasPlayersBelow(court)&&!allTied)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
-        return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">Stays C'+court+'</span>';
+        if(i===last&&!hasPlayersBelow(court))return tag('tg-gray','📍 Bottom court');
+        if(i===last)return tag('tg-red','⬇️ Moves to C'+(court+1));
+        return tag('tg-teal','Stays C'+court);
       })();
       return `<div class="lbrow"><div class="lbrank ${i===0?'r1':''}">${i+1}</div>
         <div class="lbinfo"><div class="lbname">${esc(p.name)}</div></div>
@@ -3889,82 +3754,9 @@ function renderCourtTally(court){
         ${movementTag}
       </div>`;
     }).join('')}
-    ${hasTopTie&&!topTossRecord?`<div style="margin-top:8px;padding:8px;background:rgba(241,196,15,0.15);border:1px solid var(--yellow2);border-radius:6px;"><div style="font-size:11px;margin-bottom:6px;"><strong>🪙 Tie at the TOP.</strong> Record who won the toss and moves up to C${court-1}:</div><button class="btn btn-primary btn-sm" style="width:100%;margin:0;" onclick="recordCourtToss(${court},'up')">🪙 Record Toss — Who Won?</button></div>`:''}
-    ${hasBotTie&&!botTossRecord?`<div style="margin-top:8px;padding:8px;background:rgba(241,196,15,0.15);border:1px solid var(--yellow2);border-radius:6px;"><div style="font-size:11px;margin-bottom:6px;"><strong>🪙 Tie at the BOTTOM.</strong> Record who lost the toss and moves down to C${court+1}:</div><button class="btn btn-warn btn-sm" style="width:100%;margin:0;" onclick="recordCourtToss(${court},'down')">🪙 Record Toss — Who Lost?</button></div>`:''}
-    ${(topTossRecord||botTossRecord)?`<div style="margin-top:8px;padding:6px 8px;background:rgba(39,174,96,0.12);border:1px solid var(--green2);border-radius:6px;font-size:11px;display:flex;justify-content:space-between;align-items:center;"><span>✅ Toss recorded — will be applied on round advance.</span><button class="btn btn-ghost btn-sm" style="margin:0;padding:2px 8px;font-size:10px;" onclick="clearCourtToss(${court})">↩ Redo</button></div>`:''}
+    ${done&&(hasTopTie||hasBotTie)?`<div style="margin-top:8px;padding:6px 8px;background:rgba(241,196,15,0.12);border:1px solid var(--yellow2);border-radius:6px;font-size:11px;">🪙 Coin toss by the app (tied on wins, points and point difference): ${[hasTopTie?`<strong>${esc(sorted[0].name)}</strong> moves up`:'',hasBotTie?`<strong>${esc(sorted[last].name)}</strong> moves down`:''].filter(Boolean).join(' · ')}. Every phone shows the same result.</div>`:''}
   </div>`;
   el.innerHTML=tallyHtml;
-}
-
-// ══════════════════════════════════════════════
-// Record a toss decision for a specific court's top or bottom tie.
-// Stored in S.current.preTosses and persisted to KV. applyRotation()
-// will consume this on round advance instead of prompting again.
-// ══════════════════════════════════════════════
-async function recordCourtToss(court,direction){
-  if(!S.current)return;
-  if(_autoAdvancing)return toast('Round is advancing — finish the current toss prompt first','warn');
-  const cy=S.current.cycle;
-  const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
-  // Recompute wins AND points AND differential for this court
-  const numGames=courtGames(players.length);
-  const wins={},pts={},ptFor={},ptAgainst={};
-  players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
-  for(let g=1;g<=numGames;g++){
-    const sc=S.current.scores[`c${court}_y${cy}_g${g}`];if(!sc)continue;
-    const side_a=[sc.a1,sc.a2].filter(x=>x!=null);
-    const side_b=[sc.b1,sc.b2].filter(x=>x!=null);
-    if(sc.w==='A')side_a.forEach(id=>{wins[id]=(wins[id]||0)+1;});
-    else if(sc.w==='B')side_b.forEach(id=>{wins[id]=(wins[id]||0)+1;});
-    side_a.forEach(id=>{pts[id]=(pts[id]||0)+sc.sA;ptFor[id]=(ptFor[id]||0)+sc.sA;ptAgainst[id]=(ptAgainst[id]||0)+sc.sB;});
-    side_b.forEach(id=>{pts[id]=(pts[id]||0)+sc.sB;ptFor[id]=(ptFor[id]||0)+sc.sB;ptAgainst[id]=(ptAgainst[id]||0)+sc.sA;});
-  }
-  // Only a true tie if wins AND points AND differential all match
-  const stats=players.map(p=>({id:p.id,name:p.name,wins:wins[p.id]||0,pts:pts[p.id]||0,diff:(ptFor[p.id]||0)-(ptAgainst[p.id]||0)}));
-  const sortedStats=[...stats].sort((x,y)=>y.wins-x.wins||y.pts-x.pts||y.diff-x.diff||x.id-y.id);
-  const ref=direction==='up'?sortedStats[0]:sortedStats[sortedStats.length-1];
-  const tiedPlayers=stats.filter(s=>s.wins===ref.wins&&s.pts===ref.pts&&s.diff===ref.diff);
-  if(tiedPlayers.length<2){toast('No tie to resolve — points/differential already decide movement','warn');return;}
-  // If the whole court is tied on wins+pts+diff, applyRotation skips the bottom toss
-  // (only the top toss picks who moves up; everyone else stays). Refuse to record a
-  // bot toss in that case so display never diverges from rotation.
-  if(direction==='down'){
-    const top=sortedStats[0],bot=sortedStats[sortedStats.length-1];
-    if(top.wins===bot.wins&&top.pts===bot.pts&&top.diff===bot.diff){
-      toast('Whole court is tied — only the top toss matters here. Bottom toss is skipped by rotation.','warn');return;
-    }
-  }
-  const chosenId=await tossPrompt({court,direction,players:tiedPlayers.map(p=>({id:p.id,name:p.name}))});
-  if(chosenId==null){toast('Toss cancelled','warn');return;}
-  if(!S.current.preTosses)S.current.preTosses={};
-  if(direction==='up'){
-    S.current.preTosses[`${cy}_c${court}_top`]={winnerId:chosenId,group:tiedPlayers.map(p=>p.id)};
-  }else{
-    S.current.preTosses[`${cy}_c${court}_bot`]={loserId:chosenId,group:tiedPlayers.map(p=>p.id)};
-  }
-  await setKV('current_session',S.current);
-  // Belt-and-suspenders: full rerender of score entry (which also calls renderCourtTally at its
-  // end) so the updated standings with the red ⬇ arrow always appear, even if the res-X div got
-  // replaced by some intervening render. Then scroll the tally into view.
-  renderScoreEntry();
-  renderCourtTally(court);
-  renderRoundTracker();
-  setTimeout(()=>document.getElementById(`res-${court}`)?.scrollIntoView({behavior:'smooth',block:'center'}),120);
-  const chosenName=tiedPlayers.find(p=>p.id===chosenId)?.name||'?';
-  toast(`🪙 Toss recorded: ${chosenName} ${direction==='up'?'moves up':'moves down'}`,'success');
-}
-
-// Clear a recorded toss for a court (admin redo button)
-async function clearCourtToss(court){
-  if(!S.current||!S.current.preTosses)return;
-  const cy=S.current.cycle;
-  delete S.current.preTosses[`${cy}_c${court}_top`];
-  delete S.current.preTosses[`${cy}_c${court}_bot`];
-  await setKV('current_session',S.current);
-  renderScoreEntry();
-  renderCourtTally(court);
-  renderRoundTracker();
-  toast('Toss cleared — record again','warn');
 }
 
 // ══════════════════════════════════════════════
@@ -5324,71 +5116,6 @@ function toast(msg,type='info'){
 }
 function openModal(title,body){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=body;document.getElementById('modal').classList.add('open');}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
-
-// ══════════════════════════════════════════════
-// TOSS MODAL — returns a Promise that resolves with the chosen player ID.
-// Used by applyRotation() when two or more players are tied on wins and a
-// court movement decision is required. Replaces the old prompt() dialog
-// (which was silently auto-dismissing on iOS Safari PWA).
-// ══════════════════════════════════════════════
-// Serialize tossPrompt: if one modal is already open, chain onto it so the
-// second call only runs after the first resolves. Prevents openModal from
-// overwriting an in-flight toss modal, orphaning its click handlers, and
-// silently hanging the first promise while a second applyRotation races.
-let _tossPromptChain=Promise.resolve();
-function tossPrompt(opts){
-  const run=()=>_tossPromptRun(opts);
-  const p=_tossPromptChain.then(run,run);
-  // Keep the chain alive even if this link throws/cancels
-  _tossPromptChain=p.catch(()=>{});
-  return p;
-}
-function _tossPromptRun({court,direction,players}){
-  return new Promise(resolve=>{
-    const isTop=direction==='up';
-    const title=`🪙 Court ${court} — Tie at the ${isTop?'TOP':'BOTTOM'}`;
-    const question=isTop
-      ? `Who <strong>WON</strong> the toss and moves <span style="color:var(--green2);">UP to Court ${court-1}</span>?`
-      : `Who <strong>LOST</strong> the toss and moves <span style="color:var(--red2);">DOWN to Court ${court+1}</span>?`;
-    const colorClass=isTop?'btn-primary':'btn-warn';
-    const body=`
-      <div style="margin-bottom:12px;padding:10px;background:rgba(241,196,15,0.12);border:1px solid var(--yellow2);border-radius:8px;font-size:13px;line-height:1.4;">
-        These <strong>${players.length} players</strong> are tied on wins, points, and point differential. ${question}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        ${players.map(p=>`<button class="btn ${colorClass}" data-tid="${p.id}" style="text-align:left;padding:14px 16px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:10px;">${avatar(p.name)}<span>${esc(p.name)}</span></button>`).join('')}
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button class="btn btn-ghost" id="toss-cancel-btn" style="flex:1;">← Back / Cancel</button>
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center;">Tap the player chosen by the coin toss, or Cancel to go back and re-check scores.</div>
-    `;
-    openModal(title,body);
-    const modalEl=document.getElementById('modal');
-    const closeBtn=modalEl.querySelector('.btn-ghost');
-    if(closeBtn&&closeBtn.id!=='toss-cancel-btn')closeBtn.style.display='none';
-    const ov=modalEl;
-    const prevOnclick=ov.onclick;
-    ov.onclick=null;
-    const cleanupAndResolve=(id)=>{
-      document.removeEventListener('keydown',escHandler);
-      if(closeBtn&&closeBtn.id!=='toss-cancel-btn')closeBtn.style.display='';
-      ov.onclick=prevOnclick;
-      closeModal();
-      resolve(id);
-    };
-    const escHandler=(e)=>{if(e.key==='Escape'){e.preventDefault();cleanupAndResolve(null);}};
-    document.addEventListener('keydown',escHandler);
-    modalEl.querySelectorAll('[data-tid]').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        const id=parseInt(btn.dataset.tid);
-        cleanupAndResolve(id);
-      });
-    });
-    const cancelBtn=document.getElementById('toss-cancel-btn');
-    if(cancelBtn)cancelBtn.addEventListener('click',()=>cleanupAndResolve(null));
-  });
-}
 
 // ══════════════════════════════════════════════
 // RENDER ALL

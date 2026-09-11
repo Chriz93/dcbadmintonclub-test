@@ -1,14 +1,16 @@
-// Ties and shuttles: a court tied at the top (2-2-2-0) or the bottom (a clean sweep) shows the toss tags, records who won or
-// lost the toss (Cancel and Redo included), and the next round moves exactly that player; shuttles handed out after the
-// last round go to the top scorers and appear in History and Stats once the night is saved. 100 leagues.
+// Ties and shuttles: a court tied at the top (2-2-2-0) or the bottom (a clean sweep) shows the app's own coin toss —
+// drawn from the night's start time, so it is the same on every phone — and the next round moves exactly that player;
+// Undo and advancing again cannot redraw it. Shuttles handed out after the last round go to the top scorers and appear
+// in History and Stats once the night is saved. 100 leagues.
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, combos, NC, type GenOpts, type League } from "./gen";
 import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
+import { tossOrder } from "../rules-model";
 
-type Act = "top" | "bottom" | "redo" | "birds";
-const ACTS: [Act, Partial<GenOpts>][] = [["top", { live: "r1-done", tieRate: 0 }], ["bottom", { live: "r1-done", tieRate: 0 }], ["redo", { live: "r1-partial", tieRate: 0 }], ["birds", { live: "complete" }]];
+type Act = "top" | "bottom" | "again" | "birds";
+const ACTS: [Act, Partial<GenOpts>][] = [["top", { live: "r1-done", tieRate: 0 }], ["bottom", { live: "r1-done", tieRate: 0 }], ["again", { live: "r1-done", tieRate: 0 }], ["birds", { live: "complete" }]];
 /** Tie a four-player court: "top" gives 2-2-2-0 (three tied at the top), "bottom" a sweep (three tied at the bottom). */
 function tieCourt(L: League, kind: "top" | "bottom") {
   // A bottom toss only exists where the loser would move down: the court below must have players.
@@ -74,42 +76,41 @@ for (let i = 0; i < 100; i++) {
     const tie = tieCourt(L, act === "bottom" ? "bottom" : "top");
     await load(ctx, L);
     if (!tie) return;
-    const { c, cy, tied, alone } = tie, up = act !== "bottom";
+    const { c, cy, tied, alone } = tie, up = act !== "bottom", cur = L.current!;
+    // The toss, computed independently: tied players in toss order; the first wins (moves up), the last loses (moves down).
+    const order = tossOrder(cur.id, cy, c, tied), chosen = up ? order[0] : order[order.length - 1];
     await page().evaluate(() => nav("scores"));
     await page().locator("#sc-sel").selectOption(String(c));
     const tally = page().locator(`#res-${c}`), tag = (id: number) => tally.locator(".lbrow").filter({ hasText: name(id) }).locator(".tag").last();
     await expect(tally.locator(".card-title")).toHaveText(`✅ Court ${c} Tally`);
-    for (const id of tied) await expect(tag(id), `${name(id)} tied`).toHaveText(up ? `🪙 Toss for ↑ C${c - 1}` : `🪙 Toss for ↓ C${c + 1}`);
-    await expect(tag(alone)).toHaveText(up ? `⬇️ Moves to C${c + 1}` : `⬆️ Moves to C${c - 1}`);
-    await tally.getByRole("button", { name: up ? "🪙 Record Toss — Who Won?" : "🪙 Record Toss — Who Lost?" }).click();
-    await expect(page().locator("#modal-title")).toHaveText(`🪙 Court ${c} — Tie at the ${up ? "TOP" : "BOTTOM"}`);
-    expect(await page().locator("#modal-body [data-tid]").evaluateAll((bs) => bs.map((b) => +(b as HTMLElement).dataset.tid!)), "only the tied players are offered").toEqual(tied);
-    if (act === "redo" && i % 8 === 2) {
-      await page().locator("#toss-cancel-btn").click();
-      await expect(toast()).toHaveText("Toss cancelled");
-      expect(kvOf(ctx, "current_session").preTosses || {}).toEqual({});
-      return;
-    }
-    const chosen = tied[Math.floor(r() * tied.length)];
-    await page().locator(`#modal-body [data-tid="${chosen}"]`).click();
-    await expect(toast()).toHaveText(`🪙 Toss recorded: ${name(chosen)} ${up ? "moves up" : "moves down"}`);
-    expect(kvOf(ctx, "current_session").preTosses, "the toss is saved with the tied group").toEqual({ [`${cy}_c${c}_${up ? "top" : "bot"}`]: up ? { winnerId: chosen, group: tied } : { loserId: chosen, group: tied } });
-    for (const id of tied) await expect(tag(id)).toHaveText(up ? (id === chosen ? `🪙 Won toss — ⬆️ C${c - 1}` : `🪙 Lost toss — Stays C${c}`) : (id === chosen ? `🪙 Lost toss — ⬇️ C${c + 1}` : `🪙 Won toss — Stays C${c}`));
-    await expect(tally).toContainText("✅ Toss recorded — will be applied on round advance.");
-    if (act === "redo") {
-      await tally.getByRole("button", { name: "↩ Redo" }).click();
-      await expect.poll(() => Object.keys(kvOf(ctx, "current_session").preTosses || {}), { message: "toss cleared" }).toEqual([]);
-      await expect(tally.getByRole("button", { name: "🪙 Record Toss — Who Won?" })).toBeVisible();
-      return;
-    }
-    // The next round applies the toss: exactly the chosen player moves.
-    await page().evaluate(() => nav("admin"));
-    await page().getByRole("button", { name: "📅 Session" }).click();
-    await page().locator("#sess-ui").getByRole("button", { name: "⏭ Next Round (Rotate)" }).click();
-    await expect(toast()).toHaveText(`Round ${cy + 1}!`);
-    const cs = kvOf(ctx, "current_session"), mv = cs.movements.at(-1).mv;
-    expect(mv[chosen], `${name(chosen)} moves ${up ? "up" : "down"}`).toBe(up ? "up" : "down");
-    for (const id of tied.filter((x) => x !== chosen)) expect(mv[id], `${name(id)} stays`).toBe("stay");
-    expect(courtOf(cs.assignments, chosen)).toBe(up ? c - 1 : c + 1);
+    for (const id of tied) await expect(tag(id), `${name(id)}: ${id === chosen ? "chosen" : "not chosen"} by the toss`)
+      .toHaveText(up ? (id === chosen ? `🪙 Won toss — ⬆️ C${c - 1}` : `🪙 Lost toss — Stays C${c}`) : (id === chosen ? `🪙 Lost toss — ⬇️ C${c + 1}` : `🪙 Won toss — Stays C${c}`));
+    const below = (cur.assignments[c + 1] || []).length > 0;
+    await expect(tag(alone)).toHaveText(up ? (below ? `⬇️ Moves to C${c + 1}` : "📍 Bottom court") : `⬆️ Moves to C${c - 1}`);
+    await expect(tally).toContainText(`🪙 Coin toss by the app (tied on wins, points and point difference): ${name(chosen)} moves ${up ? "up" : "down"}. Every phone shows the same result.`);
+    await expect(tally, "nothing to record by hand").not.toContainText("Record Toss");
+    const advance = async () => {
+      await page().evaluate(() => nav("admin"));
+      await page().getByRole("button", { name: "📅 Session" }).click();
+      await page().locator("#sess-ui").getByRole("button", { name: "⏭ Next Round (Rotate)" }).click();
+      await expect(toast()).toHaveText(`Round ${cy + 1}!`);
+    };
+    const checkMoves = (why: string) => {
+      const cs = kvOf(ctx, "current_session"), last = cs.movements.at(-1), mv = last.mv;
+      expect(mv[chosen], `${name(chosen)} moves ${up ? "up" : "down"} (${why})`).toBe(up ? "up" : "down");
+      for (const id of tied.filter((x) => x !== chosen)) expect(mv[id], `${name(id)} stays (${why})`).toBe("stay");
+      expect(courtOf(cs.assignments, chosen)).toBe(up ? c - 1 : c + 1);
+      expect(last.tossChoices[`${up ? "top" : "bot"}_${c}`], "the toss is recorded with the round").toEqual(up
+        ? { group: [...tied].sort((a, b) => a - b), direction: "up", winnerId: chosen, by: "app" }
+        : { group: [...tied].sort((a, b) => a - b), direction: "down", loserId: chosen, by: "app" });
+    };
+    await advance();
+    checkMoves("first advance");
+    if (act !== "again") return;
+    // Undo the advance and advance again: the toss cannot be redrawn.
+    await page().evaluate(() => undoLast());
+    await expect.poll(() => kvOf(ctx, "current_session").cycle, { message: "back to the tied round" }).toBe(cy);
+    await advance();
+    checkMoves("after Undo and advancing again");
   });
 }

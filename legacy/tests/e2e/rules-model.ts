@@ -9,6 +9,16 @@ export const cap = (_c: number) => 5;   // any court can take a fifth player
 export function courtSizes(n: number) { const s: number[] = Array(NC + 1).fill(0); if (n <= NC * 4) { let last = 0; for (let c = 1; c <= NC && n > 0; c++) { s[c] = Math.min(4, n); n -= s[c]; last = c; } if (last > 1 && s[last] === 1) { s[last - 1]++; s[last] = 0; } } else { const extra = Math.min(n - NC * 4, NC); for (let c = 1; c <= NC; c++) s[c] = 4 + (c > NC - extra ? 1 : 0); } return s; }
 export function fillCourts(ids: number[]) { const z = courtSizes(ids.length), a: number[][] = Array.from({ length: NC + 1 }, () => []); let i = 0; for (let c = 1; c <= NC; c++) { a[c] = ids.slice(i, i + z[c]); i += z[c]; } if (i < ids.length) a[NC].push(...ids.slice(i)); return a; }
 export const target = (n: number) => (n === 5 ? 15 : 21);
+/** The coin toss the app draws for players still tied on wins, points and point difference: a shuffle seeded by the
+ *  session id (its start time), the round, the court and the tied players. Tied players in toss order; the first wins. */
+export function tossOrder(sid: number, cy: number, c: number, ids: number[]) {
+  const g = [...ids].sort((x, y) => x - y); let h = 2166136261;
+  for (const ch of `${sid}|${cy}|${c}|${g.join(",")}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  let a = h | 0;
+  const rnd = () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  for (let i = g.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [g[i], g[j]] = [g[j], g[i]]; }
+  return g;
+}
 // Deterministic "form": shuffles every session so players climb and fall.
 export const strength = (id: number, session: number) => 100 - id * 2 + ((id * 37 + session * 11) % 29);
 export type Round = { wins: Record<number, number>; pts: Record<number, number>; pf: Record<number, number>; pa: Record<number, number>; games: { A: number[]; B: number[]; w: "A" | "B" }[] };
@@ -53,31 +63,26 @@ export class Model {
     for (const id of aWins ? B : A) this.stats.get(id)!.l++;
     return [x, y];
   }
-  // Ranking on a court: wins, points for, differential; a full tie goes to head-to-head, then points conceded, then id.
-  rank(r: Round, ids: number[]) {
+  // Ranking on a court: wins, points for, differential; players still tied at the top or the bottom go to the app's
+  // coin toss (tossOrder, seeded by the session id and round). When the whole court is tied, one toss order decides both.
+  rank(r: Round, ids: number[], c: number, seed: { sid: number; cy: number }) {
     const key = (id: number) => [r.wins[id] || 0, r.pts[id] || 0, (r.pf[id] || 0) - (r.pa[id] || 0)];
     const same = (a: number, b: number) => key(a).every((v, i) => v === key(b)[i]);
-    const tieOrder = (tied: number[]) => {
-      const h2h: Record<number, number> = {}; tied.forEach((i) => (h2h[i] = 0));
-      for (const g of r.games) { const tA = g.A.filter((i) => tied.includes(i)), tB = g.B.filter((i) => tied.includes(i)); if (!tA.length || !tB.length) continue; (g.w === "A" ? tA : tB).forEach((i) => h2h[i]++); }
-      return [...tied].sort((x, y) => h2h[y] - h2h[x] || (r.pa[x] || 0) - (r.pa[y] || 0) || x - y);
-    };
     const sorted = [...ids].sort((x, y) => { const kx = key(x), ky = key(y); return ky[0] - kx[0] || ky[1] - kx[1] || ky[2] - kx[2] || x - y; });
     const topGroup = sorted.filter((i) => same(i, sorted[0])), botGroup = sorted.filter((i) => same(i, sorted[sorted.length - 1]));
-    const top = topGroup.length > 1 ? tieOrder(topGroup)[0] : sorted[0];
-    const allTied = same(sorted[0], sorted[sorted.length - 1]);
-    const bottom = botGroup.length > 1 && !allTied ? tieOrder(botGroup).slice(-1)[0] : sorted[sorted.length - 1];
-    return { top, bottom, allTied };
+    const top = topGroup.length > 1 ? tossOrder(seed.sid, seed.cy, c, topGroup)[0] : sorted[0];
+    const bottom = botGroup.length > 1 ? tossOrder(seed.sid, seed.cy, c, botGroup).filter((id) => id !== top).slice(-1)[0] : sorted[sorted.length - 1];
+    return { top, bottom };
   }
-  rotate(r: Round): Record<number, string> {
+  rotate(r: Round, seed: { sid: number; cy: number }): Record<number, string> {
     const mv: Record<number, string> = {};
     for (let c = 1; c <= NC; c++) {
       const ids = this.lineup[c]; if (ids.length < 2) { ids.forEach((id) => (mv[id] = "stay")); continue; }
-      const { top, bottom, allTied } = this.rank(r, ids);
+      const { top, bottom } = this.rank(r, ids, c, seed);
       for (const id of ids) mv[id] = "stay";
       if (c > 1) mv[top] = "up";
       // The bottom player moves down only into a court that has players: the last occupied court is the bottom court.
-      if (c < NC && this.lineup[c + 1].length > 0 && !(allTied && ids.length > 1 && top === bottom)) { if (bottom !== top || c === 1) mv[bottom] = "down"; }
+      if (c < NC && this.lineup[c + 1].length > 0) mv[bottom] = "down";
     }
     const na: number[][] = Array.from({ length: NC + 1 }, () => []);
     for (const id of Object.keys(mv).map(Number).sort((a, b) => a - b)) { // the app walks the map in ascending id order

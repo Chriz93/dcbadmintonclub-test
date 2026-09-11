@@ -124,7 +124,7 @@ export function genLeague(seed: number, o: GenOpts = {}): League {
         });
       }
       if (cy <= rotateRounds) {
-        const mv = model.rotate(round);
+        const mv = model.rotate(round, { sid: 1789000000000 + k, cy });
         const fill = (src: Record<number, number>) => { const o2: Record<string, number> = {}; for (const id of activeIds) o2[id] = src[id] || 0; for (const [id, v] of Object.entries(src)) o2[id] = v; return o2; };
         movements.push({ cycle: cy, mv: mv as Record<string, string>, wins: fill(round.wins), pts: fill(round.pts), tosses: {}, tossChoices: {} });
       }

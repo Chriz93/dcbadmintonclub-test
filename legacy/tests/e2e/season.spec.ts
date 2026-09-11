@@ -53,7 +53,7 @@ test.describe("ten-session season simulation", () => {
         }
         rounds.push(r);
         if (cy === 1) { for (let c = 1; c <= NC; c++) for (const id of model.lineup[c]) void c; }
-        const mv = model.rotate(r);
+        const mv = model.rotate(r, { sid: await page.evaluate(() => S.current.id), cy });   // ties: the app's coin toss for this night
         if (cy === 2) { for (let c = 1; c <= NC; c++) for (const id of model.lineup[c]) model.round2Court.set(id, model.lineup.findIndex((l) => l.includes(id))); }
         if (cy === 1) await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
         else await expect.poll(() => page.evaluate(() => S.current.completed === true), { timeout: 20000 }).toBe(true);

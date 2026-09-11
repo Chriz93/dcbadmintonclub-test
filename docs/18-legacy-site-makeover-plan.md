@@ -255,3 +255,6 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 - Backups: daily at 7:30 AM (was weekly), every table including the payment archive; restore helper fixed and drilled
   on all 14 tables; optional copy to `~/MaplewoodBackups` on the Mac. Details: `27-generated-tab-test-suites.md`.
   Cache `dcbc-test-v59`.
+- Coin toss (p33): the app now tosses the coin for players still tied on wins, points and point difference — same
+  result on every phone, drawn from the night's start time, cannot be redrawn; the hand-recorded toss is gone.
+  Cache `dcbc-test-v60`.
