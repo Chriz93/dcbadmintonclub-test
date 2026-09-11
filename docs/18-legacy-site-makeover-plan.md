@@ -217,3 +217,15 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   assumed every table has an `id`. The run now exports 13 tables (33 players, 28 season dates) to a 90-day artifact.
 - Docs added: `22-master-prompt.md` (self-contained handover), `23-organizer-test-script.md` (the organizer's own
   end-to-end walkthrough).
+
+## Status — 2026-09-11 (Phase 12: generated tab suites and the fixes they drove)
+
+- Every tab, button and selection menu now has a generated browser suite of 100 cases (23 suites), plus 500 cases
+  that cross tabs and cross between a player and the organizer — 2,800 in the `tabs` Playwright project. Each case is
+  a different seeded league checked against expectations computed independently of `index.html`.
+- The suites found 23 app defects; all are fixed in `legacy/patches/p25_tab_suite_fixes.py` (cancel wiping earlier
+  weeks, Court 6's fifth player hidden, a sixth player on Court 6 blocking the round, late arrivals never saved, Assign
+  losing a player on a full court, Lock not locking, "25 spots left" for everyone, snapshot restore deleting
+  announcements, pre-session attendance ignored, and more). The patch replays byte for byte on the previous page.
+- The mock database now sorts like the real API, never reuses ids, and keeps explicit ids.
+- Details, the full defect list, limits and results: `27-generated-tab-test-suites.md`. Cache `dcbc-test-v54`.

@@ -880,7 +880,7 @@ async function sbUps(t,d,conflict=''){
 async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}return j;}
 // ── Shared state with versions: a stale screen can never overwrite newer data. ──
 const _stateVersion={};
-async function getKV(k){try{const r=await sbG('app_state',`key=eq.${encodeURIComponent(k)}&select=key,value,version`);if(r&&r[0]){_stateVersion[k]=r[0].version||0;return JSON.parse(r[0].value);}return null;}catch(e){return null;}}
+async function getKV(k){try{const r=await sbG('app_state',`key=eq.${encodeURIComponent(k)}&select=key,value,version`);if(r&&r[0]){_stateVersion[k]=r[0].version||0;return JSON.parse(r[0].value);}delete _stateVersion[k];return null;}catch(e){return null;}}
 async function mirrorApprovals(v){
   for(const[id,a]of Object.entries(v||{})){
     const p=S.players.find(x=>x.id===parseInt(id));if(!p||!a)continue;
@@ -922,6 +922,7 @@ function courtCap(c){return c===NC?5:4;}             // only Court 6 may hold a 
 const MAX_ROUNDS_PER_SESSION=2; // Soft policy: each Tuesday session = 2 rounds. Auto-advance stops, prompts admin to end.
 let S={players:[],sessions:[],current:null,announcements:[],lastUndo:null,votes:{},rsvp:{},qaQuestions:[]};
 let adminUnlocked=false;
+let _adminManualLock=(()=>{try{return localStorage.getItem('dcbc-admin-locked')==='1';}catch(e){return false;}})();
 let courtView='gym';
 let regData={};
 let _roundSnapshots=[]; // Stack of pre-rotation snapshots for undo
@@ -931,6 +932,8 @@ function activePlayers(){return S.players.filter(p=>p.currentCourt>0);}
 // The session everyone is preparing for: the active night, else the next un-played date (never past the season).
 function upcomingSessionNumber(){if(S.current)return S.current.number;return Math.min(S.sessions.length+1,DATES.length);}
 function seasonComplete(){return !S.current&&S.sessions.length>=DATES.length;}
+// True once the current round's results are in the season statistics (the final round rotates without opening a new one).
+function roundRotated(){return !!(S.current&&(S.current.movements||[]).some(m=>m.cycle===S.current.cycle));}
 function leaderboardPlayers(){return S.players.filter(p=>p.currentCourt>0||p.gamesPlayed>0||p.seasonWins>0);}
 
 // ══════════════════════════════════════════════
@@ -975,7 +978,7 @@ function myPlayer(){const em=myEmail();return S.players.find(p=>p.id===S_me.play
 function checkRegistrationStatus(){
   const me=myPlayer();
   userRegistered = !!(me && me.approved);
-  if(S_me.organizer&&S_me.verified&&!adminUnlocked){adminUnlocked=true;applyAdminUnlock();}
+  if(S_me.organizer&&S_me.verified&&!adminUnlocked&&!_adminManualLock){adminUnlocked=true;applyAdminUnlock();}
   updateNavVisibility();
 }
 // Returning players used to type an email; now everyone signs in with a code.
@@ -1152,7 +1155,7 @@ function renderRSVPInto(el,compact){
         ? `<div class="alert alert-success spare-status" style="text-align:center;margin-top:10px;">🎉 Seat confirmed (seat ${myClaim.rank}). Please e-transfer $${FEES.spareSession} to ${ORGANIZER_ETRANSFER} before Tuesday.</div>`
         : `<div class="alert alert-warn spare-status" style="text-align:center;margin-top:10px;">⏳ Standby — you are #${myClaim.rank-seats.declined} in line. You will be emailed the moment a seat opens.</div>`;
     }else if(myRsvp){
-      html += `<div class="alert alert-success" style="text-align:center;margin-top:10px;">${myRsvp === 'coming' ? '✅ You confirmed - See you there!' : '❌ Noted - Sit this one out'} · You can change your answer above.</div>`;
+      html += `<div class="alert alert-success" style="text-align:center;margin-top:10px;">${myRsvp === 'coming' ? '✅ You confirmed - See you there!' : '❌ Noted - Sit this one out'}${locked?'':' · You can change your answer above.'}</div>`;
     }
     if(pushSupported())html += `<button class="btn btn-ghost btn-sm push-enable" style="margin-top:10px;" onclick="enablePush()">🔔 ${_pushOn?'Notifications on':'Turn on phone notifications'}</button>`;
     html += `<label class="chk-row" style="margin-top:12px;margin-bottom:0;"><input type="checkbox" class="email-reminders-toggle" ${me.emailReminders!==false?'checked':''} onchange="setEmailReminders(this.checked)"><span style="font-size:12px;color:var(--muted);">Email me a reminder when I have not answered${meSpare?' and when a seat opens':''}</span></label>`;
@@ -1262,7 +1265,7 @@ async function prepareAdminLock(){
   if(!_session){msg.textContent='Sign in with the organizer email first.';return;}
   await refreshMe();
   if(!S_me.organizer){msg.textContent='This account ('+esc(myEmail()||'')+') is not an organizer account.';return;}
-  if(S_me.verified){adminUnlocked=true;applyAdminUnlock();return;}
+  if(S_me.verified&&!_adminManualLock){adminUnlocked=true;applyAdminUnlock();return;}
   try{
     const factors=await mfaFactors();
     if(factors.length){_mfaFactor=factors[0].id;msg.textContent='Enter the 6-digit code from your authenticator app.';}
@@ -1280,6 +1283,7 @@ async function checkPin(){
   try{
     await mfaVerify(_mfaFactor,v);await refreshMe();
     if(!S_me.verified)throw new Error('Verification was not accepted');
+    _adminManualLock=false;try{localStorage.removeItem('dcbc-admin-locked');}catch(e){}
     document.getElementById('pin-inp').value='';
     adminUnlocked=true;applyAdminUnlock();
     await loadAll();renderAll();
@@ -1292,11 +1296,12 @@ function applyAdminUnlock(){
   document.getElementById('page-courts').classList.add('admin-mode');
 }
 function lockAdmin(){
+  _adminManualLock=true;try{localStorage.setItem('dcbc-admin-locked','1');}catch(e){}
   adminUnlocked=false;
   document.getElementById('admin-lock').style.display='block';
   document.getElementById('admin-panel').style.display='none';
   document.getElementById('page-courts').classList.remove('admin-mode');
-  renderAll();
+  renderAll();prepareAdminLock();
 }
 async function changePin(){toast('PINs are retired: organizer access uses your authenticator app','warn');}
 
@@ -1335,7 +1340,7 @@ function renderHome(){
     }
   }
   const cd=document.getElementById('countdown');
-  if(cd&&ni<DATES.length){const diff=FD[ni]-now;if(diff>0){const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);cd.innerHTML=`<div class="cd-box"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div><div class="cd-box"><div class="cd-num">${hrs}</div><div class="cd-lbl">Hours</div></div><div class="cd-box"><div class="cd-num">${mins}</div><div class="cd-lbl">Mins</div></div>`;}}
+  if(cd&&ni<DATES.length){const diff=FD[ni]-now;if(diff>0){const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);cd.innerHTML=`<div class="cd-box"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div><div class="cd-box"><div class="cd-num">${hrs}</div><div class="cd-lbl">Hours</div></div><div class="cd-box"><div class="cd-num">${mins}</div><div class="cd-lbl">Mins</div></div>`;}else cd.innerHTML='';}else if(cd)cd.innerHTML='';
   // Announcements
   const ah=document.getElementById('ann-home');
   if(ah)ah.innerHTML=S.announcements.length?S.announcements.slice(0,3).map(a=>`<div class="ann-card ann-${a.type}"><div class="ann-title">${esc(a.title)}</div><div class="ann-body">${esc(a.body)}</div><div class="ann-time">${new Date(a.created_at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div>`).join(''):'';
@@ -1473,8 +1478,7 @@ async function addPlayer(){
   const mtype=g('np-membership')||'regular';
   if(!name){toast('Enter a name','warn');return;}
   if(mtype==='regular'){
-    const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
-    if(regularCount>=REGULAR_CAPACITY){toast('Regular slots full (25/25). Please choose Spare.','warn');return;}
+    if(regularPlacesTaken()>=REGULAR_CAPACITY){toast('Regular slots full (25/25). Please choose Spare.','warn');return;}
   }
   // Check if player exists as a registered (court=0) player — if so, activate them instead of creating new
   const existingReg=S.players.find(p=>p.name.toLowerCase()===name.toLowerCase()&&(!p.currentCourt||p.currentCourt===0));
@@ -1566,7 +1570,7 @@ function recordPaymentUI(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
   const spare=p.membershipType==='spare';
   const sessNo=upcomingSessionNumber();
-  openModal(`Record payment — ${esc(p.name)}`,`
+  openModal(`Record payment — ${p.name}`,`
     <label class="lbl">Type</label><select class="inp" id="pay-kind" onchange="document.getElementById('pay-amount').value=this.value==='season'?${FEES.regularSeason}:this.value==='spare'?${FEES.spareSession}:this.value==='refund'?${FEES.absenceRefund}:0">
       <option value="season" ${spare?'':'selected'}>Season fee ($${FEES.regularSeason})</option>
       <option value="spare" ${spare?'selected':''}>Spare session fee ($${FEES.spareSession})</option>
@@ -1614,11 +1618,16 @@ function undoLabel(name,args){
     default:return UNDOABLE[name]||'Admin action';
   }
 }
+const SESSION_STEPS=new Set(['startSession','endSession','nextCycle','resetSession','cancelSession']);
 function installUndoCheckpoints(){
   Object.keys(UNDOABLE).forEach(name=>{
     const orig=window[name];if(typeof orig!=='function'||orig.__ck)return;
     const wrapped=async function(...args){
       if(name==='autoAdvanceCheck'&&_undoing)return; // never advance in the middle of an undo
+      if(SESSION_STEPS.has(name)&&_ckDepth>0){
+        for(let t=0;_ckDepth>0&&t<150;t++)await new Promise(r=>setTimeout(r,100));
+        if(_ckDepth>0)return toast('The previous step is still finishing — try again in a moment','warn');
+      }
       if(!adminUnlocked||_ckDepth>0||_undoing)return orig.apply(this,args);
       if(name==='autoAdvanceCheck'&&!(S.current&&!S.current.completed&&allCourtsDone()))return orig.apply(this,args); // runs after every score save; only a real rotation is a step
       _ckDepth++;let id=null;
@@ -1776,6 +1785,7 @@ async function togglePlayerPresence(id){
 }
 async function markAbsentFromPlayers(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
+  if(!S.current)return toast('No session is running. For next Tuesday, set their vote to “not coming” in Standings → RSVP.','warn');
   if(!confirm(`Mark ${p.name} absent and move to bench?`))return;
   const oldCourt=p.currentCourt;
   // Remove from active session assignments if session active
@@ -1897,7 +1907,7 @@ function renderAdminPlayers(){
           return `<div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;">
             <div style="font-size:10px;color:var(--muted);font-weight:700;">C${c}</div>
             <div style="font-size:18px;font-weight:800;color:${color};">${n}</div>
-            <div style="font-size:11px;color:${color};">${n}/4</div>
+            <div style="font-size:11px;color:${color};">${n}/${Math.max(4,n)}</div>
           </div>`;}).join('')}
       </div>
       <button class="btn btn-warn" onclick="rebalancePlayerCourts()">🔄 Re-sort &amp; Rebalance All Courts</button>
@@ -1958,6 +1968,9 @@ function renderAdminPlayers(){
 // PAYMENTS
 // ══════════════════════════════════════════════
 
+function holdsRegularPlace(p){return !!p&&p.membershipType!=='spare'&&!p.waitlisted&&p.sig!=='admin'&&registeredThisSeason(p);}
+function regularPlacesTaken(exceptId){return S.players.filter(x=>holdsRegularPlace(x)&&x.approved&&x.id!==exceptId).length;}
+function regularPlacesClaimed(){return S.players.filter(holdsRegularPlace).length;} // sign-ups waiting for approval hold their place
 function renderRegPlayers(){
   const el=document.getElementById('sec-a-reg');if(!el)return;
   const selfReg=S.players.filter(p=>p.sig&&p.sig!=='admin');
@@ -1965,7 +1978,7 @@ function renderRegPlayers(){
   const waitlisted=selfReg.filter(p=>p.waitlisted);
   const pending=selfReg.filter(p=>!p.approved&&!p.waitlisted);
   const approved=selfReg.filter(p=>p.approved&&!p.waitlisted);
-  const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
+  const regularCount=regularPlacesTaken();
   const spareCount=S.players.filter(p=>p.membershipType==='spare').length;
   const waiverSigned=S.players.filter(p=>p.waiverSigned).length;
   const waiverUnsigned=S.players.filter(p=>!p.waiverSigned&&(p.currentCourt>0||p.sig!=='admin')).length;
@@ -2029,7 +2042,7 @@ function renderRegPlayers(){
       <div class="flex-between" style="margin-bottom:4px;">
         <div style="font-weight:800;font-size:13px;">#${i+1} ${esc(p.name)}<span class="waitlist-badge">WAITLIST</span></div>
         <div style="display:flex;gap:5px;">
-          ${regularCount<24?`<button class="btn btn-success btn-sm" onclick="promoteFromWaitlist(${p.id})" style="padding:4px 8px;">↑ Promote</button>`:'<span class="tag tg-gray">Slots Full</span>'}
+          ${regularCount<REGULAR_CAPACITY?`<button class="btn btn-success btn-sm" onclick="promoteFromWaitlist(${p.id})" style="padding:4px 8px;">↑ Promote</button>`:'<span class="tag tg-gray">Slots Full</span>'}
           <button class="btn btn-danger btn-sm" onclick="rejectPlayer(${p.id})" style="padding:4px 8px;">✕</button>
         </div>
       </div>
@@ -2067,8 +2080,7 @@ function renderRegPlayers(){
 }
 async function promoteFromWaitlist(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
-  const regularCount=S.players.filter(x=>x.membershipType==='regular'&&!x.waitlisted&&x.sig&&x.sig!=='admin').length;
-  if(regularCount>=REGULAR_CAPACITY){toast('Still no open regular slots (25/25)','warn');return;}
+  if(regularPlacesTaken(id)>=REGULAR_CAPACITY){toast('Still no open regular slots (25/25)','warn');return;}
   if(!confirm(`Promote ${p.name} off the waitlist to Regular member?`))return;
   const approvals=await getKV('player_approvals')||{};
   approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:false};
@@ -2184,22 +2196,31 @@ function renderAnnouncementsAdmin(){
 // ══════════════════════════════════════════════
 // SESSION
 // ══════════════════════════════════════════════
+// Next session's seating from the votes: regulars who are not declining by earned court, then confirmed spares.
+function upcomingLineup(){
+  const votes=S.rsvp||{},pre=S.current?{}:(S.preAttendance||{});
+  const preAbsent=new Set(S.players.filter(p=>pre[p.id]==='absent').map(p=>p.id));
+  const declined=new Set(S.players.filter(p=>isRegularMember(p)&&votes[p.id]==='notcoming'&&pre[p.id]!=='present'&&!preAbsent.has(p.id)).map(p=>p.id));
+  const confirmedSpares=spareSeats().claims.filter(c=>c.confirmed).map(c=>c.id).filter(id=>!preAbsent.has(id));
+  return{votes,pre,declined,preAbsent,confirmedSpares,assign:autoAssign(new Set([...declined,...preAbsent]),confirmedSpares)};
+}
 async function startSession(){
   if(S.current)return toast('Session already active','warn');
   const n=S.sessions.length+1;if(n>DATES.length)return toast('All '+DATES.length+' sessions are done!','warn');
-  const votes=S.rsvp||{};
-  const declined=new Set(S.players.filter(p=>isRegularMember(p)&&votes[p.id]==='notcoming').map(p=>p.id));
-  const confirmedSpares=spareSeats().claims.filter(c=>c.confirmed).map(c=>c.id);
-  const initAssign=autoAssign(declined,confirmedSpares);
+  const{votes,pre,declined,preAbsent,confirmedSpares,assign:initAssign}=upcomingLineup();
   // Votes become tonight's attendance: coming → present, not coming → excused (no court penalty).
   const attendance={};
   declined.forEach(id=>{attendance[id]='declined';});
-  for(let c=1;c<=NC;c++)initAssign[c].forEach(id=>{if(votes[id]==='coming')attendance[id]='present';});
-  const sess={id:Date.now(),number:n,date:DATES[n-1],cycle:1,assignments:initAssign,initialAssignments:JSON.parse(JSON.stringify(initAssign)),scores:{},movements:[],completed:false,preTosses:{},attendance,absentFrom:{}};
+  const absentFrom={};
+  preAbsent.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p&&p.currentCourt>0&&!isSpareMember(p)){attendance[id]='absent';absentFrom[id]=p.currentCourt;}});
+  for(let c=1;c<=NC;c++)initAssign[c].forEach(id=>{if(votes[id]==='coming'||pre[id]==='present')attendance[id]='present';});
+  const sess={id:Date.now(),number:n,date:DATES[n-1],cycle:1,assignments:initAssign,initialAssignments:JSON.parse(JSON.stringify(initAssign)),scores:{},movements:[],completed:false,preTosses:{},attendance,absentFrom};
   // Seated spares carry their court for the night (the lineup safety net only keeps players with a court).
   const spareCourt=[];for(let c=1;c<=NC;c++)initAssign[c].forEach(id=>{if(confirmedSpares.includes(id))spareCourt.push(sbU('players',id,{current_court:c,highest_court:c}));});
   if(spareCourt.length)await Promise.all(spareCourt);
-  await setKV('current_session',sess);await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
+  await setKV('current_session',sess);
+  if(Object.keys(pre).length){await deleteKV('pre_session_attendance');S.preAttendance={};}
+  await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused${preAbsent.size?`, ${preAbsent.size} marked absent`:''}, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
 }
 // Regulars in order of earned court (spares only when confirmed for the night), four per court, the rest on Court 6.
 function autoAssign(exclude=new Set(),spares=[]){
@@ -2765,13 +2786,11 @@ function copySessionSummary(){
   });
 }
 async function cancelSession(){
-  if(!confirm('Cancel session? All scores and stats from this session will be lost.'))return;
-  // Reset ALL player stats (including benched/moved players, not just activePlayers)
-  const allPlayerIds=new Set([...activePlayers().map(p=>p.id),...(S.current?Object.values(S.current.assignments).flat():[])]);
-  const resets=S.players.filter(p=>allPlayerIds.has(p.id)).map(p=>sbU('players',p.id,{season_wins:0,season_losses:0,games_played:0,highest_court:p.currentCourt||0}));
-  if(resets.length)await Promise.all(resets);
-  await setKV('current_session',null);
-  await loadAll();renderAll();toast('Session cancelled — all stats cleared','success');
+  if(!confirm('Cancel tonight\'s session? Its scores are removed; results from finished sessions are kept.'))return;
+  // Season statistics are rebuilt from the finished sessions, so earlier weeks are untouched.
+  await deleteKV('current_session');S.current=null;_roundSnapshots=[];_autoAdvancing=false;
+  await rebuildStats();
+  await loadAll();renderAll();toast('Session cancelled — earlier results kept','success');
 }
 
 // ── Cascade fill: when a player is absent, promote top player from court below ──
@@ -3009,7 +3028,7 @@ function renderAssignUI(){
     html+=`<div class="dnd-court" data-court="${c}" ondragover="dndOver(event)" ondrop="dndDrop(event,${c})" ondragleave="dndLeave(event)">
       <div class="dnd-court-hdr">
         <span class="dnd-court-title" style="color:${warn?'var(--red2)':'var(--teal)'};">COURT ${c}</span>
-        <span class="dnd-court-cnt" style="background:${warn?'rgba(192,57,43,0.15)':'rgba(39,174,96,0.15)'};color:${cntColor};">${cnt}/4${warn?` — need ${4-cnt}`:''}</span>
+        <span class="dnd-court-cnt" style="background:${warn?'rgba(192,57,43,0.15)':'rgba(39,174,96,0.15)'};color:${cntColor};">${cnt}/${Math.max(4,cnt)}${warn?` — need ${4-cnt}`:''}</span>
       </div>
       <div class="dnd-slots">
         ${players.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}</div>`).join('')}
@@ -3028,12 +3047,13 @@ async function dndDrop(e,targetCourt){
   e.preventDefault();e.currentTarget.classList.remove('drag-over');
   if(!dragPid||!S.current)return;
   const a=S.current.assignments;
+  // Refuse a full court before moving anyone (Court 6 holds five)
+  if(targetCourt>0&&(a[targetCourt]||[]).filter(id=>id!==dragPid).length>=courtCap(targetCourt)){toast(`Court ${targetCourt} is full (${courtCap(targetCourt)}/${courtCap(targetCourt)})`,'warn');dragPid=null;renderAssignUI();return;}
   // Remove from all courts
   for(let c=1;c<=NC;c++)a[c]=(a[c]||[]).filter(id=>id!==dragPid);
   // Add to target court (0 = unassigned, just remove)
   if(targetCourt>0){
     if(!a[targetCourt])a[targetCourt]=[];
-    if(a[targetCourt].length>=4){toast('Court '+targetCourt+' is full (4/4)','warn');dragPid=null;renderAssignUI();return;}
     a[targetCourt].unshift(dragPid);
   }
   await setKV('current_session',S.current);
@@ -3083,10 +3103,8 @@ async function quickAddToCourt(court){
 // GYM VIEW
 // ══════════════════════════════════════════════
 function renderCourts(){
-  // When no session: show players on their ACTUAL DB courts (not auto-redistributed)
-  let assignments;
-  if(S.current){assignments=S.current.assignments;}
-  else{assignments={};for(let c=1;c<=NC;c++)assignments[c]=[];activePlayers().forEach(p=>{if(p.currentCourt>=1&&p.currentCourt<=NC)assignments[p.currentCourt].push(p.id);});}
+  // When no session: show next session's lineup from the votes (what Start Session will seat).
+  const assignments=S.current?S.current.assignments:upcomingLineup().assign;
   const cy=S.current?S.current.cycle:0;
   const sub=document.getElementById('courts-sub');
   if(sub)sub.textContent=S.current?`Session ${S.current.number} · ${S.current.date} · Round ${cy}`:S.sessions.length?`${S.sessions.length}/${DATES.length} sessions done`:'No active session';
@@ -3117,22 +3135,24 @@ function renderCourts(){
       const showMedals=!S.current||S.current.completed;
       const medal=showMedals?(c===1?'🥇':c===2?'🥈':c===3?'🥉':''):'';
       const cnt=players.length;
-      const cntColor=cnt===4?'var(--green2)':cnt===0?'var(--muted)':'var(--yellow2)';
+      const cntColor=cnt>=4?'var(--green2)':cnt===0?'var(--muted)':'var(--yellow2)';
+      const slots=Math.max(4,cnt),half=Math.ceil(slots/2);
+      const topIdx=[...Array(half).keys()],botIdx=[...Array(slots-half).keys()].map(i=>i+half);
       return `<div class="gym-court ${cls}" onclick="showCourtDetail(${c})">
         <div class="gc-header">
           <span class="gc-num">C${c}</span>
-          <span style="font-size:11px;font-weight:800;color:${cntColor};">${cnt}/4</span>
+          <span style="font-size:11px;font-weight:800;color:${cntColor};">${cnt}/${Math.max(4,cnt)}</span>
           <span class="gc-medal">${medal}</span>
         </div>
         <div class="gc-divider"></div>
         <div class="gc-players">
-          ${[0,1].map(i=>{const p=players[i],mv=p?prevMv[p.id]:null;
+          ${topIdx.map(i=>{const p=players[i],mv=p?prevMv[p.id]:null;
             return `<div class="gc-player ${!p?'empty':''}">${p?esc(p.name.split(' ')[0]):'Open'}${mv==='up'?'<span class="mv mv-u">↑</span>':mv==='down'?'<span class="mv mv-d">↓</span>':''}</div>`
           }).join('')}
         </div>
         <div class="gc-net"></div>
         <div class="gc-players">
-          ${[2,3].map(i=>{const p=players[i],mv=p?prevMv[p.id]:null;
+          ${botIdx.map(i=>{const p=players[i],mv=p?prevMv[p.id]:null;
             return `<div class="gc-player ${!p?'empty':''}">${p?esc(p.name.split(' ')[0]):'Open'}${mv==='up'?'<span class="mv mv-u">↑</span>':mv==='down'?'<span class="mv mv-d">↓</span>':''}</div>`
           }).join('')}
         </div>
@@ -3189,7 +3209,7 @@ function renderCourts(){
       const badge=showMedals?(c===1?'🥇 TOP':c===2?'🥈 2ND':c===3?'🥉 3RD':`COURT ${c}`):(`COURT ${c}`);
       html+=`<div class="court-card ${cls}"><div class="court-header">
         <div class="cnum">Court ${c}</div><span class="cbadge">${badge}</span></div>
-        <div class="court-players">${[0,1,2,3].map(i=>{
+        <div class="court-players">${[...Array(Math.max(4,players.length)).keys()].map(i=>{
           const p=players[i],mv=p?prevMv[p.id]:null;
           return `<div class="pslot ${!p?'empty':''}">${p?esc(p.name):'Open Slot'}${p&&p.membershipType==='spare'?'<span class="spare-badge">S</span>':''}
             ${mv==='up'?'<span class="mbadge mu">↑</span>':mv==='down'?'<span class="mbadge md">↓</span>':''}
@@ -3201,14 +3221,14 @@ function renderCourts(){
 }
 
 function showCourtDetail(court){
-  let assignments;if(S.current){assignments=S.current.assignments;}else{assignments={};for(let c=1;c<=NC;c++)assignments[c]=[];activePlayers().forEach(p=>{if(p.currentCourt>=1&&p.currentCourt<=NC)assignments[p.currentCourt].push(p.id);});}
+  const assignments=S.current?S.current.assignments:upcomingLineup().assign;
   const pids=assignments[court]||[];
   const players=pids.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   const showMedals=!S.current||S.current.completed;
   const badge=showMedals?(court===1?'🥇 Top Court':court===2?'🥈 2nd Court':court===3?'🥉 3rd Court':`Court ${court}`):`Court ${court}`;
   openModal(`Court ${court} — ${badge}`,`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      ${[0,1,2,3].map(i=>{const p=players[i];
+      ${[...Array(Math.max(4,players.length)).keys()].map(i=>{const p=players[i];
         return `<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Player ${i+1}</div>
           <div style="font-weight:800;font-size:13px;">${p?esc(p.name):'<span style="color:var(--muted);font-weight:400;font-style:italic;">Empty</span>'}</div>
@@ -3937,7 +3957,7 @@ function renderLeaderboard(){
   // Compute current round wins/losses from live scores
   const liveWins={},liveLosses={};
   lbPlayers.forEach(p=>{liveWins[p.id]=0;liveLosses[p.id]=0;});
-  if(S.current){
+  if(S.current&&!roundRotated()){
     const cy=S.current.cycle;
     for(let c=1;c<=NC;c++){
       const pids=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id));
@@ -4174,12 +4194,14 @@ function renderPlayerStats(){
     });
     const sd=streakData[p.id]||{};
     const awards=[];
+    if(S.sessions.length>0){
     if(p.id===longestStreakId&&sd.maxStreak>0)awards.push('🔥');
     if(p.id===mostImprovedId&&(sd.courtClimb||0)>0)awards.push('📈');
     if(p.id===mostConsistentId)awards.push('🏅');
+    }
     // Include live round wins/losses if session active
     let lw=0,ll=0;
-    if(S.current){
+    if(S.current&&!roundRotated()){
       const scy=S.current.cycle;
       for(let c=1;c<=NC;c++){
         for(let g2=1;g2<=MAXG;g2++){
@@ -4492,7 +4514,7 @@ function regStep1(){
   const type=regData.membershipType||'regular';
   // Check regular capacity — allow waitlist if full
   if(type==='regular'){
-    const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
+    const regularCount=regularPlacesClaimed();
     if(regularCount>=REGULAR_CAPACITY){
       if(!confirm('Regular slots are FULL (25/25). You will be added to the WAITLIST and notified if a spot opens. Continue?'))return;
       regData.waitlisted=true;
@@ -4646,7 +4668,7 @@ function goRS(n){
 function renderRegPage(){
   const myEmailAddr=myEmail(),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
   // Update capacity display (exclude waitlisted from count — they don't hold active slots)
-  const regularCount=S.players.filter(p=>p.membershipType==='regular'&&!p.waitlisted&&p.sig&&p.sig!=='admin').length;
+  const regularCount=regularPlacesClaimed();
   const slotsEl=document.getElementById('reg-slots-text');
   if(slotsEl){
     const remaining=REGULAR_CAPACITY-regularCount;
@@ -4711,6 +4733,7 @@ async function undoScore(){
 }
 async function clearCycleScores(){
   if(!S.current)return toast('No session','warn');
+  if(roundRotated())return toast('Round '+S.current.cycle+' is already in the standings — use Undo to go back instead','warn');
   if(!confirm('Clear all scores for round '+S.current.cycle+'?'))return;
   const cy=S.current.cycle;Object.keys(S.current.scores).forEach(k=>{if(k.includes(`_y${cy}_`))delete S.current.scores[k];});
   S.lastUndo=null;await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();toast('Scores cleared','warn');
@@ -4792,9 +4815,9 @@ async function restoreSnapshot(key){
     // Announcements: delete all current, recreate from snapshot (IDs don't need preserving)
     const currentAnns=(await sbG('announcements','order=created_at.desc'))||[];
     for(const a of currentAnns){await sbD('announcements',a.id);}
-    for(const a of (snap.announcements||[])){
-      const {id,created_at,...fields}=a;
-      if(fields.content)await sbP('announcements',fields);
+    for(const a of [...(snap.announcements||[])].reverse()){
+      const title=a.title||(a.content?'Notice':''),body=a.body||a.content||'';
+      if(title||body)await sbP('announcements',{type:a.type||'info',title,body,created_at:a.created_at});
     }
     await loadAll();renderAll();renderSnapshots();
     toast('✅ Snapshot restored — "'+snap.label+'"','success');
@@ -5457,13 +5480,15 @@ async function markPlayerLate(){
   if(!S.current)return toast('No session','warn');
   const pid=parseInt(document.getElementById('late-player-sel')?.value);
   if(!pid)return toast('Select a player','warn');
-  const lat=S.current.latePlayers||[];
+  if(!S.current.latePlayers)S.current.latePlayers=[];
+  const lat=S.current.latePlayers;
   if(lat.find(x=>x.playerId===pid))return toast('Already marked late','warn');
   let originalCourt=null;
   for(let c=1;c<=NC;c++){
     if((S.current.assignments[c]||[]).includes(pid)){originalCourt=c;break;}
   }
   if(!originalCourt)return toast('Player not assigned','warn');
+  if(originalCourt!==NC&&(S.current.assignments[NC]||[]).length>=courtCap(NC))return toast(`Court ${NC} already has ${courtCap(NC)} players — use Remove Absent & Replace or Rebalance instead`,'warn');
   const lastCourt=NC;
   const a=S.current.assignments;
   for(let c=1;c<=NC;c++)a[c]=(a[c]||[]).filter(id=>id!==pid);
@@ -5647,19 +5672,16 @@ async function markAttForTab(id,status,court){
     S.preAttendance[id]=status;
   }
   // If absent — auto-remove from court
-  if(status==='absent'&&court){
-    if(S.current){
-      S.current.assignments[court]=(S.current.assignments[court]||[]).filter(pid=>pid!==id);
-      if(!S.current.absentFrom)S.current.absentFrom={};S.current.absentFrom[id]=court; // remembered for the demotion at session end
-      await setKV('current_session',S.current);
-    }
-    toast(S.players.find(p=>p.id===id)?.name.split(' ')[0]+' marked absent — off Court '+court+' tonight, one court down next week','warn');
-  }else if(status==='present'){
-    toast(S.players.find(p=>p.id===id)?.name.split(' ')[0]+' confirmed present','success');
+  if(status==='absent'&&court&&S.current){
+    S.current.assignments[court]=(S.current.assignments[court]||[]).filter(pid=>pid!==id);
+    if(!S.current.absentFrom)S.current.absentFrom={};S.current.absentFrom[id]=court; // remembered for the demotion at session end
   }
-  // Save immediately (no debounce — attendance is critical)
+  // Save immediately (no debounce — attendance is critical), then confirm
   if(S.current)await setKV('current_session',S.current);
   else await setKV('pre_session_attendance',S.preAttendance||{});
+  const first=S.players.find(p=>p.id===id)?.name.split(' ')[0];
+  if(status==='absent'&&court)toast(first+' marked absent — off Court '+court+' tonight, one court down next week','warn');
+  else if(status==='present')toast(first+' confirmed present','success');
   await loadAll();renderAttendanceTab();renderCourts();renderAdminPlayers();
 }
 async function saveAttendanceTab(){
@@ -7459,7 +7481,7 @@ if(window.location.hash==='#run-tests'){
       // Top player should have most total wins (not just Court 1)
       const liveW2={},liveL2={};
       activePlayers().forEach(p=>{liveW2[p.id]=0;liveL2[p.id]=0;});
-      if(S.current){const cy2=S.current.cycle;for(let c=1;c<=NC;c++){for(let g2=1;g2<=MAXG;g2++){const sc=S.current.scores[`c${c}_y${cy2}_g${g2}`];if(!sc)continue;const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);if(sc.w==='A'){sa.forEach(id=>{liveW2[id]++;});sb.forEach(id=>{liveL2[id]++;});}else if(sc.w==='B'){sb.forEach(id=>{liveW2[id]++;});sa.forEach(id=>{liveL2[id]++;});}}}};
+      if(S.current&&!roundRotated()){const cy2=S.current.cycle;for(let c=1;c<=NC;c++){for(let g2=1;g2<=MAXG;g2++){const sc=S.current.scores[`c${c}_y${cy2}_g${g2}`];if(!sc)continue;const sa=[sc.a1,sc.a2].filter(x=>x!=null),sb=[sc.b1,sc.b2].filter(x=>x!=null);if(sc.w==='A'){sa.forEach(id=>{liveW2[id]++;});sb.forEach(id=>{liveL2[id]++;});}else if(sc.w==='B'){sb.forEach(id=>{liveW2[id]++;});sa.forEach(id=>{liveL2[id]++;});}}}};
       // Find player with most total wins
       const topByWins=[...activePlayers()].sort((a,b)=>(b.seasonWins+(liveW2[b.id]||0))-(a.seasonWins+(liveW2[a.id]||0)))[0];
       // The first lbrow in the HTML should contain this player's name

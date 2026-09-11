@@ -505,7 +505,8 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.evaluate(() => endSession());
     await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 20000 }).toBe(1);
     await page.evaluate(() => closeModal());
-    await expect(page.locator("#undo-label")).toContainText("End session 1");
+    // End Session saves, rebuilds statistics and reloads before its Undo step is settled: allow it the same time as the other long steps.
+    await expect(page.locator("#undo-label")).toContainText("End session 1", { timeout: 20000 });
     await page.locator("#undo-pill button").click();
     await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
     expect(state.state["completed_sessions"]).toBeUndefined();

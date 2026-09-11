@@ -11,8 +11,10 @@ export default defineConfig({
   use: {
     actionTimeout: 15000, baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: existsSync(shell) ? { executablePath: shell } : {} },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
+    { name: "desktop", testIgnore: /tabs\//, use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", testIgnore: /tabs\//, use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
+    // Generated per-tab suites: one signed-in page per file, a different seeded league per case.
+    { name: "tabs", testMatch: /tabs\/.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
     command: `python3 -m http.server 8790 --bind 127.0.0.1 --directory "${root}"`,

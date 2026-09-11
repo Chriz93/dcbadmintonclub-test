@@ -92,6 +92,20 @@ function publicRow(p: Player) {
   o.has_account = !!p.user_id;
   return o;
 }
+/** PostgREST-style ordering: order=col.asc|desc[,col2.desc]; stable, nulls last ascending and first descending. */
+function ordered<T>(rows: T[], url: URL): T[] {
+  const spec = url.searchParams.get("order"); if (!spec) return rows;
+  const keys = spec.split(",").map((x) => { const [col, dir] = x.split("."); return { col, desc: dir === "desc" }; });
+  return [...rows].sort((a, b) => {
+    for (const k of keys) {
+      const x = (a as Record<string, unknown>)[k.col], y = (b as Record<string, unknown>)[k.col];
+      if (x === y) continue; if (x == null) return k.desc ? -1 : 1; if (y == null) return k.desc ? 1 : -1;
+      return (x < y ? -1 : 1) * (k.desc ? -1 : 1);
+    }
+    return 0;
+  });
+}
+const nextId = (rows: { id: number }[]) => Math.max(0, ...rows.map((r) => r.id)) + 1;
 function filters(url: URL) {
   const f: Record<string, string> = {};
   for (const [k, v] of url.searchParams) if (v.startsWith("eq.")) f[k] = decodeURIComponent(v.slice(3));
@@ -239,7 +253,7 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "set_email_reminders") { const p = s.players.find((x) => x.id === me); if (!p) return deny("No player record"); p.email_reminders = !!a.p_on; return json(200, null); }
       if (fn === "record_payment") {
         if (!admin) return deny("Organizer verification required");
-        const id = s.payments.length + 1;
+        const id = nextId(s.payments);
         s.payments.push({ id, player_id: a.p_player, kind: a.p_kind, amount: Number(a.p_amount), session_number: a.p_session ?? null, method: "e-transfer", received_on: a.p_received_on || new Date().toISOString().slice(0, 10), note: a.p_note || "" });
         refreshPaid(s, a.p_player); s.audit.push({ action: "payment.recorded", subject: String(a.p_player) });
         return json(200, id);
@@ -264,13 +278,13 @@ export async function installMock(page: Page, s: MockState) {
     // ── Tables ──
     const table = path.replace("/rest/v1/", "");
     if (table === "players") {
-      if (method === "GET") { const rows = admin ? s.players : s.players.filter((p) => p.user_id === c.uid || (!p.user_id && p.email.toLowerCase() === c.email)); return json(200, rows.filter((r) => matches(r as unknown as Record<string, unknown>, f))); }
+      if (method === "GET") { const rows = admin ? s.players : s.players.filter((p) => p.user_id === c.uid || (!p.user_id && p.email.toLowerCase() === c.email)); return json(200, ordered(rows.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url)); }
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
       if (method === "PATCH") { const rows = s.players.filter((r) => matches(r as unknown as Record<string, unknown>, f)); rows.forEach((r) => Object.assign(r, body())); return json(200, rows); }
-      if (method === "POST") { const id = Math.max(0, ...s.players.map((p) => p.id)) + 1; const row = { ...seedPlayers(1)[0], ...body(), id, created_at: new Date().toISOString() }; s.players.push(row); return json(201, [row]); }
+      if (method === "POST") { const b = body(); if (b.id != null && s.players.some((p) => p.id === b.id)) return json(409, { message: "duplicate key value violates unique constraint", code: "23505" }); const id = b.id ?? nextId(s.players); const row = { ...seedPlayers(1)[0], ...b, id, created_at: b.created_at ?? new Date().toISOString() }; s.players.push(row); return json(201, [row]); }
       if (method === "DELETE") { s.players = s.players.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
     }
-    if (table === "players_public" && method === "GET") return json(200, s.players.map(publicRow).filter((r) => matches(r, f)));
+    if (table === "players_public" && method === "GET") return json(200, ordered(s.players.map(publicRow).filter((r) => matches(r, f)), url));
     if (table === "invitations") {
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
       if (method === "GET") return json(200, Object.entries(s.invitations).map(([email, membership_type]) => ({ email, membership_type, note: "", created_at: "2026-09-01T00:00:00Z" })));
@@ -278,22 +292,22 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "DELETE") { const em = decodeURIComponent(String(f.email || "").replace(/^eq\./, "")); delete s.invitations[em]; return route.fulfill({ status: 204, body: "" }); }
     }
     if (table === "announcements") {
-      if (method === "GET") return json(200, [...s.announcements].reverse());
+      if (method === "GET") return json(200, ordered(s.announcements, url));
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
-      if (method === "POST") { const row = { id: s.announcements.length + 1, created_at: new Date().toISOString(), ...body() }; s.announcements.push(row); return json(201, [row]); }
+      if (method === "POST") { const row = { id: nextId(s.announcements), created_at: new Date().toISOString(), ...body() }; s.announcements.push(row); return json(201, [row]); }
       if (method === "DELETE") { s.announcements = s.announcements.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
     }
     if (table === "app_state" && method === "GET") {
       const rows = Object.entries(s.state).filter(([k]) => admin || (!k.startsWith("snapshot_") && !["admin_pin", "pin", "invite_code"].includes(k))).map(([key, v]) => ({ key, value: v.value, version: v.version, created_at: "2026-09-01T00:00:00Z" }));
       return json(200, rows.filter((r) => matches(r, f)));
     }
-    if (table === "rsvps" && method === "GET") return json(200, s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)));
+    if (table === "rsvps" && method === "GET") return json(200, ordered(s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url));
     if (table === "undo_journal" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.undo].reverse().slice(0, 10).map(({ snapshot, ...rest }) => rest)); }
     if (table === "rsvp_log" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.rsvpLog].reverse()); }
-    if (table === "payments" && method === "GET") return json(200, s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)));
+    if (table === "payments" && method === "GET") return json(200, ordered(s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)), url));
     if (table === "questions") {
-      if (method === "GET") return json(200, s.questions);
-      if (method === "POST") { const b = body(); if (b.player_id !== me) return json(403, { message: "permission denied", code: "42501" }); const row = { id: s.questions.length + 1, player_id: b.player_id, asker: b.asker, question: b.question, answer: null, answered_at: null, created_at: new Date().toISOString() }; s.questions.push(row); return json(201, [row]); }
+      if (method === "GET") return json(200, ordered(s.questions, url));
+      if (method === "POST") { const b = body(); if (b.player_id !== me) return json(403, { message: "permission denied", code: "42501" }); const row = { id: nextId(s.questions), player_id: b.player_id, asker: b.asker, question: b.question, answer: null, answered_at: null, created_at: new Date().toISOString() }; s.questions.push(row); return json(201, [row]); }
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
       if (method === "PATCH") { const rows = s.questions.filter((r) => matches(r as unknown as Record<string, unknown>, f)); rows.forEach((r) => Object.assign(r, body())); return json(200, rows); }
       if (method === "DELETE") { s.questions = s.questions.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
