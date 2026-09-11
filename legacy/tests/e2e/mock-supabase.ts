@@ -137,7 +137,7 @@ export async function installMock(page: Page, s: MockState) {
     if (path === "/auth/v1/otp") return json(200, {});
     if (path === "/auth/v1/verify") {
       const { email, token: code } = body();
-      if (code !== "123456") return json(400, { msg: "Token has expired or is invalid" });
+      if (code !== "123456" && code !== "12345678") return json(400, { msg: "Token has expired or is invalid" });   // Supabase sends 6 or 8 digits (a project setting)
       const em = String(email).toLowerCase();
       if (!s.users[em]) s.users[em] = `00000000-0000-4000-8000-${String(Object.keys(s.users).length + 1).padStart(12, "0")}`;
       const uid = s.users[em];

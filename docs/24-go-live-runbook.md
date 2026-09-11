@@ -13,7 +13,7 @@ register, be approved and vote before then.
    league Gmail account and its current app password (the same values as TEST). Without this, sign-in codes are
    rate-limited to a handful per hour and 29 players cannot sign in.
 2. **you** Authentication → Email templates → "Magic link": copy the TEST project's template exactly. It must contain
-   `{{ .Token }}`, which is the six-digit code the site asks for.
+   `{{ .Token }}`, which is the code the site asks for (6 or 8 digits, per the project's setting; the site accepts both).
 3. **you** Authentication → Sign in / Providers: Email enabled, sign-ups allowed. Authentication → Multi-factor:
    TOTP enabled. Authentication → URL configuration: Site URL `https://chriz93.github.io/dcbadmintonclub/`.
 4. **you** Settings → API keys: copy the **publishable** key (starts `sb_publishable_`) for step C1, and create a

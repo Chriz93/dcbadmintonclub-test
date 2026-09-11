@@ -373,7 +373,7 @@ body.has-undo{padding-bottom:140px;}
     <h2>🏸 Maplewood League</h2>
     <p id="signin-hint">Sign in with your email. We'll send you a one-time code.</p>
     <input type="email" class="invite-inp" id="signin-email-input" placeholder="you@email.com" autocomplete="email" style="text-transform:none;letter-spacing:0;" onkeydown="if(event.key==='Enter')signInStep()">
-    <input type="text" class="invite-inp" id="signin-code-input" placeholder="6-DIGIT CODE" inputmode="numeric" autocomplete="one-time-code" maxlength="8" style="display:none;" onkeydown="if(event.key==='Enter')signInStep()">
+    <input type="text" class="invite-inp" id="signin-code-input" placeholder="CODE FROM YOUR EMAIL" inputmode="numeric" autocomplete="one-time-code" maxlength="8" style="display:none;" onkeydown="if(event.key==='Enter')signInStep()">
     <button class="invite-btn" id="signin-btn" onclick="signInStep()">Send code</button>
     <button class="invite-btn" id="signin-back" onclick="signInReset()" style="display:none;background:transparent;border:1px solid var(--border);color:var(--muted);">Use a different email</button>
     <div class="invite-err" id="invite-err"></div>
