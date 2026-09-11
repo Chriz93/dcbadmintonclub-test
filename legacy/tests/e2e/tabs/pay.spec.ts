@@ -47,7 +47,7 @@ for (let i = 0; i < 100; i++) {
     const fmt = (ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
     const regulars = L.players.filter((p) => p.membership_type !== "spare"), spares = L.players.filter((p) => p.membership_type === "spare");
     const pays = L.payments, regPaid = regulars.filter((p) => p.paid).length, sparePaid = spares.filter((p) => p.paid).length;
-    await expect(page.locator("#pay-summary")).toContainText(`Regular Members (${regulars.length}/25)`);
+    await expect(page.locator("#pay-summary")).toContainText(`Regular Members (${regulars.length}/26)`);
     await expect(page.locator("#pay-summary")).toContainText(`Spare Players (${spares.length})`);
     expect(await page.locator("#pay-summary div[style*='grid'] > div > div:first-child").allTextContents(), "paid / unpaid / net collected; spare paid / unpaid")
       .toEqual([String(regPaid), String(regulars.length - regPaid), `$${money(pays, "season") + money(pays, "adjustment") + money(pays, "spare") - money(pays, "refund")}`, String(sparePaid), String(spares.length - sparePaid)]);

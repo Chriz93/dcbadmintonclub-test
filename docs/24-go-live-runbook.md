@@ -16,6 +16,8 @@ register, be approved and vote before then.
    `{{ .Token }}`, which is the code the site asks for (6 or 8 digits, per the project's setting; the site accepts both).
 3. **you** Authentication → Sign in / Providers: Email enabled, sign-ups allowed. Authentication → Multi-factor:
    TOTP enabled. Authentication → URL configuration: Site URL `https://chriz93.github.io/dcbadmintonclub/`.
+   Authentication → Rate limits: raise "Rate limit for sending emails" from 30 to 100 per hour, so the whole league can
+   get sign-in codes on the same evening (Gmail allows about 500 a day).
 4. **you** Settings → API keys: copy the **publishable** key (starts `sb_publishable_`) for step C1, and create a
    **secret** key named `github-jobs` for step E. Never paste either into chat.
 
@@ -76,9 +78,10 @@ The two counts must match. Also download Database → Backups → latest.
    gh secret set SUPABASE_SERVICE_ROLE_KEY
    ```
 
-3. **you** Admin → Tools → "Send a test email to me". It arrives within an hour or two (GitHub starts scheduled
-   jobs late).
-4. **you** When you are ready for players to receive reminders, both switches:
+3. **you** Production project → Integrations → Vault → Add new secret: name `github_dispatch_token`, value = the same
+   GitHub token as TEST. This is what lets the database start the email job at once (migration L14).
+4. **you** Admin → Tools → "Send a test email to me". The page shows "✅ Done — 1 email sent" within about a minute.
+5. **you** When you are ready for players to receive reminders, both switches:
 
    ```bash
    gh variable set LEGACY_DELIVERY_MODE --body live && gh variable set ALLOW_REAL_RECIPIENTS --body true
@@ -91,6 +94,15 @@ The two counts must match. Also download Database → Backups → latest.
 
 Invite one of your own `+alias@gmail.com` addresses, sign in with it on a phone, register, approve it from your
 account, vote. Confirm the vote shows on admin Home under "Vote changes".
+
+## G. Backup copies on your Mac (once, 1 min)
+
+The daily GitHub job (`legacy-backup.yml`, 7:30 AM) already exports every table; this copies each new file to
+`~/MaplewoodBackups` every morning at 9:00 without touching Supabase (see `21-backup-restore.md`):
+
+```bash
+sh /Users/christygeorge/dcbadmintonclub-test/legacy/scripts/install-local-backups.sh
+```
 
 ## Rollback (any time before players register)
 

@@ -15,7 +15,7 @@ test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const [act, extra] = ACTS[i % ACTS.length], base = variety(i + 18);
-  const opts: GenOpts = { ...base, regulars: Math.max(6, base.regulars ?? 6), ...(i % 7 === 3 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}), ...extra };
+  const opts: GenOpts = { ...base, regulars: Math.max(6, base.regulars ?? 6), ...(i % 7 === 3 ? { regulars: 26, declineRate: 0, absentRate: 0 } : {}), ...extra };
   test(`Admin extras ${String(i + 1).padStart(3, "0")} · ${act} · ${genLeague(28000 + i, opts).title}`, async () => {
     const L = genLeague(28000 + i, { ...opts, dates: ctx.dates });
     const r = rng(600 + i);
@@ -82,7 +82,7 @@ for (let i = 0; i < 100; i++) {
       await page.getByRole("button", { name: `Add to Court ${c}` }).click();
       if (!cur) { await expect(toast).toHaveText("No active session"); return; }
       const a = cur.assignments, others = (a[c] || []).filter((x) => x !== pick.id);
-      if (others.length >= (c === NC ? 5 : 4)) {
+      if (others.length >= 5) {   // any court takes a fifth player
         await expect(toast).toHaveText("Court full");
         expect(kvOf(ctx, "current_session").assignments, "a refused add moves nobody").toEqual(a);
         expect(await page.evaluate(() => S.current.assignments), "not even on screen").toEqual(a);

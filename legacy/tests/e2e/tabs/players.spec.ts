@@ -5,12 +5,13 @@ import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC } from "./gen";
 import { courtOf } from "./oracle";
+import { fillCourts } from "../rules-model";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
-  const opts = { ...variety(i + 9), ...(i % 2 ? { live: "none" as const } : {}), ...(i % 10 === 5 ? { regulars: 25 } : {}) };
+  const opts = { ...variety(i + 9), ...(i % 2 ? { live: "none" as const } : {}), ...(i % 10 === 5 ? { regulars: 26 } : {}) };
   test(`Players ${String(i + 1).padStart(3, "0")} · ${genLeague(19000 + i, opts).title}`, async () => {
     const L = genLeague(19000 + i, { ...opts, dates: ctx.dates });
     await load(ctx, L);
@@ -80,7 +81,7 @@ for (let i = 0; i < 100; i++) {
       await page.getByRole("button", { name: "+ Add Player" }).click();
       const taken = P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved && x.sig !== "admin" && String(x.registered_at) >= "2026-09-01").length;
       if (!name) { await expect(toast).toHaveText("Enter a name"); return; }
-      if (kind === "regular" && taken >= 25) { await expect(toast).toHaveText("Regular slots full (25/25). Please choose Spare."); return; }
+      if (kind === "regular" && taken >= 26) { await expect(toast).toHaveText("Regular slots full (26/26). Please choose Spare."); return; }
       if (registered && name === registered.name) {
         await expect(toast).toHaveText(`${registered.name} activated from registration → Court ${c}`);
         expect(db(registered.id)!.current_court).toBe(c);
@@ -95,9 +96,10 @@ for (let i = 0; i < 100; i++) {
       await expect(page.locator("#np-name")).toHaveValue("");
     } else if (act === 6) {
       await page.locator("#a-pl-court-summary").getByRole("button", { name: /Re-sort/ }).click();
-      await expect(toast).toHaveText(`Courts re-sorted — ${active.length} players across ${Math.ceil(active.length / 4)} courts`);
-      active.forEach((x, n) => expect(db(x.id)!.current_court, `${x.name} after re-sort`).toBe(Math.min(Math.floor(n / 4) + 1, NC)));
-      if (cur) { const a = kv("current_session").assignments; active.forEach((x, n) => expect(courtOf(a, x.id)).toBe(Math.min(Math.floor(n / 4) + 1, NC))); }
+      const filled = fillCourts(active.map((x) => x.id)), want = (id: number) => filled.findIndex((ids) => ids.includes(id));
+      await expect(toast).toHaveText(`Courts re-sorted — ${active.length} players across ${filled.slice(1).filter((x) => x.length).length} courts`);
+      active.forEach((x) => expect(db(x.id)!.current_court, `${x.name} after re-sort`).toBe(want(x.id)));
+      if (cur) { const a = kv("current_session").assignments; active.forEach((x) => expect(courtOf(a, x.id)).toBe(want(x.id))); }
     }
   });
 }

@@ -2,6 +2,7 @@
 import type { League, SessionRec, Score, Player } from "./gen";
 import { NC } from "./gen";
 import { eloReference } from "../helpers";
+import { fillCourts } from "../rules-model";
 
 export const first = (n: string) => n.split(" ")[0];
 const courtGames = (n: number) => (n === 5 ? 5 : 3);
@@ -191,8 +192,8 @@ export function upcoming(L: League) {
   const spares = claims.slice(0, declinedRows).map((r) => r.player_id).filter((id) => !preAbsent.has(id));
   const regs = L.players.filter((p) => p.current_court > 0 && p.membership_type !== "spare" && !declined.has(p.id) && !preAbsent.has(p.id)).sort((a, b) => a.current_court - b.current_court);
   const order = [...regs.map((p) => p.id), ...spares.filter((id) => !regs.some((p) => p.id === id))];
-  const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), [] as number[]]));
-  order.forEach((id, i) => assign[String(Math.min(Math.floor(i / 4) + 1, NC))].push(id));
+  const filled = fillCourts(order);
+  const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), filled[i + 1]]));
   return { vote, declined, preAbsent, spares, assign };
 }
 

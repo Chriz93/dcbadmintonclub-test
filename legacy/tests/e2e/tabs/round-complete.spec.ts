@@ -28,7 +28,7 @@ test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const base = variety(i + 21);
-  const opts: GenOpts = { ...base, regulars: Math.max(6, base.regulars ?? 6), live: i % 2 ? "r2-partial" : "r1-partial", ...(i % 5 === 0 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
+  const opts: GenOpts = { ...base, regulars: Math.max(6, base.regulars ?? 6), live: i % 2 ? "r2-partial" : "r1-partial", ...(i % 5 === 0 ? { regulars: 26, declineRate: 0, absentRate: 0 } : {}) };
   const saveAll = i % 3 !== 0;
   test(`Round complete ${String(i + 1).padStart(3, "0")} · ${saveAll ? "Save All" : "game by game"} · ${genLeague(31000 + i, opts).title}`, async () => {
     const L = genLeague(31000 + i, { ...opts, dates: ctx.dates });

@@ -1,8 +1,8 @@
-name: Legacy site weekly backup (TEST)
+name: Legacy site daily backup (TEST)
 # Exports every league table to a JSON artifact kept for 90 days. Needs SUPABASE_SERVICE_ROLE_KEY.
 on:
   schedule:
-    - cron: "30 11 * * 3" # Wednesdays 07:30 Ottawa, the morning after play
+    - cron: "30 11 * * *" # every day 07:30 Ottawa (13 small tables; a few requests, no load on Supabase)
   workflow_dispatch:
 permissions:
   contents: read

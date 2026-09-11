@@ -1,0 +1,3 @@
+# Written by gen_cases.py on every run (run.sh regenerates them).
+cases.sql
+fixtures.sql

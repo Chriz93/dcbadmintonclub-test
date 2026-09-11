@@ -30,7 +30,7 @@ for (let i = 0; i < 100; i++) {
     await expect(blocks).toHaveCount(used.length);
     for (let b = 0; b < used.length; b++) {
       const c = used[b], ids = courtIds(c), blk = blocks.nth(b);
-      await expect(blk.locator("> div").first()).toHaveText(`Court ${c} (${ids.length}/${c === NC ? 5 : 4})`);
+      await expect(blk.locator("> div").first()).toHaveText(`Court ${c} (${ids.length}/${Math.max(4, ids.length)})`);
       const names = (await blk.locator("div:has(> button[onclick^='markAttForTab']) > span:first-child").allTextContents()).map(norm);
       expect(names, `Court ${c}: players and their votes`).toEqual(ids.map((id) => `${P.find((p) => p.id === id)!.name.split(" ")[0]} ${vote[id] === "coming" ? "voted in" : vote[id] === "notcoming" ? "voted out" : "no vote"}`));
       await expect(blk.getByText("🪑 Open slot")).toHaveCount(Math.max(0, 4 - ids.length));

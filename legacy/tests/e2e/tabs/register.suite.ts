@@ -13,7 +13,7 @@ export function define() {
   test.afterAll(async () => { await closeCtx(ctx); });
   for (let i = 0; i < 100; i++) {
     const story = (["regular", "spare", "regular-paid", "full", "returning", "already", "invalid-1", "invalid-2", "invalid-3", "regular"] as const)[i % 10];
-    const opts = { ...variety(i + 13), ...(story === "full" ? { regulars: 25, pending: 0 } : {}) };
+    const opts = { ...variety(i + 13), ...(story === "full" ? { regulars: 26, pending: 0 } : {}) };
     test(`Register ${String(i + 1).padStart(3, "0")} · ${story} · ${genLeague(23000 + i, opts).title}`, async () => {
       const L = genLeague(23000 + i, { ...opts, dates: ctx.dates });
       const r = rng(170 + i), spare = story === "spare";
@@ -26,7 +26,7 @@ export function define() {
       await page.evaluate(() => nav("register"));
       // Places held by regulars registered this season (sign-ups awaiting approval included), as every viewer can see them.
       const taken = L.players.filter((p) => p.membership_type !== "spare" && !p.waitlisted && p.sig !== "admin" && String(p.registered_at) >= "2026-09-01").length;
-      await expect(page.locator("#reg-slots-text")).toHaveText(taken >= 25 ? "FULL" : `${25 - taken} spots left`);
+      await expect(page.locator("#reg-slots-text")).toHaveText(taken >= 26 ? "FULL" : `${26 - taken} spots left`);
       if (story === "already") {
         await expect(page.locator("#reg-form")).toBeHidden();
         const card = page.locator("#reg-already");
@@ -85,7 +85,7 @@ export function define() {
       await page.locator("#lf-all").check();
       await page.locator("#r-sig-lf").fill(name);
       await page.locator("#reg-btn-lf").click();
-      const waitlisted = !spare && taken >= 25;   // a full league puts new regulars on the waitlist
+      const waitlisted = !spare && taken >= 26;   // a full league puts new regulars on the waitlist
       await expect(page.locator("#reg-success-msg")).toContainText(spare ? "Registered as Spare — Admin will contact you when needed." : waitlisted ? "You have been added to the Regular Waitlist. Admin will promote you when a spot opens." : "Your registration");
       const row = await expect.poll(() => ctx.state.players.find((p) => p.email === REG && p.name === name)).toBeTruthy().then(() => ctx.state.players.find((p) => p.email === REG && p.name === name)!);
       expect({ type: row.membership_type, pay: row.declared_payment, waitlisted: !!row.waitlisted, approved: !!row.approved, phone: row.phone, sig: row.sig }, "saved registration")

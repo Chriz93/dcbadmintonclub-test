@@ -22,7 +22,7 @@ export function define() {
   test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
   test.afterAll(async () => { await closeCtx(ctx); });
   for (let i = 0; i < 100; i++) {
-    const size = i % 4 === 0 ? { regulars: 25, declineRate: 0, absentRate: 0 } : i % 4 === 1 ? { regulars: 5 + (i % 3), spares: 0 } : {};
+    const size = i % 4 === 0 ? { regulars: 26, declineRate: 0, absentRate: 0 } : i % 4 === 1 ? { regulars: 5 + (i % 3), spares: 0 } : {};
     const opts = { ...variety(i + 2), ...size, live: LIVES[i % LIVES.length], sessions: i % 5 };
     test(`Scores ${String(i + 1).padStart(3, "0")} · ${genLeague(11000 + i, opts).title}`, async () => {
       const L = genLeague(11000 + i, { ...opts, dates: ctx.dates });

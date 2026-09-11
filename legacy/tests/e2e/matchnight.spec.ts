@@ -18,7 +18,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
   test("organizer runs a 25-player night: five-player Court 6, strict scores, deterministic ties, statistics", async ({ page }) => {
     await signIn(page, ORGANIZER);
     await expect(page.locator("#page-home")).toHaveClass(/active/);
-    await expect(page.locator("#season-rules-card")).toContainText("Court 6 runs five players");
+    await expect(page.locator("#season-rules-card")).toContainText("Court 6 first, then Court 5, then Court 4");
     await unlockOrganizer(page);
 
     // Start session 1: 25 active players → courts of 4 with five on Court 6.
@@ -351,9 +351,10 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     expect(state.players.find((p) => p.id === 1)!.no_show_count).toBe(0);
   });
   test("payment ledger drives the paid flag; waitlist promotion; my-season card; push opt-in", async ({ page }) => {
-    // 25 self-registered regulars fill the league; one more is approved onto the waitlist.
+    // 26 self-registered regulars fill the league; one more is approved onto the waitlist.
     state.players.forEach((p) => { p.sig = "data:sig"; });
-    state.players.push({ ...state.players[0], id: 26, name: "Waiting Wanda", email: "wanda@example.invalid", current_court: 0, highest_court: 0, approved: true, waitlisted: true, registered_at: "2026-09-03T00:00:00Z", user_id: null });
+    state.players.push({ ...state.players[0], id: 26, name: "TEST Player 26", email: "test-player-26@example.invalid", current_court: 6, highest_court: 6, approved: true, waitlisted: false, user_id: null });
+    state.players.push({ ...state.players[0], id: 27, name: "Waiting Wanda", email: "wanda@example.invalid", current_court: 0, highest_court: 0, approved: true, waitlisted: true, registered_at: "2026-09-03T00:00:00Z", user_id: null });
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
     // Ledger: two half payments make the season fee paid; a refund never unpays it; deleting an entry re-derives.
@@ -383,7 +384,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.evaluate(async () => { await loadAll(); renderAll(); });
     await expect(page.locator("#waitlist-offer")).toContainText("1 regular place free");
     await page.locator("#waitlist-offer button").click();
-    await expect.poll(() => state.players.find((p) => p.id === 26)!.waitlisted).toBe(false);
+    await expect.poll(() => state.players.find((p) => p.id === 27)!.waitlisted).toBe(false);
     await expect(page.locator("#waitlist-offer")).toHaveCount(0);
     // A player sees their own season card and can register a push subscription (own row only).
     state.state["completed_sessions"] = { value: JSON.stringify([{ number: 1, date: "Sep 15, 2026", scores: { c1_y1_g1: { a1: 1, a2: 2, b1: 3, b2: 4, sA: 21, sB: 10, w: "A" } }, movements: [{ cycle: 1, mv: {}, wins: { 1: 1, 2: 1 } }], assignments: { 1: [1, 2, 3, 4] }, initialAssignments: { 1: [1, 2, 3, 4] }, finalAssignments: { 1: [1, 2, 3, 4] }, playerNames: { 1: "TEST Player 01" } }]), version: 1 };

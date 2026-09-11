@@ -4,6 +4,7 @@ import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts, type League, type SessionRec } from "./gen";
 import { upcoming, courtOf } from "./oracle";
+import { fillCourts } from "../rules-model";
 
 type Kind = "start" | "missing" | "next" | "end" | "reset" | "cancel" | "late" | "absent" | "rebalance" | "cascade" | "attendance";
 const PLAN: [Kind, Partial<GenOpts>][] = [
@@ -27,7 +28,7 @@ test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const [kind, extra] = i === 99 ? (["start", { live: "none", sessions: 28 }] as [Kind, Partial<GenOpts>]) : PLAN[i % PLAN.length];
-  const opts: GenOpts = { ...variety(i + 2), ...(i % 3 === 0 ? { regulars: 25, spares: 3 } : {}), ...extra };
+  const opts: GenOpts = { ...variety(i + 2), ...(i % 3 === 0 ? { regulars: 26, spares: 3 } : {}), ...extra };
   test(`Session ${String(i + 1).padStart(3, "0")} · ${kind} · ${genLeague(12000 + i, opts).title}`, async () => {
     const L: League = genLeague(12000 + i, { ...opts, dates: ctx.dates });
     await load(ctx, L);
@@ -161,9 +162,9 @@ for (let i = 0; i < 100; i++) {
     } else if (k === "rebalance") {
       await ui.getByRole("button", { name: "🔄 Rebalance Courts" }).click();
       const ids = [...new Set(assigned)].map((id) => ctx.state.players.find((p) => p.id === id)!).filter(Boolean).sort((x, y) => x.current_court - y.current_court);
-      await expect(toast).toHaveText(`Courts re-sorted — ${ids.length} players across ${Math.ceil(ids.length / 4)} courts`);
-      const want: Record<string, number[]> = Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [String(c), []]));
-      ids.forEach((p, n) => want[String(Math.min(Math.floor(n / 4) + 1, NC))].push(p.id));
+      const filled = fillCourts(ids.map((p) => p.id));
+      await expect(toast).toHaveText(`Courts re-sorted — ${ids.length} players across ${filled.slice(1).filter((x) => x.length).length} courts`);
+      const want: Record<string, number[]> = Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [String(c), filled[c]]));
       expect(kv("current_session").assignments).toEqual(want);
     } else if (k === "cascade") {
       const from = 2 + Math.floor(r() * 5);

@@ -2,7 +2,8 @@
 // the ten-session simulation proves the real app agrees with) and stored in exactly the shape the app writes.
 import season from "../../../automation/season.json";
 import type { MockState } from "../mock-supabase";
-import { Model, fresh } from "../rules-model";
+import { Model, fresh, fillCourts } from "../rules-model";
+export const CAPACITY = 26;
 
 export type Player = MockState["players"][number];
 export type Score = { a1: number; a2: number | null; b1: number; b2: number | null; sA: number; sB: number; w: "A" | "B" };
@@ -68,7 +69,8 @@ export function genLeague(seed: number, o: GenOpts = {}): League {
   const str: Record<number, number> = {}; players.forEach((p) => (str[p.id] = 30 + r() * 70));
   const regs = players.filter((p) => p.membership_type === "regular" && p.approved);
   const key: Record<number, number> = {}; regs.forEach((p) => (key[p.id] = str[p.id] + r() * 25));
-  [...regs].sort((a, b) => key[b.id] - key[a.id]).forEach((p, i) => { const c = Math.min(Math.floor(i / 4) + 1, NC); p.current_court = c; p.highest_court = c; });
+  const seeded = fillCourts([...regs].sort((a, b) => key[b.id] - key[a.id]).map((p) => p.id));
+  for (let c = 1; c <= NC; c++) for (const id of seeded[c]) { const p = players.find((x) => x.id === id)!; p.current_court = c; p.highest_court = c; }
   const model = new Model(players);
   const courtIdx = (id: number) => model.lineup.findIndex((l) => l && l.includes(id));
   const assignFrom = (): Assign => Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), [...(model.lineup[i + 1] || [])]]));

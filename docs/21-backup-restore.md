@@ -2,8 +2,10 @@
 
 ## What is backed up
 `legacy/automation/export-backup.mjs` exports every league table (players, app_state, announcements, rsvps, questions,
-invitations, app_admins, reminder_log, audit_log) into one JSON file. The weekly workflow `legacy-backup.yml` runs it
-every Wednesday morning after play and keeps the file as a GitHub artifact for 90 days. Run it by hand with:
+invitations, app_admins, reminder_log, rsvp_log, audit_log, payments, payments_archive, push_subscriptions,
+season_dates) into one JSON file. The workflow `legacy-backup.yml` runs it every day at 7:30 AM Ottawa and keeps each
+file as a GitHub artifact for 90 days. One export reads a few hundred rows once a day, so it adds no noticeable load to
+Supabase. Run it by hand with:
 
 ```bash
 SUPABASE_URL=https://<project>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<service key> BACKUP_DIR=~/league-backups node legacy/automation/export-backup.mjs

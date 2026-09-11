@@ -13,7 +13,7 @@ let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
-  const opts = { ...variety(i + 14), ...(i % 5 === 1 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
+  const opts = { ...variety(i + 14), ...(i % 5 === 1 ? { regulars: 26, declineRate: 0, absentRate: 0 } : {}) };
   test(`Admin ${String(i + 1).padStart(3, "0")} · ${genLeague(24000 + i, opts).title}`, async () => {
     const L = genLeague(24000 + i, { ...opts, dates: ctx.dates });
     await load(ctx, L);

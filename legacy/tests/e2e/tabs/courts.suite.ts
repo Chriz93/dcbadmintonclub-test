@@ -12,7 +12,7 @@ export function define() {
   test.afterAll(async () => { await closeCtx(ctx); });
   for (let i = 0; i < 100; i++) {
     // Every fifth case fills the league to 25 so Court 6 carries five players.
-    const opts = { ...variety(i), ...(i % 5 === 2 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
+    const opts = { ...variety(i), ...(i % 5 === 2 ? { regulars: 26, declineRate: 0, absentRate: 0 } : {}) };
     test(`Courts ${String(i + 1).padStart(3, "0")} · ${genLeague(9000 + i, opts).title}`, async () => {
       const L = genLeague(9000 + i, { ...opts, dates: ctx.dates });
       await load(ctx, L);

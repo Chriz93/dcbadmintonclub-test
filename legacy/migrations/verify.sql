@@ -19,4 +19,12 @@ select 'legacy secrets removed',case when count(*)=0 then 'OK' else 'FAIL: '||st
 union all
 select 'app_state versions',case when count(*)=count(version) then 'OK' else 'FAIL' end from public.app_state
 union all
+select 'votes only through set_rsvp (L15)',case when count(*)=0 then 'OK' else 'FAIL: '||string_agg(policyname,',') end from pg_policies where schemaname='public' and tablename='rsvps' and cmd<>'SELECT'
+union all
+select 'no TRUNCATE for site roles (L15)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and privilege_type='TRUNCATE' and grantee in('anon','authenticated','service_role')
+union all
+select 'payment archive (L15)',case when to_regclass('public.payments_archive') is not null then 'OK' else 'FAIL: missing' end
+union all
+select 'question asker from record (L15)',case when count(*)=1 then 'OK' else 'FAIL' end from pg_trigger where tgname='questions_asker' and tgrelid='public.questions'::regclass
+union all
 select 'player columns',case when count(*)=8 then 'OK' else 'FAIL: '||count(*)||'/8' end from information_schema.columns where table_schema='public' and table_name='players' and column_name in('approved','waitlisted','registered_at','admin_note','user_id','updated_at','email_reminders','membership_type');

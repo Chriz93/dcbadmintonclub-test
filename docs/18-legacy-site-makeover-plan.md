@@ -243,3 +243,15 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 
 - Tools email buttons now send at once and timed reminders go out on time (L14 + p28): the database starts the GitHub
   job itself; needs the Vault secret `github_dispatch_token` (TEST now, production at go-live). Cache `dcbc-test-v57`.
+
+## Status — 2026-09-11 (final deep check: 26 regulars, database tests, L15, daily backups)
+
+- Rules: 26 regulars; extra players become a fifth player on the bottom courts (Court 6, then 5, then 4) and a court of
+  five plays five games to 15; two ladder rounds, then free play; nobody is ever seated alone (p30, p32). Home now
+  also lists the no-deuce scoring and late-arrival rules.
+- Database: 1,570 generated database cases (`legacy/tests/db`) and a negative control; migration L15 closes seven holes
+  they and the deep check found, including votes changed after the Sunday lock, a season rollover that Supabase would
+  have refused, and last season's payments counting toward next season. Applied to TEST and verified (25/25).
+- Backups: daily at 7:30 AM (was weekly), every table including the payment archive; restore helper fixed and drilled
+  on all 14 tables; optional copy to `~/MaplewoodBackups` on the Mac. Details: `27-generated-tab-test-suites.md`.
+  Cache `dcbc-test-v59`.

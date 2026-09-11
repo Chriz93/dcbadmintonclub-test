@@ -345,3 +345,14 @@ do $$ declare r jsonb; begin
  if (r->>'dispatched')::boolean or coalesce(r->>'reason','')='' then raise exception 'timer path wrong: %', r; end if;
 end $$;
 select 'PHASE10 RULES PASS' as result;
+
+-- ═══ PHASE11: hardening (L15) — no answering for others without a player record; games only by that court's players ═══
+\i legacy/migrations/L15_hardening.sql
+insert into auth.users values('a0000000-0000-0000-0000-0000000000f1','no.player@example.invalid',now()) on conflict do nothing;
+set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-0000000000f1',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"no.player@example.invalid"}',false);
+do $$ declare victim bigint; begin
+ select id into victim from public.players where membership_type='spare' or membership_type is null or true order by id limit 1;
+ begin perform public.set_rsvp(1,victim,'notcoming'); raise exception 'an account with no player record answered for someone'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+select 'PHASE11 RULES PASS' as result;

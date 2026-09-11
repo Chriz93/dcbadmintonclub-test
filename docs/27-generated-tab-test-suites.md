@@ -152,3 +152,67 @@ only queued a request for it. Now the database starts the job through GitHub's A
 
 Rehearsal PHASE10 proves only the organizer or the timer can start the job; the Tools suite (100 cases) runs against
 the new behaviour. L14 is included in `PROD_2026-27.sql`; production needs the same Vault secret.
+
+## Final deep check (September 11, 2026) — 26 regulars, 1,570 database cases, L15, backups
+
+**League rules in the app (patches p30, p31, p32).** 26 regulars. Courts hold four; extra players become a fifth player
+on the bottom courts (Court 6, then 5, then 4), and a court of five plays five doubles games to 15 with each player
+sitting out one. Every session is two ladder rounds, then free play. With fewer than 24 playing nobody is seated alone:
+a single leftover joins the court above as its fifth player (before, 21, 17, 13, 9 or 5 players left one person alone
+on the last court); two or three left over still play singles, as the registration rules say. Home now also lists the
+no-deuce scoring (21, or 15 on a court of five, even at 20–20) and the late-arrival rule.
+
+**Database tests (`legacy/tests/db`, run with `sh legacy/tests/db/run.sh`).** A fresh copy of the schema on the local
+Postgres, every migration (with the existing rules phases), then 1,570 generated cases, each rolled back:
+
+| Family | Cases | What it proves |
+|---|---|---|
+| Table access matrix | 523 | read, add, change, remove and empty (TRUNCATE) every table as anonymous, a player, a spare, a stranger, the organizer with and without the second factor, and the job key; the public roster hides every private column |
+| Voting | 270 | only your own answer (the organizer may answer for anyone); regulars locked from Sunday 10 PM, spares never |
+| Scores | 260 | court, round, game number, 21/15 target, no tie, winner flag, the players named must be that court's, stale screens refused |
+| Payments | 100 | the paid flag follows the ledger (season + adjustments ≥ $400; any spare fee for spares; refunds never unpay) |
+| Registration | 110 | invitation, verified email, length limits, declared payment, no second record for a returning player |
+| State, spares, reminders | 155 | versioned writes and retired keys; spare seat order and confirmation; who the reminder job may email |
+| Statistics, undo, rollover | 101 | rebuild from stored scores; undo steps and its season boundary; the new rollover ledger rules and labels |
+| Everything else | 51 | real asker names, profile, push, email opt-out, admin status, instant email, internal functions not callable |
+| **Total** | **1,570** | |
+
+A negative control re-opened three of the holes below on a copy; 134 cases failed exactly where expected.
+
+**Defects found and fixed in the database (migration `L15_hardening.sql`, applied to TEST, included in
+`PROD_2026-27.sql`).**
+
+29. A signed-in account with no player record could answer the vote for any player.
+30. A player could save games naming players from other courts, or game numbers a court does not play.
+31. Players could still change their own vote directly in the table after the Sunday 10 PM lock (the site never does;
+    the table allowed it). Votes now go only through `set_rsvp`.
+32. The asker's name on a question came from the browser; it now comes from the player record.
+33. The season rollover would have been refused on Supabase (its safe-update guard rejects a bulk delete without a
+    WHERE clause), and it left last season's payments counting toward next season's fee and last season's reminder log
+    blocking next season's reminders. Old payments now move to an organizer-only `payments_archive` (p31 says so on
+    screen).
+34. Supabase's default privileges gave signed-in users TRUNCATE and other unused rights on several tables; every table
+    now has exactly the rights the site and the jobs use.
+35. Security Advisor warnings: `my_email()` search path, `pg_net` in the public schema, two trigger functions callable
+    directly. The one remaining advisor error (`players_public` is a security-definer view) is the design: it shows the
+    roster without contact details. The remaining "signed-in users can run security-definer functions" warnings are
+    the site's own database functions, each of which checks who is calling.
+
+**Backups.** Daily at 7:30 AM (was weekly), every table including `rsvp_log`, `payments`, `payments_archive`,
+`push_subscriptions` and `season_dates`. The restore helper restored invitations, organizers and season dates on the
+wrong key and used `disable trigger all`, which Supabase refuses; both fixed, with unit tests, and a local drill damaged
+13 of the 14 tables and restored all 14 exactly. `legacy/scripts/install-local-backups.sh` copies each day's file to
+`~/MaplewoodBackups` without touching Supabase.
+
+**Results (final code: patches p30–p32, migration L15).**
+
+| Gate | Result |
+|---|---|
+| Generated tab suites (`tabs` 3,405 + `tabs-phone` 500) | **3,905 / 3,905 passed** (19.6 min) |
+| Match night, season and opener (desktop + phone) | 18 passed, 2 skipped by design |
+| Database cases (`legacy/tests/db`) | **1,570 / 1,570**; negative control 134 failures where expected |
+| SQL rules rehearsal | RULES and PHASE2–PHASE11 pass |
+| Automation unit tests | 16 / 16 (3 new for the restore helper) |
+| Restore drill (local) | 14 / 14 tables identical after restore |
+| TEST database after L15 | `verify.sql` 25 / 25 OK; function bodies match the rehearsal; timer still reaches GitHub |
+| Patch replay | p30 + p31 + p32 applied to the previous commit reproduce `index.html` exactly |

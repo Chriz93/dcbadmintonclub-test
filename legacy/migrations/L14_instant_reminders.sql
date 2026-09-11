@@ -7,7 +7,7 @@
 -- read and write). The organizer adds it in the dashboard; it is never stored in code or chat.
 -- Safe to run again. Where pg_net / pg_cron / Vault are missing (local rehearsal) the function reports why instead.
 
-do $$ begin create extension if not exists pg_net; exception when others then raise notice 'pg_net not available: %', sqlerrm; end $$;
+do $$ begin create extension if not exists pg_net with schema extensions; exception when others then raise notice 'pg_net not available: %', sqlerrm; end $$;
 do $$ begin create extension if not exists pg_cron; exception when others then raise notice 'pg_cron not available: %', sqlerrm; end $$;
 
 create or replace function public.dispatch_reminder_job(p_reason text default 'button')

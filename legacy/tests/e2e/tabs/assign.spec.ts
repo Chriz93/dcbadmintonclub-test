@@ -10,7 +10,7 @@ let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); await ctx.page.setViewportSize({ width: 1280, height: 3600 }); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
-  const opts = { ...variety(i + 11), live: LIVES[i % 5], ...(i % 4 === 0 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
+  const opts = { ...variety(i + 11), live: LIVES[i % 5], ...(i % 4 === 0 ? { regulars: 26, declineRate: 0, absentRate: 0 } : {}) };
   test(`Assign ${String(i + 1).padStart(3, "0")} · ${genLeague(21000 + i, opts).title}`, async () => {
     const L = genLeague(21000 + i, { ...opts, dates: ctx.dates });
     await load(ctx, L);
@@ -39,7 +39,7 @@ for (let i = 0; i < 100; i++) {
     if (!pool.length) return;
     const pid = pool[Math.floor(r() * pool.length)], from = [1, 2, 3, 4, 5, 6].find((c) => (a[c] || []).includes(pid)) || 0;
     const targets = [0, 1, 2, 3, 4, 5, 6].filter((t) => t !== from && (t > 0 || un.length > 0));
-    const t = targets[Math.floor(r() * targets.length)], cap = t === NC ? 5 : 4;
+    const t = targets[Math.floor(r() * targets.length)], cap = 5;   // any court takes a fifth player
     await ui.locator(`.dnd-player[data-pid='${pid}']`).dragTo(ui.locator(`.dnd-court[data-court='${t}']`));
     if (t > 0 && (a[t] || []).filter((x) => x !== pid).length >= cap) {
       await expect(toast).toHaveText(`Court ${t} is full (${cap}/${cap})`);

@@ -3,7 +3,11 @@
 import type { MockState } from "./mock-supabase";
 
 const NC = 6;
-export const cap = (c: number) => (c === NC ? 5 : 4);
+export const cap = (_c: number) => 5;   // any court can take a fifth player
+/** Courts hold four; with more than 24 playing, the extras become a fifth player on the bottom courts (6, then 5, then 4).
+ *  With fewer, courts fill four at a time and nobody sits alone: a single leftover joins the court above as its fifth. */
+export function courtSizes(n: number) { const s: number[] = Array(NC + 1).fill(0); if (n <= NC * 4) { let last = 0; for (let c = 1; c <= NC && n > 0; c++) { s[c] = Math.min(4, n); n -= s[c]; last = c; } if (last > 1 && s[last] === 1) { s[last - 1]++; s[last] = 0; } } else { const extra = Math.min(n - NC * 4, NC); for (let c = 1; c <= NC; c++) s[c] = 4 + (c > NC - extra ? 1 : 0); } return s; }
+export function fillCourts(ids: number[]) { const z = courtSizes(ids.length), a: number[][] = Array.from({ length: NC + 1 }, () => []); let i = 0; for (let c = 1; c <= NC; c++) { a[c] = ids.slice(i, i + z[c]); i += z[c]; } if (i < ids.length) a[NC].push(...ids.slice(i)); return a; }
 export const target = (n: number) => (n === 5 ? 15 : 21);
 // Deterministic "form": shuffles every session so players climb and fall.
 export const strength = (id: number, session: number) => 100 - id * 2 + ((id * 37 + session * 11) % 29);
@@ -30,7 +34,7 @@ export class Model {
       .sort((a, b) => this.earned.get(a)! - this.earned.get(b)! || a - b);
     const ids = [...regs, ...spares];
     this.lineup = Array.from({ length: NC + 1 }, () => []);
-    ids.forEach((id, i) => this.lineup[Math.min(Math.floor(i / 4) + 1, NC)].push(id));
+    this.lineup = fillCourts(ids);
     this.sessionWins.clear(); this.sessionGames.clear(); this.initialCourt.clear(); this.absentFrom.clear(); this.round2Court.clear();
     for (let c = 1; c <= NC; c++) for (const id of this.lineup[c]) this.initialCourt.set(id, c);
   }

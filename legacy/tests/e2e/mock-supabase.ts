@@ -230,8 +230,9 @@ export async function installMock(page: Page, s: MockState) {
         s.state[`archive_${a.p_label}`] = { value: JSON.stringify({ label: a.p_label, completed_sessions: JSON.parse(s.state["completed_sessions"]?.value || "[]"), players: s.players.map((p) => ({ id: p.id, season_wins: p.season_wins })) }), version: 1 };
         for (const k of Object.keys(s.state)) if (/^(completed_sessions|player_approvals|membership_overrides|pre_session_attendance|round_snapshots|votes_session_|rsvp_session_)/.test(k)) delete s.state[k];
         s.rsvps = [];
+        const np = s.payments.length; s.payments = [];   // L15: last season's ledger moves to payments_archive
         let n = 0; for (const p of s.players) { Object.assign(p, { season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, paid: false, approved: false, waitlisted: false, registered_at: null }); n++; }
-        return json(200, { archived: a.p_label, players_reset: n });
+        return json(200, { archived: a.p_label, players_reset: n, payments_archived: np });
       }
       if (fn === "rebuild_player_stats") {
         if (!admin) return deny("Organizer verification required");

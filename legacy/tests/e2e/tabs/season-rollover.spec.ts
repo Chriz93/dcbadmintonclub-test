@@ -29,10 +29,12 @@ for (let i = 0; i < 100; i++) {
     const label = act === "short-label" ? ["", "ab", "  x  "][i % 3] : `2025-26 #${i + 1}`;
     await page.locator("#new-season-label").fill(label);
     const archive = page.getByRole("button", { name: "📦 Archive season and start fresh" });
+    const paymentsBefore = ctx.state.payments.length;
     await archive.click();
     if (act === "short-label") { await expect(toast).toHaveText("Enter an archive label (for example 2025-26)"); expect(Object.keys(ctx.state.state).filter((k) => k.startsWith("archive_"))).toEqual([]); return; }
     if (act === "during-session") { await expect(toast).toHaveText("End the active session first"); expect(kvOf(ctx, "completed_sessions") || []).toEqual(L.sessions); return; }
-    await expect(toast).toHaveText(`Archived ${label}; ${L.players.length} players reset`);
+    await expect(toast).toHaveText(`Archived ${label}; ${L.players.length} players reset; ${paymentsBefore} payments archived`);
+    expect(ctx.state.payments, "last season's payments leave the ledger (they move to the organizer's archive)").toEqual([]);
     const archived = kvOf(ctx, `archive_${label}`);
     expect(archived.completed_sessions, "last season kept in the archive").toEqual(L.sessions);
     expect(kvOf(ctx, "completed_sessions"), "the new season starts with no finished nights").toBeNull();

@@ -9,7 +9,7 @@ let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
-  const opts = { ...variety(i + 8), pending: 1 + (i % 3), ...(i % 4 === 0 ? { regulars: 25 } : {}) };
+  const opts = { ...variety(i + 8), pending: 1 + (i % 3), ...(i % 4 === 0 ? { regulars: 26 } : {}) };
   test(`Registered ${String(i + 1).padStart(3, "0")} · ${genLeague(18000 + i, opts).title}`, async () => {
     const L = genLeague(18000 + i, { ...opts, dates: ctx.dates });
     const r = rng(80 + i);
@@ -33,7 +33,7 @@ for (let i = 0; i < 100; i++) {
     expect(await names(/^🔄 Spare Players/), "spare players").toEqual(approved.filter((p) => p.membership_type === "spare").map((p) => p.name + "SPARE"));
     expect(await names(/^⏳ Waitlist/), "waitlist").toEqual(waitlisted.map((p, k) => `#${k + 1} ${p.name}WAITLIST`));
     if (notReg.length) await expect(cardOf(/^❌ Not Registered/)).toContainText("Walk-in Guest");
-    const free = Math.max(0, 25 - taken()), first = [...waitlisted].sort((a, b) => String(a.registered_at).localeCompare(String(b.registered_at)) || a.id - b.id)[0];
+    const free = Math.max(0, 26 - taken()), first = [...waitlisted].sort((a, b) => String(a.registered_at).localeCompare(String(b.registered_at)) || a.id - b.id)[0];
     await expect(sec.locator("#waitlist-offer"), "waitlist offer only when a place is free").toHaveCount(first && free > 0 ? 1 : 0);
     if (waitlisted.length) await expect(cardOf(/^⏳ Waitlist/).locator(free > 0 ? "button:has-text('↑ Promote')" : ".tag:has-text('Slots Full')")).toHaveCount(waitlisted.length);
     // One registration card in detail.
@@ -60,7 +60,7 @@ for (let i = 0; i < 100; i++) {
         await expect(page.locator("#invite-card")).toContainText(email);
       } else await expect(toast).toHaveText(email === "not-an-email" ? "Enter a valid email address" : "That email already belongs to a player — they can sign in and register");
     } else if (act === 2 && pending.length) {
-      const p = pending[0], full = p.membership_type !== "spare" && taken(p.id) >= 25;
+      const p = pending[0], full = p.membership_type !== "spare" && taken(p.id) >= 26;
       await cardOf(/^⏳ Pending Approval/).getByRole("button", { name: "✓ Approve" }).first().click();
       await expect(toast).toHaveText(full ? "Approved (waitlisted — regular slots full)" : "Player approved!");
       const kv = JSON.parse(ctx.state.state["player_approvals"].value);
