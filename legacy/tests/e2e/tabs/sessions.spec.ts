@@ -1,12 +1,12 @@
 // Standings → Sessions: each finished night, court by court, with placement, movement arrow and record, on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, inOrder, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, inOrder, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import { sessionsTab } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Sessions ${String(i + 1).padStart(3, "0")} · ${genLeague(4000 + i, variety(i)).title}`, async () => {
     const L = genLeague(4000 + i, { ...variety(i), dates: ctx.dates });

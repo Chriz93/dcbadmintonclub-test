@@ -1,12 +1,12 @@
 // Standings → Court history: one row per player, one cell per finished night with the court they ended on.
 import { test, expect } from "@playwright/test";
-import { openAs, load, type Ctx } from "./harness";
+import { openAs, closeCtx, load, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import { courtHistory } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Court history ${String(i + 1).padStart(3, "0")} · ${genLeague(6000 + i, variety(i)).title}`, async () => {
     const L = genLeague(6000 + i, { ...variety(i), dates: ctx.dates });

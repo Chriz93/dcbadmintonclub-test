@@ -1,14 +1,21 @@
 // One signed-in page per suite; each case swaps a whole generated league into the mock database and re-renders.
-import { expect, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { installMock, freshState, ORGANIZER, type MockState } from "../mock-supabase";
 import { signIn, unlockOrganizer } from "../helpers";
 import type { League } from "./gen";
 import season from "../../../automation/season.json";
+import fs from "node:fs";
+
+// COVERAGE_DIR=<folder> records which parts of the page ran (Chrome's own coverage), for coverage-report.mjs.
+const COVER = process.env.COVERAGE_DIR;
 
 export type Ctx = { page: Page; state: MockState; dates: string[]; fd: number[]; email: string; prompts: string[] };
 /** A signed-in page. Pass another page's state to have two people share one database (organizer and player). */
 export async function openAs(browser: Browser, who: "admin" | string = "admin", nowMs = Date.parse("2026-09-10T12:00:00-04:00"), shared?: MockState): Promise<Ctx> {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  // Desktop suites use a tall laptop window; the phone project opens the page at that phone's size, with touch.
+  const use = test.info().project.use;
+  const page = await browser.newPage(use.isMobile ? { viewport: use.viewport, userAgent: use.userAgent, deviceScaleFactor: use.deviceScaleFactor, isMobile: true, hasTouch: use.hasTouch } : { viewport: { width: 1280, height: 900 } });
+  if (COVER) await page.coverage.startJSCoverage({ resetOnNavigation: false });
   const state = shared ?? freshState();
   if (!shared) { state.players = []; state.invitations = {}; state.nowMs = nowMs; }
   const email = who === "admin" ? ORGANIZER : who;
@@ -34,6 +41,17 @@ export async function openAs(browser: Browser, who: "admin" | string = "admin", 
 export async function pinSession(page: Page) {
   const ok = await page.evaluate(async () => { if (_refreshing) await _refreshing; if (!_session) return false; _session.expires_at = 4102444800; return true; });
   expect(ok, "still signed in").toBe(true);
+}
+/** Close a suite's page (saving its coverage when COVERAGE_DIR is set). */
+export async function closeCtx(ctx?: Ctx) {
+  if (!ctx) return;
+  if (COVER) {
+    const main = (await ctx.page.coverage.stopJSCoverage()).filter((e) => e.source?.includes("function renderLeaderboard"));
+    fs.mkdirSync(COVER, { recursive: true });
+    if (main[0] && !fs.existsSync(`${COVER}/source.js`)) fs.writeFileSync(`${COVER}/source.js`, main[0].source!);
+    fs.writeFileSync(`${COVER}/cov-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`, JSON.stringify(main.map((e) => e.functions)));
+  }
+  await ctx.page.close();
 }
 /** Another person's page catching up with the database (the 20-second sync, in real use). */
 export async function refresh(ctx: Ctx) {

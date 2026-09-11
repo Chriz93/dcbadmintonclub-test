@@ -14,7 +14,9 @@ export default defineConfig({
     { name: "desktop", testIgnore: /tabs\//, use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", testIgnore: /tabs\//, use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
     // Generated per-tab suites: one signed-in page per file, a different seeded league per case.
-    { name: "tabs", testMatch: /tabs\/.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "tabs", testMatch: /tabs\/.*\.spec\.ts/, testIgnore: /tabs\/phone\//, use: { ...devices["Desktop Chrome"] } },
+    // The player-facing suites again on a phone screen (same leagues, iPhone 13 size, touch).
+    { name: "tabs-phone", testMatch: /tabs\/phone\/.*\.spec\.ts/, use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
   ],
   webServer: {
     command: `python3 -m http.server 8790 --bind 127.0.0.1 --directory "${root}"`,

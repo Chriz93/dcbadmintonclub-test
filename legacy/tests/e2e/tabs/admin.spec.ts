@@ -2,7 +2,7 @@
 // time), the court detail popup from the gym view, and locking the organizer panel on this device — it stays locked
 // until the authenticator code is entered again. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng } from "./gen";
 import { upcoming } from "./oracle";
 import { unlockOrganizer } from "../helpers";
@@ -11,7 +11,7 @@ const PAGES = ["home", "register", "courts", "scores", "standings", "schedule", 
 const TABS: [RegExp, string][] = [[/^👥 Players$/, "a-pl"], [/^📋 Registered/, "a-reg"], [/^📅 Session$/, "a-sess"], [/^📋 Attendance$/, "a-att"], [/^🏟️ Assign$/, "a-assign"], [/^💰 Pay$/, "a-pay"], [/^📣 Announce$/, "a-ann"], [/^🛠 Tools$/, "a-tools"]];
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 14), ...(i % 5 === 1 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
   test(`Admin ${String(i + 1).padStart(3, "0")} · ${genLeague(24000 + i, opts).title}`, async () => {

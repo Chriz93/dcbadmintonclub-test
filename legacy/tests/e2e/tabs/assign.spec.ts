@@ -1,14 +1,14 @@
 // Admin → Assign: the drag-and-drop board — unassigned players, each court's count and open slots, the missing-players
 // warning, dragging a player onto another court or off the courts, and refusing a full court (Court 6 holds five).
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 
 const LIVES: LiveState[] = ["r1-partial", "r2-partial", "r1-done", "none", "r1-partial"];
 let ctx: Ctx;
 // A tall window keeps the whole board on screen: a real drag must not scroll mid-way.
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); await ctx.page.setViewportSize({ width: 1280, height: 3600 }); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 11), live: LIVES[i % 5], ...(i % 4 === 0 ? { regulars: 25, declineRate: 0, absentRate: 0 } : {}) };
   test(`Assign ${String(i + 1).padStart(3, "0")} · ${genLeague(21000 + i, opts).title}`, async () => {

@@ -1,7 +1,7 @@
 // Admin → Pay: collected totals, each player's balance line and ledger, the $14 refund list with Mark refunded, recording
 // payments of every kind (the amount follows the type), rejecting a blank amount and deleting a ledger entry. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type League, type Player } from "./gen";
 import type { MockState } from "../mock-supabase";
 
@@ -35,7 +35,7 @@ function refunds(L: League, pays: Pay[], fd: number[]) {
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 7), hoursBefore: [150, 80, 73, 71, 40, 5][i % 6] };
   test(`Pay ${String(i + 1).padStart(3, "0")} · ${genLeague(17000 + i, opts).title}`, async () => {

@@ -229,3 +229,12 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   announcements, pre-session attendance ignored, and more). The patch replays byte for byte on the previous page.
 - The mock database now sorts like the real API, never reuses ids, and keeps explicit ids.
 - Details, the full defect list, limits and results: `27-generated-tab-test-suites.md`. Cache `dcbc-test-v54`.
+
+## Status — 2026-09-11 (Phase 13: coverage-guided suites, phone runs, stranded-player fix)
+
+- Chrome coverage showed what the 2,800 cases never ran; 1,100 more cases target it: the five player-facing suites on a
+  phone screen (500) and six new suites (600) — including the Tuesday-night path where saving the last court advances
+  the round by itself. 3,900 / 3,900 pass; app coverage 77.5% → 86.2% of lines.
+- Five more defects fixed (p26, p27), the serious one: with 17–20 players attending, rotation could leave a player alone
+  on an empty court for the next round. Now the last occupied court is the bottom court.
+- Details: `27-generated-tab-test-suites.md`, Phase 13. Cache `dcbc-test-v56`.

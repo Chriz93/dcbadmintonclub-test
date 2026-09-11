@@ -2,13 +2,13 @@
 // benching them, marking absent, removing, calling in, adding (new, duplicate, blank, registered, capacity) and
 // re-sorting. With and without a session running. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC } from "./gen";
 import { courtOf } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 9), ...(i % 2 ? { live: "none" as const } : {}), ...(i % 10 === 5 ? { regulars: 25 } : {}) };
   test(`Players ${String(i + 1).padStart(3, "0")} · ${genLeague(19000 + i, opts).title}`, async () => {

@@ -1,14 +1,14 @@
 // Standings → Q&A: the organizer answers, edits and deletes; approved players ask (and cannot moderate); players awaiting
 // approval can read but not ask. Questions and answers are shown as plain text, never as markup. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng } from "./gen";
 
 const PLAYER = "qa.tester@example.invalid";
 const TEXTS = ["Is parking free after 7?", "Can I bring a guest <b>once</b>?", "What if it's a tie & we both reach 21?", "Shuttles: feather or \"nylon\"?", "Où est le gymnase ? 🏸"];
 let admin: Ctx, player: Ctx;
 test.beforeAll(async ({ browser }) => { admin = await openAs(browser); player = await openAs(browser, PLAYER); });
-test.afterAll(async () => { await admin?.page.close(); await player?.page.close(); });
+test.afterAll(async () => { await closeCtx(admin); await closeCtx(player); });
 for (let i = 0; i < 100; i++) {
   const asAdmin = i % 2 === 0, pendingViewer = !asAdmin && i % 8 === 7;
   const opts = { ...variety(i + 5), regulars: 6 + (i % 15), ...(asAdmin ? {} : { viewerEmail: PLAYER, viewerKind: pendingViewer ? ("pending" as const) : ("regular" as const), pending: pendingViewer ? 1 : 0 }) };

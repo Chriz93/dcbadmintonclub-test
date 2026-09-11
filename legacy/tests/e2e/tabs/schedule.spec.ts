@@ -1,12 +1,12 @@
 // Schedule: 28 approved Tuesdays in order, the right one active or done, the six school cancellations, on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import season from "../../../automation/season.json";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   // Cover the whole season: 0 to 27 nights played, with and without a night in progress.
   const opts = { ...variety(i), sessions: i % 28, regulars: i === 0 ? 0 : 8 + (i % 17) };

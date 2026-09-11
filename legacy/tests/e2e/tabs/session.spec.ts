@@ -1,7 +1,7 @@
 // Admin → Session: start, next round, end, reset, cancel, late arrivals, absences and spares, rebalance, cascade and
 // attendance — each checked against the database afterwards, on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts, type League, type SessionRec } from "./gen";
 import { upcoming, courtOf } from "./oracle";
 
@@ -24,7 +24,7 @@ const statsFrom = (sessions: SessionRec[]) => {
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const [kind, extra] = i === 99 ? (["start", { live: "none", sessions: 28 }] as [Kind, Partial<GenOpts>]) : PLAN[i % PLAN.length];
   const opts: GenOpts = { ...variety(i + 2), ...(i % 3 === 0 ? { regulars: 25, spares: 3 } : {}), ...extra };

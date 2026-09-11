@@ -88,3 +88,52 @@ The mock database now orders results the way the real API does (`order=` was ign
 
 Along the way, full runs also exposed timing races. Two were app defects (22 and 23 above); the others were tests
 reading the database before the page had finished saving, and now wait for the save.
+
+## Phase 13 — 1,100 more cases, aimed at what had not run (September 11, 2026)
+
+**How the gaps were found.** The suites can record Chrome's own code coverage (`COVERAGE_DIR=<folder>`, then
+`node legacy/tests/e2e/tabs/coverage-report.mjs <folder> index.html`). Before this phase the 2,800 cases ran 219 of 276
+named functions and 77.5% of the app's code lines (3,341 of 4,310). The rest of the page — 2,779 lines from
+`if(window.location.hash==='#run-tests')` to the end of the script — is an old in-page test runner that only starts
+when the address ends in `#run-tests`; it is not part of the app and is excluded from the app figure.
+
+**New suites.**
+
+| Suite | Cases | What it adds |
+|---|---|---|
+| `phone/home`, `phone/vote`, `phone/register`, `phone/scores`, `phone/courts` | 500 | the player-facing suites again at iPhone 13 size with touch (`tabs-phone` project) |
+| `round-complete` | 100 | the Tuesday-night path: saving the last court (game by game or "Save All") advances the round by itself, or readies the session to end after round 2 |
+| `toss-birds` | 100 | top and bottom ties, the toss popup (Cancel, Redo), the next round moving exactly the chosen player; shuttle hand-out reaching History and Stats |
+| `admin-extras` | 100 | private notes, editing a registration, adding from the court popup, the sync banner, withdrawing an invitation, the present / absent tag |
+| `vote-changes` | 100 | the admin Home list of vote changes (after-deadline and by-admin marks) and an override appearing at the top |
+| `my-season` | 100 | a player's own season card and share image |
+| `season-rollover` | 100 | archiving the season (label rules, refusals) and the full reset, with every tab re-checked |
+
+**Defects found and fixed (patch `legacy/patches/p26_gap_suite_fixes.py`).**
+
+24. The admin-note title showed names like "O&#39;Connor".
+25. My season told a player who declared "paid in full" that the fee was owing, with the e-transfer address; it now says the payment is reported and waiting for the admin.
+26. Stats (and the season PDF) always counted 0 shuttles: they read the per-court hand-out as if it were per player.
+27. Adding a player from the court popup to a full court took them off their own court before refusing.
+28. A player could be stranded alone on an empty court. The bottom player of a court moved down whenever the court was not
+    Court 6 — even into an empty court — so with, say, 6 players (Court 1: 4, Court 2: 2) round 2 had one player alone on
+    Court 2 and one alone on Court 3, and neither could play. It happened every round whenever the turnout left the last
+    occupied court with 2–3 players (17–20 attending, for example); a full 25-player league never showed it. Now a player
+    moves down only if the court below has players — the last occupied court is the bottom court — in the rotation, End
+    Session, the projected next round, the round tracker and the court tally (patch `p27_no_stranded_player.py`; the test
+    rules model follows the same rule).
+
+**Results (after patches p26 and p27).**
+
+| Gate | Result |
+|---|---|
+| All generated suites (`tabs` 3,400 + `tabs-phone` 500) | **3,900 / 3,900 passed** in one run (22.2 min, with coverage recording) |
+| Match night, season and opener (desktop + phone) | 18 passed, 2 skipped by design, two consecutive runs |
+| Automation unit tests | 13 / 13 |
+| SQL rules rehearsal | RULES and PHASE2–PHASE9 pass |
+| Coverage of the app's code | **244 of 281** named functions, **86.2%** of lines (3,717 of 4,313) — up from 219 / 276 and 77.5% |
+
+Still not exercised by any browser test: files the page makes for you (season PDF, waiver export, share and copy
+summaries), phone push notifications, signing out, linking a waiver to another player, promoting from the waitlist, and
+legacy helpers no button reaches any more (`undoRound`, `undoScore`, `saveAssignments`, `changePin`, `toggleMembership`,
+`handleAbsentPlayer`, `startRealtime`).

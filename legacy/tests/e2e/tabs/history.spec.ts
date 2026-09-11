@@ -1,12 +1,12 @@
 // Standings → History: a card per night with rounds and games; opening one shows every game and the moves after each round.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, inOrder, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, inOrder, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import { history } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`History ${String(i + 1).padStart(3, "0")} · ${genLeague(5000 + i, variety(i)).title}`, async () => {
     const L = genLeague(5000 + i, { ...variety(i), dates: ctx.dates });

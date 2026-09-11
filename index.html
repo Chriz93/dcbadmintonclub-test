@@ -918,7 +918,9 @@ const FD=APPROVED_DATES.map(iso=>{const[y,m,d]=iso.split('-').map(Number);return
 const NC=6,NCYC=99,NG=3,MAXG=5; // NG: games per round on a 2–4 player court; MAXG: games on the five-player court
 function courtGames(n){return n===5?5:3;}            // every court plays 3 games, except five players play 5
 function courtTarget(n){return n===5?15:21;}         // five-player games go to 15, everything else to 21
-function courtCap(c){return c===NC?5:4;}             // only Court 6 may hold a fifth player
+function courtCap(c){return c===NC?5:4;}
+// A court's bottom player moves down only into a court that has players (the last occupied court is the bottom court).
+function hasPlayersBelow(c){const a=S.current?.assignments||{};return c<NC&&(a[c+1]||[]).some(id=>S.players.some(p=>p.id===id));}             // only Court 6 may hold a fifth player
 const MAX_ROUNDS_PER_SESSION=2; // Soft policy: each Tuesday session = 2 rounds. Auto-advance stops, prompts admin to end.
 let S={players:[],sessions:[],current:null,announcements:[],lastUndo:null,votes:{},rsvp:{},qaQuestions:[]};
 let adminUnlocked=false;
@@ -1384,7 +1386,7 @@ function renderMySeason(){
   const me=myPlayer();
   if(!me||!me.approved||(me.gamesPlayed===0&&!S.sessions.length)){el.innerHTML='';return;}
   const d=mySeasonData(me);
-  const fee=me.membershipType==='spare'?(d.bal.owed?`Spare fees: $${d.bal.paid} paid${d.bal.due?`, $${d.bal.due} owing`:''}`:'Spare fees: none yet'):(d.bal.due===0?'Season fee paid ✅':`Season fee: $${d.bal.due} owing · e-transfer to ${ORGANIZER_ETRANSFER}`);
+  const fee=me.membershipType==='spare'?(d.bal.owed?`Spare fees: $${d.bal.paid} paid${d.bal.due?`, $${d.bal.due} owing`:''}`:'Spare fees: none yet'):(d.bal.due===0?'Season fee paid ✅':me.declaredPayment==='paid_full'?'Season fee: payment reported — the admin will confirm it':`Season fee: $${d.bal.due} owing · e-transfer to ${ORGANIZER_ETRANSFER}`);
   el.innerHTML=`<div class="card" id="my-season-card"><div class="card-title">📈 My season</div>
     <div class="sgrid" style="margin-top:0;">
       <div class="sbox"><div class="sv">${d.w}–${d.l}</div><div class="sl">Record · ${d.wr}%</div></div>
@@ -1853,7 +1855,7 @@ async function toggleMembership(id,type){
 }
 function openAdminNote(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
-  openModal('📝 Admin Note — '+esc(p.name),`
+  openModal('📝 Admin Note — '+p.name,`
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Private note only visible to admin (e.g. "has knee injury", "may leave early")</div>
     <textarea class="inp" id="admin-note-text" placeholder="Enter private note..." style="min-height:90px;">${esc(p.adminNote||'')}</textarea>
     <button class="btn btn-primary" onclick="saveAdminNote(${id})">💾 Save Note</button>
@@ -2478,7 +2480,7 @@ async function applyRotation(){
     // BOTTOM TIE: only real if wins AND points AND differential all match — and only
     // matters if there's an actual bottom group distinct from the top (otherwise everyone
     // on the court is tied, nobody moves).
-    if(c<NC){
+    if(hasPlayersBelow(c)){
       const bot=courtSorted[courtSorted.length-1];
       const botGroup=courtSorted.filter(s=>s.wins===bot.wins&&s.pts===bot.pts&&s.diff===bot.diff);
       const top=courtSorted[0];
@@ -2530,7 +2532,7 @@ async function applyRotation(){
       if(tossResults[tKey2])return tossResults[tKey2]===a?-1:1;
       return a-b; // final fallback (shouldn't happen once toss is resolved)
     });
-    sorted.forEach((id,i)=>{if(i===0&&c>1)mv[id]='up';else if(i===sorted.length-1&&c<NC)mv[id]='down';else mv[id]='stay';});
+    sorted.forEach((id,i)=>{if(i===0&&c>1)mv[id]='up';else if(i===sorted.length-1&&hasPlayersBelow(c))mv[id]='down';else mv[id]='stay';});
   }
   Object.entries(mv).forEach(([id,m])=>{
     const pid=parseInt(id);let from=null;
@@ -2577,7 +2579,7 @@ async function endSession(){
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>finalMv[id]='stay');continue;}
     const sorted=sortCourtRanking(pids,finalWins,finalPts,finalPtFor,finalPtAgainst,cy,c,S.current.preTosses);
-    sorted.forEach((id,i)=>{if(i===0&&c>1)finalMv[id]='up';else if(i===sorted.length-1&&c<NC)finalMv[id]='down';else finalMv[id]='stay';});
+    sorted.forEach((id,i)=>{if(i===0&&c>1)finalMv[id]='up';else if(i===sorted.length-1&&hasPlayersBelow(c))finalMv[id]='down';else finalMv[id]='stay';});
   }
   // ── Compute finalAssignments EARLY: post-all-rotation state. We use this
   //    both for the player.current_court DB updates (so next session starts
@@ -3091,9 +3093,9 @@ async function quickAddToCourt(court){
   const pid=parseInt(document.getElementById('modal-player-sel')?.value);
   if(!pid)return toast('Select a player','warn');
   const a=S.current.assignments;
+  if((a[court]||[]).filter(id=>id!==pid).length>=courtCap(court))return toast('Court full','warn');   // refuse before moving anyone
   for(let c=1;c<=NC;c++)a[c]=(a[c]||[]).filter(id=>id!==pid);
   if(!a[court])a[court]=[];
-  if(a[court].length>=courtCap(court))return toast('Court full','warn');
   a[court].unshift(pid); // unshift so newly added player appears at top of court
   await setKV('current_session',S.current);
   await loadAll();renderAll();closeModal();toast('Player added to Court '+court,'success');
@@ -3372,7 +3374,7 @@ function computeRoundStatus(){
     const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
     sorted.forEach((id,i)=>{
       if(i===0&&c>1)projectedMv[id]='up';
-      else if(i===sorted.length-1&&c<NC)projectedMv[id]='down';
+      else if(i===sorted.length-1&&hasPlayersBelow(c))projectedMv[id]='down';
       else projectedMv[id]='stay';
     });
   }
@@ -3518,7 +3520,7 @@ function renderRoundTracker(){
       <div style="font-size:11px;font-weight:800;color:${done?'var(--green2)':'var(--muted)'};">C${c} ${done?'✅':'⏳'}</div>
       <div style="font-size:11px;color:var(--muted);">${cs.gamesScored||0}/${cs.numGames} games</div>
       ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;">${c>1?`<span style="color:var(--green2);">↑${esc(winnerP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">👑${esc(winnerP.name.split(' ')[0])}</span>`}</div>`:''}
-      ${done&&loserP?`<div style="font-size:11px;">${c<NC?`<span style="color:var(--red2);">↓${esc(loserP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">⬇️Stay</span>`}</div>`:''}
+      ${done&&loserP?`<div style="font-size:11px;">${hasPlayersBelow(c)?`<span style="color:var(--red2);">↓${esc(loserP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">⬇️Stay</span>`}</div>`:''}
     </div>`;
   }
   html+=`</div>`;
@@ -3541,7 +3543,7 @@ function renderRoundTracker(){
       sorted.forEach((p,i)=>{
         const w=status.wins[p.id]||0;
         const pt=status.pts[p.id]||0;
-        const mvDir=i===0&&c>1?'up':i===sorted.length-1&&c<NC?'down':'stay';
+        const mvDir=i===0&&c>1?'up':i===sorted.length-1&&hasPlayersBelow(c)?'down':'stay';
         const mvIcon=mvDir==='up'?'<span style="color:var(--green2);font-weight:800;"> ↑</span>':mvDir==='down'?'<span style="color:var(--red2);font-weight:800;"> ↓</span>':'';
         const rankBg=i===0?'rgba(39,174,96,0.1)':i===sorted.length-1?'rgba(192,57,43,0.07)':'transparent';
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-radius:5px;background:${rankBg};margin-bottom:2px;">
@@ -3834,7 +3836,7 @@ function renderCourtTally(court){
   const botTossRecord=preT[`${cy}_c${court}_bot`]; // {loserId}
   const allTied=topStat.wins===botStat.wins&&topStat.pts===botStat.pts&&topStat.diff===botStat.diff;
   const hasTopTie=topTiedCount>1&&court>1;
-  const hasBotTie=bottomTiedCount>1&&court<NC&&!allTied;
+  const hasBotTie=bottomTiedCount>1&&hasPlayersBelow(court)&&!allTied;
   const tallyHtml=`<div class="card" style="border-color:var(--teal2);"><div class="card-title">✅ Court ${court} Tally${players.length<4?' (Singles)':''}</div>
     ${sorted.map((p,i)=>{
       const pw=wins[p.id];
@@ -3852,15 +3854,15 @@ function renderCourtTally(court){
         // Clean top (no tie) — only i===0 moves up
         if(i===0&&court>1)return '<span class="tag tg-green" style="margin-left:4px;font-size:11px;">⬆️ Moves to C'+(court-1)+'</span>';
         // Bottom-court bottom player — no down-movement possible
-        if(i===sorted.length-1&&court===NC&&!allTied)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
+        if(i===sorted.length-1&&!hasPlayersBelow(court)&&!allTied)return '<span class="tag tg-gray" style="margin-left:4px;font-size:11px;">📍 Bottom court</span>';
         // Bottom-tie: every player in the tie group shows toss state (any could lose)
-        if(court<NC&&isBotTied){
+        if(hasPlayersBelow(court)&&isBotTied){
           if(botTossRecord&&botTossRecord.loserId===p.id)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">🪙 Lost toss — ⬇️ C'+(court+1)+'</span>';
           if(botTossRecord)return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">🪙 Won toss — Stays C'+court+'</span>';
           return '<span class="tag tg-yellow" style="margin-left:4px;font-size:11px;">🪙 Toss for ↓ C'+(court+1)+'</span>';
         }
         // Clean bottom (no tie) — only i===sorted.length-1 moves down
-        if(i===sorted.length-1&&court<NC&&!allTied)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
+        if(i===sorted.length-1&&hasPlayersBelow(court)&&!allTied)return '<span class="tag tg-red" style="margin-left:4px;font-size:11px;">⬇️ Moves to C'+(court+1)+'</span>';
         return '<span class="tag tg-teal" style="margin-left:4px;font-size:11px;">Stays C'+court+'</span>';
       })();
       return `<div class="lbrow"><div class="lbrank ${i===0?'r1':''}">${i+1}</div>
@@ -4190,7 +4192,7 @@ function renderPlayerStats(){
     const wr=p.gamesPlayed>0?Math.round(p.seasonWins/p.gamesPlayed*100):0;
     let totalBirds=0;
     S.sessions.forEach(s=>{
-      Object.values(s.birdDistribution||{}).forEach(bd=>{if(bd.playerId===p.id)totalBirds+=bd.birdsReceived;});
+      Object.values(s.birdDistribution||{}).forEach(bd=>(bd.recipients||[]).forEach(r=>{if(r.playerId===p.id)totalBirds+=r.birdsReceived||0;}));
     });
     const sd=streakData[p.id]||{};
     const awards=[];
@@ -4936,7 +4938,7 @@ function generateSeasonPDF(){
     doc.setFont(undefined,'normal');doc.setFontSize(10);doc.setTextColor(50,50,50);
     const totalSess=S.sessions.length;
     let totalBirds=0;
-    S.sessions.forEach(s=>Object.values(s.birdDistribution||{}).forEach(b=>totalBirds+=b.birdsReceived||0));
+    S.sessions.forEach(s=>Object.values(s.birdDistribution||{}).forEach(b=>totalBirds+=b.total||0));
     const totalGames=S.players.reduce((s,p)=>s+(p.gamesPlayed||0),0);
     doc.text(`Sessions Played: ${totalSess}/${DATES.length}`,mg,y);y+=lh;
     doc.text(`Total Games Played: ${totalGames}`,mg,y);y+=lh;
@@ -4991,7 +4993,7 @@ function generateSeasonPDF(){
       doc.setFont(undefined,'normal');doc.setFontSize(9);doc.setTextColor(50,50,50);
       S.sessions.forEach(s=>{
         if(y>270){doc.addPage();y=mg;}
-        let birds=0;Object.values(s.birdDistribution||{}).forEach(b=>birds+=b.birdsReceived||0);
+        let birds=0;Object.values(s.birdDistribution||{}).forEach(b=>birds+=b.total||0);
         doc.text(`Session ${s.number} — ${s.date} · ${s.movements?.length||0} rounds · 🪶 ${birds} birds`,mg,y);y+=lh;
       });
     }

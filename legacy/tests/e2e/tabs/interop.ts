@@ -2,7 +2,7 @@
 // league afterwards, each tab re-derived from the database by the independent oracles. Ten journeys, repeated over
 // generated leagues; the five interop-*.spec.ts files each run 100 of the 500 cases.
 import { test, expect } from "@playwright/test";
-import { openAs, load, refresh, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, refresh, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts, type League, type Player } from "./gen";
 import { upcoming } from "./oracle";
 import { fromDb, kvOf, checkAllTabs, checkCourts } from "./checks";
@@ -21,7 +21,7 @@ const money = (L: League, id: number) => L.payments.filter((x) => x.player_id ==
 export function defineInterop(from: number, to: number) {
   let admin: Ctx, player: Ctx;
   test.beforeAll(async ({ browser }) => { admin = await openAs(browser); player = await openAs(browser, PLAYER, undefined, admin.state); });
-  test.afterAll(async () => { await admin?.page.close(); await player?.page.close(); });
+  test.afterAll(async () => { await closeCtx(admin); await closeCtx(player); });
   for (let i = from; i < to; i++) {
     const [journey, extra] = JOURNEYS[i % JOURNEYS.length];
     const withPlayer = journey === "qa" || journey === "announce" || journey === "vote";

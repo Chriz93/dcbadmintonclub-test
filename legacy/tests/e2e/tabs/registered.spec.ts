@@ -2,12 +2,12 @@
 // invitations (valid, invalid, already a player), approve (including the full-capacity waitlist path), reject, promote from
 // the waitlist, and assigning a court from the card. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type Player } from "./gen";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 8), pending: 1 + (i % 3), ...(i % 4 === 0 ? { regulars: 25 } : {}) };
   test(`Registered ${String(i + 1).padStart(3, "0")} · ${genLeague(18000 + i, opts).title}`, async () => {

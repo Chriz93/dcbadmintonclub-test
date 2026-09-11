@@ -1,13 +1,13 @@
 // The Standings page itself: every tab button shows its own section and only that one, the banner and the subtitle.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng } from "./gen";
 import { pos } from "./oracle";
 
 const TABS: [string, string][] = [["Leaders", "lb"], ["Rankings", "rank"], ["Stats", "pstats"], ["Sessions", "sessstand"], ["History", "hist"], ["Court history", "heat"], ["RSVP", "vote"], ["Q&A", "qa"]];
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Standings ${String(i + 1).padStart(3, "0")} · ${genLeague(7000 + i, variety(i)).title}`, async () => {
     const L = genLeague(7000 + i, { ...variety(i), dates: ctx.dates });

@@ -1,14 +1,14 @@
 // Admin → Announce: list, post (every type, with validation and plain-text rendering), delete, and the Home page following
 // along — on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, type Ctx } from "./harness";
+import { openAs, closeCtx, load, type Ctx } from "./harness";
 import { genLeague, variety, rng } from "./gen";
 
 const TYPES = ["info", "warn", "success"] as const;
 const TITLES = ["Gym change", "No play <next> week", "Bring \"indoor\" shoes", "Tournament & social 🏸", "Rappel : paiement"];
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Announce ${String(i + 1).padStart(3, "0")} · ${genLeague(16000 + i, variety(i + 6)).title}`, async () => {
     const L = genLeague(16000 + i, { ...variety(i + 6), dates: ctx.dates });

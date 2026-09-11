@@ -1,12 +1,12 @@
 // Stats: one card per player with record, win rate, best court, streaks, court climb and absences; the awards banner.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import { stats } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Stats ${String(i + 1).padStart(3, "0")} · ${genLeague(3000 + i, variety(i)).title}`, async () => {
     const L = genLeague(3000 + i, { ...variety(i), dates: ctx.dates });

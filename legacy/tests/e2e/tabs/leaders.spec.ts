@@ -1,12 +1,12 @@
 // Leaders: order, court label, record, win rate, badges, live results and the per-player history, on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 import { leaders } from "./oracle";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   test(`Leaders ${String(i + 1).padStart(3, "0")} · ${genLeague(1000 + i, variety(i)).title}`, async () => {
     const L = genLeague(1000 + i, { ...variety(i), dates: ctx.dates });

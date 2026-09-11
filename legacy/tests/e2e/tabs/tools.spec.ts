@@ -3,7 +3,7 @@
 // JSON export. 100 leagues.
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type LiveState, type SessionRec } from "./gen";
 import { ORGANIZER } from "../mock-supabase";
 
@@ -21,7 +21,7 @@ const statsFrom = (sessions: SessionRec[]) => {
 };
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 12), live: LIVES[i % LIVES.length] };
   test(`Tools ${String(i + 1).padStart(3, "0")} · ${genLeague(22000 + i, opts).title}`, async () => {

@@ -72,7 +72,8 @@ export class Model {
       const { top, bottom, allTied } = this.rank(r, ids);
       for (const id of ids) mv[id] = "stay";
       if (c > 1) mv[top] = "up";
-      if (c < NC && !(allTied && ids.length > 1 && top === bottom)) { if (bottom !== top || c === 1) mv[bottom] = "down"; }
+      // The bottom player moves down only into a court that has players: the last occupied court is the bottom court.
+      if (c < NC && this.lineup[c + 1].length > 0 && !(allTied && ids.length > 1 && top === bottom)) { if (bottom !== top || c === 1) mv[bottom] = "down"; }
     }
     const na: number[][] = Array.from({ length: NC + 1 }, () => []);
     for (const id of Object.keys(mv).map(Number).sort((a, b) => a - b)) { // the app walks the map in ascending id order

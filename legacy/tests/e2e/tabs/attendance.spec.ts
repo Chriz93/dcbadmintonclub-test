@@ -1,14 +1,14 @@
 // Admin → Attendance: tonight's counts, each court with votes and open slots, the spare pool, excused decliners, confirmed
 // spares, past sessions (expand to see names), and marking present / absent / saving — before and during a session.
 import { test, expect } from "@playwright/test";
-import { openAs, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
 
 const LIVES: LiveState[] = ["none", "r1-partial", "r2-partial", "r1-done"];
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
-test.afterAll(async () => { await ctx?.page.close(); });
+test.afterAll(async () => { await closeCtx(ctx); });
 for (let i = 0; i < 100; i++) {
   const opts = { ...variety(i + 10), live: LIVES[i % 4], absentRate: 0.4, declineRate: 0.2 };
   test(`Attendance ${String(i + 1).padStart(3, "0")} · ${genLeague(20000 + i, opts).title}`, async () => {

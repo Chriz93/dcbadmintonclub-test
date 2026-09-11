@@ -501,6 +501,8 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
       await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 6 + i] : [21, 11 + i])) as [number, number][]);
     }
     await expect.poll(() => page.evaluate(() => S.current.completed === true), { timeout: 20000 }).toBe(true);
+    // The final round's step settles (statistics saved) before the organizer sees it on the Undo button.
+    await expect(page.locator("#undo-label")).toContainText("Finish round 2", { timeout: 20000 });
     const before = JSON.stringify(state.players.map((p) => [p.id, p.current_court, p.highest_court, p.season_wins, p.season_losses, p.games_played]));
     await page.evaluate(() => endSession());
     await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 20000 }).toBe(1);
