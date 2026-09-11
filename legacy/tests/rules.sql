@@ -321,3 +321,27 @@ do $$ begin
 end $$;
 reset role;
 select 'PHASE9 RULES PASS' as result;
+
+-- ═══ PHASE10: instant reminders (L14) — only the organizer (or the database timer) can start the job ═══
+\i legacy/migrations/L14_instant_reminders.sql
+set role anon;
+do $$ begin
+ begin perform public.dispatch_reminder_job('x'); raise exception 'anon started the job'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"test-player-01@example.invalid"}',false);
+do $$ begin
+ begin perform public.dispatch_reminder_job('x'); raise exception 'a player started the job'; exception when raise_exception then if sqlerrm not like 'Organizer verification required%' then raise; end if; end;
+end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare r jsonb; begin
+ r := public.dispatch_reminder_job('smoke');
+ if (r->>'dispatched')::boolean then raise exception 'dispatched without a token: %', r; end if;
+ if coalesce(r->>'reason','') = '' then raise exception 'no reason given: %', r; end if;
+end $$;
+reset role; select set_config('request.jwt.claim.sub','',false); select set_config('request.jwt.claims','{}',false);
+do $$ declare r jsonb; begin
+ r := public.dispatch_reminder_job('timer');
+ if (r->>'dispatched')::boolean or coalesce(r->>'reason','')='' then raise exception 'timer path wrong: %', r; end if;
+end $$;
+select 'PHASE10 RULES PASS' as result;

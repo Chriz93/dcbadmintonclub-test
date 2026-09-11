@@ -765,7 +765,7 @@ body.has-undo{padding-bottom:140px;}
       </div>
       <div class="card" id="reminder-tools-card">
         <div class="card-title">✉️ Email reminders</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">A scheduled check runs through the day. GitHub often starts it late, so allow up to a couple of hours. These buttons ask it to act on its next check instead of waiting for the weekly window.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Reminders go out automatically on a timer every 10 minutes during each voting window. These buttons send straight away; the result shows below within about a minute.</div>
         <div id="reminder-status" style="font-size:12px;margin-bottom:10px;"></div>
         <button class="btn btn-ghost" onclick="requestReminderRun('smoke')">📧 Send a test email to me</button>
         <button class="btn btn-primary" onclick="requestReminderRun('vote')">🔔 Send vote reminders now</button>
@@ -1691,16 +1691,27 @@ async function requestReminderRun(kind){
   if(kind==='vote'&&!confirm(`Send vote reminders for Session ${n} to everyone who has not answered?\n\nWhile the league is in test mode these go to the league inbox, not to players.`))return;
   try{
     await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail(),to:myEmail()});
+    const before=S.reminderLastRun&&S.reminderLastRun.at;
+    let d=null;try{d=await rpc('dispatch_reminder_job',{p_reason:kind});}catch(e){d={dispatched:false,reason:e.message};}
     await loadAll();renderAll();
-    toast(kind==='smoke'?`Test email queued for ${myEmail()} — sent on the next scheduled check (usually within an hour or two)`:`Reminders for Session ${n} queued — sent on the next scheduled check (usually within an hour or two)`,'success');
-  }catch(e){toast('Not queued: '+e.message,'error');}
+    if(!d||!d.dispatched){toast(`Queued — ${d&&d.reason?d.reason:'instant sending is not set up'}. It goes out on the next scheduled check.`,'warn');return;}
+    toast(kind==='smoke'?`Sending the test email to ${myEmail()} now…`:`Sending reminders for Session ${n} now…`,'success');
+    // The job reports back through reminder_last_run; watch for it for up to two minutes.
+    for(let i=0;i<24;i++){
+      await new Promise(r=>setTimeout(r,5000));
+      await loadAll();renderReminderTools();
+      const last=S.reminderLastRun;
+      if(last&&last.at&&last.at!==before){renderAll();toast(`✅ Done — ${last.sent||0} email${last.sent===1?'':'s'} sent${kind==='smoke'?' (check '+myEmail()+')':''}`,'success');return;}
+    }
+    toast('Still sending — the status below updates when it is done','info');
+  }catch(e){toast('Not sent: '+e.message,'error');}
 }
 function renderReminderTools(){
   const el=document.getElementById('reminder-status');if(!el)return;
   const req=S.reminderRequest,last=S.reminderLastRun;
   const fmt=x=>{const d=new Date(x);return isNaN(d)?String(x):d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
   let html='';
-  if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — waiting for the next scheduled check (usually within an hour or two).</div>`;
+  if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — sending now; this line clears when it is done.</div>`;
   if(last&&last.at){
     const mode=last.mode==='live'?'<span style="color:var(--green2);">live — players receive these</span>':last.mode==='test-inbox'?'<span style="color:var(--yellow2);">test — everything goes to the league inbox</span>':'<span style="color:var(--muted);">dry run — nothing is sent</span>';
     html+=`<div id="reminder-last">Last check <strong>${fmt(last.at)}</strong> · ${mode}<br>${last.sent||0} email${last.sent===1?'':'s'} sent${last.planned!==undefined?` of ${last.planned} planned`:''}${last.note?`<br><span style="color:var(--muted);">${esc(last.note)}</span>`:''}</div>`;

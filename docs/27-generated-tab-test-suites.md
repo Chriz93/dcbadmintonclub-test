@@ -137,3 +137,18 @@ Still not exercised by any browser test: files the page makes for you (season PD
 summaries), phone push notifications, signing out, linking a waiver to another player, promoting from the waitlist, and
 legacy helpers no button reaches any more (`undoRound`, `undoScore`, `saveAssignments`, `changePin`, `toggleMembership`,
 `handleAbsentPlayer`, `startRealtime`).
+
+## Instant email (September 11, 2026) — migration L14, patch p28
+
+GitHub's own timer for the reminder job ("every 10 minutes") actually started it 2–5 hours apart, and the Tools buttons
+only queued a request for it. Now the database starts the job through GitHub's API:
+
+- `public.dispatch_reminder_job()` (organizer only, or the database's own timer) posts a `workflow_dispatch` for
+  `legacy-reminders.yml`, using a fine-grained GitHub token kept in Supabase Vault as `github_dispatch_token`.
+- A Supabase timer (`pg_cron`, job `maplewood-reminders`) calls it every 10 minutes, on time.
+- Tools → "Send a test email to me" / "Send vote reminders now" start the job at once and show "✅ Done — N emails
+  sent" when it reports back (a manual start took 14 seconds end to end). Without the token they fall back to the
+  timer and say so.
+
+Rehearsal PHASE10 proves only the organizer or the timer can start the job; the Tools suite (100 cases) runs against
+the new behaviour. L14 is included in `PROD_2026-27.sql`; production needs the same Vault secret.

@@ -78,10 +78,13 @@ for (let i = 0; i < 100; i++) {
     } else if (act === 2 || act === 3) {
       const kind = act === 2 ? "smoke" : "vote";
       await tools.getByRole("button", { name: kind === "smoke" ? "📧 Send a test email to me" : "🔔 Send vote reminders now" }).click();
-      await expect(toast).toHaveText(kind === "smoke" ? `Test email queued for ${ORGANIZER} — sent on the next scheduled check (usually within an hour or two)` : `Reminders for Session ${U} queued — sent on the next scheduled check (usually within an hour or two)`);
-      const req = kv("reminder_request");
+      await expect(toast).toHaveText(kind === "smoke" ? `Sending the test email to ${ORGANIZER} now…` : `Sending reminders for Session ${U} now…`);
+      const req = JSON.parse(ctx.state.audit.filter((x) => x.action === "dispatch").at(-1)!.subject!);
       expect({ kind: req.kind, session: req.session, by: req.by, to: req.to, at: req.at }).toEqual({ kind, session: U, by: ORGANIZER, to: ORGANIZER, at: new Date(L.nowMs).toISOString() });
-      await expect(page.locator("#reminder-pending")).toHaveText(`⏳ ${kind === "smoke" ? "Test email" : "Vote reminders"} requested ${await fmt(L.nowMs)} — waiting for the next scheduled check (usually within an hour or two).`);
+      const n = kind === "smoke" ? 1 : 0;
+      await expect(toast, "the result comes back on screen").toHaveText(`✅ Done — ${n} email${n === 1 ? "" : "s"} sent${kind === "smoke" ? ` (check ${ORGANIZER})` : ""}`, { timeout: 20000 });
+      await expect(page.locator("#reminder-pending")).toHaveCount(0);
+      await expect(page.locator("#reminder-last")).toContainText(`${n} email${n === 1 ? "" : "s"} sent`);
     } else {
       const label = `Before case ${i + 1} — “test” <snap>`;
       await expect(page.locator("#snap-list")).toContainText('No snapshots yet. Click "📸 Save Snapshot" above to create one.');

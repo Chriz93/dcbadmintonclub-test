@@ -238,3 +238,8 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 - Five more defects fixed (p26, p27), the serious one: with 17–20 players attending, rotation could leave a player alone
   on an empty court for the next round. Now the last occupied court is the bottom court.
 - Details: `27-generated-tab-test-suites.md`, Phase 13. Cache `dcbc-test-v56`.
+
+## Status — 2026-09-11 (instant email)
+
+- Tools email buttons now send at once and timed reminders go out on time (L14 + p28): the database starts the GitHub
+  job itself; needs the Vault secret `github_dispatch_token` (TEST now, production at go-live). Cache `dcbc-test-v57`.

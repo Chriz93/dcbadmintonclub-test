@@ -250,6 +250,18 @@ export async function installMock(page: Page, s: MockState) {
         s.audit.push({ action: "stats.rebuilt" });
         return json(200, { players_changed: n });
       }
+      if (fn === "dispatch_reminder_job") {
+        if (!admin) return deny("Organizer verification required");
+        // The real job runs on GitHub; here it finishes a moment later and reports back the way the job does.
+        const req = s.state["reminder_request"] ? JSON.parse(s.state["reminder_request"].value) : null;
+        s.audit.push({ action: "dispatch", subject: JSON.stringify(req) });
+        setTimeout(() => {
+          const sent = req?.kind === "smoke" ? 1 : 0;
+          s.state["reminder_last_run"] = { value: JSON.stringify({ at: new Date((s.nowMs ?? Date.now()) + 30000).toISOString(), mode: "test-inbox", sent, planned: sent, note: req?.kind === "smoke" ? `Test email delivered to ${req.to}.` : "Vote reminders checked." }), version: (s.state["reminder_last_run"]?.version || 0) + 1 };
+          delete s.state["reminder_request"];
+        }, 800);
+        return json(200, { dispatched: true, request_id: 1, reason: a.p_reason });
+      }
       if (fn === "set_email_reminders") { const p = s.players.find((x) => x.id === me); if (!p) return deny("No player record"); p.email_reminders = !!a.p_on; return json(200, null); }
       if (fn === "record_payment") {
         if (!admin) return deny("Organizer verification required");
