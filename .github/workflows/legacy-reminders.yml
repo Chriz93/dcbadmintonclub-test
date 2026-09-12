@@ -47,9 +47,9 @@ jobs:
         if: steps.gate.outputs.ready == 'true'
         env:
           TZ: America/Toronto
-          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SITE_URL: https://chriz93.github.io/dcbadmintonclub-test/
+          SITE_URL: https://chriz93.github.io/dcbadmintonclub/
           DELIVERY_MODE: ${{ vars.LEGACY_DELIVERY_MODE || 'dry-run' }}
           ALLOW_REAL_RECIPIENTS: ${{ vars.ALLOW_REAL_RECIPIENTS || 'false' }}
           GMAIL_USER: maplewoodbadmintonleague@gmail.com

@@ -24,7 +24,7 @@ jobs:
       - name: Export
         if: steps.gate.outputs.ready == 'true'
         env:
-          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_DIR: backup
         run: node legacy/automation/export-backup.mjs
