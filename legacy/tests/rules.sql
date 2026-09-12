@@ -356,3 +356,14 @@ do $$ declare victim bigint; begin
 end $$;
 reset role;
 select 'PHASE11 RULES PASS' as result;
+
+-- ═══ PHASE12: parity (L16) — production's exact table layout, the same undo_last text, the job key limited to its two functions ═══
+\i legacy/migrations/L16_parity.sql
+do $$ begin
+ if exists(select 1 from information_schema.columns where table_schema='public' and table_name='app_state' and column_name='id') then raise exception 'app_state still has an id column'; end if;
+ if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='players' and column_name='id' and is_identity='YES' and identity_generation='ALWAYS') then raise exception 'players.id is not an identity'; end if;
+ if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='announcements' and column_name='title') then raise exception 'announcements has no title'; end if;
+ if has_function_privilege('service_role','public.set_state(text,text,int)','execute') then raise exception 'job key can still run set_state'; end if;
+ if not has_function_privilege('service_role','public.reminder_targets(int)','execute') or not has_function_privilege('service_role','public.dispatch_reminder_job(text)','execute') then raise exception 'job key lost a function it needs'; end if;
+end $$;
+select 'PHASE12 RULES PASS' as result;
