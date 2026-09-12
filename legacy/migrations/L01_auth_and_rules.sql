@@ -3,6 +3,9 @@
 begin;
 
 -- Columns the running app already reads/writes but the original setup never created.
+-- (Production's players table also lacks no_show_count and membership_type: the old site's writes to them failed silently.)
+alter table public.players add column if not exists no_show_count int not null default 0;
+alter table public.players add column if not exists membership_type text not null default 'regular';
 alter table public.players add column if not exists approved boolean not null default true;
 alter table public.players add column if not exists waitlisted boolean not null default false;
 alter table public.players add column if not exists registered_at timestamptz;

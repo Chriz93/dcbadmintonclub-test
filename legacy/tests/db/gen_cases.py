@@ -52,7 +52,7 @@ fx += ["end $f$;",
        f"insert into public.payments(player_id,kind,amount) values({ID('P1')},'season',400),({ID('S1')},'spare',20);",
        f"insert into public.push_subscriptions(player_id,endpoint,p256dh,auth) values({ID('P1')},'https://push.example.invalid/p1','k','a');",
        f"insert into public.questions(player_id,asker,question) values({ID('P1')},'Dee Bee One','Is there parking?');",
-       "insert into public.announcements(content) values('db fixture notice');",
+       "insert into public.announcements(type,title,body) values('info','db fixture','notice');",
        f"insert into public.rsvps(session_number,player_id,response) values(25,{ID('P1')},'coming'),(25,{ID('P2')},'coming');",
        f"insert into public.reminder_log(session_number,player_id,kind) values(1,{ID('P2')},'vote');"]
 (HERE / "fixtures.sql").write_text("\n".join(fx) + "\n")
@@ -127,7 +127,7 @@ def can_write(op, t, who, rule):
 ADMIN_ALL = {t: (lambda k: (lambda w: total(k) if w == "ORG2" else 0))(TOT[t]) for t in TABLES}
 INSERTS = [
     ("a player", "players", "insert into public.players(name,email) values('Zed Insert','zed@example.invalid')", {"ORG2"}),
-    ("an announcement", "announcements", "insert into public.announcements(content) values('x')", {"ORG2"}),
+    ("an announcement", "announcements", "insert into public.announcements(type,title,body) values('info','x','x')", {"ORG2"}),
     ("own question", "questions", "insert into public.questions(player_id,asker,question) values(public.my_player_id(),'me','Where do we park?')", {"P1", "S1"}),
     ("question as someone else", "questions", f"insert into public.questions(player_id,asker,question) values({ID('P2')},'me','q?')", set()),
     ("an invitation", "invitations", "insert into public.invitations(email) values('new.one@example.invalid')", {"ORG2"}),
@@ -151,7 +151,7 @@ for label, t, stmt, rule in INSERTS:
 UPDATES = [
     ("another player", "players", f"update public.players set admin_note=admin_note where id={ID('P2')}", lambda w: 1 if w == "ORG2" else 0),
     ("own player row", "players", "update public.players set season_wins=99 where id=public.my_player_id()", lambda w: 0),
-    ("announcements", "announcements", "update public.announcements set content=content", ADMIN_ALL["announcements"]),
+    ("announcements", "announcements", "update public.announcements set title=title", ADMIN_ALL["announcements"]),
     ("questions", "questions", "update public.questions set answer='yes'", ADMIN_ALL["questions"]),
     ("invitations", "invitations", "update public.invitations set note=note", ADMIN_ALL["invitations"]),
     ("own vote directly", "rsvps", "update public.rsvps set response='notcoming' where session_number=25 and player_id=public.my_player_id()", None),

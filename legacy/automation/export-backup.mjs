@@ -7,7 +7,7 @@ const base = need("SUPABASE_URL").replace(/\/$/, ""), key = need("SUPABASE_SERVI
 const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
 // Every league table, with the column that gives each one a stable paging order (not all have an id).
 const TABLES = {
-  players: "id", app_state: "id", announcements: "id", questions: "id", audit_log: "id",
+  players: "id", app_state: "key", announcements: "id", questions: "id", audit_log: "id",
   reminder_log: "id", rsvp_log: "id", payments: "id", payments_archive: "id", push_subscriptions: "id",
   rsvps: "session_number,player_id", invitations: "email", app_admins: "user_id", season_dates: "session_number",
 };

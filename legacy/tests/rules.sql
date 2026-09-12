@@ -5,10 +5,10 @@ create table auth.users(id uuid primary key,email text,email_confirmed_at timest
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
 grant usage on schema auth to authenticated,anon; grant execute on all functions in schema auth to authenticated,anon;
--- Legacy tables exactly as production created them (plus the twelve anonymous policies).
-create table public.players(id bigint generated always as identity primary key,name text,email text,phone text,emergency text,medical text,sig text,waiver_signed boolean,paid boolean,current_court int,highest_court int,season_wins int,season_losses int,games_played int,no_show_count int,membership_type text,created_at timestamptz default now());
-create table public.announcements(id bigint generated always as identity primary key,content text,created_at timestamptz default now());
-create table public.app_state(id bigint generated always as identity primary key,key text,value text,created_at timestamptz default now());
+-- Legacy tables exactly as production has them (checked against production on September 11, 2026), plus the anonymous policies.
+create table public.players(id bigint generated always as identity primary key,name text not null,email text,phone text,emergency text,medical text,sig text,waiver_signed boolean default false,paid boolean default false,current_court int default 3,highest_court int default 3,season_wins int default 0,season_losses int default 0,games_played int default 0,created_at timestamptz default now());
+create table public.announcements(id bigint generated always as identity primary key,type text default 'info',title text,body text,created_at timestamptz default now());
+create table public.app_state(key text primary key,value text,created_at timestamptz default now(),updated_at timestamptz default now());
 alter table public.players enable row level security; alter table public.announcements enable row level security; alter table public.app_state enable row level security;
 do $$ declare t text; begin foreach t in array array['players','announcements','app_state'] loop
  execute format('create policy "anon read %1$s" on public.%1$I for select to anon using(true)',t);
@@ -18,9 +18,9 @@ do $$ declare t text; begin foreach t in array array['players','announcements','
 end loop; end $$;
 grant all on all tables in schema public to anon; grant usage on schema public to anon;
 insert into auth.users values('a0000000-0000-0000-0000-000000000001','christygeorge993@gmail.com',now()),('a0000000-0000-0000-0000-000000000002','alice@example.invalid',now()),('a0000000-0000-0000-0000-000000000003','christygeorge993+spare@gmail.com',now()),('a0000000-0000-0000-0000-000000000004','stranger@example.invalid',now());
-insert into public.players(name,email,phone,emergency,medical,sig,waiver_signed,paid,current_court,highest_court,season_wins,season_losses,games_played,no_show_count,membership_type) values
- ('Alice Real','alice@example.invalid','613-555-0001','Bob 613','asthma','data:sig',true,true,1,1,10,2,12,0,'regular'),
- ('Carl Real','carl@example.invalid','613-555-0002','Dee 613','','data:sig',true,true,2,1,5,7,12,1,'regular');
+insert into public.players(name,email,phone,emergency,medical,sig,waiver_signed,paid,current_court,highest_court,season_wins,season_losses,games_played) values
+ ('Alice Real','alice@example.invalid','613-555-0001','Bob 613','asthma','data:sig',true,true,1,1,10,2,12),
+ ('Carl Real','carl@example.invalid','613-555-0002','Dee 613','','data:sig',true,true,2,1,5,7,12);
 insert into public.app_state(key,value) values('current_session','{"number":3,"playerNames":{"1":"Alice Real","2":"Carl Real"}}'),('admin_pin','"1234"'),('invite_code','"MAPLE2026"'),('snapshot_2026','{"players":[{"name":"Alice Real","medical":"asthma"}]}'),('completed_sessions','[{"id":1,"playerNames":{"1":"Alice Real"}}]');
 create schema upgrade_backup_20260906; create table upgrade_backup_20260906.players as table public.players;
 

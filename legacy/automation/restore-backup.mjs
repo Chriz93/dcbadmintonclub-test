@@ -11,7 +11,7 @@ if (!rows.length) { console.log(`-- ${table}: no rows in backup`); process.exit(
 const cols = Object.keys(rows[0]);
 const lit = (v) => v === null || v === undefined ? "null" : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "true" : "false") : typeof v === "object" ? `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb` : `'${String(v).replace(/'/g, "''")}'`;
 // Each table's own key (not every table has an id).
-const KEYS = { rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"] };
+const KEYS = { app_state: ["key"], rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"] };
 const key = KEYS[table] || ["id"];
 const updates = cols.filter((c) => !key.includes(c)).map((c) => `${c}=excluded.${c}`).join(",");
 console.log(`-- restore ${table}: ${rows.length} rows from ${file} (exported ${data.exported_at})`);
