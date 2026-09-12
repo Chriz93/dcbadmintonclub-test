@@ -33,7 +33,8 @@ create table backup_20260911.announcements as table public.announcements;
 select (select count(*) from public.players) live_players, (select count(*) from backup_20260911.players) backed_up;
 ```
 
-The two counts must match. Also download Database → Backups → latest.
+The two counts must match. Nothing to download: this project's backups cannot be downloaded, Supabase keeps its own
+daily backups (Database → Backups, restorable from there), and this copy stays inside the database for the rollback.
 
 ## C. Switch over (10 min — the old site stops working at C2, so do C2 and C3 back to back)
 
@@ -41,7 +42,7 @@ The two counts must match. Also download Database → Backups → latest.
    the command history):
 
    ```bash
-   cd /Users/christygeorge/dcbadmintonclub-test && read -rs -p "Production publishable key: " K && echo && python3 legacy/scripts/build-production.py --key "$K" --out ../dcbadmintonclub && unset K
+   cd /Users/christygeorge/dcbadmintonclub-test && python3 legacy/scripts/build-production.py --out ../dcbadmintonclub
    ```
 
 2. Production SQL editor: paste the whole of `legacy/migrations/PROD_2026-27.sql` and run it. It never deletes
