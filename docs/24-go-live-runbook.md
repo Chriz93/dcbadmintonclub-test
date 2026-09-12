@@ -62,9 +62,9 @@ daily backups (Database → Backups, restorable from there), and this copy stays
 2. Production SQL editor: run `legacy/migrations/P00_organizer.sql` (must print `ORGANIZER OK`), then
    `legacy/migrations/verify.sql` (every row `OK`).
 3. **you** Reload, open Admin, scan the QR code with your authenticator, enter the code.
-4. **you** Last season's final night (Session 8, May 26) was never ended, so first Admin → Session → **End & Save
-   Session**: it goes into History with its scores. Then Admin → Tools → Start new season, label `2025-26`. Last
-   season's results move into History and every player is asked to register again.
+4. Fresh start instead of a season rollover (decided September 11): `legacy/migrations/R01_fresh_start.sql` ran on
+   production and on TEST. No earlier-season data is kept (sessions, scores, standings, votes, snapshots, approvals,
+   payments, logs); the player list stays and everyone registers again. Nothing to do in the app.
 5. **you** Admin → Registered → Invite a player, for anyone new this season. Returning players just sign in with the
    email already on file.
 6. **you** As registrations arrive: approve them, then seed courts (Admin → Players).

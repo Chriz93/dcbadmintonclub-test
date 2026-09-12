@@ -258,3 +258,12 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
 - Coin toss (p33): the app now tosses the coin for players still tied on wins, points and point difference — same
   result on every phone, drawn from the night's start time, cannot be redrawn; the hand-recorded toss is gone.
   Cache `dcbc-test-v60`.
+
+## Status — 2026-09-11 (production live)
+
+- Production runs the new site (https://chriz93.github.io/dcbadmintonclub/, cache `dcbc-v40`) on the updated database
+  (`verify.sql` 42/42, organizer set). Fresh start: no earlier-season data kept on production or TEST (R01).
+- TEST and production are the same code and the same database structure (L16; the only difference is a Supabase
+  helper on production). Details and what production taught us: `27-generated-tab-test-suites.md`.
+- Still to do: organizer authenticator, invitations, smoke test, jobs pointed at production with the production key
+  and Vault token, test email, then real reminders (runbook section E).

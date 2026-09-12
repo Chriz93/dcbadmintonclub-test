@@ -241,3 +241,35 @@ hand; that popup and its Redo are gone.
 - **Results.** All generated suites 3,905 / 3,905 (desktop and phone); match night, season and opener 18 passed,
   2 skipped by design — the ten-session season agrees with the rules model's own toss round by round. p33 applied to the
   previous commit reproduces `index.html` exactly.
+
+## Production go-live, fresh start and TEST = production (September 11, 2026)
+
+**What production taught us.** The first run of `PROD_2026-27.sql` on production stopped at "column no_show_count does
+not exist" and rolled back, changing nothing: production's original tables were never the ones the rehearsal assumed
+(players lacked `no_show_count` and `membership_type`; `app_state` is keyed by `key` with no `id`; announcements have
+`type`/`title`/`body`). Fixes: L01 adds the two columns first; the rehearsal (`rules.sql`) now builds the legacy tables
+exactly as production has them; backups key `app_state` on `key`. A dry run (`PROD_DRYRUN.sql`, built by
+`build-prod-dryrun.py`: the whole update in one transaction that always ends in an error) proved the update on
+production's real data before the real run. Also found and fixed on the way: the organizer script `P00_organizer.sql`
+wrote to a column that does not exist; production's "Confirm sign up" email only had a link (a first sign-in is a
+sign-up), so it now shows the code like the sign-in email; the build script now asks for the key itself (the old
+`read -p` prompt does not work in zsh) and explains a refused key.
+
+**Fresh start (`R01_fresh_start.sql`).** At the organizer's request no earlier-season data is kept: sessions, scores,
+standings, votes, snapshots, approvals, payments, questions, announcements and logs were removed on production and on
+TEST with the same file; the player list stays and everyone registers again. Production: 54 players kept, 0 leftover
+rows; TEST: 29 test players kept, 0 leftover rows. The old production data remains in schema `backup_20260911` and in
+Supabase's daily backups.
+
+**TEST = production.** A structure snapshot (columns, defaults, functions by content hash, rules, grants, triggers,
+constraints, indexes, views, extensions, the email timer) compared the two projects: 53 differences, all from TEST's
+original setup (and the job key's function rights on production). `L16_parity.sql` gives any project production's
+exact layout (identity ids, production's defaults, announcements with `type`/`title`/`body` — posting an announcement
+on TEST had been failing — and `app_state` keyed by `key`), the same `undo_last` text, and the job key only the two
+functions it calls. After L16 on both: one difference left, `rls_auto_enable()`, a helper Supabase itself installed on
+production (not used by the league). `legacy/scripts/check-parity.sh` confirms the live sites run the same code (only
+database address, key, title and cache name differ). From now on every change goes to TEST first, is tested, and
+reaches production through `build-production.py` and the same migration files.
+
+**Results.** Rules rehearsal RULES–PHASE12 and 1,570 / 1,570 database cases on production's real layout; L16 tested on
+a copy with TEST's old layout; restore drill 14 / 14; unit tests 16 / 16; production `verify.sql` 42 / 42.
