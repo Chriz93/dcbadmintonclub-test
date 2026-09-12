@@ -40,7 +40,8 @@ for (let i = 0; i < 100; i++) {
       const cur = L.current!, cy = cur.cycle, counts: Record<number, number> = {};
       await page().evaluate(() => nav("admin"));
       await page().getByRole("button", { name: "📅 Session" }).click();
-      for (let c = 1; c <= NC; c++) { counts[c] = Math.floor(r() * 9); await page().locator(`#birds_${c}`).fill(String(counts[c])); }
+      // Two shuttlecocks per player: a court of n starts with 2n, so 0..2n can be left; a court not in use is disabled.
+      for (let c = 1; c <= NC; c++) { const n = (cur.assignments[c] || []).length, max = n >= 2 ? 2 * n : 0; counts[c] = Math.floor(r() * (max + 1)); if (max) await page().locator(`#birds_${c}`).fill(String(counts[c])); else await expect(page().locator(`#birds_${c}`), `Court ${c} not in use`).toBeDisabled(); }
       await page().getByRole("button", { name: "🪶 Distribute to Top Scorers" }).click();
       await expect(toast()).toHaveText("Birds distributed to top scorers!");
       const want: Record<string, { recipients: { playerId: number; birdsReceived: number }[]; total: number }> = {};

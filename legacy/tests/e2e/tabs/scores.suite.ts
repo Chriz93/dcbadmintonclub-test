@@ -1,7 +1,7 @@
 // Scores: pick a court, read the pairings and saved games, type a score, watch the live check and save — on 100 leagues.
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
-import { genLeague, variety, rng, combos, target, NC, type LiveState } from "./gen";
+import { genLeague, variety, rng, combos, target, NC, type LiveState, gamesNeeded } from "./gen";
 
 /** The suite's cases; the desktop and phone spec files both call this. */
 export function define() {
@@ -46,6 +46,11 @@ export function define() {
       await expect(blocks).toHaveCount(games.length);
       for (let g = 0; g < games.length; g++) {
         const gm = games[g], b = blocks.nth(g), saved = cur.scores[`c${c}_y${cy}_g${g + 1}`];
+        if (g + 1 > gamesNeeded(ids.length, cur.scores, c, cy)) {   // best of three: after a 2–0 there is no Game 3 to enter
+          await expect(b, "no Game 3 after a 2–0").toContainText("won the first two games — best of three, so there is no Game 3.");
+          await expect(b.locator("input"), "no score boxes for a game that is not played").toHaveCount(0);
+          continue;
+        }
         const names = (await b.locator(".tnames").allInnerTexts()).map(norm);
         expect(names, `game ${g + 1}: sides`).toEqual([[gm.a1, gm.a2], [gm.b1, gm.b2]].map((s) => s.filter((x): x is number => x != null).map(name).join(" & ")));
         expect(await b.locator(".saved-pill").count(), `game ${g + 1}: saved mark`).toBe(saved ? 1 : 0);
@@ -54,9 +59,10 @@ export function define() {
       }
       // Which game to type into: an open one when saving it cannot finish the round (the round advance has its own suite).
       const missingAll: string[] = [];
-      for (let cc = 1; cc <= NC; cc++) { const n = (cur.assignments[cc] || []).length; if (n < 2) continue; for (let g = 1; g <= (n === 5 ? 5 : 3); g++) if (!cur.scores[`c${cc}_y${cy}_g${g}`]) missingAll.push(`${cc}_${g}`); }
-      const openHere = games.map((_, g) => g + 1).filter((g) => !cur.scores[`c${c}_y${cy}_g${g}`]);
-      const g = openHere.length && missingAll.length >= 2 ? openHere[Math.floor(r() * openHere.length)] : 1 + Math.floor(r() * games.length);
+      for (let cc = 1; cc <= NC; cc++) { const n = (cur.assignments[cc] || []).length; if (n < 2) continue; for (let g = 1; g <= gamesNeeded(n, cur.scores, cc, cy); g++) if (!cur.scores[`c${cc}_y${cy}_g${g}`]) missingAll.push(`${cc}_${g}`); }
+      const need = gamesNeeded(ids.length, cur.scores, c, cy);
+      const openHere = games.map((_, g) => g + 1).filter((g) => g <= need && !cur.scores[`c${c}_y${cy}_g${g}`]);
+      const g = openHere.length && missingAll.length >= 2 ? openHere[Math.floor(r() * openHere.length)] : 1 + Math.floor(r() * need);
       const lo = String(Math.floor(r() * (T - 1)));
       const kinds: [string, string][] = [[String(T), lo], [lo, String(T)], [String(T), String(T)], [String(T + 1 + Math.floor(r() * 5)), lo], [String(T - 1), lo], ["", lo], [String(T), ""], ["7", "7"]];
       const [a, b] = kinds[Math.floor(r() * kinds.length)];
@@ -72,6 +78,11 @@ export function define() {
         await expect(page.locator("#_t")).toHaveText(v.err);
         expect(JSON.parse(ctx.state.state["current_session"].value).scores, "nothing saved").toEqual(before.scores);
         return;
+      }
+      // Best of three: correcting Game 1 or 2 into a 2–0 while a Game 3 is on record is refused by the database.
+      if (ids.length === 2 && g <= 2 && cur.scores[`c${c}_y${cy}_g3`]) {
+        const other = cur.scores[`c${c}_y${cy}_g${3 - g}`], w = v.sa > v.sb ? "A" : "B";
+        if (other && other.w === w) { await expect(page.locator("#_t")).toHaveText("Score not saved: Best of three: there is no Game 3 after one player wins the first two games"); expect(JSON.parse(ctx.state.state["current_session"].value).scores, "nothing saved").toEqual(before.scores); return; }
       }
       await expect(page.locator("#_t")).toHaveText(`Game ${g} saved!`);
       const gm = games[g - 1];

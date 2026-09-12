@@ -54,4 +54,5 @@ select (select count(*) from public.players) as players,
        (select count(*) from games) as games_stored,
        (select count(*) from public.rsvps) as votes,
        (select count(*) from public.players where email not like '%@example.invalid') as real_addresses;""")
-print("\n".join(out))
+# The database itself refuses unless it is marked test (L18), so a paste into the wrong SQL editor changes nothing.
+print("\n".join(["-- TEST only: stops here on any database not marked test (L18).", "select public.assert_test_environment();"] + out))

@@ -1,5 +1,8 @@
 -- Local rehearsal of L01/L02 against a copy of the legacy schema. Run with psql -v ON_ERROR_STOP=1.
 do $$ begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if; if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role bypassrls; end if; end $$;
+-- Supabase gives these roles every privilege on new tables in public by default (the reason for L15, L17 and L21). The
+-- rehearsal does the same, so a migration that forgets a revoke fails here instead of on TEST.
+alter default privileges in schema public grant all on tables to anon,authenticated,service_role;
 create schema auth;
 create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
@@ -25,6 +28,9 @@ insert into public.app_state(key,value) values('current_session','{"number":3,"p
 create schema upgrade_backup_20260906; create table upgrade_backup_20260906.players as table public.players;
 
 \i legacy/migrations/L01_auth_and_rules.sql
+-- The rehearsal database is a test environment: mark it (L18, T01) so the TEST-only seed (L02) agrees to run.
+\i legacy/migrations/L18_environment.sql
+\i legacy/migrations/T01_mark_test.sql
 \i legacy/migrations/L02_test_synthetic_players.sql
 
 -- Anonymous visitors: nothing.
@@ -378,3 +384,126 @@ select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001'
 do $$ declare n int; begin select count(*) into n from public.past_players; if n<1 then raise exception 'the organizer cannot read past players'; end if; end $$;
 reset role;
 select 'PHASE13 RULES PASS' as result;
+
+-- ═══ PHASE14: environment marker (L18) — scripts run only on a database marked test; the marker can not be relabelled ═══
+select public.assert_test_environment();
+do $$ begin
+ begin update public.environment set name='production'; raise exception 'the marker was relabelled'; exception when insufficient_privilege then if sqlerrm<>'The environment name cannot be changed' then raise; end if; end;   -- environment_guard
+ begin delete from public.environment; raise exception 'the marker was removed'; exception when insufficient_privilege then if sqlerrm<>'The environment marker cannot be removed' then raise; end if; end;
+end $$;
+set role anon;
+do $$ begin
+ begin perform count(*) from public.environment; raise exception 'anon read the marker'; exception when insufficient_privilege then null; end;
+ begin insert into public.environment(name,schema_version) values('test','x'); raise exception 'anon wrote a marker'; exception when insufficient_privilege then null; end;
+ begin perform public.assert_test_environment(); raise exception 'anon ran the guard function'; exception when insufficient_privilege then null; end; end $$;
+reset role;
+set role authenticated;
+do $$ begin if (select name from public.environment)<>'test' then raise exception 'a signed-in user cannot read the marker'; end if;
+ begin update public.environment set schema_version='x'; raise exception 'a signed-in user changed the marker'; exception when insufficient_privilege then null; end; end $$;
+reset role;
+-- An unmarked database, and one marked production, both refuse (the marker is swapped around the checks, then restored).
+alter table public.environment disable trigger environment_guard; delete from public.environment;
+do $$ begin begin perform public.assert_test_environment(); raise exception 'unmarked database accepted'; exception when insufficient_privilege then null; end; end $$;
+insert into public.environment(name,schema_version) values('production','rehearsal');
+do $$ begin begin perform public.assert_test_environment(); raise exception 'production marker accepted'; exception when insufficient_privilege then null; end; end $$;
+delete from public.environment; insert into public.environment(name,schema_version) values('test','rehearsal');
+alter table public.environment enable trigger environment_guard;
+select 'PHASE14 RULES PASS' as result;
+
+-- ═══ PHASE15: best of three (L19) — no Game 3 on a court of two after a 2–0 ═══
+\i legacy/migrations/L19_best_of_three.sql
+do $$ declare v int; begin
+ insert into public.app_state(key,value) values('current_session','{"number":1,"cycle":1,"completed":false,"assignments":{"1":[1,2]},"scores":{}}')
+  on conflict(key) do update set value=excluded.value;
+ select version into v from public.app_state where key='current_session';
+ perform set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',true);
+ perform set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',true);
+ perform public.save_court_scores(1,1,'{"c1_y1_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":10,"w":"A"},"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":12,"w":"A"}}'::jsonb,null);
+ begin perform public.save_court_scores(1,1,'{"c1_y1_g3":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":5,"w":"A"}}'::jsonb,null); raise exception 'Game 3 accepted after 2-0';
+ exception when raise_exception then if sqlerrm not like 'Best of three%' then raise; end if; end;
+ -- A split court needs its third game.
+ update public.app_state set value='{"number":1,"cycle":1,"completed":false,"assignments":{"1":[1,2]},"scores":{}}' where key='current_session';
+ perform public.save_court_scores(1,1,'{"c1_y1_g1":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":10,"w":"A"},"c1_y1_g2":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":12,"sB":21,"w":"B"},"c1_y1_g3":{"a1":1,"a2":null,"b1":2,"b2":null,"sA":21,"sB":19,"w":"A"}}'::jsonb,null);
+ delete from public.app_state where key='current_session';
+end $$;
+select 'PHASE15 RULES PASS' as result;
+
+-- ═══ PHASE16: waiver records (L20, T02) — exact versioned wording, one record per acceptance, never rewritten ═══
+\i legacy/migrations/L20_waiver_records.sql
+do $$ begin
+ if (select count(*) from public.waiver_versions)<>2 then raise exception 'expected two waiver versions'; end if;
+ if (select version from public.waiver_versions where is_current)<>'2026-09-v1' then raise exception 'v1 should be current after L20'; end if;
+ if exists(select 1 from public.waiver_versions where sha256<>encode(sha256(convert_to(body,'UTF8')),'hex') or length(sha256)<>64) then raise exception 'digest is not the database''s own'; end if;
+ begin update public.waiver_versions set body=body||' ' where version='2026-09-v1'; raise exception 'wording rewritten'; exception when insufficient_privilege then if sqlerrm not like 'Waiver wording is never rewritten%' then raise; end if; end;   -- waiver_versions_guard
+ begin update public.waiver_versions set title='x' where version='2026-09-v1'; raise exception 'title rewritten'; exception when insufficient_privilege then null; end;
+ begin delete from public.waiver_versions where version='2026-09-v1'; raise exception 'version deleted'; exception when insufficient_privilege then if sqlerrm<>'Waiver versions are kept permanently' then raise; end if; end;
+ update public.waiver_versions set sha256='x' where version='2026-09-v1';
+ if (select sha256 from public.waiver_versions where version='2026-09-v1')='x' then raise exception 'digest overwritten'; end if;
+ begin insert into public.waiver_versions(version,title,body) values('bad','x','# x'); raise exception 'bad version name accepted'; exception when check_violation then null; end;
+end $$;
+\i legacy/migrations/T02_publish_waiver_v2.sql
+insert into auth.users values('a0000000-0000-0000-0000-00000000be55','waiver.tester@example.invalid',now()) on conflict do nothing;
+insert into public.invitations(email,membership_type) values('waiver.tester@example.invalid','regular') on conflict do nothing;
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-00000000be55',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"waiver.tester@example.invalid"}',false);
+do $$ declare pid bigint; v text; h text; n int; begin
+ select version,sha256 into v,h from public.waiver_versions where is_current;
+ if v<>'2026-09-v2' then raise exception 'T02 did not make v2 current'; end if;
+ begin perform public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay'); raise exception 'registered without accepting a waiver'; exception when invalid_parameter_value then null; end;
+ begin perform public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay','2026-09-v1',(select sha256 from public.waiver_versions where version='2026-09-v1'),'Wendy Waiver'); raise exception 'an old version was accepted'; exception when invalid_parameter_value then null; end;
+ begin perform public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay',v,repeat('0',64),'Wendy Waiver'); raise exception 'a wrong digest was accepted'; exception when invalid_parameter_value then null; end;
+ begin perform public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay',v,h,'W'); raise exception 'a one-letter signature was accepted'; exception when invalid_parameter_value then null; end;
+ begin perform public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay',v,h,'Wendy Waiver','America/Toronto',-240,'guardian',''); raise exception 'a guardian without the minor''s name was accepted'; exception when invalid_parameter_value then null; end;
+ if exists(select 1 from public.players where email='waiver.tester@example.invalid') then raise exception 'a refused registration left a player record'; end if;
+ pid=public.register_me('Wendy Waiver','613','EC','','Wendy Waiver','regular','will_pay',v,upper(h),'Wendy Waiver','America/Toronto',-240,'adult','',true,'rehearsal');
+ select count(*) into n from public.waiver_acceptances where player_id=pid and waiver_version=v and waiver_sha256=h and typed_signature='Wendy Waiver' and participant_name='Wendy Waiver'
+   and email='waiver.tester@example.invalid' and client_timezone='America/Toronto' and client_utc_offset_minutes=-240 and action='registration' and media_consent and age_declaration='adult'
+   and user_id='a0000000-0000-0000-0000-00000000be55' and registration_ref like 'REG-'||pid||'-________T______Z';
+ if n<>1 then raise exception 'the acceptance was not recorded as expected'; end if;
+ begin perform public.accept_waiver(v,h,'Wendy Waiver'); raise exception 'the same version was accepted twice'; exception when invalid_parameter_value then null; end;
+ begin update public.waiver_acceptances set typed_signature='x'; raise exception 'a player changed a record'; exception when insufficient_privilege then null; end;
+ begin delete from public.waiver_acceptances; raise exception 'a player deleted a record'; exception when insufficient_privilege then null; end;
+ begin insert into public.waiver_acceptances(email,participant_name,typed_signature,waiver_version,waiver_sha256,action) values('x','x','x',v,h,'registration'); raise exception 'a player wrote a record directly'; exception when insufficient_privilege then null; end;
+ begin perform public.publish_waiver_version('2026-09-v1'); raise exception 'a player published a version'; exception when insufficient_privilege then null; end;
+end $$;
+-- Another player sees none of Wendy's records; the organizer (second factor) sees them and can publish an updated version.
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"alice@example.invalid"}',false);
+do $$ begin if exists(select 1 from public.waiver_acceptances) then raise exception 'a player can read another player''s acceptance'; end if; end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ begin if not exists(select 1 from public.waiver_acceptances where participant_name='Wendy Waiver') then raise exception 'the organizer cannot read acceptances'; end if;
+ perform public.publish_waiver_version('2026-09-v1'); if (select version from public.waiver_versions where is_current)<>'2026-09-v1' then raise exception 'publish did not switch versions'; end if; end $$;
+-- Wendy accepts the version that is now current: a second record, marked as a later acceptance.
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-00000000be55',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"waiver.tester@example.invalid"}',false);
+do $$ declare h text; n int; begin select sha256 into h from public.waiver_versions where version='2026-09-v1';
+ perform public.accept_waiver('2026-09-v1',h,'Wendy Waiver','Europe/London',60,'guardian','Wally Waiver',false,'rehearsal');
+ select count(*) into n from public.waiver_acceptances where participant_name='Wendy Waiver';
+ if n<>2 or not exists(select 1 from public.waiver_acceptances where action='updated-version' and waiver_version='2026-09-v1' and age_declaration='guardian' and minor_name='Wally Waiver' and not media_consent) then raise exception 'the updated-version acceptance was not recorded'; end if; end $$;
+set role anon;
+do $$ begin
+ begin perform count(*) from public.waiver_versions; raise exception 'anon read waiver wording'; exception when insufficient_privilege then null; end;
+ begin perform count(*) from public.waiver_acceptances; raise exception 'anon read acceptances'; exception when insufficient_privilege then null; end; end $$;
+reset role;
+-- Records are permanent even for the database owner; deleting the player keeps the record and clears the link.
+do $$ declare pid bigint; begin select id into pid from public.players where email='waiver.tester@example.invalid';
+ begin update public.waiver_acceptances set typed_signature='x' where player_id=pid; raise exception 'the owner changed a record'; exception when insufficient_privilege then if sqlerrm<>'Waiver acceptance records are never changed' then raise; end if; end;   -- waiver_acceptances_guard
+ begin delete from public.waiver_acceptances where player_id=pid; raise exception 'the owner deleted a record'; exception when insufficient_privilege then if sqlerrm<>'Waiver acceptance records are kept permanently' then raise; end if; end;
+ delete from public.players where id=pid;
+ if (select count(*) from public.waiver_acceptances where participant_name='Wendy Waiver' and player_id is null)<>2 then raise exception 'deleting the player lost the records'; end if; end $$;
+update public.waiver_versions set is_current=false where is_current; update public.waiver_versions set is_current=true where version='2026-09-v2';
+select 'PHASE16 RULES PASS' as result;
+
+-- ═══ PHASE17: exact privileges on the new tables (L21) — the defaults above must not leave TRUNCATE on them ═══
+-- Before L21 the rehearsal shows what verify.sql found on TEST: the service role holds TRUNCATE on the three new tables.
+do $$ begin
+ if (select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in('environment','waiver_versions','waiver_acceptances') and grantee='service_role' and privilege_type='TRUNCATE')<>3 then raise exception 'the rehearsal should reproduce the grants TEST had before L21'; end if; end $$;
+\i legacy/migrations/L21_new_table_privileges.sql
+do $$ begin
+ if exists(select 1 from information_schema.role_table_grants where table_schema='public' and grantee in('anon','authenticated','service_role') and privilege_type in('TRUNCATE','REFERENCES','TRIGGER')) then raise exception 'a site role still holds TRUNCATE, REFERENCES or TRIGGER'; end if;
+ if (select schema_version from public.environment)<>'L21' then raise exception 'the marker should say L21'; end if;
+ if not has_table_privilege('service_role','public.waiver_acceptances','SELECT') or not has_table_privilege('service_role','public.environment','SELECT') then raise exception 'the backup lost read access'; end if;
+ if not has_table_privilege('authenticated','public.waiver_versions','SELECT') then raise exception 'signed-in users can no longer read the wording'; end if;
+ if has_table_privilege('authenticated','public.waiver_acceptances','INSERT') or has_table_privilege('service_role','public.waiver_acceptances','DELETE') then raise exception 'records can be written directly'; end if; end $$;
+set role service_role;
+do $$ begin begin truncate public.waiver_acceptances; raise exception 'the service role emptied the waiver records'; exception when insufficient_privilege then null; end; end $$;
+reset role;
+select 'PHASE17 RULES PASS' as result;

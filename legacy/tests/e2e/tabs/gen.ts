@@ -18,6 +18,13 @@ export type League = { pre?: Record<string, string>; seed: number; players: Play
 
 export const NC = 6;
 export const target = (n: number) => (n === 5 ? 15 : 21);
+/** Games that finish a court this round: five on a court of five, three otherwise — except that a court of two plays
+ *  best of three, so after a 2–0 there is no Game 3. */
+export function gamesNeeded(n: number, scores: Record<string, { w: string } | undefined>, c: number, cy: number) {
+  if (n < 2) return 0; if (n === 5) return 5;
+  const g1 = scores[`c${c}_y${cy}_g1`], g2 = scores[`c${c}_y${cy}_g2`];
+  return n === 2 && g1 && g2 && g1.w === g2.w ? 2 : 3;
+}
 export function rng(seed: number) {
   let a = seed >>> 0 || 1;
   return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -110,6 +117,7 @@ export function genLeague(seed: number, o: GenOpts = {}): League {
         const ids = model.lineup[c]; if (!ids || ids.length < 2) continue;
         const T = target(ids.length);
         combos(ids).forEach((g, gi) => {
+          if (ids.length === 2 && gi === 2) { const g1 = scores[`c${c}_y${cy}_g1`], g2 = scores[`c${c}_y${cy}_g2`]; if (g1 && g2 && g1.w === g2.w) return; }   // best of three: no Game 3 after a 2–0
           if (partial && chance(0.45)) return;
           const A = [g.a1, g.a2].filter((x): x is number => x != null), B = [g.b1, g.b2].filter((x): x is number => x != null);
           let sA: number, sB: number;

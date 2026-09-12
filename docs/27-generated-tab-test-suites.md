@@ -293,3 +293,74 @@ Tests: `past-players` suite (40 cases: list, details, search, tags, invite back)
 Admin-extras and the match-night suites pass. `build-production.py --reuse-key` takes the publishable key from the
 published production site, so republishing needs no copy and paste. Caches: TEST `dcbc-test-v61`, production
 `dcbc-v41`.
+
+## September 12, 2026 release — 2,115 new tests (patches p35–p52, migrations L18–L21)
+
+**Baseline before this release:**
+
+- 3,965 browser cases: 3,445 desktop tab suites, 500 phone, 20 desktop/mobile.
+- 1,602 database cases.
+- 16 automation tests.
+
+Every baseline test title still exists. This was checked by listing the committed suites and the current ones
+(`playwright test --list`) and comparing titles. Tests changed because a requirement changed are listed in docs/28
+section 5.
+
+**New:** 1,349 browser cases, 518 unit tests and 248 database cases.
+
+| Suite | Cases | What it checks | Expectations from |
+|---|---|---|---|
+| `tabs/adjust.spec.ts`, `tabs/phone/adjust.spec.ts` | 200 + 80 | Attendance toggles, the waiting-changes bar, the preview text, changed moves, unavailable courts, Apply, the stored courts, Undo, on generated leagues | reference model `unit/adjust-reference.mjs` |
+| `tabs/adjust-edge.spec.ts` | 46 | Double clicks, two organizers, failed saves, stale previews, one or nobody left, bad overrides, courts with scores, keyboard, undo steps, reload | reference model |
+| `tabs/late.spec.ts` | 60 | The late rule from both entry points, every reason a late player stays | reference model, rule text |
+| `tabs/late-gaps.spec.ts` | 186 | The late rule on every ladder shape (57 patterns of courts in use × each court), with and without scores | reference model |
+| `tabs/rotation-gaps.spec.ts` | 114 | Round 1 and round 2 rotation with empty courts in the ladder, End Session's earned courts | rules model `e2e/rules-model.ts` |
+| `tabs/seating.spec.ts` | 33 | Start Session for 0 to 32 players: the lineup shape, the ranking order, the refusals | rules model |
+| `tabs/sequences.spec.ts` | 100 | 5 to 8 mixed steps (absent, back, late, adjust, undo) per evening, checked after every step | reference model |
+| `tabs/best-of-three.spec.ts` | 60 | No Game 3 after a 2–0, on screen and in the saved round | rule text, L19 |
+| `tabs/waiver.spec.ts` | 194 | Registration wording and records, updated versions, organizer downloads (text and CSV), permissions | wording files, L20 |
+| `tabs/wording.spec.ts` | 95 | Every page, form and confirmation carries the new rules; the removed sentence appears nowhere | the rule text |
+| `tabs/a11y.spec.ts` | 42 | axe (WCAG 2.2 A/AA) on every page, tab and main dialog; keyboard focus; reduced motion; palette contrast | WCAG |
+| `tabs/dialog-keyboard.spec.ts` | 23 | Dialog semantics, focus in and back, Tab kept inside, Escape and Close, court cards and note buttons by keyboard | WCAG 2.1.1, 2.4.3, 4.1.2 |
+| `tabs/phone/reflow.spec.ts` | 42 | Every page, tab, registration step and main dialog fits a 320px screen; long messages wrap; the round bars show two rounds | WCAG 1.4.10 |
+| `tabs/phone/waiver-phone.spec.ts` | 13 | The waiver on a phone: wording box, 44px targets, the dialog, a complete record | 44px target rule |
+| `tabs/sync-race.spec.ts` | 5 | A slow background refresh does not undo a save; the next save is not refused; the round still advances; newer replies and a new session are applied | p52; 3 of the 5 fail on the page without p52 |
+| `tabs/isolation.spec.ts` | 24 | The site refuses the wrong database; the harness stops every request to production | p35, p42, L18 |
+| `tabs/controls.spec.ts` | 32 | Every organizer control not otherwise exercised, one case each | the control's purpose |
+| `unit/adjust.test.mjs` | 437 | The engine against the independent reference model: formats, placement, late, refusals, explanations | reference model |
+| `unit/isolation.test.mjs` | 18 | Settings that name production are refused; network access is refused in unit tests | — |
+| `unit/helpers.test.mjs` | 63 | CSV formula guard, shuttlecocks, seating refusals, games per court, next court in use, waiver fingerprint, league time | rule text, Node's SHA-256 |
+| database sections 13–17 | 248 | Waiver records and marker permissions, registration and acceptance validation, publishing, best of three, callers | L18–L21 |
+
+**Database rehearsal additions:**
+
+- Rule phases 14–17.
+- A rollback rehearsal on every run.
+- Supabase's default table privileges, copied so that a missing revoke fails locally. That was the L21 finding.
+
+**Corrections to test infrastructure (none weakens a check):**
+
+- The axe helper waited for looping animations that never end; it now waits only for animations that have an end.
+- The unit loader could not load `async` functions.
+- The adjust-dialog accessibility case was given an unscored court, so the dialog has something to show.
+- The seating players now vote "coming". A player who did not answer is seated but left unmarked, which is the intended
+  behaviour.
+- The phone waiver tests wait for the newly opened dialog, because a dialog's contents stay in the page after it closes.
+- The zero-player unit scenario now expects the refusal that p45 defined.
+
+**App defects the new tests found (all fixed):**
+
+- **p44:** faded rows made grey text unreadable.
+- **p45:** the dialog was not announced and did not take the focus; Escape did nothing. Nobody coming was not defined.
+- **p46:** a late player who had to stay was left waiting to move later. The court cards could not be opened by keyboard.
+- **p47:** the focus was lost when the opener was redrawn. The note buttons had no useful name.
+- **p48:** the focus was lost when the opener disabled itself.
+- **p49:** the preview and Apply disagreed about what can be applied.
+- **p50:** the waiver choices were under 44px on phones.
+- **p51:** long messages ran off a phone screen; the round progress bars drew 99 dots. Both were found by looking
+  at the screenshots, not by a test.
+- **p52:** a slow background refresh undid a save that had just been made. It was found because the season
+  simulation failed at random sessions under load. The stand-in can now hold one reply (`holdRead`) to reproduce it.
+- **L21:** the service role could TRUNCATE the new tables.
+
+Results of the final run are in docs/28 section 5.

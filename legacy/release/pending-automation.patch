@@ -1,0 +1,47 @@
+diff --git a/legacy/automation/export-backup.mjs b/legacy/automation/export-backup.mjs
+index ec0c01d..0880d7f 100644
+--- a/legacy/automation/export-backup.mjs
++++ b/legacy/automation/export-backup.mjs
+@@ -2,6 +2,8 @@
+ // Weekly league backup: every row of the league tables as one JSON file, written to the path in BACKUP_DIR (or
+ // printed to stdout). Runs with the service-role key from GitHub Actions; the artifact is stored encrypted by GitHub
+ // (workflow artifacts) and can also be committed to a private repository. Restore = docs/21-backup-restore.md.
++// Automated tests never reach a real database (the backup job itself runs outside `node --test`).
++if (process.env.NODE_TEST_CONTEXT && /supabase\.(co|com)/i.test(process.env.SUPABASE_URL || "")) throw new Error("Refusing: automated tests must not reach a real Supabase project");
+ const need = (k) => { if (!process.env[k]) throw new Error(`${k} is required`); return process.env[k]; };
+ const base = need("SUPABASE_URL").replace(/\/$/, ""), key = need("SUPABASE_SERVICE_ROLE_KEY");
+ const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
+@@ -9,6 +11,7 @@ const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Author
+ const TABLES = {
+   players: "id", app_state: "key", announcements: "id", questions: "id", audit_log: "id",
+   reminder_log: "id", rsvp_log: "id", payments: "id", payments_archive: "id", past_players: "id", push_subscriptions: "id",
++  waiver_versions: "version", waiver_acceptances: "id", environment: "id",
+   rsvps: "session_number,player_id", invitations: "email", app_admins: "user_id", season_dates: "session_number",
+ };
+ export async function exportAll() {
+diff --git a/legacy/automation/remind.mjs b/legacy/automation/remind.mjs
+index 0e122a6..a2b1df6 100644
+--- a/legacy/automation/remind.mjs
++++ b/legacy/automation/remind.mjs
+@@ -129,6 +129,8 @@ function api(env) {
+ export async function run(env = process.env, deps = {}) {
+   const log = deps.log || ((...a) => console.log(...a));
+   for (const k of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SITE_URL", "GMAIL_USER"]) if (!env[k]) throw new Error(`${k} is required`);
++  // Automated tests never reach a real database: under `node --test` a real Supabase address is refused outright.
++  if ((env.NODE_TEST_CONTEXT || process.env.NODE_TEST_CONTEXT) && /supabase\.(co|com)/i.test(env.SUPABASE_URL)) throw new Error("Refusing: automated tests must not reach a real Supabase project");
+   const db = deps.db || api(env);
+   const live = env.DELIVERY_MODE === "live";
+   const testMode = env.ALLOW_REAL_RECIPIENTS !== "true";
+diff --git a/legacy/automation/restore-backup.mjs b/legacy/automation/restore-backup.mjs
+index e2dbbc3..fb422d1 100644
+--- a/legacy/automation/restore-backup.mjs
++++ b/legacy/automation/restore-backup.mjs
+@@ -11,7 +11,7 @@ if (!rows.length) { console.log(`-- ${table}: no rows in backup`); process.exit(
+ const cols = Object.keys(rows[0]);
+ const lit = (v) => v === null || v === undefined ? "null" : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "true" : "false") : typeof v === "object" ? `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb` : `'${String(v).replace(/'/g, "''")}'`;
+ // Each table's own key (not every table has an id).
+-const KEYS = { app_state: ["key"], rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"] };
++const KEYS = { app_state: ["key"], rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"], waiver_versions: ["version"], environment: ["id"] };
+ const key = KEYS[table] || ["id"];
+ const updates = cols.filter((c) => !key.includes(c)).map((c) => `${c}=excluded.${c}`).join(",");
+ console.log(`-- restore ${table}: ${rows.length} rows from ${file} (exported ${data.exported_at})`);

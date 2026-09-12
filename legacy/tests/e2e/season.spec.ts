@@ -36,6 +36,8 @@ test.describe("ten-session season simulation", () => {
         absentId = model.lineup[3][0];
         await page.click("#bnav-admin"); await page.evaluate(() => showSec("admin", "a-att"));
         await page.evaluate(([id, c]) => markAttForTab(id, "absent", c), [absentId, 3] as [number, number]);
+        // The toggle records the absence; Adjust courts takes the player off (a court of four becomes three: no other move).
+        await page.evaluate(async () => { await previewAdjust(); await applyCourtAdjust(); });
         await expect.poll(() => page.evaluate(() => S.current.assignments[3].length)).toBe(3);
         model.absent(absentId);
         expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));
@@ -48,7 +50,11 @@ test.describe("ten-session season simulation", () => {
           const games: Game[] = await courtGames(page, c);
           const n = model.lineup[c].length;
           expect(games).toHaveLength(n === 5 ? 5 : 3);
-          const scores = games.map((g) => model.play(r, [g.a1, g.a2].filter((x): x is number => x != null), [g.b1, g.b2].filter((x): x is number => x != null), k, target(n)));
+          const scores: [number, number][] = [];
+          for (const g of games) {   // a court of two plays best of three: no Game 3 after a 2–0
+            if (n === 2 && scores.length === 2 && (scores[0][0] > scores[0][1]) === (scores[1][0] > scores[1][1])) break;
+            scores.push(model.play(r, [g.a1, g.a2].filter((x): x is number => x != null), [g.b1, g.b2].filter((x): x is number => x != null), k, target(n)));
+          }
           await scoreCourt(page, c, scores);
         }
         rounds.push(r);

@@ -2,7 +2,8 @@
 // attendance — each checked against the database afterwards, on 100 leagues.
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
-import { genLeague, variety, rng, NC, type GenOpts, type League, type SessionRec } from "./gen";
+import { genLeague, variety, rng, NC, gamesNeeded, type GenOpts, type League, type SessionRec } from "./gen";
+import { expectAdjust, lateStaySentence, REFUSAL } from "./adjust-oracle";
 import { upcoming, courtOf } from "./oracle";
 import { fillCourts } from "../rules-model";
 
@@ -78,7 +79,7 @@ for (let i = 0; i < 100; i++) {
     expect((await page.locator("#spare-replace-sel option").allInnerTexts()).slice(1).map((t) => t.replace(/ \((SPARE|C\d)\)$/, "")), "replacement list").toEqual(replaceIds.map((id) => name(id)));
 
     const missing: string[] = [];
-    for (let c = 1; c <= NC; c++) { const n = (a[c] || []).length; if (n < 2) continue; for (let g = 1; g <= (n === 5 ? 5 : 3); g++) if (!cur.scores[`c${c}_y${cur.cycle}_g${g}`]) missing.push(`C${c}G${g}`); }
+    for (let c = 1; c <= NC; c++) { const n = (a[c] || []).length; if (n < 2) continue; for (let g = 1; g <= gamesNeeded(n, cur.scores, c, cur.cycle); g++) if (!cur.scores[`c${c}_y${cur.cycle}_g${g}`]) missing.push(`C${c}G${g}`); }
     const k = (kind === "missing" && !missing.length) || (kind === "next" && missing.length) ? (missing.length ? "missing" : "next") : kind;
 
     if (k === "missing") {
@@ -135,14 +136,18 @@ for (let i = 0; i < 100; i++) {
       await ui.getByRole("button", { name: "Mark Late", exact: true }).click();
       const from = courtOf(a, pick.id);
       if (!from) { await expect(toast).toHaveText("Player not assigned"); return; }
-      if (from !== NC && (a[NC] || []).length >= 5) { await expect(toast).toHaveText(`Court ${NC} already has 5 players — use Remove Absent & Replace or Rebalance instead`); expect(kv("current_session").assignments).toEqual(a); return; }
-      await expect(toast).toHaveText("Player marked late");
-      const want = Object.fromEntries(Object.entries(a).map(([c, ids]) => [c, ids.filter((x) => x !== pick.id)]));
-      want[NC] = [...want[NC], pick.id];
+      // "Players arriving more than 5 minutes late move down one court": the next court in use below, if it has room and
+      // no scores yet and the move leaves nobody alone; otherwise the player stays. Only the moves a valid round needs.
+      const ref = expectAdjust(cur, { absent: [], returning: [], late: [pick.id] });
+      if (!ref.ok) { await expect(toast).toHaveText(REFUSAL[ref.why!]); expect(kv("current_session").assignments, "nothing changed").toEqual(a); return; }
+      const mv = ref.moves.find((m) => m.id === pick.id), stay = ref.skippedLate.find((x) => x.id === pick.id);
+      const below = [1, 2, 3, 4, 5, 6].find((x) => x > from && (a[x] || []).length > 0) || 0, other = (a[from] || []).find((x) => x !== pick.id);
+      await expect(toast).toHaveText(mv ? `${pick.name} arrived late — moves down from Court ${from} to Court ${mv.to}.` : lateStaySentence(stay!.why, pick.name, from, below, other ? name(other)! : ""));
       const cs = kv("current_session");
-      expect(cs.assignments, "late player goes to the last court").toEqual(want);
-      expect(cs.latePlayers).toEqual([{ playerId: pick.id, originalCourt: from }]);
-      await expect(ui).toContainText(`⏰ ${pick.name} (was C${from})`);
+      expect(cs.assignments, "late rule applied with only the moves a valid round needs").toEqual(Object.fromEntries(Object.entries(ref.lineup).map(([c, ids]) => [String(c), ids])));
+      expect(cs.latePlayers).toEqual([{ playerId: pick.id, originalCourt: from, round: cur.cycle, to: mv ? mv.to : from, pending: false, ...(stay ? { stayed: stay.why } : {}) }]);
+      expect(cs.attendance[pick.id], "a late player counts as present").toBe("present");
+      await expect(ui).toContainText(`⏰ ${pick.name} (was C${from}${mv ? ` → C${mv.to}` : " · stayed"})`);
       await page.locator("#late-player-sel").selectOption(String(pick.id));
       await ui.getByRole("button", { name: "Mark Late", exact: true }).click();
       await expect(toast).toHaveText("Already marked late");

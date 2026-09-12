@@ -1,0 +1,2721 @@
+{
+ "generated": "2026-09-12T21:21:17.281Z",
+ "summary": [
+  {
+   "k": "Control handler",
+   "n": 107,
+   "g": 0
+  },
+  {
+   "k": "Database function",
+   "n": 36,
+   "g": 0
+  },
+  {
+   "k": "Database table",
+   "n": 16,
+   "g": 0
+  },
+  {
+   "k": "Download / export",
+   "n": 7,
+   "g": 0
+  },
+  {
+   "k": "Form field",
+   "n": 58,
+   "g": 0
+  },
+  {
+   "k": "Page",
+   "n": 7,
+   "g": 0
+  },
+  {
+   "k": "Production isolation",
+   "n": 7,
+   "g": 0
+  },
+  {
+   "k": "Rule / wording",
+   "n": 13,
+   "g": 0
+  },
+  {
+   "k": "Tab",
+   "n": 18,
+   "g": 0
+  }
+ ],
+ "items": [
+  {
+   "kind": "Page",
+   "item": "admin",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "courts",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/courts.suite.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "home",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/home.suite.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/my-season.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "register",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "schedule",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/schedule.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "scores",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Page",
+   "item": "standings",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/history.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/qa.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-ann",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-assign",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-att",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-past",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-pay",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-pl",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-reg",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-sess",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-tools",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "admin → a-wv",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → heat",
+   "tests": [
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → hist",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/history.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → lb",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → pstats",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/stats.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → qa",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/qa.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → rank",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/rankings.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → sessstand",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/sessions.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Tab",
+   "item": "standings → vote",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/wording.spec.ts",
+    "legacy/automation/remind.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "acceptWaiverUpdate",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "addPlayer",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "adjOverride",
+   "tests": [
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "adjToggleClosed",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
+    "e2e/opener.spec.ts",
+    "e2e/rules-model.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust-oracle.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/courts.spec.ts",
+    "e2e/tabs/courts.suite.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/gen.ts",
+    "e2e/tabs/home.suite.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/ladder.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/my-season.spec.ts",
+    "e2e/tabs/oracle.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/seating.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/stats.spec.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts",
+    "rules.sql",
+    "unit/adjust-reference.mjs",
+    "unit/adjust.test.mjs",
+    "unit/helpers.test.mjs",
+    "unit/load-app.mjs"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "adminSetVote",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "answerQuestion",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "applyCourtAdjust",
+   "tests": [
+    "e2e/season.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/sequences.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "approvePlayer",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "assignCourtToRegistered",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "callInSpare",
+   "tests": [
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "cancelSession",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "cascadeFillCourt",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "checkPin",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "clearAdminNote",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "clearCycleScores",
+   "tests": [
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "closeModal",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/harness.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "copyRoundSummary",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "copySessionSummary",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "deleteAnn",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "deleteInvitation",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "deletePayment",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "deleteQuestion",
+   "tests": [
+    "e2e/tabs/qa.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "deleteSnapshot",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "distributeBirds",
+   "tests": [
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "doLinkWaiver",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "downloadWaiverCsv",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "downloadWaiverRecord",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "downloadWaiverRecordByEmail",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "downloadWaiverWording",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "editRegistration",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "enablePush",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "endSession",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/rules-model.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/gen.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "exportData",
+   "tests": [
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "exportWaiver",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "generateSeasonPDF",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "goRS",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "handleAbsentAndReplace",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "hardReset",
+   "tests": [
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "invitePastPlayer",
+   "tests": [
+    "e2e/tabs/past-players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "invitePlayer",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "linkWaiverToPlayer",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "liveW",
+   "tests": [
+    "e2e/tabs/scores.suite.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "lockAdmin",
+   "tests": [
+    "e2e/tabs/admin.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "markAbsentFromPlayers",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "markAttForTab",
+   "tests": [
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/sequences.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "markAttendance",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "markPlayerLate",
+   "tests": [
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "markRefunded",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "nav",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/courts.suite.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/history.spec.ts",
+    "e2e/tabs/home.suite.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/my-season.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/qa.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/schedule.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "nextCycle",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "openAdminNote",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "openWaiverAccept",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "postAnn",
+   "tests": [
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/interop.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "previewAdjust",
+   "tests": [
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/sequences.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "promoteFromWaitlist",
+   "tests": [
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "promoteWaitlisted",
+   "tests": [
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "promptSaveSnapshot",
+   "tests": [
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "publishWaiverVersion",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "quickAddToCourt",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "rebalanceCourts",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "rebalancePlayerCourts",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "recordPayment",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "recordPaymentUI",
+   "tests": [
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "regStep1",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "regStep2",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "regStep3",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "rejectPlayer",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "removePlayer",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderAttendanceTab",
+   "tests": [
+    "e2e/tabs/attendance.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderGameHistory",
+   "tests": [
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderHistory",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/history.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderPastPlayers",
+   "tests": [
+    "e2e/tabs/past-players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderScoreEntry",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/harness.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "renderWaiverAdmin",
+   "tests": [
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "requestReminderRun",
+   "tests": [
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "resetSession",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "restoreSnapshot",
+   "tests": [
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveAdminNote",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveAssignments",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveAttendance",
+   "tests": [
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveAttendanceTab",
+   "tests": [
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveEditRegistration",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveGameScore",
+   "tests": [
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "saveScores",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/sync-race.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "selectMembership",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "setEmailReminders",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "setPlayerCourt",
+   "tests": [
+    "e2e/opener.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "setView",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "shareCourtAssignments",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "shareMessenger",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "shareMySeason",
+   "tests": [
+    "e2e/tabs/my-season.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "showCourtAddPlayer",
+   "tests": [
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "showCourtDetail",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/courts.suite.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "showSec",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "showSignIn",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "signInReset",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "signInStep",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/signin.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "signOut",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "startNewSeason",
+   "tests": [
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "startSession",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/seating.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "submitQuestion",
+   "tests": [
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/qa.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "submitRSVP",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "syncCourtsFromLastSession",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "togglePaid",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "togglePlayerPresence",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "undoLast",
+   "tests": [
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "wvAgeChanged",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "*",
+   "tests": [
+    "db/gen_cases.py",
+    "db/rollback-check.sql",
+    "db/run.sh",
+    "e2e/helpers.ts",
+    "e2e/isolation.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
+    "e2e/mock-waiver.ts",
+    "e2e/opener.spec.ts",
+    "e2e/playwright.config.ts",
+    "e2e/rules-model.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust-oracle.ts",
+    "e2e/tabs/adjust.spec.ts",
+    "e2e/tabs/adjust.suite.ts",
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/checks.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/courts.spec.ts",
+    "e2e/tabs/courts.suite.ts",
+    "e2e/tabs/coverage-report.mjs",
+    "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/gen.ts",
+    "e2e/tabs/harness.ts",
+    "e2e/tabs/history.spec.ts",
+    "e2e/tabs/home.spec.ts",
+    "e2e/tabs/home.suite.ts",
+    "e2e/tabs/interop-1.spec.ts",
+    "e2e/tabs/interop-2.spec.ts",
+    "e2e/tabs/interop-3.spec.ts",
+    "e2e/tabs/interop-4.spec.ts",
+    "e2e/tabs/interop-5.spec.ts",
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/ladder.ts",
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/my-season.spec.ts",
+    "e2e/tabs/oracle.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/phone/adjust.spec.ts",
+    "e2e/tabs/phone/courts.spec.ts",
+    "e2e/tabs/phone/home.spec.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/phone/register.spec.ts",
+    "e2e/tabs/phone/scores.spec.ts",
+    "e2e/tabs/phone/vote.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/qa.spec.ts",
+    "e2e/tabs/rankings.spec.ts",
+    "e2e/tabs/register.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/schedule.spec.ts",
+    "e2e/tabs/scores.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/seating.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts",
+    "e2e/tabs/sessions.spec.ts",
+    "e2e/tabs/signin.spec.ts",
+    "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/stats.spec.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/tools.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote.spec.ts",
+    "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts",
+    "legacy/automation/remind.test.mjs",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql",
+    "unit/adjust-reference.mjs",
+    "unit/adjust.test.mjs",
+    "unit/fetch-guard.mjs",
+    "unit/helpers.test.mjs",
+    "unit/isolation.test.mjs",
+    "unit/load-app.mjs"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "absent-player-sel",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "adj-closed-*",
+   "tests": [
+    "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/adjust.suite.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "adj-round",
+   "tests": [
+    "e2e/tabs/adjust.suite.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "admin-note-text",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "ann-body",
+   "tests": [
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/interop.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "ann-title",
+   "tests": [
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/interop.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "ann-type",
+   "tests": [
+    "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/interop.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "birds_*",
+   "tests": [
+    "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "edit-email",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "edit-emergency",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "edit-medical",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "edit-name",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "edit-phone",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "inv-email",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "inv-note",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "inv-type",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/registered.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "late-player-sel",
+   "tests": [
+    "e2e/tabs/late-gaps.spec.ts",
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "lf-all",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "link-target-select",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "modal-player-sel",
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "mt-regular",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "mt-spare",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-label",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "np-court",
+   "tests": [
+    "e2e/tabs/players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "np-membership",
+   "tests": [
+    "e2e/tabs/players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "np-name",
+   "tests": [
+    "e2e/tabs/players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "past-q",
+   "tests": [
+    "e2e/tabs/past-players.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pay-amount",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pay-date",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pay-kind",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pay-note",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/pay.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pay-session",
+   "tests": [
+    "e2e/matchnight.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "pin-inp",
+   "tests": [
+    "e2e/helpers.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "qa-input",
+   "tests": [
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/qa.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-email",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/register.suite.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-emergency",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-medical",
+   "tests": [
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-name",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-phone",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-sig",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "r-sig-lf",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "sc-sel",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/harness.ts",
+    "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "si_*_*_a",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/sync-race.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "si_*_*_b",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/sync-race.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "signin-code-input",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/signin.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "signin-email-input",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/signin.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "snap-label",
+   "tests": [
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "spare-replace-sel",
+   "tests": [
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "w1",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wv-age-adult",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wv-age-guardian",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wv-media",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wv-minor",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wva-media",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wva-minor",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wva-ok",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "wva-sig",
+   "tests": [
+    "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Late rule",
+   "tests": [
+    "e2e/tabs/late.spec.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Late player on the bottom court stays",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Two shuttlecocks per player (Home)",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Two shuttlecocks per player (registration)",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "The app can make mistakes",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Waitlist sentence removed",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Payment acknowledgement only on step 1",
+   "tests": [
+    "e2e/helpers.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Fees only where they apply",
+   "tests": [
+    "e2e/tabs/wording.spec.ts"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Best of three on a court of two",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
+    "e2e/opener.spec.ts",
+    "e2e/season.spec.ts",
+    "e2e/tabs/adjust-oracle.ts",
+    "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/gen.ts",
+    "e2e/tabs/rotation-gaps.spec.ts",
+    "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/scores.suite.ts",
+    "rules.sql",
+    "unit/adjust.test.mjs",
+    "unit/helpers.test.mjs"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Five players: five games to 15, each sits out once",
+   "tests": [
+    "e2e/tabs/adjust-oracle.ts",
+    "unit/adjust.test.mjs"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "25–27 players: fifth players on Courts 6, 5, 4",
+   "tests": [
+    "unit/adjust.test.mjs"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Nobody plays alone",
+   "tests": [
+    "unit/adjust.test.mjs"
+   ]
+  },
+  {
+   "kind": "Rule / wording",
+   "item": "Refuse 31 players / 1 player at session start",
+   "tests": [
+    "unit/adjust.test.mjs",
+    "unit/helpers.test.mjs"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Waiver acceptance record",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "All acceptances (CSV)",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Waiver wording",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Season PDF",
+   "tests": [
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Player export (now the record)",
+   "tests": [
+    "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Backup export (job)",
+   "tests": [
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Download / export",
+   "item": "Restore statement (job)",
+   "tests": [
+    "legacy/automation/restore.test.mjs"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "accept_waiver",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "admin_status",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "assert_test_environment",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql",
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "capture_state",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "checkpoint",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "checkpoint_settle",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "delete_payment",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "delete_push_subscription",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "delete_state",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "dispatch_reminder_job",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "environment_guard",
+   "tests": [
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "is_admin",
+   "tests": [
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "is_admin_any_factor",
+   "tests": [
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "log_rsvp_change",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "my_email",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "my_player_id",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "prune_undo_journal",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "publish_waiver_version",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/waiver.spec.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "rebuild_player_stats",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "record_payment",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "record_waiver_acceptance",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "refresh_paid_flag",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "register_me",
+   "tests": [
+    "db/gen_cases.py",
+    "db/rollback-check.sql",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "reminder_targets",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "save_court_scores",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "save_push_subscription",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "set_email_reminders",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "set_question_asker",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "set_rsvp",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/vote.suite.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "set_state",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/adjust-edge.spec.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "spare_seats",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "start_new_season",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "undo_last",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "update_my_profile",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "waiver_acceptances_guard",
+   "tests": [
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "waiver_versions_guard",
+   "tests": [
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "app_admins",
+   "tests": [
+    "db/gen_cases.py",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "audit_log",
+   "tests": [
+    "db/gen_cases.py",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "environment",
+   "tests": [
+    "db/gen_cases.py",
+    "db/rollback-check.sql",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "invitations",
+   "tests": [
+    "db/gen_cases.py",
+    "db/rollback-check.sql",
+    "e2e/mock-supabase.ts",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "past_players",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "payments",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/gen.ts",
+    "e2e/tabs/pay.spec.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "payments_archive",
+   "tests": [
+    "db/gen_cases.py"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "push_subscriptions",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "questions",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "reminder_log",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "rsvp_log",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "rsvps",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/gen.ts",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "season_dates",
+   "tests": [
+    "db/gen_cases.py",
+    "legacy/automation/restore.test.mjs",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "undo_journal",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "waiver_acceptances",
+   "tests": [
+    "db/gen_cases.py",
+    "db/rollback-check.sql",
+    "db/run.sh",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "waiver_versions",
+   "tests": [
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts",
+    "rules.sql"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Browser runs refuse production settings",
+   "tests": [
+    "e2e/isolation.ts",
+    "e2e/playwright.config.ts",
+    "e2e/tabs/isolation.spec.ts",
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Browser requests to production blocked",
+   "tests": [
+    "e2e/isolation.ts",
+    "e2e/tabs/isolation.spec.ts"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Unit tests make no network requests",
+   "tests": [
+    "unit/fetch-guard.mjs",
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "DB runner refuses hosted databases",
+   "tests": [
+    "db/run.sh",
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Seed SQL checks the TEST marker",
+   "tests": [
+    "db/gen_cases.py",
+    "rules.sql",
+    "unit/isolation.test.mjs"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Site refuses a mismatched database",
+   "tests": [
+    "e2e/tabs/isolation.spec.ts"
+   ]
+  },
+  {
+   "kind": "Production isolation",
+   "item": "Production build only from committed code",
+   "tests": [
+    "unit/isolation.test.mjs"
+   ]
+  }
+ ]
+}

@@ -4,6 +4,7 @@ import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
+import { expectAdjust, changes, sorted } from "./adjust-oracle";
 
 const LIVES: LiveState[] = ["none", "r1-partial", "r2-partial", "r1-done"];
 let ctx: Ctx;
@@ -73,9 +74,37 @@ for (let i = 0; i < 100; i++) {
       await expect.poll(() => (cur ? kv("current_session")?.attendance?.[id] : kv("pre_session_attendance")?.[id]), { message: "saved" }).toBe("present");
     } else {
       await row.getByRole("button", { name: "❌" }).click();
-      await expect(toast).toHaveText(`${first} marked absent — off Court ${c} tonight, one court down next week`);
-      if (cur) { const cs = kv("current_session"); expect({ att: cs.attendance[id], from: cs.absentFrom[id], seated: courtOf(cs.assignments, id) }).toEqual({ att: "absent", from: c, seated: 0 }); }
-      else await expect.poll(() => kv("pre_session_attendance")?.[id], { message: "saved" }).toBe("absent");
+      if (!cur) {
+        await expect(toast).toHaveText(`${first} marked absent — off Court ${c} tonight, one court down next week`);
+        await expect.poll(() => kv("pre_session_attendance")?.[id], { message: "saved" }).toBe("absent");
+        return;
+      }
+      // During a session the toggle only records the absence; Adjust courts moves players, and only as the rules need.
+      await expect.poll(() => kv("current_session")?.attendance?.[id], { message: "saved" }).toBe("absent");
+      const cs = kv("current_session"), want = expectAdjust(cs), n = changes(want);
+      await expect(toast).toHaveText(`${first} marked absent${n ? " — press Adjust courts to update the courts" : ""}. One court down next week.`);
+      expect({ from: cs.absentFrom[id], seated: courtOf(cs.assignments, id) }, "recorded, not moved yet").toEqual({ from: c, seated: c });
+      await page.locator("#adj-btn").click();
+      if (!want.ok) {
+        await expect(page.locator("#modal.open #adj-explain .alert-error")).toBeVisible();
+        await expect(page.locator("#adj-apply")).toBeDisabled();
+        expect(kv("current_session").assignments, "a refusal changes nothing").toEqual(cs.assignments);
+        return;
+      }
+      if (!n) {   // a court with scores this round keeps its players until the round ends: a note, nothing to apply
+        await expect(page.locator("#modal.open #adj-explain")).toContainText(`Court ${c} already has scores this round`);
+        await expect(page.locator("#adj-apply")).toBeDisabled();
+        return;
+      }
+      await expect(page.locator("#modal.open")).toContainText(`Adjust courts — Round ${cur.cycle}`);
+      await expect(page.locator("#adj-explain")).toContainText(`${P.find((p) => p.id === id)!.name} is absent — off Court ${c}.`);
+      await expect(page.locator("#adj-explain li")).toHaveCount(n + want.skippedLate.length + (Object.values(want.lineup).filter((x, k) => x.length !== ((cs.assignments[k + 1] || []).length) && x.length >= 2).length) + (Object.values(want.lineup).flat().length ? 0 : 1));
+      await page.locator("#adj-apply").click();
+      await expect(toast).toHaveText(`Courts adjusted for Round ${cur.cycle} — ${n} change${n === 1 ? "" : "s"}. Undo is on the Attendance tab.`);
+      const after = kv("current_session");
+      expect(sorted(after.assignments), "courts as the rules say, and nobody else moved").toEqual(sorted(want.lineup));
+      expect(courtOf(after.assignments, id), `${first} is off the courts`).toBe(0);
+      await expect(sec.locator("#adj-last")).toContainText(`${P.find((p) => p.id === id)!.name} is absent — off Court ${c}.`);
     }
   });
 }

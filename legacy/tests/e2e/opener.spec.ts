@@ -141,12 +141,14 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
       const games = await courtGames(page, c);
       const n = model.lineup[c].length;
       expect(games).toHaveLength(n === 5 ? 5 : 3);
-      const scores = games.map((g) => {
+      const scores: [number, number][] = [];
+      for (const g of games) {   // a court of two plays best of three: no Game 3 after a 2–0
+        if (n === 2 && scores.length === 2 && (scores[0][0] > scores[0][1]) === (scores[1][0] > scores[1][1])) break;
         const A = [g.a1, g.a2].filter(num), B = [g.b1, g.b2].filter(num);
         const [sA, sB] = model.play(r, A, B, 1, target(n));
         sheet.push({ round: cy, court: c, game: g.g, A, B, sA, sB });
-        return [sA, sB] as [number, number];
-      });
+        scores.push([sA, sB]);
+      }
       if (cy === 1 && c === 1) {
         await page.selectOption("#sc-sel", "1");
         for (const [i, [a, b]] of scores.entries()) { await page.fill(`#si_1_${i + 1}_a`, String(a)); await page.fill(`#si_1_${i + 1}_b`, String(b)); }

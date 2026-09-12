@@ -55,7 +55,9 @@ fx += ["end $f$;",
        "insert into public.announcements(type,title,body) values('info','db fixture','notice');",
        f"insert into public.rsvps(session_number,player_id,response) values(25,{ID('P1')},'coming'),(25,{ID('P2')},'coming');",
        f"insert into public.reminder_log(session_number,player_id,kind) values(1,{ID('P2')},'vote');",
-       "insert into public.past_players(id,season_label,name,email,phone) values(700001,'2025-26','Old Timer','old.timer@example.invalid','613-555-0199');"]
+       "insert into public.past_players(id,season_label,name,email,phone) values(700001,'2025-26','Old Timer','old.timer@example.invalid','613-555-0199');",
+       # L20: P1 and P2 accepted the current waiver when they registered (written directly by the owner, as the record would be).
+       *[f"insert into public.waiver_acceptances(player_id,user_id,email,participant_name,typed_signature,waiver_version,waiver_sha256,action,registration_ref) select {ID(k)},'{ACCOUNTS[k][0]}','{ACCOUNTS[k][1]}','{NAME[k]}','{NAME[k]}',version,sha256,'registration','REG-fixture' from public.waiver_versions where is_current;" for k in ("P1", "P2")]]
 (HERE / "fixtures.sql").write_text("\n".join(fx) + "\n")
 
 # ── how a case is written ────────────────────────────────────────────────────────────────────────────────────────────
@@ -85,7 +87,7 @@ def total(k): return f"current_setting('dbt.{k}')::bigint"   # counted by the da
 COUNTS = {"players": "public.players", "ann": "public.announcements", "state": "public.app_state", "rsvps": "public.rsvps",
           "q": "public.questions", "inv": "public.invitations", "admins": "public.app_admins", "audit": "public.audit_log",
           "pay": "public.payments", "parch": "public.payments_archive", "push": "public.push_subscriptions", "rlog": "public.reminder_log",
-          "vlog": "public.rsvp_log", "undo": "public.undo_journal", "dates": "public.season_dates", "past": "public.past_players",
+          "vlog": "public.rsvp_log", "undo": "public.undo_journal", "dates": "public.season_dates", "past": "public.past_players", "wa": "public.waiver_acceptances",
           "state_member": "public.app_state where (key not like 'snapshot\\_%' and key not in ('admin_pin','pin','invite_code')) or key like 'archive\\_%'"}
 TOTALS = "select " + ", ".join(f"set_config('dbt.{k}',(select count(*) from {v})::text,true)" for k, v in COUNTS.items()) + ";"
 
@@ -300,7 +302,9 @@ for k in range(110):
     who = R.choice(["INV", "INV", "INV", "STR", "P1", "ORG1", "ORG2", "UNC"])
     (name, name_ok), phone, emer, med = R.choice(NAMES), "1" * R.choice([10, 40, 41]), "e" * R.choice([5, 200, 201]), "m" * R.choice([0, 500, 501])
     pay, mem = R.choice(["paid_full", "will_pay", "per_session", "bogus"]), R.choice(["regular", "spare"])
-    call = f"public.register_me('{name}','{phone}','{emer}','{med}','sig','{mem}','{pay}')"
+    # L20: every registration accepts the current waiver wording (its version and the digest of the text on screen).
+    call = (f"public.register_me('{name}','{phone}','{emer}','{med}','sig','{mem}','{pay}',(select version from public.waiver_versions where is_current),"
+            f"(select sha256 from public.waiver_versions where is_current),'Signed {k + 1}','America/Toronto',-240)")
     if who == "UNC": want = "Verified sign-in email required"
     elif who == "STR": want = "Registration is closed"
     elif not (name_ok and len(phone) <= 40 and len(emer) <= 200 and len(med) <= 500): want = "Invalid registration details"
@@ -470,6 +474,168 @@ case("admin status hidden from anon", "anon", err("perform public.admin_status()
 for fn in ["capture_state()", "refresh_paid_flag(1)", "log_rsvp_change()", "prune_undo_journal()", "set_question_asker()"]:
     for who in ["P1", "ORG2", "SVC"]:
         case(f"internal {fn.split('(')[0]} not callable by {who}", who, err(f"perform public.{fn}", "permission denied"))
+
+# ── 13. waiver wording, acceptance records and the environment marker (L18–L20): who may read and write ─────────────
+WRITES_DENIED = [
+    ("add a waiver version", "insert into public.waiver_versions(version,title,body) values('2027-01-v9','x','# x')"),
+    ("change waiver wording", "update public.waiver_versions set body=body"),
+    ("remove a waiver version", "delete from public.waiver_versions"),
+    ("add an acceptance directly", "insert into public.waiver_acceptances(email,participant_name,typed_signature,waiver_version,waiver_sha256,action) select 'x','x','x',version,sha256,'registration' from public.waiver_versions limit 1"),
+    ("change an acceptance", "update public.waiver_acceptances set typed_signature='forged'"),
+    ("remove an acceptance", "delete from public.waiver_acceptances"),
+    ("relabel the environment", "update public.environment set name='production'"),
+    ("remove the environment marker", "delete from public.environment"),
+    ("add an environment marker", "insert into public.environment(name,schema_version) values('test','x')"),
+    ("run the TEST-only guard function", "perform public.assert_test_environment()"),
+    ("record an acceptance through the internal function", "perform public.record_waiver_acceptance(1,'x','x','x','x','x','x',0,'registration','adult','',false,'')"),
+]
+for who in CALLERS + ["P2", "INV"]:
+    # Anonymous visitors get nothing (the site reads both only after sign-in); everyone signed in, and the jobs, read them.
+    case(f"read waiver wording as {who}", who, err("perform count(*) from public.waiver_versions", "permission denied") if who == "anon" else rows("select 1 from public.waiver_versions", 2))
+    case(f"read the environment marker as {who}", who, err("perform count(*) from public.environment", "permission denied") if who == "anon" else rows("select 1 from public.environment where name='test'", 1))
+    acc = {"anon": None, "SVC": total("wa"), "ORG2": total("wa"), "P1": 1, "P2": 1}.get(who, 0)
+    case(f"read waiver acceptances as {who}", who, err("perform count(*) from public.waiver_acceptances", "permission denied") if acc is None else rows("select 1 from public.waiver_acceptances", acc), TOTALS)
+    for label, stmt in WRITES_DENIED: case(f"{label} as {who}", who, err(stmt, "permission denied"))
+    for t in ["waiver_versions", "waiver_acceptances", "environment"]: case(f"empty {t} as {who}", who, err(f"truncate public.{t} cascade", "permission denied"))
+
+# ── 14. registering records the acceptance of the exact current wording ──────────────────────────────────────────────
+WV, WH = "(select version from public.waiver_versions where is_current)", "(select sha256 from public.waiver_versions where is_current)"
+V1H = "(select sha256 from public.waiver_versions where version='2026-09-v1')"
+def reg(extra): return f"public.register_me('Nia Newcomer','613','EC','','sig','regular','will_pay'{extra})"
+INV_EMAIL = ACCOUNTS["INV"][1]
+for label, extra, pat in [
+    ("no waiver", "", "out of date"), ("an unknown version", f",'1999-01-v1',{WH},'Nia Newcomer'", "out of date"),
+    ("an older version", f",'2026-09-v1',{V1H},'Nia Newcomer'", "updated while you were registering"),
+    ("a wrong digest", f",{WV},repeat('a',64),'Nia Newcomer'", "does not match"), ("an empty digest", f",{WV},'','Nia Newcomer'", "does not match"),
+    ("the digest of other words", f",{WV},encode(sha256(convert_to('other words','UTF8')),'hex'),'Nia Newcomer'", "does not match"),
+    ("the digest of the older version", f",{WV},{V1H},'Nia Newcomer'", "does not match"),
+    ("a one-letter signature", f",{WV},{WH},'N'", "full name"), ("an 81-letter signature", f",{WV},{WH},repeat('n',81)", "full name"),
+    ("a blank signature", f",{WV},{WH},'   '", "full name"),
+    ("an unknown age declaration", f",{WV},{WH},'Nia Newcomer','America/Toronto',-240,'child'", "18 or older"),
+    ("a guardian without the name of the minor", f",{WV},{WH},'Nia Newcomer','America/Toronto',-240,'guardian',''", "under 18"),
+    ("a guardian with a one-letter name for the minor", f",{WV},{WH},'Nia Newcomer','America/Toronto',-240,'guardian','N'", "under 18")]:
+    case(f"register refused with {label}", "INV", err(f"perform {reg(extra)}", pat) + rows(f"select 1 from public.players where email='{INV_EMAIL}'", 0) + rows("select 1 from public.waiver_acceptances where participant_name='Nia Newcomer'", 0))
+for label, extra, cond in [
+    ("an adult giving photo consent", f",{WV},{WH},'Nia Newcomer','America/Toronto',-240,'adult','',true,'agent'", "age_declaration='adult' and media_consent and client_timezone='America/Toronto' and client_utc_offset_minutes=-240 and minor_name='' and user_agent='agent'"),
+    ("an adult without photo consent", f",{WV},{WH},'Nia Newcomer','America/Toronto',-240,'adult','',false", "not media_consent"),
+    ("a guardian registering a minor", f",{WV},{WH},'Nia Newcomer','America/Toronto',-300,'guardian','Nico Newcomer'", "age_declaration='guardian' and minor_name='Nico Newcomer' and client_utc_offset_minutes=-300"),
+    ("the digest in capitals", f",{WV},upper({WH}),'Nia Newcomer'", "waiver_sha256=" + WH),
+    ("a device offset out of range (not stored)", f",{WV},{WH},'Nia Newcomer','X',9999", "client_utc_offset_minutes is null"),
+    ("a half-hour time zone", f",{WV},{WH},'Nia Newcomer','Asia/Kolkata',330", "client_timezone='Asia/Kolkata' and client_utc_offset_minutes=330"),
+    ("a time zone longer than 64 characters (cut)", f",{WV},{WH},'Nia Newcomer',repeat('z',100)", "length(client_timezone)=64"),
+    ("a device description longer than 300 characters (cut)", f",{WV},{WH},'Nia Newcomer','',null,'adult','',false,repeat('u',400)", "length(user_agent)=300"),
+    ("a name for a minor on an adult declaration (not stored)", f",{WV},{WH},'Nia Newcomer','',null,'adult','Someone'", "minor_name=''"),
+    ("a signature with spaces around it (trimmed)", f",{WV},{WH},'  Nia N  '", "typed_signature='Nia N'")]:
+    case(f"register records the acceptance: {label}", "INV",
+         f" select {reg(extra)} into vm;" + rows(f"select 1 from public.waiver_acceptances where player_id=vm and {cond} and action='registration' and waiver_version={WV} and waiver_sha256={WH}"
+                                                 f" and email='{INV_EMAIL}' and user_id='{ACCOUNTS['INV'][0]}' and participant_name='Nia Newcomer' and registration_ref like 'REG-'||vm||'-________T______Z' and accepted_at>now()-interval '1 minute'", 1))
+case("a new acceptance by a returning player attaches to their existing record", "P1",
+     f" select public.register_me('Dee Bee One','613','EC','','sig','regular','will_pay',{WV},{WH},'Dee Bee One') into vm; if vm<>{ID('P1')} then raise exception 'new record'; end if;" + rows(f"select 1 from public.waiver_acceptances where player_id={ID('P1')}", 2))
+
+# ── 15. accepting an updated version, and publishing one ─────────────────────────────────────────────────────────────
+PUB_V1 = "update public.waiver_versions set is_current=false where is_current; update public.waiver_versions set is_current=true where version='2026-09-v1';"
+for label, who, stmt, want, setup in [
+    ("the version already accepted", "P1", f"perform public.accept_waiver({WV},{WH},'Dee Bee One')", "already accepted", ""),
+    ("an older version", "P1", f"perform public.accept_waiver('2026-09-v1',{V1H},'Dee Bee One')", "updated while you were registering", ""),
+    ("no player record", "STR", f"perform public.accept_waiver({WV},{WH},'Stranger Person')", "Register first", ""),
+    ("a wrong digest", "P2", f"perform public.accept_waiver('2026-09-v1',repeat('b',64),'Dee Bee Two')", "does not match", PUB_V1),
+    ("a missing signature", "P2", f"perform public.accept_waiver('2026-09-v1',{V1H},'')", "full name", PUB_V1),
+    ("an anonymous visitor", "anon", f"perform public.accept_waiver({WV},{WH},'x')", "permission denied", "")]:
+    case(f"accept waiver refused: {label}", who, err(stmt, want), setup)
+case("a player accepts the newly published version: a second record, marked as a later acceptance", "P1",
+     f" perform public.accept_waiver('2026-09-v1',{V1H},'Dee Bee One','America/Toronto',-240,'adult','',true);" +
+     rows(f"select 1 from public.waiver_acceptances where player_id={ID('P1')}", 2) + rows(f"select 1 from public.waiver_acceptances where player_id={ID('P1')} and action='updated-version' and waiver_version='2026-09-v1' and media_consent", 1), PUB_V1)
+case("a spare with no earlier record accepts the current version", "S1", f" perform public.accept_waiver({WV},{WH},'Dee Bee Spare');" + rows(f"select 1 from public.waiver_acceptances where player_id={ID('S1')} and action='updated-version'", 1))
+case("the organizer publishes a version: exactly one is current", "ORG2", " perform public.publish_waiver_version('2026-09-v1');" + rows("select 1 from public.waiver_versions where is_current and version='2026-09-v1'", 1) + rows("select 1 from public.waiver_versions where is_current", 1))
+case("publishing the current version again changes nothing", "ORG2", f" perform public.publish_waiver_version({WV});" + rows("select 1 from public.waiver_versions where is_current", 1))
+for who, want in [("ORG1", "Organizer verification required"), ("P1", "Organizer verification required"), ("STR", "Organizer verification required"), ("anon", "permission denied")]:
+    case(f"publish a waiver version refused for {who}", who, err("perform public.publish_waiver_version('2026-09-v1')", want))
+case("publishing an unknown version is refused", "ORG2", err("perform public.publish_waiver_version('1999-01-v1')", "No waiver version"))
+
+case("my_email is the verified sign-in email, in lower case", "P1", rows(f"select 1 where public.my_email()='{ACCOUNTS['P1'][1]}'", 1))
+case("my_email is not available to an anonymous visitor", "anon", err("perform public.my_email()", "permission denied"))
+
+# ── 16. best of three on a court of two (L19) ────────────────────────────────────────────────────────────────────────
+def sess(ids): return ("insert into public.app_state(key,value,version) values('current_session','{\"number\":1,\"cycle\":1,\"completed\":false,\"scores\":{},\"assignments\":{\"1\":['||"
+                       + "||','||".join(ID(k) for k in ids) + "||']}}',1) on conflict(key) do update set value=excluded.value,version=1;")
+def g(n, a, b, sa, sb): return f'"c1_y1_g{n}":{{"a1":\'||{ID(a)}||\',"a2":null,"b1":\'||{ID(b)}||\',"b2":null,"sA":{sa},"sB":{sb},"w":"{"A" if sa > sb else "B"}"}}'
+def save(*games): return f"perform public.save_court_scores(1,1,('{{{','.join(games)}}}')::jsonb,null)"
+W1, W2, L1_, L2_ = g(1, "P1", "P2", 21, 10), g(2, "P1", "P2", 21, 12), g(1, "P1", "P2", 10, 21), g(2, "P1", "P2", 12, 21)
+S2, G3 = g(2, "P1", "P2", 15, 21), g(3, "P1", "P2", 21, 19)
+stored = lambda n: f" select count(*) into vn from jsonb_object_keys((select value::jsonb->'scores' from public.app_state where key='current_session')); if vn<>{n} then raise exception '% games stored', vn; end if;"
+for who in ["ORG2", "P1"]:
+    case(f"best of three ({who}): after a 2–0 there is no Game 3", who, f" {save(W1, W2)};" + err(save(G3), "Best of three"), sess(["P1", "P2"]))
+    case(f"best of three ({who}): a 2–0 sent together with a Game 3 is refused", who, err(save(W1, W2, G3), "Best of three") + stored(0), sess(["P1", "P2"]))
+    case(f"best of three ({who}): a split court plays Game 3", who, f" {save(W1, S2)}; {save(G3)};" + stored(3), sess(["P1", "P2"]))
+    case(f"best of three ({who}): Game 3 saved first, then a 2–0, is refused", who, f" {save(G3)};" + err(save(L1_, L2_), "Best of three") + stored(1), sess(["P1", "P2"]))
+case("best of three: Game 3 saved first, then a split, is kept", "ORG2", f" {save(G3)}; {save(W1, S2)};" + stored(3), sess(["P1", "P2"]))
+case("best of three: a 2–0 alone is two stored games", "ORG2", f" {save(W1, W2)};" + stored(2), sess(["P1", "P2"]))
+case("three players still play all three games even when one player wins the first two", "ORG2",
+     f" perform public.save_court_scores(1,1,('{{{g(1, 'P1', 'P2', 21, 5)},{g(2, 'P1', 'R3', 21, 6).replace('g2', 'g2')},{g(3, 'P2', 'R3', 21, 7)}}}')::jsonb,null);" + stored(3), sess(["P1", "P2", "R3"]))
+
+# ── 17. accepting an updated waiver: every detail recorded, every refusal, and who may call what (L20) ───────────────────
+# P2 accepted the current version (v2) when registering; with v1 made current (PUB_V1) P2 has a new version to accept.
+def aw(rest=",'Dee Bee Two'", sha=V1H): return "public.accept_waiver('2026-09-v1'," + sha + rest + ")"
+P2_EMAIL, P2_UID = ACCOUNTS["P2"][1], ACCOUNTS["P2"][0]
+for label, call, cond in [
+    ("an adult giving photo consent", aw(",'Dee Bee Two','America/Toronto',-240,'adult','',true,'agent'"), "age_declaration='adult' and media_consent and client_timezone='America/Toronto' and client_utc_offset_minutes=-240 and minor_name='' and user_agent='agent'"),
+    ("an adult without photo consent", aw(",'Dee Bee Two','America/Toronto',-240,'adult','',false"), "media_consent=false"),
+    ("no photo choice offered", aw(), "media_consent is null and age_declaration='adult' and client_timezone='' and client_utc_offset_minutes is null and user_agent=''"),
+    ("a guardian accepting for a minor", aw(",'Dee Bee Two','America/Toronto',-300,'guardian','Nico Two'"), "age_declaration='guardian' and minor_name='Nico Two' and client_utc_offset_minutes=-300"),
+    ("the digest in capitals", aw(sha=f"upper({V1H})"), f"waiver_sha256={V1H}"),
+    ("a device offset out of range (not stored)", aw(",'Dee Bee Two','X',9999"), "client_utc_offset_minutes is null and client_timezone='X'"),
+    ("a half-hour time zone", aw(",'Dee Bee Two','Asia/Kolkata',330"), "client_timezone='Asia/Kolkata' and client_utc_offset_minutes=330"),
+    ("a time zone longer than 64 characters (cut)", aw(",'Dee Bee Two',repeat('z',100)"), "length(client_timezone)=64"),
+    ("a device description longer than 300 characters (cut)", aw(",'Dee Bee Two','',null,'adult','',false,repeat('u',400)"), "length(user_agent)=300"),
+    ("a name for a minor on an adult declaration (not stored)", aw(",'Dee Bee Two','',null,'adult','Someone'"), "minor_name=''"),
+    ("a signature with spaces around it (trimmed)", aw(",'  Dee Two  '"), "typed_signature='Dee Two'"),
+    ("the name of the minor with spaces around it (trimmed)", aw(",'Dee Bee Two','',null,'guardian','  Nico Two  '"), "minor_name='Nico Two'")]:
+    case(f"accept waiver records {label}", "P2", f" perform {call};" + rows(
+        f"select 1 from public.waiver_acceptances where player_id={ID('P2')} and waiver_version='2026-09-v1' and waiver_sha256={V1H} and action='updated-version'"
+        f" and email='{P2_EMAIL}' and user_id='{P2_UID}' and participant_name='Dee Bee Two' and registration_ref like 'REG-'||{ID('P2')}||'-________T______Z'"
+        f" and accepted_at>now()-interval '1 minute' and {cond}", 1), PUB_V1)
+for label, who, stmt, pat, setup in [
+    ("an unknown version", "P2", "perform public.accept_waiver('1999-01-v1',repeat('a',64),'Dee Bee Two')", "out of date", PUB_V1),
+    ("an empty version", "P2", f"perform public.accept_waiver('',{V1H},'Dee Bee Two')", "out of date", PUB_V1),
+    ("an empty digest", "P2", "perform " + aw(sha="''"), "does not match", PUB_V1),
+    ("the digest of other words", "P2", "perform " + aw(sha="encode(sha256(convert_to('other words','UTF8')),'hex')"), "does not match", PUB_V1),
+    ("the digest of another version", "P2", "perform " + aw(sha="(select sha256 from public.waiver_versions where version='2026-09-v2')"), "does not match", PUB_V1),
+    ("a one-letter signature", "P2", "perform " + aw(",'D'"), "full name", PUB_V1),
+    ("an 81-letter signature", "P2", "perform " + aw(",repeat('d',81)"), "full name", PUB_V1),
+    ("a blank signature", "P2", "perform " + aw(",'   '"), "full name", PUB_V1),
+    ("an unknown age declaration", "P2", "perform " + aw(",'Dee Bee Two','',null,'child'"), "18 or older", PUB_V1),
+    ("a guardian without the name of the minor", "P2", "perform " + aw(",'Dee Bee Two','',null,'guardian',''"), "under 18", PUB_V1),
+    ("a guardian with an 81-letter name for the minor", "P2", "perform " + aw(",'Dee Bee Two','',null,'guardian',repeat('n',81)"), "under 18", PUB_V1),
+    ("the organizer, who has no player record", "ORG2", f"perform public.accept_waiver({WV},{WH},'Org Anizer')", "Register first", ""),
+    ("an invited person who has not registered", "INV", f"perform public.accept_waiver({WV},{WH},'Nia Newcomer')", "Register first", ""),
+    ("an unconfirmed email", "UNC", f"perform public.accept_waiver({WV},{WH},'Un Confirmed')", "Register first", ""),
+    ("the service role", "SVC", f"perform public.accept_waiver({WV},{WH},'Serv Ice')", "permission denied", "")]:
+    case(f"accept waiver refused: {label}", who, err(stmt, pat) + (rows(f"select 1 from public.waiver_acceptances where player_id={ID('P2')} and waiver_version='2026-09-v1'", 0) if who == "P2" else ""), setup)
+
+def reg16(name, phone="'613'", mem="'regular'", pay="'will_pay'"): return f"public.register_me('{name}',{phone},'EC','','sig',{mem},{pay},{WV},{WH},'{name}')"
+case("register refused: a signed-in person who was not invited", "STR", err(f"perform {reg16('Stran Ger')}", "Registration is closed") + rows("select 1 from public.waiver_acceptances where participant_name='Stran Ger'", 0))
+case("register refused: an unconfirmed email", "UNC", err(f"perform {reg16('Un Confirmed')}", "Verified sign-in email required"))
+case("register refused: an anonymous visitor", "anon", err(f"perform {reg16('Ann Onymous')}", "permission denied"))
+case("register refused: the service role", "SVC", err(f"perform {reg16('Serv Ice')}", "permission denied"))
+case("register refused: a phone number over 40 characters, and no acceptance is recorded", "INV",
+     err(f"perform {reg16('Nia Newcomer', phone='repeat(chr(54),41)')}", "Invalid registration details") + rows("select 1 from public.waiver_acceptances where participant_name='Nia Newcomer'", 0))
+case("the organizer can register without an invitation, and the acceptance is recorded", "ORG1",
+     f" select {reg16('Org Anizer')} into vm;" + rows(f"select 1 from public.players where id=vm and email='{ACCOUNTS['ORG'][1]}'", 1) + rows("select 1 from public.waiver_acceptances where player_id=vm and action='registration'", 1))
+case("a spare who registers again stays a spare and gets a new acceptance record", "S1",
+     f" select {reg16('Dee Bee Spare', pay=chr(39) + 'per_session' + chr(39))} into vm; if vm<>{ID('S1')} then raise exception 'new record'; end if;" +
+     rows(f"select 1 from public.players where id={ID('S1')} and membership_type='spare'", 1) + rows(f"select 1 from public.waiver_acceptances where player_id={ID('S1')} and action='registration'", 1))
+for who in ["P2", "S1", "INV", "UNC"]:
+    case(f"publish a waiver version refused for {who}", who, err("perform public.publish_waiver_version('2026-09-v1')", "Organizer verification required"))
+case("publish a waiver version refused for the service role", "SVC", err("perform public.publish_waiver_version('2026-09-v1')", "permission denied"))
+
+# Best of three is only for a court of two: four and five players keep every game.
+def gd(n, a1, a2, b1, b2, sa, sb): return f'"c1_y1_g{n}":{{"a1":\'||{ID(a1)}||\',"a2":\'||{ID(a2)}||\',"b1":\'||{ID(b1)}||\',"b2":\'||{ID(b2)}||\',"sA":{sa},"sB":{sb},"w":"{"A" if sa > sb else "B"}"}}'
+case("four players: the same pair winning Games 1 and 2 still plays Game 3", "ORG2",
+     f" {save(gd(1, 'P1', 'P2', 'R3', 'R4', 21, 10), gd(2, 'P1', 'P2', 'R3', 'R4', 21, 12))}; {save(gd(3, 'P1', 'R3', 'P2', 'R4', 21, 15))};" + stored(3), sess(["P1", "P2", "R3", "R4"]))
+case("five players: all five games to 15 are kept", "ORG2",
+     f" {save(gd(1, 'P1', 'P2', 'R3', 'R4', 15, 10), gd(2, 'P1', 'R3', 'P2', 'R5', 15, 11), gd(3, 'P1', 'R4', 'R3', 'R5', 15, 12), gd(4, 'P2', 'R3', 'R4', 'R5', 15, 13), gd(5, 'P1', 'R5', 'P2', 'R4', 15, 9))};" + stored(5), sess(["P1", "P2", "R3", "R4", "R5"]))
+case("best of three: a 2–0 for the second player, then Game 3, is refused", "ORG2", f" {save(L1_, L2_)};" + err(save(G3), "Best of three") + stored(2), sess(["P1", "P2"]))
+case("best of three: Game 2 then Game 1 saved separately make a 2–0, and Game 3 is refused", "ORG2", f" {save(W2)}; {save(W1)};" + err(save(G3), "Best of three") + stored(2), sess(["P1", "P2"]))
 
 (HERE / "cases.sql").write_text("\n".join(cases) + "\n")
 print(f"{len(cases)} database cases written to {HERE / 'cases.sql'}")

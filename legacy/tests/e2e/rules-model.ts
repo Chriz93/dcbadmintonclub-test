@@ -48,6 +48,8 @@ export class Model {
     this.sessionWins.clear(); this.sessionGames.clear(); this.initialCourt.clear(); this.absentFrom.clear(); this.round2Court.clear();
     for (let c = 1; c <= NC; c++) for (const id of this.lineup[c]) this.initialCourt.set(id, c);
   }
+  above(c: number) { for (let x = c - 1; x >= 1; x--) if (this.lineup[x].length) return x; return 0; }
+  below(c: number) { for (let x = c + 1; x <= NC; x++) if (this.lineup[x].length) return x; return 0; }
   absent(id: number) { const c = this.initialCourt.get(id)!; this.lineup[c] = this.lineup[c].filter((x) => x !== id); this.absentFrom.set(id, c); }
   // Score a game between two sides; returns [scoreA, scoreB] and records the result.
   play(r: Round, A: number[], B: number[], session: number, t: number): [number, number] {
@@ -80,14 +82,14 @@ export class Model {
       const ids = this.lineup[c]; if (ids.length < 2) { ids.forEach((id) => (mv[id] = "stay")); continue; }
       const { top, bottom } = this.rank(r, ids, c, seed);
       for (const id of ids) mv[id] = "stay";
-      if (c > 1) mv[top] = "up";
-      // The bottom player moves down only into a court that has players: the last occupied court is the bottom court.
-      if (c < NC && this.lineup[c + 1].length > 0) mv[bottom] = "down";
+      // "One court up/down" is the next court in use: an empty court in the ladder is skipped, never filled by one player.
+      if (this.above(c)) mv[top] = "up";
+      if (this.below(c)) mv[bottom] = "down";
     }
     const na: number[][] = Array.from({ length: NC + 1 }, () => []);
     for (const id of Object.keys(mv).map(Number).sort((a, b) => a - b)) { // the app walks the map in ascending id order
       const from = this.lineup.findIndex((l) => l.includes(id)); let to = from;
-      if (mv[id] === "up") to = Math.max(1, from - 1); if (mv[id] === "down") to = Math.min(NC, from + 1);
+      if (mv[id] === "up") to = this.above(from) || from; if (mv[id] === "down") to = this.below(from) || from;
       na[to].push(id);
     }
     for (let c = 1; c <= NC; c++) while (na[c].length > cap(c)) { const ov = na[c].pop()!; na[c < NC ? c + 1 : c - 1].unshift(ov); }

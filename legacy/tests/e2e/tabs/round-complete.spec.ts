@@ -17,6 +17,7 @@ function allButOne(L: League, r: () => number) {
     combos(ids).forEach((g, k) => {
       const key = `c${c}_y${cy}_g${k + 1}`;
       if (c === last) { delete cur.scores[key]; return; }
+      if (ids.length === 2 && k === 2) { const s1 = cur.scores[`c${c}_y${cy}_g1`], s2 = cur.scores[`c${c}_y${cy}_g2`]; if (s1 && s2 && s1.w === s2.w) { delete cur.scores[key]; return; } }   // best of three
       if (!cur.scores[key]) { const lo = Math.floor(r() * (T - 1)), aWins = r() < 0.5; cur.scores[key] = { ...g, sA: aWins ? T : lo, sB: aWins ? lo : T, w: aWins ? "A" : "B" }; }
     });
   }
@@ -39,13 +40,18 @@ for (let i = 0; i < 100; i++) {
     await page.evaluate(() => nav("scores"));
     await expect(page.locator("#advance-banner"), "round not complete yet").toHaveText("");
     await page.locator("#sc-sel").selectOption(String(last));
+    // The games still to play: all of them, except that a court of two stops after a 2–0 (best of three).
+    const plan: [number, number][] = [];
     for (let g = 1; g <= games.length; g++) {
-      const lo = Math.floor(r() * (T - 1)), aWins = r() < 0.5;
-      await page.locator(`#si_${last}_${g}_a`).fill(String(aWins ? T : lo));
-      await page.locator(`#si_${last}_${g}_b`).fill(String(aWins ? lo : T));
+      if (ids.length === 2 && g === 3 && (plan[0][0] > plan[0][1]) === (plan[1][0] > plan[1][1])) break;
+      const lo = Math.floor(r() * (T - 1)), aWins = r() < 0.5; plan.push(aWins ? [T, lo] : [lo, T]);
+    }
+    for (let g = 1; g <= plan.length; g++) {
+      await page.locator(`#si_${last}_${g}_a`).fill(String(plan[g - 1][0]));
+      await page.locator(`#si_${last}_${g}_b`).fill(String(plan[g - 1][1]));
       if (!saveAll) {
         await page.locator(".game-block").nth(g - 1).getByRole("button", { name: `💾 Save Game ${g}` }).click();
-        if (g < games.length) await expect(page.locator("#_t")).toHaveText(`Game ${g} saved!`);
+        if (g < plan.length) await expect(page.locator("#_t")).toHaveText(`Game ${g} saved!`);
       }
     }
     if (saveAll) await page.getByRole("button", { name: `💾 Save All Court ${last} Scores` }).click();

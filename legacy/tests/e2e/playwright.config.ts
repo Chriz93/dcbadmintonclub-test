@@ -2,6 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
+import { refuseProduction } from "./isolation";
+// Production isolation: no run starts while any environment variable points at the production project. Every page
+// also aborts requests to anything but the local site and the in-memory TEST stand-in (isolation.ts, mock-supabase.ts).
+refuseProduction();
 const shell = resolve(homedir(), "Library/Caches/ms-playwright/chromium_headless_shell-1181/chrome-mac/headless_shell");
 const root = resolve(__dirname, "../../..");
 export default defineConfig({

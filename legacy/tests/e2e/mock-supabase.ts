@@ -6,6 +6,8 @@ import season from "../../automation/season.json";
  * It is a test double, not proof of the real database; the SQL rehearsal in legacy/tests/rules.sql covers that.
  */
 import type { Page, Route } from "@playwright/test";
+import { guardContext } from "./isolation";
+import { waiverVersions, acceptanceProblem, recordAcceptance, type WaiverVersion, type Acceptance } from "./mock-waiver";
 
 export const SB = "https://wgolevihkvmosajumzvl.supabase.co";
 export const ORGANIZER = "christygeorge993@gmail.com";
@@ -34,6 +36,11 @@ export interface MockState {
   factors: Record<string, boolean>; // uid -> enrolled
   audit: { action: string; subject?: string }[];
   requests: string[];
+  blocked?: string[]; // requests the isolation guard stopped (production, another project, the live sites)
+  environment?: { name: string; schema_version: string } | null; // L18 marker; undefined = marked test
+  holdRead?: { key: string; until: Promise<void>; served: () => void }; // a slow refresh: one app_state read's reply is fixed when asked, delivered when released
+  waiverVersions?: WaiverVersion[];    // L20
+  waiverAcceptances?: Acceptance[];
 }
 
 const b64url = (s: string) => Buffer.from(s).toString("base64url");
@@ -82,6 +89,7 @@ export function freshState(): MockState {
     players: seedPlayers(25), announcements: [], state: {}, rsvps: [], questions: [], payments: [], pushSubs: [], rsvpLog: [], undo: [],
     invitations: { "christygeorge993+regular@gmail.com": "regular", "christygeorge993+spare@gmail.com": "spare" },
     admins: [ORGANIZER], users: { [ORGANIZER]: "00000000-0000-4000-8000-000000000001" }, factors: {}, audit: [], requests: [],
+    waiverVersions: waiverVersions(), waiverAcceptances: [],
   };
 }
 
@@ -125,6 +133,8 @@ function myPlayerId(c: { uid: string; email: string } | null, s: MockState) {
 }
 
 export async function installMock(page: Page, s: MockState) {
+  s.blocked = s.blocked || [];
+  await guardContext(page.context(), s.blocked);
   await page.route(`${SB}/**`, async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
@@ -134,6 +144,10 @@ export async function installMock(page: Page, s: MockState) {
     const json = (status: number, body: unknown) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     const body = () => (req.postData() ? JSON.parse(req.postData()!) : {});
     const c = claims(req, s);
+    // L18: signed-in users read the environment marker; the site checks it right after sign-in (anonymous: nothing).
+    // L20: signed-in users read the waiver wording (not logged: the site checks the current version on every sync).
+    if (path === "/rest/v1/waiver_versions" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); const vs = (s.waiverVersions ??= waiverVersions()); return json(200, ordered(vs.filter((r) => matches(r as unknown as Record<string, unknown>, filters(url))), url)); }
+    if (path === "/rest/v1/environment" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); return json(200, s.environment === undefined ? [{ name: "test", schema_version: "L19" }] : s.environment ? [s.environment] : []); }
     // ── Auth ──
     if (path === "/auth/v1/otp") return json(200, {});
     if (path === "/auth/v1/verify") {
@@ -196,10 +210,16 @@ export async function installMock(page: Page, s: MockState) {
         const inv = s.invitations[c.email];
         const existing = s.players.find((x) => x.user_id === c.uid) || s.players.find((x) => !x.user_id && x.email.toLowerCase() === c.email);
         if (!existing && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
+        // L20: the registration also records the acceptance of the exact current waiver wording, or is refused.
+        const wa = { player_id: null as number | null, user_id: c.uid, email: c.email, name: a.p_name, version: a.p_waiver_version, sha: a.p_waiver_sha, sig: a.p_waiver_sig, tz: a.p_tz, offset: a.p_offset, action: "registration" as const, age: a.p_age, minor: a.p_minor, media: a.p_media, ua: a.p_ua };
+        const wp = acceptanceProblem(s.waiverVersions ??= waiverVersions(), wa);
+        if (wp) return json(400, { message: wp, code: "22023" });
+        const wNow = new Date(s.nowMs ?? Date.now()).toISOString();
         const declared = ["paid_full", "will_pay", "per_session"].includes(a.p_payment) ? a.p_payment : "";
-        if (existing) { Object.assign(existing, { declared_payment: declared || existing.declared_payment || "", name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); return json(200, existing.id); }
+        if (existing) { Object.assign(existing, { declared_payment: declared || existing.declared_payment || "", name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); recordAcceptance(s.waiverVersions!, s.waiverAcceptances ??= [], { ...wa, player_id: existing.id }, wNow); return json(200, existing.id); }
         const id = Math.max(0, ...s.players.map((p) => p.id)) + 1;
         s.players.push({ id, name: a.p_name, email: c.email, phone: a.p_phone || "", emergency: a.p_emergency || "", medical: a.p_medical || "", sig: a.p_sig || "", waiver_signed: !!a.p_sig, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: inv || a.p_membership || "regular", declared_payment: declared, created_at: new Date().toISOString(), approved: false, waitlisted: false, registered_at: new Date().toISOString(), admin_note: "", user_id: c.uid });
+        recordAcceptance(s.waiverVersions!, s.waiverAcceptances ??= [], { ...wa, player_id: id }, wNow);
         return json(200, id);
       }
       if (fn === "save_court_scores") {
@@ -219,6 +239,8 @@ export async function installMock(page: Page, s: MockState) {
           if (sc.w !== (sc.sA > sc.sB ? "A" : "B")) return json(400, { message: "Winner flag does not match" });
           cur.scores = cur.scores || {}; cur.scores[k] = sc; cnt++;
         }
+        // L19: two players play best of three — no Game 3 once one player has won the first two.
+        if (assigned.length === 2) { const g = (n: number) => cur.scores?.[`c${a.p_court}_y${a.p_cycle}_g${n}`]; if (g(1) && g(2) && g(1).w === g(2).w && g(3)) return json(400, { message: "Best of three: there is no Game 3 after one player wins the first two games" }); }
         if (!cnt) return json(400, { message: "No scores supplied" });
         s.undo.push({ id: (s.undo.at(-1)?.id || 0) + 1, created_at: new Date().toISOString(), label: `Scores: Court ${a.p_court}, Round ${a.p_cycle}`, actor_email: c.email, snapshot: captureState(s) });
         st.value = JSON.stringify(cur); st.version += 1; s.audit.push({ action: "scores.saved", subject: `court ${a.p_court}` });
@@ -286,6 +308,21 @@ export async function installMock(page: Page, s: MockState) {
         s.audit.push({ action: "undo", subject: e.label });
         return json(200, { undone: e.label, taken_at: e.created_at, remaining: s.undo.length });
       }
+      if (fn === "accept_waiver") {
+        if (me == null) return deny("Register first — there is no player record for this sign-in");
+        const acc = (s.waiverAcceptances ??= []), p = s.players.find((x) => x.id === me)!;
+        if (acc.some((x) => x.player_id === me && x.waiver_version === a.p_version)) return json(400, { message: `You have already accepted waiver version ${a.p_version}`, code: "22023" });
+        const wa = { player_id: me, user_id: c.uid, email: c.email, name: p.name, version: a.p_version, sha: a.p_sha, sig: a.p_sig, tz: a.p_tz, offset: a.p_offset, action: "updated-version" as const, age: a.p_age, minor: a.p_minor, media: a.p_media, ua: a.p_ua };
+        const wp = acceptanceProblem(s.waiverVersions ??= waiverVersions(), wa); if (wp) return json(400, { message: wp, code: "22023" });
+        return json(200, recordAcceptance(s.waiverVersions, acc, wa, new Date(s.nowMs ?? Date.now()).toISOString()).id);
+      }
+      if (fn === "publish_waiver_version") {
+        if (!admin) return deny("Organizer verification required");
+        const vs = (s.waiverVersions ??= waiverVersions());
+        if (!vs.some((v) => v.version === a.p_version)) return json(400, { message: `No waiver version ${a.p_version}`, code: "22023" });
+        vs.forEach((v) => (v.is_current = v.version === a.p_version)); s.audit.push({ action: "waiver.published", subject: a.p_version });
+        return json(200, null);
+      }
       if (fn === "update_my_profile") return json(200, null);
       return json(404, { message: `unknown rpc ${fn}` });
     }
@@ -305,6 +342,7 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "POST") { const b = body(); s.invitations[b.email] = b.membership_type; return json(201, [b]); }
       if (method === "DELETE") { const em = decodeURIComponent(String(f.email || "").replace(/^eq\./, "")); delete s.invitations[em]; return route.fulfill({ status: 204, body: "" }); }
     }
+    if (table === "waiver_acceptances" && method === "GET") { const all = s.waiverAcceptances ?? []; return json(200, ordered((admin ? all : all.filter((r) => r.user_id === c.uid)).filter((r) => matches(r as unknown as Record<string, unknown>, f)), url)); }
     if (table === "past_players" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, ordered(s.pastPlayers || [], url)); }
     if (table === "announcements") {
       if (method === "GET") return json(200, ordered(s.announcements, url));
@@ -314,7 +352,10 @@ export async function installMock(page: Page, s: MockState) {
     }
     if (table === "app_state" && method === "GET") {
       const rows = Object.entries(s.state).filter(([k]) => admin || (!k.startsWith("snapshot_") && !["admin_pin", "pin", "invite_code"].includes(k))).map(([key, v]) => ({ key, value: v.value, version: v.version, created_at: "2026-09-01T00:00:00Z" }));
-      return json(200, rows.filter((r) => matches(r, f)));
+      const reply = rows.filter((r) => matches(r, f));
+      // A slow background refresh (p52 tests): the reply's contents are fixed now; it arrives when the test releases it.
+      const h = s.holdRead; if (h && url.searchParams.get("key") === `eq.${h.key}`) { s.holdRead = undefined; h.served(); await h.until; }
+      return json(200, reply);
     }
     if (table === "rsvps" && method === "GET") return json(200, ordered(s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url));
     if (table === "undo_journal" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.undo].reverse().slice(0, 10).map(({ snapshot, ...rest }) => rest)); }

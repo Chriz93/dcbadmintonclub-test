@@ -23,6 +23,8 @@ select 'votes only through set_rsvp (L15)',case when count(*)=0 then 'OK' else '
 union all
 select 'no TRUNCATE for site roles (L15)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and privilege_type='TRUNCATE' and grantee in('anon','authenticated','service_role')
 union all
+select 'no REFERENCES or TRIGGER for site roles (L21)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and privilege_type in('REFERENCES','TRIGGER') and grantee in('anon','authenticated','service_role')
+union all
 select 'payment archive (L15)',case when to_regclass('public.payments_archive') is not null then 'OK' else 'FAIL: missing' end
 union all
 select 'question asker from record (L15)',case when count(*)=1 then 'OK' else 'FAIL' end from pg_trigger where tgname='questions_asker' and tgrelid='public.questions'::regclass

@@ -374,6 +374,19 @@ on conflict(version) do nothing;
 commit;
 select version,is_current,sha256,length(body) as characters from public.waiver_versions order by version;
 
+-- ═══════════ L21_new_table_privileges ═══════════
+-- L21 (September 12, 2026): exact privileges on the tables added by L18 and L20, for TEST and production alike.
+-- L18 and L20 revoked everything from visitors and signed-in users but not from the service role, so Supabase's defaults
+-- left the service role REFERENCES, TRIGGER and TRUNCATE on environment, waiver_versions and waiver_acceptances (found by
+-- verify.sql on TEST: "no TRUNCATE for site roles: FAIL: 3"). Row rules and row triggers do not cover TRUNCATE.
+-- Same pattern as L15 and L17: revoke everything, then grant back reading only (the organizer through the row rules; the
+-- daily backup through the service role). Writes stay inside the security-definer functions from L18 and L20.
+begin;
+revoke all on public.environment,public.waiver_versions,public.waiver_acceptances from public,anon,authenticated,service_role;
+grant select on public.environment,public.waiver_versions,public.waiver_acceptances to authenticated,service_role;
+update public.environment set schema_version='L21';
+end;
+
 -- ═══════════ verify ═══════════
 -- Post-migration verification. Every row must say OK.
 select 'rls '||c.relname as check_name,case when c.relrowsecurity then 'OK' else 'FAIL: RLS off' end as result
@@ -399,6 +412,8 @@ union all
 select 'votes only through set_rsvp (L15)',case when count(*)=0 then 'OK' else 'FAIL: '||string_agg(policyname,',') end from pg_policies where schemaname='public' and tablename='rsvps' and cmd<>'SELECT'
 union all
 select 'no TRUNCATE for site roles (L15)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and privilege_type='TRUNCATE' and grantee in('anon','authenticated','service_role')
+union all
+select 'no REFERENCES or TRIGGER for site roles (L21)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and privilege_type in('REFERENCES','TRIGGER') and grantee in('anon','authenticated','service_role')
 union all
 select 'payment archive (L15)',case when to_regclass('public.payments_archive') is not null then 'OK' else 'FAIL: missing' end
 union all

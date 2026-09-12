@@ -60,17 +60,18 @@ export function define() {
         return;
       }
       await expect(page.locator("#rs2")).toHaveClass(/active/);
-      await expect(page.locator("#w5-row")).toBeVisible({ visible: !spare });
-      await expect(page.locator("#w6-row")).toBeVisible({ visible: spare });
+      // The payment acknowledgement is the season-fee choice on step 1; the waiver step has no second one.
+      await expect(page.locator("#rs2 #w5-row, #rs2 #w6-row, #w5, #w6"), "no duplicate payment acknowledgement on step 2").toHaveCount(0);
+      await expect(page.locator("#rs2"), "no fee on the waiver step").not.toContainText(spare ? "$400" : "$20 per session");
       if (story === "invalid-2") {
         await page.locator("#rs2").getByRole("button", { name: "Continue →" }).click();
-        await expect(toast).toHaveText("Please check all required boxes to continue");
-        await page.locator("#w1").check(); await page.locator(spare ? "#w6" : "#w5").check();
+        await expect(toast).toHaveText("Please tick the box to accept the waiver to continue");
+        await page.locator("#w1").check();
         await page.locator("#rs2").getByRole("button", { name: "Continue →" }).click();
         await expect(toast).toHaveText("Enter digital signature");
         return;
       }
-      await page.locator("#w1").check(); await page.locator(spare ? "#w6" : "#w5").check();
+      await page.locator("#w1").check();
       await page.locator("#r-sig").fill(name);
       await page.locator("#rs2").getByRole("button", { name: "Continue →" }).click();
       await expect(page.locator("#rs3")).toHaveClass(/active/);

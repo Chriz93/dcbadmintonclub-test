@@ -6,22 +6,25 @@
 <title>🧪 Maplewood League — TEST</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
-<meta name="theme-color" content="#15803d">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700&display=swap">
+<meta name="theme-color" content="#146c2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DC Badminton">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230d2137' width='100' height='100' rx='20'/><text y='65' x='50' text-anchor='middle' font-size='50'>🏸</text></svg>">
 <style>
 :root{
-  --navy:#ffffff;--navy2:#f1f7f3;--teal:#15803d;--teal2:#16a34a;
-  --green:#16a34a;--green2:#15803d;--red:#dc2626;--red2:#b91c1c;
-  --yellow:#d97706;--yellow2:#b45309;--gold:#ca8a04;--silver:#6b7280;--bronze:#b45309;
-  --bg:#f4f7f5;--s1:#ffffff;--s2:#f1f5f2;--s3:#e6ede8;--s4:#d5e0d9;
-  --border:#e1e8e3;--text:#0f1f16;--muted:#5f6f66;
-  --ink:#ffffff;--radius:16px;--shadow:0 10px 30px rgba(15,31,22,0.10);
+  /* Court greens; every text colour is at least 4.5:1 on white and on the card greys (WCAG 2.2 AA). */
+  --navy:#ffffff;--navy2:#eef3ee;--teal:#146c2e;--teal2:#17702f;
+  --green:#17803a;--green2:#146c2e;--red:#c42b1c;--red2:#a8231a;
+  --yellow:#8a5300;--yellow2:#7a4a00;--gold:#7a5c00;--silver:#56606b;--bronze:#8a4b14;
+  --bg:#f2f5f1;--s1:#ffffff;--s2:#eef3ee;--s3:#e2eae3;--s4:#cfdbd1;
+  --border:#d3ddd5;--text:#17231b;--muted:#4b5a50;
+  --ink:#ffffff;--radius:14px;--shadow:0 12px 32px rgba(23,35,27,0.12);
   color-scheme:light;
-  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font:'Barlow',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-display:'Barlow Condensed','Arial Narrow',ui-sans-serif,system-ui,sans-serif;
+  --ease:cubic-bezier(0.4,0,0.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow-x:hidden;}
@@ -76,6 +79,41 @@ textarea.inp{resize:vertical;min-height:80px;}
 .btn-ghost{background:#ffffff;color:var(--text);border:1px solid var(--border);}
 .btn-sm{padding:8px 12px;min-height:36px;font-size:12px;width:auto;margin-top:0;}
 .btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* ATTENDANCE: toggles and the Adjust courts bar */
+.adj-bar{position:sticky;top:62px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(15,31,22,0.08);}
+.adj-bar.adj-pending{border-color:var(--teal);box-shadow:0 0 0 2px rgba(21,128,61,0.18),0 6px 18px rgba(15,31,22,0.08);}
+.adj-sum{flex:1 1 220px;font-size:13px;line-height:1.4;}
+.adj-lock{font-size:12px;color:var(--muted);margin-top:2px;}
+.adj-lbl{font-size:12px;color:var(--muted);font-weight:700;}
+.adj-sel{width:auto;margin:0;padding:9px 10px;font-size:14px;}
+.adj-btn{width:auto;margin:0;min-height:44px;}
+.att-tg{min-height:40px;padding:6px 10px;font-size:12px;margin:0;}
+@media (pointer:coarse){.att-tg{min-height:44px;min-width:44px;}}
+.att-out>span:first-child{text-decoration:line-through;color:var(--muted);}
+.adj-list{margin:0 0 10px;padding-left:18px;font-size:13px;line-height:1.5;display:grid;gap:4px;}
+.adj-over{margin:8px 0;display:grid;gap:6px;}
+.adj-ov-row{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;}
+.adj-ov{width:auto;margin:0;padding:8px 10px;}
+.adj-closed{margin:8px 0;font-size:13px;}
+.adj-closed summary{cursor:pointer;font-weight:700;padding:6px 0;}
+.adj-closed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.adj-sizes{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;}
+.adj-actions{display:flex;gap:8px;}
+.adj-actions .btn{flex:1;}
+.game-skip{opacity:0.85;}
+
+/* WAIVER */
+[hidden]{display:none!important;}
+.wv-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin-bottom:8px;}
+.waiver-box .wv-title{font-size:15px;}
+.wv-list{margin:4px 0 8px 18px;display:grid;gap:2px;}
+.wv-loading{color:var(--muted);font-size:13px;padding:8px 0;}
+.wv-error{color:var(--red2);font-weight:700;}
+.wv-age{border:0;padding:0;margin:10px 0;display:grid;gap:4px;min-width:0;}
+.wv-row,.wv-ver-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.wv-sub{font-size:12px;color:var(--muted);}
+.wv-ver-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 
 /* ALERTS */
 .alert{padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600;}
@@ -268,6 +306,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
 
 /* MODAL */
+.modal:focus{outline:none;}
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(15,31,22,0.55);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:16px;}
 .modal-ov.open{display:flex;}
 .modal{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:22px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);}
@@ -281,9 +320,9 @@ textarea.inp{resize:vertical;min-height:80px;}
 .pos-stat{font-size:12px;color:var(--muted);margin-top:4px;}
 
 /* MESSENGER SHARE */
-.messenger-btn{background:#0084ff;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center;margin-top:8px;}
-.messenger-btn:hover{background:#0070e0;}
-.wa-btn{background:#25d366;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center;margin-top:8px;}
+.messenger-btn{background:#0060c7;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center;margin-top:8px;}
+.messenger-btn:hover{background:#004f9f;}
+.wa-btn{background:#0e7a3e;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center;margin-top:8px;}
 
 /* PLAYER AVATARS */
 .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;text-transform:uppercase;}
@@ -364,6 +403,67 @@ textarea.inp{resize:vertical;min-height:80px;}
 .undo-btn{display:flex;align-items:center;gap:8px;background:#0f1f16;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(15,31,22,.35);cursor:pointer;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font);}
 .undo-btn .undo-ic{font-size:17px;line-height:1;}
 body.has-undo{padding-bottom:140px;}
+
+/* ══ DESIGN (p39): type, palette, spacing, motion, touch, focus ══ */
+body{font-size:15px;line-height:1.5;background:radial-gradient(900px 480px at 50% -200px,rgba(20,108,46,0.08),transparent 65%),var(--bg);}
+.page{animation:fadeUp .32s var(--ease);}
+@media (min-width:900px){.page{max-width:760px;padding:24px 20px;}}
+.page-title{font-family:var(--font-display);font-size:34px;font-weight:700;line-height:1.02;letter-spacing:0.01em;text-transform:uppercase;margin-bottom:4px;text-wrap:balance;}
+.page-sub{font-size:14px;}
+.nav-title{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;}
+.card{border-radius:var(--radius);padding:18px;box-shadow:0 1px 2px rgba(23,35,27,0.05),0 6px 18px rgba(23,35,27,0.05);}
+.card-title{font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:0.05em;color:var(--text);margin-bottom:10px;}
+.hero{background:linear-gradient(160deg,#0f4d22 0%,#146c2e 60%,#0c4020 100%);}
+.hero-club{font-family:var(--font-display);font-size:34px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;line-height:1.02;}
+.lbl{font-size:12.5px;}
+.inp{border-color:var(--s4);}
+.inp:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,108,46,0.2);}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}
+.btn{letter-spacing:0.02em;transition:background-color .15s var(--ease),box-shadow .15s var(--ease),transform .1s var(--ease),filter .15s var(--ease);}
+.btn:hover{filter:none;}
+.btn-primary{background:var(--teal);color:#fff;box-shadow:0 6px 16px rgba(20,108,46,0.25);}
+.btn-primary:hover{background:#0f5b26;}
+.btn-success{background:var(--green);}
+.btn-danger{background:var(--red);}
+.btn-warn{background:#f2b541;color:#231800;}
+.btn-ghost{border-color:var(--s4);}
+.btn-ghost:hover{background:var(--s2);}
+.ptab{font-size:14px;}
+.ptab.active{background:var(--teal);}
+.bnav-btn{font-size:11px;}
+.bnav-btn.active .bi{background:rgba(20,108,46,0.12);}
+.invite-btn,.vote-banner{background:var(--teal);}
+.alert{font-size:14px;border-radius:12px;}
+.alert-info{background:#e7f3ea;border-color:#9ccaa8;color:#12512a;}
+.alert-success{background:#e7f3ea;border-color:#9ccaa8;color:#12512a;}
+.alert-warn{background:#fdf3dc;border-color:#e8c57a;color:#5e3b00;}
+.alert-error{background:#fbe9e7;border-color:#e8a79f;color:#8a1c14;}
+.tag{font-size:12px;}
+.tg-teal,.tg-green{background:#e3f1e6;color:#145a28;border-color:#b9dcc2;}
+.tg-red{background:#fbe9e7;color:#8f1d14;border-color:#f1c3bd;}
+.tg-yellow{background:#fdf1d8;color:#6e4400;border-color:#f0d49a;}
+.tg-gold{background:#fbf0cf;color:#6b5200;border-color:#ead28a;}
+.tg-gray{color:#3f4a43;}
+.lc1 .cbadge{background:#f4d35e;color:#3d2e00;}.lc2 .cbadge{background:#dfe3e8;color:#2f3640;}.lc3 .cbadge{background:#ecc9a8;color:#4a2608;}
+.gym-court.gc1{border-color:#e2c04a;}.gym-court.gc2{border-color:#b8c0c8;}.gym-court.gc3{border-color:#d7a57a;}
+.glabel{font-size:12px;letter-spacing:0.12em;}
+.tnames{font-size:13px;}
+.gc-player{font-size:12px;}
+.gc-header{font-size:11.5px;}
+.dnd-court-title{font-size:13px;}
+.chk-row span,.chk-row label{font-size:14px;}
+.waiver-box{font-size:14px;line-height:1.65;color:var(--text);max-height:340px;}
+.waiver-box h4{color:var(--teal);font-family:var(--font-display);font-size:16px;letter-spacing:0.03em;}
+.modal{border-radius:18px;}
+.modal h3{font-family:var(--font-display);font-size:20px;letter-spacing:0.03em;color:var(--text);}
+.modal-ov.open .modal{animation:modalIn .22s var(--ease);}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+/* Old screens set 9–11px text inline; nothing is smaller than 12px now. */
+[style*="font-size:9px"],[style*="font-size:10px"],[style*="font-size:11px"]{font-size:12px!important;}
+/* Touch screens: every control is at least 44px tall. */
+@media (pointer:coarse){.btn-sm,.ptab,.rsvp-btn,.att-btn,.vt-btn,.notes-btn,.adj-sel{min-height:44px;}.tag[onclick]{min-height:36px;padding:8px 10px;}.chk-row input{width:22px;height:22px;margin-top:0;}.chk-row{min-height:44px;align-items:center;}}
+/* Reduced motion: no fades, rises or pulses. */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -406,13 +506,14 @@ body.has-undo{padding-bottom:140px;}
     </div>
     <div class="countdown" id="countdown"></div>
   </div>
+  <div id="home-waiver"></div>
   <div id="home-vote"></div>
   <div id="my-season"></div>
   <div class="card" id="season-rules-card">
     <div class="card-title">📜 Season rules 2026–27</div>
     <div style="font-size:12px;line-height:1.6;">
       • 28 Tuesdays, 8:00–10:00 PM, Maplewood SS gyms 127C & 127D. Six courts.<br>
-      • Regular season $400 (26 players). Spare session $20, confirmed once the admin verifies the e-transfer.<br>
+      • <span id="rules-fee">Regular season $400 (26 players). Spare session $20, confirmed once the admin verifies the e-transfer.</span><br>
       • Everyone votes on the app every week — Home → “I'm coming” / “Not coming”, or the one-tap link in the reminder email — by <strong>Sunday 10:00 PM</strong> (46 hours before play); after that the answer is final and only the admin can change it (message the group). Decline by Saturday 8:00 PM (72 hours before) for the $14 refund; later notice or a no-show earns no refund.<br>
       • Spares are asked from Saturday 8:00 PM (3 days before) whenever a regular has declined; seats go in the order spares answer.<br>
       • Your vote is your attendance: “coming” seats you for the night, “not coming” excuses you without a court penalty. Only an unannounced no-show drops a court.<br>
@@ -420,9 +521,12 @@ body.has-undo{padding-bottom:140px;}
       • Spares: when a regular votes “not coming”, a seat opens and spares who said “available” are confirmed in the order they answered; the rest stay on standby.<br>
       • Verified no-show: one court down next week. A missing vote alone is not a no-show.<br>
       • Courts hold four. When more than 24 play (all 26 regulars, or a spare joins), the extra players become a fifth player on the bottom courts — Court 6 first, then Court 5, then Court 4. With fewer than 24, nobody plays alone: a single leftover player joins the last court in use as its fifth player, and a court left with two or three plays singles. A court of five plays five doubles games to <strong>15 points</strong> and each player sits out one; a court of four plays three games to 21.<br>
-      • Games end at the target: first to 21 (15 on a court of five) wins, even at 20–20 — no deuce. Arrive 5 minutes early; more than 5 minutes late moves you to the last court.<br>
+      • Games end at the target: first to 21 (15 on a court of five) wins, even at 20–20 — no deuce.<br>
+      • Arrive 5 minutes early. Players arriving more than 5 minutes late move down one court. On the bottom court in use there is no lower court, so a late player stays there.<br>
+      • Shuttlecocks: two per player on each court — 8 for four players, 10 for five, 6 for three and 4 for two. Players provide any extra shuttlecocks.<br>
       • Every session is <strong>two ladder rounds</strong>. After the second round the courts are free for casual games or drills (use old shuttlecocks).<br>
-      • The admin sets the initial seeding. After each round the player with the most wins on a court moves up one court and the fewest moves down; ties go to points, then point difference, then a coin toss that the app does by itself (the same result on every phone). Nobody moves down from the last court in use.
+      • The admin sets the initial seeding. After each round the player with the most wins on a court moves up one court and the fewest moves down; ties go to points, then point difference, then a coin toss that the app does by itself (the same result on every phone). Nobody moves down from the last court in use.<br>
+      • <strong>The app can make mistakes. Please keep a note of your court's score for each round on your phone. If you notice an error, send your recorded scores to the organizer on the same day, after the session.</strong>
     </div>
   </div>
   <div id="pos-home"></div>
@@ -492,64 +596,22 @@ body.has-undo{padding-bottom:140px;}
     <!-- Step 2: Waiver -->
     <div class="reg-step" id="rs2">
       <div class="card">
-        <div class="card-title">Waiver & Rules</div>
-        <div class="waiver-box">
-          <p><strong style="color:var(--text);">DC Badminton Club — Maplewood Ladder League</strong><br>
-          <em style="color:var(--muted);font-size:11px;">Privately organized recreational badminton group operated by Christy George (individual organizer) — not a registered corporation or non-profit</em><br>
-          700 Cope Drive, Stittsville · Tuesdays 8:00–10:00 PM · Sep 15, 2026 – May 18, 2027</p>
-
-          <h4>1. Nature of the Activity & Group</h4>
-          <p>DC Badminton Club is a privately organized recreational badminton group. It is not a registered corporation, non-profit, or incorporated association. All sessions are organized by Christy George (individual). By registering, I understand and accept this context and voluntarily choose to participate.</p>
-
-          <h4>2. Assumption of Risk</h4>
-          <p>I understand that participating in badminton involves inherent risks of physical injury including but not limited to muscle strains, sprains, falls, collisions, and eye injuries. I voluntarily and knowingly assume full responsibility for all risks, injuries, or damages that may occur as a result of my participation in DC Badminton Club activities.</p>
-
-          <h4>3. Release of Liability</h4>
-          <p>I hereby release, waive, and discharge Christy George (individual organizer), any co-organizers, volunteers operating under the DC Badminton Club name, and OCDSB (Ottawa-Carleton District School Board) from any and all claims, liabilities, expenses, or legal actions arising from ordinary negligence related to injuries, losses, or damages incurred during participation. <strong>Note:</strong> Ontario law does not permit waivers for gross negligence or intentional misconduct — this release covers ordinary negligence only.</p>
-
-          <h4>4. Physical Condition & Medical</h4>
-          <p>I certify that I am in good physical condition and have no medical conditions that prevent me from safely participating in badminton. If I have medical concerns, I have consulted a physician and obtained clearance. I agree to notify the organizer immediately of any discomfort, pain, or medical issues that arise during participation. DC Badminton Club is not responsible for medical or emergency costs arising from my participation.</p>
-
-          <h4>5. Age Requirement</h4>
-          <p>This league is open to all ages. Participants under 18 must have a parent or legal guardian register on their behalf and sign this waiver. By registering, I confirm that I am either 18 years of age or older, or that I am a parent/legal guardian registering and accepting responsibility for a minor participant.</p>
-
-          <h4>6. OCDSB Facility Rules</h4>
-          <p>• Non-marking, soft-soled indoor shoes are mandatory at all times<br>
-          • No food or drinks in the gymnasium<br>
-          • No alcohol, smoking, vaping or cannabis on school premises<br>
-          • Play 8:00–10:00 PM; finish play by 10:05 PM and leave by 10:15 PM sharp<br>
-          • Remain in designated gymnasium areas only<br>
-          • No nuts, nut products, shellfish or latex items on premises<br>
-          • No aggressive behaviour, coarse language, or discrimination of any kind<br>
-          • Only custodians may adjust mechanical or building equipment</p>
-
-          <h4>7. Personal Belongings</h4>
-          <p>DC Badminton Club and OCDSB are not responsible for lost, stolen, or damaged personal belongings while at the facility. Players are responsible for their own equipment and valuables. Leave valuables at home.</p>
-
-          <h4>8. Strict Non-Refundable Payment Policy (No Exceptions)</h4>
-          <p>All fees paid to DC Badminton Club are final, non-negotiable, and non-refundable under any circumstances, including but not limited to: personal schedule conflicts, illness or injury, relocation, missed sessions, or cancellations due to bad weather, facility closures, or OCDSB/city-imposed shutdowns. Sessions will not be rescheduled or credited unless the organizer cancels for their own internal reasons. Registration is only confirmed upon receipt of full payment.</p>
-
-          <h4>9. E-Transfer Payment</h4>
-          <p>If paying by e-transfer, it is solely my responsibility to ensure payment is received and confirmed at christygeorge993@gmail.com. If an e-transfer is not received, not confirmed, or rejected, my registration will be considered incomplete and I will not be permitted to participate until resolved.</p>
-
-          <h4>10. Media Consent</h4>
-          <p>I grant permission to DC Badminton Club to use photographs or videos of me taken during sessions or events for promotional purposes including social media and the club website, at no compensation. To revoke this consent, I must submit a written request to the organizer.</p>
-
-          <h4>11. Personal Information &amp; Privacy</h4>
-          <p>I consent to DC Badminton Club collecting and using my personal information (name, email, phone, emergency contact, and any medical notes) solely for the purpose of administering the league. This information will not be sold or shared with third parties. It will be retained for the duration of the league season and may be deleted upon request.</p>
-
-          <h4>12. Consent &amp; Agreement</h4>
-          <p>By checking the boxes below and entering my digital signature, I confirm I have read, understood, and fully agree to all terms of this Liability Waiver, Activity Release, and Payment Policy. I understand this is a voluntary private recreational arrangement. This constitutes a binding digital agreement between me and Christy George (individual organizer).</p>
-        </div>
+        <div class="card-title">Waiver</div>
+        <div class="wv-meta" id="waiver-meta" aria-live="polite"></div>
+        <div class="waiver-box" id="waiver-box" tabindex="0" role="region" aria-label="Waiver text"><div class="wv-loading">Loading the waiver…</div></div>
+        <fieldset class="wv-age"><legend class="lbl">Who is accepting?</legend>
+          <label class="chk-row"><input type="radio" name="wv-age" id="wv-age-adult" value="adult" checked onchange="wvAgeChanged()"><span>I am 18 or older and I am the participant</span></label>
+          <label class="chk-row"><input type="radio" name="wv-age" id="wv-age-guardian" value="guardian" onchange="wvAgeChanged()"><span>I am a parent or legal guardian registering a participant under 18</span></label>
+          <div id="wv-minor-row" hidden><label class="lbl" for="wv-minor">Participant's full name *</label><input class="inp" id="wv-minor" autocomplete="off" placeholder="Full name of the participant under 18"></div>
+        </fieldset>
+        <label class="chk-row" id="wv-media-row" hidden><input type="checkbox" id="wv-media"><span>Optional: I agree to photos and video of me (or the participant) being used to promote the league, as the waiver describes. I can withdraw this at any time.</span></label>
         <div class="chk-row" style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.3);border-radius:8px;padding:10px 12px;">
           <input type="checkbox" id="w1">
-          <span style="font-weight:700;">I have read and agree to <strong>all sections above</strong> including: liability waiver & release, assumption of risk, OCDSB facility rules, non-refundable payment policy, media consent, privacy policy, and e-transfer responsibility. If registering a minor, I accept full responsibility as parent/guardian.</span>
+          <label for="w1" style="font-weight:700;">I have read this waiver, I understand it, and I accept it<span id="wv-ver-inline"></span>.</label>
         </div>
-        <div class="chk-row" id="w5-row" style="display:none;"><input type="checkbox" id="w5"><span>I acknowledge the e-transfer payment of <strong>$400</strong> to <strong>christygeorge993@gmail.com</strong> is required to complete my registration.</span></div>
-        <div class="chk-row" id="w6-row" style="display:none;"><input type="checkbox" id="w6"><span>I understand spare players are charged <strong>$20 per session</strong> via e-transfer to <strong>christygeorge993@gmail.com</strong> before or on the session date.</span></div>
-        <label class="lbl" style="margin-top:8px;">Digital Signature (type full name) *</label>
-        <input class="inp" id="r-sig" placeholder="Your full name as signature">
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">⚠️ By typing your name you confirm this is a legally binding digital signature</div>
+        <label class="lbl" for="r-sig" style="margin-top:8px;">Digital Signature (type full name) *</label>
+        <input class="inp" id="r-sig" placeholder="Your full name as signature" autocomplete="name">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Typing your name and ticking the box is your electronic signature. The exact wording, its version and the time you accept are recorded.</div>
       </div>
       <button class="btn btn-primary" id="reg-btn" onclick="regStep2()">Continue →</button>
       <button class="btn btn-ghost" onclick="goRS(1)">← Back</button>
@@ -560,28 +622,28 @@ body.has-undo{padding-bottom:140px;}
         <div class="card-title">League Format & Rules</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Please read all rules carefully before agreeing.</div>
         <ol style="padding-left:18px;margin:0 0 16px;display:flex;flex-direction:column;gap:9px;">
-          <li style="font-size:13px;line-height:1.5;">Arrive 5 minutes early. If late by more than 5 minutes, you will be moved to the last court.</li>
+          <li style="font-size:13px;line-height:1.5;">Arrive 5 minutes early. Players arriving more than 5 minutes late move down one court. On the bottom court in use there is no lower court, so a late player stays there.</li>
           <li style="font-size:13px;line-height:1.5;">Warm-up is limited to 5 minutes at the start and must be done only on your assigned court. Do not use new shuttlecocks for warm-up — use old/used ones only. Once games begin, no more warm-ups are allowed.</li>
-          <li style="font-size:13px;line-height:1.5;">Each court is allotted 8 shuttlecocks (2 per player). Extra shuttlecocks must be provided by players.</li>
+          <li style="font-size:13px;line-height:1.5;">Each court gets two shuttlecocks per player: 8 for a court of four, 10 for a court of five (6 for three, 4 for two). Players provide any extra shuttlecocks.</li>
           <li style="font-size:13px;line-height:1.5;">Games are played to 21 points — 15 on a court of five. First to reach the target wins, even at 20-20 (14-14 on a court of five). No deuce.</li>
           <li style="font-size:13px;line-height:1.5;">Scores are entered by one person per court after confirming with all players. The app shows exactly who plays who in each game (Game 1: A+B vs C+D · Game 2: A+C vs B+D · Game 3: A+D vs B+C).</li>
+          <li style="font-size:13px;line-height:1.5;"><strong>The app can make mistakes. Please keep a note of your court's score for each round on your phone. If you notice an error, send your recorded scores to the organizer on the same day, after the session.</strong></li>
           <li style="font-size:13px;line-height:1.5;">After each round, the player with the most wins on each court moves UP one court and the player with the fewest moves DOWN (ties: points, then point difference, then a coin toss done by the app). Nobody moves down from the last court in use.</li>
-          <li style="font-size:13px;line-height:1.5;">Remaining shuttlecocks are distributed to top scorers per court starting from Court 1.</li>
+          <li style="font-size:13px;line-height:1.5;">At the end of each session, remaining shuttlecocks on each court are distributed to the top scorer(s) on that court.</li>
           <li style="font-size:13px;line-height:1.5;">New shuttlecocks are ONLY for official ladder matches. Use old/used shuttlecocks while waiting between rounds or during casual play.</li>
           <li style="font-size:13px;line-height:1.5;">The court where you finish each session is your starting court the following week. Court positions carry over week to week.</li>
           <li style="font-size:13px;line-height:1.5;">All court allocations are final and decided by the admin. If a higher-caliber spare player joins, you may be displaced from your court position.</li>
           <li style="font-size:13px;line-height:1.5;">Maintain respectful communication and resolve disputes through the admin only. League polls may be conducted via the Facebook group.</li>
-          <li style="font-size:13px;line-height:1.5;">Missing a session without notice will move your court one down at the start of the following session. Repeated unexcused absences may result in losing your spot to a waitlist player.</li>
+          <li style="font-size:13px;line-height:1.5;">Missing a session without notice will move your court one down at the start of the following session.</li>
           <li style="font-size:13px;line-height:1.5;">Bring your own water bottle and towel. No glass containers in the gymnasium. Wear non-marking indoor shoes at all times.</li>
           <li style="font-size:13px;line-height:1.5;">Each session has two ladder rounds; every court finishes a round before the next begins. After the second round, courts are free for casual games or drills.</li>
           <li style="font-size:13px;line-height:1.5;">If a court has fewer than 4 players (due to absences or odd numbers), it switches to singles round-robin format. 3 players play 3 singles games; 2 players play best-of-3 singles. Nobody plays alone: a single leftover player joins the last court in use as a fifth player. When more than 24 play, the extra players join the bottom courts as a fifth player (Court 6, then 5, then 4): a court of five plays five doubles games to 15 and each player sits out one.</li>
-          <li style="font-size:13px;line-height:1.5;">At the end of each session, remaining shuttlecocks on each court are distributed to the top scorer(s) on that court.</li>
           <li style="font-size:13px;line-height:1.5;">Registration through this app confirms your interest and waiver acceptance. Court placement is handled separately by the admin — registering does not automatically assign you to a court.</li>
           <li style="font-size:13px;line-height:1.5;">The app tracks all scores, rankings, and court movements in real time. Players can view standings, game history, and session results at any time.</li>
         </ol>
         <div class="chk-row" style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
           <input type="checkbox" id="lf-all">
-          <span style="font-weight:700;font-size:13px;">I have read and agree to all of the league format rules listed above.</span>
+          <label for="lf-all" style="font-weight:700;font-size:13px;">I have read and agree to all of the league format rules listed above.</label>
         </div>
         <label class="lbl">Digital Signature (type full name) *</label>
         <input class="inp" id="r-sig-lf" placeholder="Your full name as signature">
@@ -599,6 +661,7 @@ body.has-undo{padding-bottom:140px;}
         <div class="alert alert-info" id="reg-spare-payment-note" style="display:none;">💡 As a spare, you pay <strong>$20 per session</strong> when called in.<br>E-transfer to <strong>christygeorge993@gmail.com</strong> before or on the session date.</div>
         <div class="alert alert-info">📍 Maplewood Secondary School<br>700 Cope Drive, Stittsville · Gym 127C & 127D</div>
         <div class="alert alert-success">✅ First session: <strong>Tuesday September 15, 2026 at 8:00 PM</strong></div>
+        <div class="alert alert-info" id="reg-score-note">📝 The app can make mistakes. Please keep a note of your court's score for each round on your phone. If you notice an error, send your recorded scores to the organizer on the same day, after the session.</div>
       </div>
     </div>
   </div>
@@ -625,7 +688,8 @@ body.has-undo{padding-bottom:140px;}
   <div class="page-title">Enter Scores</div>
   <div class="page-sub">All players enter scores after each game</div>
   <div class="card">
-    <label class="lbl">Select Your Court</label>
+    <label class="lbl" for="sc-sel">Select Your Court</label>
+    <div id="score-note" style="font-size:12px;line-height:1.5;margin:0 0 8px;padding:8px 10px;border-radius:8px;background:var(--s2);border:1px solid var(--border);">📝 The app can make mistakes. Please keep a note of your court's score for each round on your phone. If you notice an error, send your recorded scores to the organizer on the same day, after the session.</div>
     <select class="inp" id="sc-sel" onchange="renderScoreEntry()" style="margin:0;">
       <option value="">— Choose Court —</option>
       <option value="1">Court 1</option><option value="2">Court 2</option>
@@ -671,7 +735,7 @@ body.has-undo{padding-bottom:140px;}
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">8:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Start</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">10:00 PM</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">End</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">6</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Courts</div></div>
-      <div><div style="font-size:20px;font-weight:800;color:var(--teal2);">$400</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Season</div></div>
+      <div id="sched-fee"><div id="sched-fee-amt" style="font-size:20px;font-weight:800;color:var(--teal2);">$400</div><div id="sched-fee-lbl" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Season</div></div>
     </div>
   </div>
   <div id="sched-list"></div>
@@ -706,6 +770,7 @@ body.has-undo{padding-bottom:140px;}
       <button class="ptab active" onclick="showSec('admin','a-pl',this)">👥 Players</button>
       <button class="ptab" onclick="showSec('admin','a-reg',this)" id="tab-a-reg">📋 Registered <span id="reg-pending-badge" style="display:none;background:var(--red2);color:#fff;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:3px;font-weight:800;"></span></button>
       <button class="ptab" onclick="showSec('admin','a-past',this)">📇 Past Players</button>
+      <button class="ptab" id="tab-a-wv" onclick="showSec('admin','a-wv',this);renderWaiverAdmin(true)">🖋 Waivers</button>
       <button class="ptab" onclick="showSec('admin','a-sess',this)">📅 Session</button>
       <button class="ptab" onclick="showSec('admin','a-att',this)">📋 Attendance</button>
       <button class="ptab" onclick="showSec('admin','a-assign',this)">🏟️ Assign</button>
@@ -715,16 +780,17 @@ body.has-undo{padding-bottom:140px;}
     </div>
     <div id="sec-a-reg" class="section"></div>
     <div id="sec-a-past" class="section"></div>
+    <div id="sec-a-wv" class="section"></div>
     <div id="sec-a-pl" class="section active">
       <div class="card">
         <div class="card-title">➕ Add Player</div>
         <label class="lbl">Full Name</label><input class="inp" id="np-name" placeholder="Full name">
-        <label class="lbl">Membership Type</label>
+        <label class="lbl" for="np-membership">Membership Type</label>
         <select class="inp" id="np-membership">
           <option value="regular">🏸 Regular ($400/season)</option>
           <option value="spare">🔄 Spare ($20/session)</option>
         </select>
-        <label class="lbl">Starting Court</label>
+        <label class="lbl" for="np-court">Starting Court</label>
         <select class="inp" id="np-court">
           <option value="0">No Court (Spare Pool)</option>
           <option value="1">Court 1</option><option value="2">Court 2</option>
@@ -751,7 +817,7 @@ body.has-undo{padding-bottom:140px;}
       <div class="card">
         <div class="card-title">📣 Post Announcement</div>
         <label class="lbl">Type</label>
-        <select class="inp" id="ann-type"><option value="info">ℹ️ Info</option><option value="warn">⚠️ Warning</option><option value="success">✅ Good news</option></select>
+        <select class="inp" id="ann-type" aria-label="Announcement type"><option value="info">ℹ️ Info</option><option value="warn">⚠️ Warning</option><option value="success">✅ Good news</option></select>
         <label class="lbl">Title</label><input class="inp" id="ann-title" placeholder="e.g. Session update">
         <label class="lbl">Message</label><textarea class="inp" id="ann-body" placeholder="Your message..."></textarea>
         <button class="btn btn-primary" onclick="postAnn()">📣 Post</button>
@@ -819,7 +885,7 @@ body.has-undo{padding-bottom:140px;}
 </nav>
 
 <div class="modal-ov" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal"><h3 id="modal-title"></h3><div id="modal-body"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><h3 id="modal-title"></h3><div id="modal-body"></div>
     <button class="btn btn-ghost" style="margin-top:10px;" onclick="closeModal()">Close</button>
   </div>
 </div>
@@ -884,7 +950,9 @@ async function sbUps(t,d,conflict=''){
 async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}return j;}
 // ── Shared state with versions: a stale screen can never overwrite newer data. ──
 const _stateVersion={};
-async function getKV(k){try{const r=await sbG('app_state',`key=eq.${encodeURIComponent(k)}&select=key,value,version`);if(r&&r[0]){_stateVersion[k]=r[0].version||0;return JSON.parse(r[0].value);}delete _stateVersion[k];return null;}catch(e){return null;}}
+// _kvRead[k]: the version a read returned and the version this page already held when the reply arrived (p52).
+const _kvRead={};
+async function getKV(k){delete _kvRead[k];try{const r=await sbG('app_state',`key=eq.${encodeURIComponent(k)}&select=key,value,version`);if(r&&r[0]){_kvRead[k]={version:r[0].version||0,known:_stateVersion[k]};_stateVersion[k]=r[0].version||0;return JSON.parse(r[0].value);}delete _stateVersion[k];return null;}catch(e){return null;}}
 async function mirrorApprovals(v){
   for(const[id,a]of Object.entries(v||{})){
     const p=S.players.find(x=>x.id===parseInt(id));if(!p||!a)continue;
@@ -915,12 +983,17 @@ const CANCELLED_DATES=['2026-12-01','2026-12-08','2027-01-12','2027-04-06','2027
 const ORGANIZER_ETRANSFER='christygeorge993@gmail.com';
 const VAPID_PUBLIC_KEY='BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE'; // public half only; the private key lives with the reminder job
 const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,voteDeadlineHours:46,spareAskHours:72,facilityShuttles:2};
+const SHUTTLES_PER_PLAYER=2; // each court starts with two new shuttlecocks per player; players provide extras
+function birdsAllotted(n){return n>=2?SHUTTLES_PER_PLAYER*n:0;}
 function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});}
 const DATES=APPROVED_DATES.map(fmtDate);
 // Local wall-clock 8:00 PM on each date (players are in the Ottawa time zone; DST handled by the browser).
 const FD=APPROVED_DATES.map(iso=>{const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,20,0,0);});
 const NC=6,NCYC=99,NG=3,MAXG=5; // NG: games per round on a 2–4 player court; MAXG: games on the five-player court
-function courtGames(n){return n===5?5:3;}            // every court plays 3 games, except five players play 5
+function courtGames(n){return n===5?5:3;}
+// Two players play best of three: Game 3 only when the first two games are split. gamesNeeded is what finishes a court.
+function bestOfThreeDecided(c,cy){const sc=S.current?.scores||{},g1=sc[`c${c}_y${cy}_g1`],g2=sc[`c${c}_y${cy}_g2`];return !!(g1&&g2&&g1.w===g2.w);}
+function gamesNeeded(c,cy){const n=(S.current?.assignments?.[c]||[]).filter(id=>S.players.some(p=>p.id===id)).length;if(n<2)return 0;if(n===2&&bestOfThreeDecided(c,cy??S.current.cycle))return 2;return courtGames(n);}            // every court plays 3 games, except five players play 5
 function courtTarget(n){return n===5?15:21;}         // five-player games go to 15, everything else to 21
 function courtCap(c){return 5;}                    // any court can take a fifth player (then it plays five games to 15)
 // Courts hold four; with more than 24 playing, the extras become a fifth player on the bottom courts (Court 6, then 5, then 4…).
@@ -928,7 +1001,12 @@ function courtCap(c){return 5;}                    // any court can take a fifth
 function courtSizes(n){const s={};for(let c=1;c<=NC;c++)s[c]=0;if(n<=NC*4){let last=0;for(let c=1;c<=NC&&n>0;c++){s[c]=Math.min(4,n);n-=s[c];last=c;}if(last>1&&s[last]===1){s[last-1]++;s[last]=0;}}else{const extra=Math.min(n-NC*4,NC);for(let c=1;c<=NC;c++)s[c]=4+(c>NC-extra?1:0);}return s;}
 function fillCourts(ids){const z=courtSizes(ids.length),a={};let i=0;for(let c=1;c<=NC;c++){a[c]=ids.slice(i,i+z[c]);i+=z[c];}if(i<ids.length)a[NC].push(...ids.slice(i));return a;}
 // A court's bottom player moves down only into a court that has players (the last occupied court is the bottom court).
-function hasPlayersBelow(c){const a=S.current?.assignments||{};return c<NC&&(a[c+1]||[]).some(id=>S.players.some(p=>p.id===id));}             // only Court 6 may hold a fifth player
+// Ladder neighbours skip empty courts: "one court up/down" is the next court in use, so a court whose players are
+// all out never strands a player alone. Pass the lineup being moved (defaults to the live round).
+function courtInUse(a,c){return (a[c]||[]).some(id=>S.players.some(p=>p.id===id));}
+function courtAbove(c,a){a=a||S.current?.assignments||{};for(let x=c-1;x>=1;x--)if(courtInUse(a,x))return x;return 0;}
+function courtBelow(c,a){a=a||S.current?.assignments||{};for(let x=c+1;x<=NC;x++)if(courtInUse(a,x))return x;return 0;}
+function hasPlayersBelow(c){return courtBelow(c)>0;}
 const MAX_ROUNDS_PER_SESSION=2; // Soft policy: each Tuesday session = 2 rounds. Auto-advance stops, prompts admin to end.
 let S={players:[],sessions:[],current:null,announcements:[],lastUndo:null,votes:{},rsvp:{},qaQuestions:[]};
 let adminUnlocked=false;
@@ -978,7 +1056,7 @@ async function signInStep(){
   }catch(e){err.textContent='❌ '+(e.message||'Try again');}
   finally{btn.disabled=false;}
 }
-async function afterSignIn(){showGate(false);setSS('syncing');regData={};try{goRS(1);}catch(e){}const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();nav('home');startSync();toast('Signed in as '+myEmail(),'success');registrationFirst();applyPendingVote();}else{setSS('err');toast('Cannot load league data','error');}}
+async function afterSignIn(){if(!(await checkDatabaseMarker()))return;showGate(false);setSS('syncing');regData={};try{goRS(1);}catch(e){}const ok=await loadAll();if(ok){setSS('ok');checkRegistrationStatus();nav('home');startSync();toast('Signed in as '+myEmail(),'success');registrationFirst();applyPendingVote();}else{setSS('err');toast('Cannot load league data','error');}}
 // First thing after sign-in for someone without a player record: the registration form.
 function registrationFirst(){if(S_me.organizer)return;const me=myPlayer();if(!me){nav('register');toast('Welcome! Please complete your registration first.','info');}else if(!me.approved){nav('register');}}
 async function initAuth(){loadSession();if(!_session){showGate(true);return false;}const x=await ensureSession();if(!x){showGate(true);return false;}showGate(false);return true;}
@@ -1206,7 +1284,10 @@ async function loadAll(){
       return{id:p.id,emailReminders:p.email_reminders!==false,declaredPayment:p.declared_payment||'',name:p.name,email:p.email||'',phone:p.phone||'',emergency:p.emergency||'',medical:p.medical||'',sig:p.sig||'',waiverSigned:p.waiver_ok!==undefined?!!p.waiver_ok:((p.waiver_signed&&p.sig!=='admin')||(!!(p.sig&&p.sig!=='admin'))),paid:p.paid,currentCourt:p.current_court,highestCourt:p.highest_court,seasonWins:p.season_wins,seasonLosses:p.season_losses,gamesPlayed:p.games_played,membershipType:mo[p.id]||p.membership_type||kv.membershipType||'regular',approved:p.approved!==undefined&&p.approved!==null?!!p.approved:(kv.approved!==undefined?kv.approved:true),registeredAt:p.registered_at||kv.registeredAt||'',waitlisted:p.waitlisted!==undefined&&p.waitlisted!==null?!!p.waitlisted:!!kv.waitlisted,noShowCount:p.no_show_count||0,adminNote:p.admin_note||''};
     });
     S.announcements=an||[];
-    S.current=cur||null;
+    {const rd=_kvRead['current_session'];
+     // A reply older than a save this page has already made, for the same session, must not undo that save.
+     if(rd&&rd.known!=null&&rd.version<rd.known&&S.current&&cur&&cur.id===S.current.id)_stateVersion['current_session']=rd.known;
+     else S.current=cur||null;}
     S.sessions=sess||[];
     {
       const sessNo=upcomingSessionNumber();
@@ -1221,6 +1302,9 @@ async function loadAll(){
     S.rsvpLog=(S_me.organizer&&S_me.verified)?((await sbG('rsvp_log','select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.desc&limit=100'))||[]):[];
     S.invitations=(S_me.organizer&&S_me.verified)?((await sbG('invitations','select=email,membership_type,note,created_at&order=created_at.desc'))||[]):[];
     S.pastPlayers=(S_me.organizer&&S_me.verified)?((await sbG('past_players','select=*&order=name.asc'))||[]):[];
+    S.waiverCurrent=((await sbG('waiver_versions','is_current=eq.true&select=version,title,published_at'))||[])[0]||null;
+    S.waiverAcc=(S_me.player_id||S_me.organizer)?((await sbG('waiver_acceptances','select=id,player_id,user_id,email,participant_name,typed_signature,waiver_version,waiver_sha256,accepted_at,client_timezone,client_utc_offset_minutes,action,age_declaration,minor_name,media_consent,registration_ref,user_agent&order=accepted_at.asc,id.asc'))||[]):[];
+    if(S.waiver&&S.waiverCurrent&&S.waiver.version!==S.waiverCurrent.version){S.waiver=null;S.waiverVersions=null;}
     S.payments=(await sbG('payments','select=id,player_id,kind,amount,session_number,method,received_on,note&order=received_on.desc,id.desc'))||[];
     S.qaQuestions=((await sbG('questions','select=id,player_id,asker,question,answer,answered_at,created_at&order=created_at.asc'))||[]).map(q=>({id:q.id,playerId:q.player_id,playerName:q.asker,question:q.question,answer:q.answer,ts:q.created_at,answeredAt:q.answered_at}));
     S.preAttendance=await getKV('pre_session_attendance')||{};
@@ -1638,7 +1722,7 @@ async function togglePaid(id){recordPaymentUI(id);}
 // ── Undo ─────────────────────────────────────────────────────────────────────────────────────────
 // Every wrapped admin action gets a database checkpoint first; if the action changed nothing the checkpoint is
 // discarded. Score saves are journaled by the database itself. undoLast() restores the latest checkpoint exactly.
-const UNDOABLE={"startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","restoreSnapshot":"Restore snapshot","saveEditRegistration":"Edit registration"};
+const UNDOABLE={"applyCourtAdjust":"Adjust courts","startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","restoreSnapshot":"Restore snapshot","saveEditRegistration":"Edit registration"};
 let _ckDepth=0,_undoing=false,_undoEpoch=0;
 function undoLabel(name,args){
   const pn=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'player';};
@@ -1648,6 +1732,8 @@ function undoLabel(name,args){
     case 'nextCycle':case 'autoAdvanceCheck':return S.current?(S.current.cycle>=MAX_ROUNDS_PER_SESSION?`Finish round ${S.current.cycle}`:`Advance to round ${S.current.cycle+1}`):'Advance round';
     case 'setPlayerCourt':return `Move ${pn(args[0])} to Court ${args[1]}`;
     case 'markAttForTab':return `Mark ${pn(args[0])} ${args[1]}`;
+    case 'applyCourtAdjust':return `Adjust courts (Round ${S.current?.cycle||1})`;
+    case 'markPlayerLate':{const v=parseInt(document.getElementById('late-player-sel')?.value);return `Mark ${pn(v)} late`;}
     case 'callInSpare':return `Seat ${pn(args[0])}`;
     case 'approvePlayer':return `Approve ${pn(args[0])}`;
     case 'rejectPlayer':return `Reject ${pn(args[0])}`;
@@ -1976,16 +2062,16 @@ function renderAdminPlayers(){
     const noteIcon=p.adminNote?'📝':'📋';
     const attStatus=S.current?.attendance?.[p.id]||S.preAttendance?.[p.id]||'';
     const isAbsentInSess=attStatus==='absent';
-    html+=`<div style="display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border);${isAbsentInSess?'opacity:0.5;':''}">
+    html+=`<div style="display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border);${isAbsentInSess?'background:var(--s2);':''}">
     <div class="pl-num">${i+1}</div>
     <div style="flex:1;min-width:0;">
       <div style="font-weight:800;font-size:13px;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${isAbsentInSess?'<span class="tag tg-red" style="margin-left:4px;font-size:11px;">ABSENT</span>':''}</div>
       <div style="font-size:10px;color:var(--muted);">${esc(p.email)||'—'} · C${p.currentCourt} · ${p.seasonWins}W ${p.seasonLosses}L · Absent:${p.noShowCount}</div>
     </div>
-    <button class="notes-btn" onclick="openAdminNote(${p.id})">${noteIcon}</button>
+    <button class="notes-btn" onclick="openAdminNote(${p.id})" aria-label="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}" title="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}">${noteIcon}</button>
     <span class="tag ${attStatus==='absent'?'tg-red':attStatus==='present'?'tg-green':'tg-gray'}" style="cursor:pointer;font-size:11px;" onclick="togglePlayerPresence(${p.id})" title="Toggle present/absent">${attStatus==='absent'?'❌':attStatus==='present'?'✅':'—'}</span>
     <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;font-size:11px;" onclick="togglePaid(${p.id})" title="Toggle paid">${p.paid?'💰':'⏳'}</span>
-    <select style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
+    <select aria-label="Court for ${esc(p.name)}" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
       <option value="0">Bench</option>
       ${[1,2,3,4,5,6].map(c=>`<option value="${c}" ${p.currentCourt===c?'selected':''}>C${c}</option>`).join('')}
     </select>
@@ -2002,7 +2088,7 @@ function renderAdminPlayers(){
           <div style="font-weight:700;font-size:12px;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}</div>
           <div style="font-size:10px;color:var(--muted);">${esc(p.email)||'—'}</div>
         </div>
-        <select style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
+        <select aria-label="Court for ${esc(p.name)}" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
           <option value="0" selected>Bench</option>
           ${[1,2,3,4,5,6].map(c=>`<option value="${c}">C${c}</option>`).join('')}
         </select>
@@ -2051,7 +2137,7 @@ function renderRegPlayers(){
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Everyone needs an invitation this season: invite returning players from 📇 Past Players, new players here. They sign in with that email, register, and you approve them.</div>
     <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;">
       <input class="inp" id="inv-email" type="email" placeholder="player@email.com" autocomplete="off" style="margin:0;" value="${esc(keep.email)}">
-      <select class="inp" id="inv-type" style="margin:0;width:auto;"><option value="regular" ${keep.type==='regular'?'selected':''}>Regular</option><option value="spare" ${keep.type==='spare'?'selected':''}>Spare</option></select>
+      <select class="inp" id="inv-type" aria-label="Membership for this invitation" style="margin:0;width:auto;"><option value="regular" ${keep.type==='regular'?'selected':''}>Regular</option><option value="spare" ${keep.type==='spare'?'selected':''}>Spare</option></select>
     </div>
     <input class="inp" id="inv-note" placeholder="Note (optional): who referred them, phone…" maxlength="200" style="margin-top:8px;" value="${esc(keep.note)}">
     <button class="btn btn-primary" onclick="invitePlayer()">Send invitation</button>
@@ -2161,7 +2247,7 @@ function regPlayerCard(p,showApprove){
     <div style="font-size:11px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;">
       <div>📞 ${esc(p.phone)}</div>
       <div>${p.currentCourt>0?'🏸 Court '+p.currentCourt:'🏸 Unassigned'}</div>
-      <select class="inp" style="font-size:10px;padding:4px 6px;margin:0;" onchange="assignCourtToRegistered(${p.id},this.value)">
+      <select class="inp" aria-label="Court for ${esc(p.name)}" style="font-size:10px;padding:4px 6px;margin:0;" onchange="assignCourtToRegistered(${p.id},this.value)">
         <option value="0" ${!p.currentCourt||p.currentCourt===0?'selected':''}>Unassigned</option>
         ${[1,2,3,4,5,6].map(c=>`<option value="${c}" ${p.currentCourt===c?'selected':''}>Court ${c}</option>`).join('')}
       </select>
@@ -2258,6 +2344,7 @@ async function startSession(){
   if(S.current)return toast('Session already active','warn');
   const n=S.sessions.length+1;if(n>DATES.length)return toast('All '+DATES.length+' sessions are done!','warn');
   const{votes,pre,declined,preAbsent,confirmedSpares,assign:initAssign}=upcomingLineup();
+  {const why=seatingProblem(Object.values(initAssign).flat().length);if(why)return toast(why,'error');}
   // Votes become tonight's attendance: coming → present, not coming → excused (no court penalty).
   const attendance={};
   declined.forEach(id=>{attendance[id]='declined';});
@@ -2273,6 +2360,8 @@ async function startSession(){
   await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused${preAbsent.size?`, ${preAbsent.size} marked absent`:''}, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
 }
 // Regulars in order of earned court (spares only when confirmed for the night), four per court, the rest on Court 6.
+// More players than six courts seat (five each) is not a valid night: say so instead of overfilling a court.
+function seatingProblem(n){return n>NC*5?`${n} players are coming, but the ${NC} courts seat at most ${NC*5}. Mark someone absent or not coming, then start the session.`:n===1?'Only one player is coming — a game needs at least two. Start the session when another player is coming.':n===0?'Nobody is coming — a game needs at least two players. Start the session when players are coming.':'';}
 function autoAssign(exclude=new Set(),spares=[]){
   const a={};for(let c=1;c<=NC;c++)a[c]=[];
   const regulars=activePlayers().filter(p=>p.membershipType!=='spare'&&!exclude.has(p.id));
@@ -2292,7 +2381,7 @@ function isCourtDone(c){
   const cy=S.current.cycle;
   const pids=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id));
   if(pids.length<2)return true;
-  const numGames=courtGames(pids.length);
+  const numGames=gamesNeeded(c,cy);
   for(let g=1;g<=numGames;g++){if(!S.current.scores[`c${c}_y${cy}_g${g}`])return false;}
   return true;
 }
@@ -2413,7 +2502,7 @@ async function nextCycle(){
   for(let c=1;c<=NC;c++){
     const courtPlayers=(S.current.assignments[c]||[]).filter(id=>S.players.find(p=>p.id===id)).length;
     if(courtPlayers<2) continue; // skip courts with <2 players (no games possible)
-    const numGames=courtGames(courtPlayers); // 3-player RR has 3 games too
+    const numGames=gamesNeeded(c,S.current.cycle); // best of three on a court of two
     for(let g=1;g<=numGames;g++)if(!S.current.scores[`c${c}_y${S.current.cycle}_g${g}`])missing.push(`C${c}G${g}`);
   }
   if(missing.length){toast(`Cannot advance — ${missing.length} scores missing: ${missing.slice(0,6).join(', ')}${missing.length>6?'...':''}`,'error');return;}
@@ -2486,7 +2575,7 @@ async function applyRotation(){
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>mv[id]='stay');continue;}
     const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
-    const up=c>1?sorted[0]:null,down=hasPlayersBelow(c)?sorted[sorted.length-1]:null;
+    const up=courtAbove(c,a)?sorted[0]:null,down=courtBelow(c,a)?sorted[sorted.length-1]:null;
     const topG=pids.filter(id=>key(id)===key(sorted[0])).sort((x,y)=>x-y),botG=pids.filter(id=>key(id)===key(sorted[sorted.length-1])).sort((x,y)=>x-y);
     if(up!=null&&topG.length>1){tossChoices['top_'+c]={group:topG,direction:'up',winnerId:up,by:'app'};tossResults['top_'+c]=up;}
     if(down!=null&&botG.length>1){tossChoices['bot_'+c]={group:botG,direction:'down',loserId:down,by:'app'};tossResults['bot_'+c]=down;}
@@ -2496,7 +2585,7 @@ async function applyRotation(){
     const pid=parseInt(id);let from=null;
     for(let c=1;c<=NC;c++)if((a[c]||[]).includes(pid)){from=c;break;}
     if(from===null)return;
-    let to=from;if(m==='up')to=Math.max(1,from-1);if(m==='down')to=Math.min(NC,from+1);
+    let to=from;if(m==='up')to=courtAbove(from,a)||from;if(m==='down')to=courtBelow(from,a)||from;
     na[to].push(pid);
   });
   for(let c=1;c<=NC;c++)while(na[c].length>courtCap(c)){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
@@ -2537,7 +2626,7 @@ async function endSession(){
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>finalMv[id]='stay');continue;}
     const sorted=sortCourtRanking(pids,finalWins,finalPts,finalPtFor,finalPtAgainst,cy,c,S.current.preTosses);
-    sorted.forEach((id,i)=>{if(i===0&&c>1)finalMv[id]='up';else if(i===sorted.length-1&&hasPlayersBelow(c))finalMv[id]='down';else finalMv[id]='stay';});
+    sorted.forEach((id,i)=>{if(i===0&&courtAbove(c,a))finalMv[id]='up';else if(i===sorted.length-1&&courtBelow(c,a))finalMv[id]='down';else finalMv[id]='stay';});
   }
   // ── Compute finalAssignments EARLY: post-all-rotation state. We use this
   //    both for the player.current_court DB updates (so next session starts
@@ -2552,8 +2641,8 @@ async function endSession(){
   }else{
     for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>{
       const dir=finalMv[id];let to=c;
-      if(dir==='up')to=Math.max(1,c-1);
-      else if(dir==='down')to=Math.min(NC,c+1);
+      if(dir==='up')to=courtAbove(c,S.current.assignments)||c;
+      else if(dir==='down')to=courtBelow(c,S.current.assignments)||c;
       _finalA[to].push(id);
     });
     for(let c=1;c<=NC;c++)while(_finalA[c].length>courtCap(c)){const ov=_finalA[c].pop();const t=c<NC?c+1:c-1;_finalA[t].unshift(ov);}
@@ -2871,8 +2960,9 @@ function renderSessionAdmin(){
       <button class="btn btn-danger" onclick="cancelSession()">✕ Cancel Session</button>
     </div>
     <div class="card"><div class="card-title">⏰ Late Arrivals</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Players arriving more than 5 minutes late move down one court, starting now. On the bottom court in use they stay. Courts with scores this round don't change.</div>
       <div style="margin-bottom:10px;">
-        <select class="inp" id="late-player-sel" style="margin-bottom:6px;">
+        <select class="inp" id="late-player-sel" aria-label="Player who arrived late" style="margin-bottom:6px;">
           <option value="">— Select Player —</option>
           ${activePlayers().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}
         </select>
@@ -2881,7 +2971,7 @@ function renderSessionAdmin(){
       <div>${(S.current.latePlayers||[]).map(lp=>{
         const p=S.players.find(x=>x.id===lp.playerId);
         return `<div style="padding:6px;background:var(--s3);border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
-          <span>⏰ ${p?esc(p.name):'Unknown'} (was C${lp.originalCourt})</span>
+          <span>⏰ ${p?esc(p.name):'Unknown'} (was C${lp.originalCourt}${lp.pending?' · move waiting for Adjust courts':lp.to&&lp.to!==lp.originalCourt?` → C${lp.to}`:' · stayed'})</span>
         </div>`;
       }).join('')}</div>
     </div>
@@ -2891,14 +2981,14 @@ function renderSessionAdmin(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <div>
           <div style="font-size:10px;font-weight:800;color:var(--red2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Absent Player</div>
-          <select class="inp" id="absent-player-sel" style="margin-bottom:0;">
+          <select class="inp" id="absent-player-sel" aria-label="Absent player" style="margin-bottom:0;">
             <option value="">— Select —</option>
             ${Object.entries(S.current.assignments).flatMap(([c,pids])=>pids.map(id=>{const p=S.players.find(x=>x.id===id);return p?`<option value="${p.id}|${c}">${esc(p.name)} (C${c})</option>`:''})).join('')}
           </select>
         </div>
         <div>
           <div style="font-size:10px;font-weight:800;color:var(--green2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Replace With (Optional)</div>
-          <select class="inp" id="spare-replace-sel" style="margin-bottom:0;">
+          <select class="inp" id="spare-replace-sel" aria-label="Replace with" style="margin-bottom:0;">
             <option value="">— No replacement —</option>
             ${S.players.filter(p=>!Object.values(S.current.assignments).flat().includes(p.id)&&(p.currentCourt>0||p.membershipType==='spare')).map(p=>`<option value="${p.id}">${esc(p.name)}${p.membershipType==='spare'?' (SPARE)':''}</option>`).join('')}
           </select>
@@ -2916,17 +3006,17 @@ function renderSessionAdmin(){
       </div>
     </div>
     <div class="card"><div class="card-title">🪶 Shuttlecock Distribution</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Each court started with 8 birds. Enter how many are left on each court. Top scorers on each court take home the remaining birds.</div>
-      <div>${[1,2,3,4,5,6].map(c=>`
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Each court starts with two shuttlecocks per player (8 for four players, 10 for five, 6 for three, 4 for two). Enter how many are left on each court; the top scorers on that court take them home.</div>
+      <div>${[1,2,3,4,5,6].map(c=>{const n=(S.current.assignments[c]||[]).length,max=birdsAllotted(n);return `
         <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;">
-          <label style="width:80px;font-size:12px;font-weight:700;">Court ${c}:</label>
-          <input type="number" class="inp" id="birds_${c}" min="0" max="8" value="0" style="width:60px;padding:4px;">
-          <span style="font-size:10px;color:var(--muted);">of 8 remaining</span>
+          <label for="birds_${c}" style="width:80px;font-size:12px;font-weight:700;">Court ${c}:</label>
+          <input type="number" class="inp" id="birds_${c}" min="0" max="${max}" value="0" ${max?'':'disabled'} style="width:60px;padding:4px;">
+          <span id="birds_of_${c}" style="font-size:10px;color:var(--muted);">${max?`of ${max} remaining (${n} players × 2)`:'not in use'}</span>
         </div>
-      `).join('')}
+      `;}).join('')}
       </div>
       <button class="btn btn-primary" onclick="distributeBirds()" style="margin-top:10px;width:100%;">🪶 Distribute to Top Scorers</button>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">1 bird = top scorer · 2 = top 2 · 3 = top 3 · 4 = 1 each · 5+ = top gets extras</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">One each to the players in order of wins this round, then any extras go round again from the top scorer.</div>
     </div>
     <div class="card"><div class="card-title">✅ Attendance Marking</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Mark who actually showed up today. An unexcused absence moves the player one court down at the start of next session.</div>
@@ -3070,7 +3160,7 @@ function renderCourts(){
   const sub=document.getElementById('courts-sub');
   if(sub)sub.textContent=S.current?`Session ${S.current.number} · ${S.current.date} · Round ${cy}`:S.sessions.length?`${S.sessions.length}/${DATES.length} sessions done`:'No active session';
   const cb=document.getElementById('cybar');
-  if(cb)cb.innerHTML=Array.from({length:NCYC},(_,i)=>`<div class="cyseg ${i<cy-1?'done':i===cy-1&&S.current?'act':''}"></div>`).join('');
+  if(cb)cb.innerHTML=Array.from({length:MAX_ROUNDS_PER_SESSION},(_,i)=>`<div class="cyseg ${i<cy-1?'done':i===cy-1&&S.current?'act':''}"></div>`).join('');
   // Admin badge on courts page
   const ab=document.getElementById('admin-court-badge');
   if(ab)ab.innerHTML=adminUnlocked?'<span class="tag tg-yellow">⚙️ Admin</span>':'';
@@ -3099,7 +3189,7 @@ function renderCourts(){
       const cntColor=cnt>=4?'var(--green2)':cnt===0?'var(--muted)':'var(--yellow2)';
       const slots=Math.max(4,cnt),half=Math.ceil(slots/2);
       const topIdx=[...Array(half).keys()],botIdx=[...Array(slots-half).keys()].map(i=>i+half);
-      return `<div class="gym-court ${cls}" onclick="showCourtDetail(${c})">
+      return `<div class="gym-court ${cls}" role="button" tabindex="0" onclick="showCourtDetail(${c})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCourtDetail(${c});}">
         <div class="gc-header">
           <span class="gc-num">C${c}</span>
           <span style="font-size:11px;font-weight:800;color:${cntColor};">${cnt}/${Math.max(4,cnt)}</span>
@@ -3274,7 +3364,7 @@ function computeRoundStatus(){
     const pids=(a[c]||[]).filter(id=>S.players.find(p=>p.id===id));
     if(pids.length<2){courts[c]={scored:false,players:0,skip:true,courtCycle:cy};continue;}
     totalCourts++;
-    const numGames=courtGames(pids.length);
+    const numGames=gamesNeeded(c,cy);
     let gamesScored=0;
     for(let g=1;g<=numGames;g++){
       const sc=S.current.scores[`c${c}_y${cy}_g${g}`];
@@ -3307,8 +3397,8 @@ function computeRoundStatus(){
     const pids=courts[c].pids;
     const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
     sorted.forEach((id,i)=>{
-      if(i===0&&c>1)projectedMv[id]='up';
-      else if(i===sorted.length-1&&hasPlayersBelow(c))projectedMv[id]='down';
+      if(i===0&&courtAbove(c,a))projectedMv[id]='up';
+      else if(i===sorted.length-1&&courtBelow(c,a))projectedMv[id]='down';
       else projectedMv[id]='stay';
     });
   }
@@ -3324,8 +3414,8 @@ function computeRoundStatus(){
       for(let c=1;c<=NC;c++)if((a[c]||[]).includes(pid)){from=c;break;}
       if(from===null)return;
       let to=from;
-      if(m==='up')to=Math.max(1,from-1);
-      if(m==='down')to=Math.min(NC,from+1);
+      if(m==='up')to=courtAbove(from,a)||from;
+      if(m==='down')to=courtBelow(from,a)||from;
       if(to!==from)moves.push({pid,from,to});
     });
     // Remove moved players from old courts
@@ -3431,16 +3521,16 @@ function renderRoundTracker(){
   html+=`<div class="card" style="margin-bottom:12px;">
     <div class="card-title">📊 Round ${cy} Progress</div>
     <div style="display:flex;gap:4px;margin-bottom:10px;">`;
-  for(let r=1;r<=NCYC;r++){
+  for(let r=1;r<=MAX_ROUNDS_PER_SESSION;r++){
     const isDone=r<cy;const isActive=r===cy;
-    html+=`<div style="flex:1;height:6px;border-radius:3px;background:${isDone?'var(--green)':isActive?'var(--teal2)':'var(--s3)'};${isActive?'animation:glow 1.2s ease-in-out infinite alternate;':''}"></div>`;
+    html+=`<div class="round-seg" style="flex:1;height:6px;border-radius:3px;background:${isDone?'var(--green)':isActive?'var(--teal2)':'var(--s3)'};${isActive?'animation:glow 1.2s ease-in-out infinite alternate;':''}"></div>`;
   }
   html+=`</div>`;
   html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">`;
   for(let c=1;c<=NC;c++){
     const cs=status.courts[c];
     if(!cs||cs.skip){
-      html+=`<div style="background:var(--s3);border-radius:8px;padding:8px;text-align:center;opacity:0.5;">
+      html+=`<div style="background:var(--s2);border:1px dashed var(--border);border-radius:8px;padding:8px;text-align:center;">
         <div style="font-size:11px;font-weight:800;color:var(--muted);">C${c}</div>
         <div style="font-size:11px;color:var(--muted);">Skipped</div></div>`;
       continue;
@@ -3477,7 +3567,7 @@ function renderRoundTracker(){
       sorted.forEach((p,i)=>{
         const w=status.wins[p.id]||0;
         const pt=status.pts[p.id]||0;
-        const mvDir=i===0&&c>1?'up':i===sorted.length-1&&hasPlayersBelow(c)?'down':'stay';
+        const mvDir=i===0&&courtAbove(c)?'up':i===sorted.length-1&&hasPlayersBelow(c)?'down':'stay';
         const mvIcon=mvDir==='up'?'<span style="color:var(--green2);font-weight:800;"> ↑</span>':mvDir==='down'?'<span style="color:var(--red2);font-weight:800;"> ↓</span>':'';
         const rankBg=i===0?'rgba(39,174,96,0.1)':i===sorted.length-1?'rgba(192,57,43,0.07)':'transparent';
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-radius:5px;background:${rankBg};margin-bottom:2px;">
@@ -3580,6 +3670,7 @@ function renderScoreEntry(){
     </div>`;
   combos.forEach(({g,t,ta,tb,md})=>{
     const key=`c${court}_y${cy}_g${g}`,saved=S.current.scores[key];
+    if(n===2&&g===3&&!saved&&bestOfThreeDecided(court,cy)){const g1=S.current.scores[`c${court}_y${cy}_g1`];html+=`<div class="game-block game-skip" id="skip_${court}_3"><div class="glabel">${t} <span style="font-size:10px;color:var(--muted);font-weight:400;">not needed</span></div><div style="font-size:12px;color:var(--muted);">${esc(g1.w==='A'?ta:tb)} won the first two games — best of three, so there is no Game 3.</div></div>`;return;}
     html+=`<div class="game-block"><div class="glabel">${t} <span style="font-size:10px;color:var(--muted);font-weight:400;">${md}</span> ${saved?'<span class="saved-pill">✓ Saved</span>':''}</div>
       <div class="grow">
         <div class="tcol"><div class="tnames">${esc(ta)}</div>
@@ -3679,6 +3770,7 @@ async function saveGameScore(court,gameNum){
   if(players.length<2)return toast('Need at least 2 players on this court','warn');
   const combos=buildCombos(players);
   const combo=combos.find(c=>c.g===gameNum);if(!combo){toast('Invalid game','warn');return;}
+  if(players.length===2&&gameNum===3&&bestOfThreeDecided(court,cy))return toast('Best of three: there is no Game 3 once one player has won the first two games.','warn');
   const sa=parseInt(document.getElementById(`si_${court}_${gameNum}_a`)?.value);
   const sb=parseInt(document.getElementById(`si_${court}_${gameNum}_b`)?.value);
   {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(v.error,'warn');return;}}
@@ -3699,10 +3791,16 @@ async function saveScores(court){
   if(players.length<2)return toast('Need at least 2 players','warn');
   const combos=buildCombos(players);
   let valid=true;const entries=[];
-  combos.forEach(({g,a1,a2,b1,b2})=>{
+  // Best of three on a court of two: Game 3 only when the first two games are split.
+  const val=g=>[parseInt(document.getElementById(`si_${court}_${g}_a`)?.value),parseInt(document.getElementById(`si_${court}_${g}_b`)?.value)];
+  const w12=players.length===2?[1,2].map(g=>{const sv=S.current.scores[`c${court}_y${cy}_g${g}`];if(sv)return sv.w;const[x,y]=val(g);return isNaN(x)||isNaN(y)||x===y?null:x>y?'A':'B';}):null;
+  const decided=!!(w12&&w12[0]&&w12[0]===w12[1]);
+  if(decided){const[x,y]=val(3);if(!isNaN(x)||!isNaN(y))return toast('Best of three: there is no Game 3 once one player has won the first two games. Clear Game 3 and save again.','warn');}
+  const needed=decided?combos.filter(x=>x.g!==3):combos;
+  needed.forEach(({g,a1,a2,b1,b2})=>{
     const sa=parseInt(document.getElementById(`si_${court}_${g}_a`)?.value);
     const sb=parseInt(document.getElementById(`si_${court}_${g}_b`)?.value);
-    if(isNaN(sa)||isNaN(sb)){toast(`Enter all ${combos.length} scores`,'warn');valid=false;return;}
+    if(isNaN(sa)||isNaN(sb)){toast(`Enter all ${needed.length} scores`,'warn');valid=false;return;}
     {const v=validScore(sa,sb,courtTarget(players.length));if(v.error){toast(`Game ${g}: `+v.error,'warn');valid=false;return;}}
     entries.push({g,a1,a2,b1,b2,sA:sa,sB:sb,w:sa>sb?'A':sb>sa?'B':'T'});
   });
@@ -3735,7 +3833,7 @@ function renderCourtTally(court){
   const players=(S.current.assignments[court]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   if(players.length<2){el.innerHTML='';return;}
   // Read scored games for this court/cycle
-  const numGames=courtGames(players.length);
+  const numGames=gamesNeeded(court,cy);
   const wins={},pts={},ptFor={},ptAgainst={};
   players.forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;});
   let gamesScored=0;
@@ -3753,7 +3851,7 @@ function renderCourtTally(court){
   // Sort using sortCourtRanking so preTosses are honored and tiebreakers match applyRotation
   const sortedIds=sortCourtRanking(players.map(p=>p.id),wins,pts,ptFor,ptAgainst,cy,court,S.current.preTosses);
   const sorted=sortedIds.map(id=>players.find(p=>p.id===id));
-  const maxWins=players.length===5?4:players.length===3?2:3;   // on a court of five each player plays four of the five games
+  const maxWins=players.length===5?4:players.length===3?2:players.length===2?numGames:3;   // on a court of five each player plays four of the five games
   const done=gamesScored===numGames,last=sorted.length-1;
   const key=id=>[wins[id]||0,pts[id]||0,(ptFor[id]||0)-(ptAgainst[id]||0)].join('/');
   // Tied on wins, points and point difference with the top (or bottom) player: the app's coin toss decides who moves.
@@ -3870,7 +3968,7 @@ function renderLeaderboard(){
     let divider='';
     if(!isActive&&prevActive&&inactiveCount>0){divider=`<div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-top:1px solid var(--border);margin-top:8px;">Not Playing This Session</div>`;prevActive=false;}
     const courtLabel=isActive?`Court ${displayCourt}`:`Last: C${displayCourt<=NC?displayCourt:'?'}`;
-    return divider+`<div class="lbrow" style="cursor:pointer;${!isActive?'opacity:0.7;':''}" onclick="renderGameHistory(${p.id})">
+    return divider+`<div class="lbrow" style="cursor:pointer;${!isActive?'background:var(--s2);':''}" onclick="renderGameHistory(${p.id})">
       <div class="lbrank ${i===0?'r1':i===1?'r2':i===2?'r3':'rn'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
       ${avatar(p.name)}
       <div class="lbinfo"><div class="lbname">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${absentTag}${liveTag}</div><div class="lbsub">${courtLabel} · ${totalW}W ${totalL}L · ${wr}% · <span style="color:var(--teal2);">tap for history</span></div></div>
@@ -3942,7 +4040,7 @@ function renderRankings(){
     const courtCls=p.courtPos===1?'var(--gold)':p.courtPos===2?'var(--silver)':p.courtPos===3?'var(--bronze)':'var(--teal2)';
     const trend=p.rating>=1500-(p.courtPos-1)*100+50?'📈':p.rating<=1500-(p.courtPos-1)*100-50?'📉':'';
     const absentTag=!p.isActive?'<span style="color:var(--muted);font-size:11px;margin-left:4px;">(absent)</span>':'';
-    html+=`<div class="lbrow" style="cursor:pointer;${!p.isActive?'opacity:0.7;':''}" onclick="renderGameHistory(${p.id})">
+    html+=`<div class="lbrow" style="cursor:pointer;${!p.isActive?'background:var(--s2);':''}" onclick="renderGameHistory(${p.id})">
       <div style="font-size:14px;font-weight:900;width:28px;text-align:center;flex-shrink:0;color:${i<3?'var(--gold)':'var(--muted)'};">${i+1}</div>
       ${avatar(p.name)}
       <div class="lbinfo">
@@ -4062,7 +4160,7 @@ function renderPlayerStats(){
     if(S.current){for(let c=1;c<=NC;c++){if((S.current.assignments[c]||[]).includes(p.id)){displayCourt=c;break;}}}
     const isAbsent=p.currentCourt===0;
     const courtTag=isAbsent?'<span class="tag tg-gray">Absent</span>':`<span class="tag tg-teal">Court ${displayCourt}</span>`;
-    return `<div class="card" style="${isAbsent?'opacity:0.7;':''}"><div class="flex-between" style="margin-bottom:10px;">
+    return `<div class="card" style="${isAbsent?'background:var(--s2);':''}"><div class="flex-between" style="margin-bottom:10px;">
       <div style="font-weight:800;font-size:15px;">${esc(p.name)}${awards.length?` <span style="font-size:14px;">${awards.join('')}</span>`:''}</div>
       ${courtTag}</div>
       <div class="sgrid">
@@ -4173,8 +4271,8 @@ function sessFinalAssignments(s){
     (ra[c]||[]).forEach(id=>{
       const dir=lastMv.mv?.[id];
       let to=c;
-      if(dir==='up')to=Math.max(1,c-1);
-      else if(dir==='down')to=Math.min(NC,c+1);
+      if(dir==='up')to=courtAbove(c,ra)||c;
+      else if(dir==='down')to=courtBelow(c,ra)||c;
       computed[to].push(id);
     });
   }
@@ -4343,11 +4441,6 @@ function selectMembership(type){
   if(pick&&!(document.querySelector('input[name="pay-decl"]:checked')&&document.querySelector('input[name="pay-decl"]:checked').closest('label').style.display!=='none')){pick.checked=true;regData.payment=pick.value;}
   document.getElementById('mt-regular-box').className='membership-box'+(type==='regular'?' active-box':'');
   document.getElementById('mt-spare-box').className='membership-box'+(type==='spare'?' active-box':'');
-  const w5row=document.getElementById('w5-row');if(w5row)w5row.style.display=type==='regular'?'flex':'none';
-  const w6row=document.getElementById('w6-row');if(w6row)w6row.style.display=type==='spare'?'flex':'none';
-  // Uncheck the hidden one to avoid accidental validation pass
-  if(type==='regular'){const cb=document.getElementById('w6');if(cb)cb.checked=false;}
-  else{const cb=document.getElementById('w5');if(cb)cb.checked=false;}
 }
 function regStep1(){
   const name=g('r-name').trim(),email=(myEmail()||g('r-email')).trim().toLowerCase(),phone=g('r-phone').trim(),emergency=g('r-emergency').trim();
@@ -4370,21 +4463,26 @@ function regStep1(){
   const existing=S.players.find(p=>(p.email||'').toLowerCase()===email);
   if(existing&&registeredThisSeason(existing)){toast('You already registered this season — the admin will approve it','warn');return;}
   regData={...regData,name,email,phone,emergency,medical:g('r-medical').trim(),membershipType:type};
-  // Show/hide payment checkboxes based on membership type
-  const w5row=document.getElementById('w5-row');if(w5row)w5row.style.display=type==='regular'?'flex':'none';
-  const w6row=document.getElementById('w6-row');if(w6row)w6row.style.display=type==='spare'?'flex':'none';
   goRS(2);
 }
 async function regStep2(){
-  const checkboxes=['w1'];
-  if(regData.membershipType==='regular')checkboxes.push('w5');
-  else checkboxes.push('w6');
-  if(!checkboxes.every(id=>document.getElementById(id)?.checked)){
-    toast('Please check all required boxes to continue','warn');return;
-  }
+  // The payment acknowledgement is the season-fee choice on step 1; this step is the waiver alone.
+  if(!S.waiver||!S.waiver.body)return toast(S.waiverError||'The waiver has not loaded yet — check the connection and try again','warn');
+  if(!document.getElementById('w1')?.checked){toast('Please tick the box to accept the waiver to continue','warn');return;}
+  const age=document.querySelector('input[name="wv-age"]:checked')?.value;
+  if(!age)return toast('Choose who is accepting the waiver','warn');
+  const minor=g('wv-minor').trim();
+  if(age==='guardian'&&(minor.length<2||minor.length>80))return toast('Enter the full name of the participant under 18','warn');
   const sig=g('r-sig').trim();if(!sig){toast('Enter digital signature','warn');return;}
-  regData.waiverSig=sig;goRS(3);
+  if(sig.length<2||sig.length>80)return toast('Type your full name (2 to 80 characters) as your signature','warn');
+  const mediaRow=document.getElementById('wv-media-row');
+  regData.waiverSig=sig;
+  regData.waiver={version:S.waiver.version,sha:S.waiver.sha,sig,age,minor:age==='guardian'?minor:'',media:mediaRow&&!mediaRow.hidden?!!document.getElementById('wv-media')?.checked:null};
+  goRS(3);
 }
+// The waiver arguments sent with a registration: the version and digest shown, and how and where it was accepted.
+function waiverArgs(){const w=regData.waiver||{};let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}
+  return {p_waiver_version:w.version||'',p_waiver_sha:w.sha||'',p_waiver_sig:w.sig||regData.waiverSig||'',p_tz:tz,p_offset:-new Date().getTimezoneOffset(),p_age:w.age||'adult',p_minor:w.minor||'',p_media:w.media===undefined?null:w.media,p_ua:(navigator.userAgent||'').slice(0,300)};}
 async function regStep3(){
   if(!document.getElementById('lf-all')?.checked){toast('Please agree to the league format rules to continue','warn');return;}
   const sig=g('r-sig-lf').trim();if(!sig){toast('Enter digital signature','warn');return;}
@@ -4395,8 +4493,8 @@ async function regStep3(){
     // Don't assign court on registration — admin assigns courts when adding to session
     regData.email=myEmail();
     let playerId;
-    try{playerId=await rpc('register_me',{p_name:regData.name,p_phone:regData.phone||'',p_emergency:regData.emergency||'',p_medical:regData.medical||'',p_payment:regData.payment||(regData.membershipType==='spare'?'per_session':'will_pay'),p_sig:sig,p_membership:regData.membershipType||'regular'});}
-    catch(e){toast('Registration error: '+(e.message||'Unknown error'),'error');btn.disabled=false;btn.innerHTML='Submit Registration →';return;}
+    try{playerId=await rpc('register_me',{p_name:regData.name,p_phone:regData.phone||'',p_emergency:regData.emergency||'',p_medical:regData.medical||'',p_payment:regData.payment||(regData.membershipType==='spare'?'per_session':'will_pay'),p_sig:sig,...waiverArgs(),p_membership:regData.membershipType||'regular'});}
+    catch(e){const m=e.message||'Unknown error';if(/waiver/i.test(m)){S.waiver=null;await ensureWaiver();goRS(2);}toast('Registration error: '+m,'error');btn.disabled=false;btn.innerHTML='Submit Registration →';return;}
     // Update success screen based on type
     const successMsg=document.getElementById('reg-success-msg');
     const payNote=document.getElementById('reg-payment-note');
@@ -4509,6 +4607,7 @@ function goRS(n){
   [1,2,3].forEach(i=>{const l=document.getElementById('sl'+i);if(l)l.className='sline'+(i<n?' done':'');});
 }
 function renderRegPage(){
+  ensureWaiver();
   const myEmailAddr=myEmail(),already=document.getElementById('reg-already'),form=document.getElementById('reg-form');
   // Update capacity display (exclude waitlisted from count — they don't hold active slots)
   const regularCount=regularPlacesClaimed();
@@ -4855,7 +4954,7 @@ function generateSeasonPDF(){
 // ══════════════════════════════════════════════
 // PLAYER AVATARS
 // ══════════════════════════════════════════════
-const AVATAR_COLORS=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#00bcd4','#ff5722','#607d8b','#795548'];
+const AVATAR_COLORS=['#b3261e','#a04000','#7a5c00','#146c2e','#0b6e5f','#1d5fa8','#6c3a9a','#a3134f','#006a7a','#b3401a','#4a5a66','#6b4a36']; // all ≥6:1 with white initials
 function avatarColor(name){let h=0;for(let i=0;i<(name||'').length;i++)h=name.charCodeAt(i)+((h<<5)-h);return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length];}
 function avatar(name,size=''){
   const n=String(name||'?');const parts=n.trim().split(/\s+/);
@@ -4911,75 +5010,176 @@ function buildRoundSummary(){
   text+=`\n🏸 See full stats: chriz93.github.io/dcbadmintonclub`;
   return text;
 }
-function exportWaiver(playerId){
-  const p=S.players.find(x=>x.id===playerId);if(!p)return;
-  const text=`DC BADMINTON CLUB — MAPLEWOOD LADDER LEAGUE
-WAIVER & CONSENT RECORD
-${'='.repeat(60)}
+// Players → 📄 Export: the person's acceptance record (the old export printed a paraphrase of today's terms).
+function exportWaiver(playerId){return downloadWaiverRecord(playerId);}
 
-PARTICIPANT INFORMATION
-Name: ${p.name}
-Email: ${p.email}
-Phone: ${p.phone}
-Emergency Contact: ${p.emergency}
-Medical Conditions: ${p.medical||'None disclosed'}
-
-REGISTRATION DETAILS
-Date Registered: ${p.registeredAt?new Date(p.registeredAt).toLocaleString():'Unknown'}
-Membership Type: ${p.membershipType==='spare'?'Spare ($20/session)':'Regular ($400/season)'}
-Approved: ${p.approved?'YES':'PENDING'}
-Payment Status: ${p.paid?'PAID':'UNPAID'}
-
-WAIVER & CONSENT STATUS
-Waiver Signed: ${p.waiverSigned?'YES':'NO'}
-Digital Signature: "${p.sig}"
-
-${'─'.repeat(60)}
-TERMS AGREED TO (by checking the consent box and signing):
-${'─'.repeat(60)}
-
-1. ASSUMPTION OF RISK — Participant understands badminton involves
-   inherent risks including muscle strains, falls, collisions, and
-   eye injuries. Participant voluntarily assumes full responsibility.
-
-2. RELEASE OF LIABILITY — Participant releases Christy George
-   (organizer), co-organizers, volunteers, and OCDSB from claims
-   arising from ordinary negligence during participation.
-
-3. PHYSICAL CONDITION — Participant certifies being in good physical
-   condition with no medical conditions preventing safe participation.
-
-4. AGE & GUARDIAN — Participant confirms being 18+ or that a parent/
-   guardian has registered and signed on the minor's behalf.
-
-5. NON-REFUNDABLE PAYMENT — All fees are final, non-negotiable, and
-   non-refundable under any circumstances including illness, weather,
-   cancellations, or schedule conflicts.
-
-6. E-TRANSFER RESPONSIBILITY — Participant is solely responsible for
-   ensuring payment is received at christygeorge993@gmail.com.
-
-7. MEDIA CONSENT — Participant grants permission for photos/videos
-   to be used for promotional purposes.
-
-8. PRIVACY — Personal information collected solely for league
-   administration. Will not be sold or shared with third parties.
-
-9. OCDSB FACILITY RULES — Non-marking shoes mandatory, no food/drinks
-   in gymnasium, no alcohol/smoking/vaping, arrive after 8:15 PM,
-   vacate by 10:15 PM, no nuts/shellfish/latex on premises.
-
-${'='.repeat(60)}
-This constitutes a binding digital agreement between the participant
-and Christy George (individual organizer).
-
-Generated: ${new Date().toLocaleString()}
-Document ID: DCBC-${p.id}-${Date.now()}`;
-  const blob=new Blob([text],{type:'text/plain'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`waiver_${p.name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.txt`;a.click();
-  toast('Waiver exported!','success');
+// ══════════════════════════════════════════════
+// WAIVER RECORDS (L20)
+// ══════════════════════════════════════════════
+// The exact current wording comes from the database; the page shows it and sends back its version and SHA-256 when
+// someone accepts, so every record names the words that were on screen. Records are never changed or back-filled.
+const LEAGUE_TZ='America/Toronto';
+async function sha256Hex(text){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+// Wording format: "# " title, "## " section heading, "• " list item, blank line between paragraphs. Everything escaped.
+function waiverHtml(body){
+  const out=[];let para=[],list=[];
+  const endList=()=>{if(list.length){out.push(`<ul class="wv-list">${list.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);list=[];}};
+  const endPara=()=>{if(para.length){out.push(`<p>${para.map(esc).join('<br>')}</p>`);para=[];}};
+  for(const line of String(body).split('\n')){
+    if(!line.trim()){endList();endPara();continue;}
+    if(line.startsWith('## ')){endList();endPara();out.push(`<h4>${esc(line.slice(3))}</h4>`);continue;}
+    if(line.startsWith('# ')){endList();endPara();out.push(`<p class="wv-title"><strong>${esc(line.slice(2))}</strong></p>`);continue;}
+    if(line.startsWith('• ')){endPara();list.push(line.slice(2));continue;}
+    endList();para.push(line);
+  }
+  endList();endPara();return out.join('');
 }
+const waiverOffersMedia=body=>/separate and optional/i.test(body||'');
+async function loadWaiver(){
+  const rows=await sbG('waiver_versions','is_current=eq.true&select=version,title,body,sha256,published_at');
+  const w=rows&&rows[0];if(!w){S.waiver=null;throw new Error('No waiver is published yet — registration opens when the organizer publishes one.');}
+  let sha='';try{sha=await sha256Hex(w.body);}catch(e){throw new Error('This browser cannot check the waiver text. Open the site over https in an up-to-date browser.');}
+  if(w.sha256&&sha!==w.sha256)throw new Error('The waiver text did not arrive intact — reload the page.');
+  S.waiver={version:w.version,title:w.title,body:w.body,sha,published_at:w.published_at};return S.waiver;
+}
+async function ensureWaiver(){
+  if(S.waiver||S._waiverLoading)return renderWaiverBox();
+  S._waiverLoading=true;
+  try{S.waiverError='';await loadWaiver();}catch(e){S.waiverError=e.message||'The waiver could not be loaded — check the connection and try again.';}
+  finally{S._waiverLoading=false;renderWaiverBox();}
+}
+function renderWaiverBox(){
+  const box=document.getElementById('waiver-box');if(!box)return;
+  const meta=document.getElementById('waiver-meta'),inl=document.getElementById('wv-ver-inline'),media=document.getElementById('wv-media-row'),w=S.waiver;
+  if(!w){box.innerHTML=`<div class="wv-loading${S.waiverError?' wv-error':''}" role="${S.waiverError?'alert':'status'}">${esc(S.waiverError||'Loading the waiver…')}</div>`;delete box.dataset.version;delete box.dataset.sha;if(meta)meta.textContent='';if(inl)inl.textContent='';return;}
+  if(box.dataset.sha!==w.sha){box.innerHTML=waiverHtml(w.body);box.dataset.version=w.version;box.dataset.sha=w.sha;}
+  if(meta)meta.innerHTML=`<span class="tag tg-teal">Version ${esc(w.version)}</span> <span>${esc(w.title)}</span>`;
+  if(inl)inl.textContent=` (version ${w.version})`;
+  if(media)media.hidden=!waiverOffersMedia(w.body);
+}
+function wvAgeChanged(){const v=document.querySelector('input[name="wv-age"]:checked')?.value;const r=document.getElementById('wv-minor-row');if(r)r.hidden=v!=='guardian';}
+// ── A registered player who has not accepted the current version: a Home card to read and accept it ──
+function needsWaiverUpdate(){
+  const me=myPlayer(),cur=S.waiverCurrent;
+  return !!(me&&cur&&registeredThisSeason(me)&&!(S.waiverAcc||[]).some(a=>a.player_id===me.id&&a.waiver_version===cur.version));
+}
+function renderWaiverPrompt(){
+  const el=document.getElementById('home-waiver');if(!el)return;
+  if(!needsWaiverUpdate()){el.innerHTML='';return;}
+  const cur=S.waiverCurrent,had=(S.waiverAcc||[]).some(a=>a.player_id===myPlayer().id);
+  el.innerHTML=`<div class="card" id="waiver-update-card"><div class="card-title">🖋 Waiver</div>
+    <div style="font-size:13px;margin-bottom:8px;">${had?`The league waiver has a new version (${esc(cur.version)}). Please read it and accept it.`:`Please read the league waiver (version ${esc(cur.version)}) and accept it, so your acceptance is on record.`}</div>
+    <button class="btn btn-primary" id="waiver-update-btn" onclick="openWaiverAccept()">Read and accept</button></div>`;
+}
+async function openWaiverAccept(){
+  try{await loadWaiver();}catch(e){return toast(e.message,'error');}
+  const w=S.waiver;
+  openModal(`Waiver — version ${w.version}`,`<div class="waiver-box" id="wva-box" tabindex="0" role="region" aria-label="Waiver text">${waiverHtml(w.body)}</div>
+    <fieldset class="wv-age"><legend class="lbl">Who is accepting?</legend>
+      <label class="chk-row"><input type="radio" name="wva-age" value="adult" checked onchange="document.getElementById('wva-minor-row').hidden=true"><span>I am 18 or older and I am the participant</span></label>
+      <label class="chk-row"><input type="radio" name="wva-age" value="guardian" onchange="document.getElementById('wva-minor-row').hidden=false"><span>I am a parent or legal guardian of a participant under 18</span></label>
+      <div id="wva-minor-row" hidden><label class="lbl" for="wva-minor">Participant's full name *</label><input class="inp" id="wva-minor" autocomplete="off"></div></fieldset>
+    ${waiverOffersMedia(w.body)?`<label class="chk-row"><input type="checkbox" id="wva-media"><span>Optional: I agree to photos and video of me (or the participant) being used to promote the league, as the waiver describes.</span></label>`:''}
+    <div class="chk-row"><input type="checkbox" id="wva-ok"><label for="wva-ok" style="font-weight:700;">I have read this waiver, I understand it, and I accept it (version ${esc(w.version)}).</label></div>
+    <label class="lbl" for="wva-sig">Type your full name *</label><input class="inp" id="wva-sig" autocomplete="name">
+    <button class="btn btn-primary" id="wva-btn" onclick="acceptWaiverUpdate()">✓ Accept version ${esc(w.version)}</button>`);
+}
+let _wvAccepting=false;
+async function acceptWaiverUpdate(){
+  const w=S.waiver;if(_wvAccepting||!w)return;
+  if(!document.getElementById('wva-ok')?.checked)return toast('Please tick the box to accept the waiver','warn');
+  const age=document.querySelector('input[name="wva-age"]:checked')?.value||'adult',minor=(document.getElementById('wva-minor')?.value||'').trim(),sig=(document.getElementById('wva-sig')?.value||'').trim();
+  if(age==='guardian'&&(minor.length<2||minor.length>80))return toast('Enter the full name of the participant under 18','warn');
+  if(sig.length<2||sig.length>80)return toast('Type your full name (2 to 80 characters) as your signature','warn');
+  const mediaEl=document.getElementById('wva-media');let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}
+  _wvAccepting=true;const b=document.getElementById('wva-btn');if(b){b.disabled=true;b.textContent='Saving…';}
+  try{
+    await rpc('accept_waiver',{p_version:w.version,p_sha:w.sha,p_sig:sig,p_tz:tz,p_offset:-new Date().getTimezoneOffset(),p_age:age,p_minor:age==='guardian'?minor:'',p_media:mediaEl?mediaEl.checked:null,p_ua:(navigator.userAgent||'').slice(0,300)});
+    closeModal();await loadAll();renderAll();toast(`Thank you — your acceptance of waiver version ${w.version} is recorded`,'success');
+  }catch(e){toast('Not recorded: '+(e.message||'check the connection'),'error');if(/waiver/i.test(e.message||''))S.waiver=null;}
+  finally{_wvAccepting=false;if(b&&b.isConnected){b.disabled=false;b.textContent=`✓ Accept version ${w.version}`;}}
+}
+// ── Admin → 🖋 Waivers ──
+async function ensureAllWaiverVersions(force){if(!force&&S.waiverVersions&&S.waiverVersions.length)return;S.waiverVersions=(await sbG('waiver_versions','select=version,title,body,sha256,published_at,is_current,note&order=version.asc'))||[];}
+function fmtWhen(iso){return new Date(iso).toLocaleString('en-CA',{timeZone:LEAGUE_TZ,year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});}
+function renderWaiverAdmin(load){
+  const el=document.getElementById('sec-a-wv');if(!el)return;
+  if(load)ensureAllWaiverVersions(true).then(()=>renderWaiverAdmin()).catch(e=>toast('Waiver versions not loaded: '+(e.message||'check the connection'),'error'));
+  const vs=S.waiverVersions||[],acc=S.waiverAcc||[],cur=S.waiverCurrent,of=id=>acc.filter(a=>a.player_id===id);
+  const players=S.players.filter(p=>registeredThisSeason(p)||of(p.id).length).sort((x,y)=>x.name.localeCompare(y.name));
+  const gone=acc.filter(a=>!a.player_id||!S.players.some(p=>p.id===a.player_id)),goneEmails=[...new Set(gone.map(a=>a.email))];
+  const onCur=players.filter(p=>cur&&of(p.id).some(a=>a.waiver_version===cur.version)).length;
+  el.innerHTML=`<div class="card" id="wv-versions"><div class="card-title">🖋 Waiver versions</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">New sign-ups see the current version. Published wording is never changed — a change is a new version. Only you can see the acceptance records.</div>
+    ${vs.length?vs.map(v=>{const isCur=cur&&v.version===cur.version,n=acc.filter(a=>a.waiver_version===v.version).length;return `<div class="wv-ver-row" data-version="${esc(v.version)}"><div><strong>${esc(v.version)}</strong> ${isCur?'<span class="tag tg-green">current</span>':''} <span style="font-size:12px;">${esc(v.title)}</span>
+      <div class="wv-sub">SHA-256 ${esc(String(v.sha256).slice(0,16))}… · ${n} acceptance${n===1?'':'s'}${v.note?' · '+esc(v.note):''}</div></div>
+      <div class="wv-ver-actions"><button class="btn btn-ghost btn-sm" data-v="${esc(v.version)}" onclick="downloadWaiverWording(this.dataset.v)">⬇ Wording</button>${isCur?'':`<button class="btn btn-warn btn-sm" data-v="${esc(v.version)}" onclick="publishWaiverVersion(this.dataset.v)">Make current</button>`}</div></div>`;}).join(''):'<div class="wv-sub">Loading versions…</div>'}
+  </div>
+  <div class="card" id="wv-records"><div class="card-title">📄 Acceptance records (${acc.length})</div>
+    <div class="flex-between" style="gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span class="wv-sub" id="wv-summary">Current version ${cur?esc(cur.version):'—'} · ${onCur} of ${players.length} registered player${players.length===1?' has':'s have'} accepted it</span>
+      <button class="btn btn-ghost btn-sm" id="wv-csv" onclick="downloadWaiverCsv()" ${acc.length?'':'disabled'}>⬇ All acceptances (CSV)</button></div>
+    ${players.map(p=>{const list=of(p.id),last=list[list.length-1];return `<div class="wv-row" data-player="${p.id}"><div><strong>${esc(p.name)}</strong>
+      <div class="wv-sub">${last?`Version ${esc(last.waiver_version)} · ${esc(fmtWhen(last.accepted_at))}${list.length>1?` · ${list.length} acceptances`:''}${cur&&last.waiver_version!==cur.version?' · <span class="tag tg-yellow">not the current version</span>':''}`:'No acceptance record on file'}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="downloadWaiverRecord(${p.id})">⬇ Record</button></div>`;}).join('')||'<div class="wv-sub">No registered players yet.</div>'}
+    ${goneEmails.length?`<div class="lbl" style="margin-top:10px;">People no longer on the player list</div>${goneEmails.map(em=>`<div class="wv-row"><div><strong>${esc(gone.find(a=>a.email===em).participant_name)}</strong><div class="wv-sub">${esc(em)}</div></div><button class="btn btn-ghost btn-sm" data-email="${esc(em)}" onclick="downloadWaiverRecordByEmail(this.dataset.email)">⬇ Record</button></div>`).join('')}`:''}
+  </div>`;
+}
+function tzTime(iso){return new Date(iso).toLocaleString('en-CA',{timeZone:LEAGUE_TZ,year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});}
+function offsetLabel(min){if(min==null)return 'not reported';const a=Math.abs(min);return `UTC${min<0?'−':'+'}${String(Math.floor(a/60)).padStart(2,'0')}:${String(a%60).padStart(2,'0')}`;}
+const safeName=x=>String(x||'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'player';
+// One person's record: every acceptance, oldest first, each with the exact wording it names. Nothing is inferred.
+async function waiverRecordText(rows,who){
+  await ensureAllWaiverVersions();
+  const V=Object.fromEntries((S.waiverVersions||[]).map(v=>[v.version,v])),line='='.repeat(64),thin='-'.repeat(64);
+  let t=`MAPLEWOOD LADDER LEAGUE (DC BADMINTON CLUB) — WAIVER ACCEPTANCE RECORD\nGenerated ${tzTime(new Date().toISOString())} by ${myEmail()||'the organizer'} from the ${SITE_ENV==='production'?'league site':'TEST site'}\n${line}\nPARTICIPANT\nName on file: ${who.name}\nSign-in email: ${who.email||'—'}\nPlayer record: ${who.id?'#'+who.id:'no longer on the player list'}\n`;
+  if(!rows.length){
+    t+=`${thin}\nNo acceptance record exists for this person.\nIndividual acceptance records (who, when, which wording) began with the waiver versions; a registration made before then was not recorded that way, and no record is created after the fact.\n`;
+    if(who.registeredAt)t+=`Registration on file: ${tzTime(who.registeredAt)}\n`;
+    return t+line+'\n';
+  }
+  rows.forEach((a,i)=>{const v=V[a.waiver_version];
+    t+=`${thin}\nACCEPTANCE ${i+1} OF ${rows.length}\nAction: ${a.action==='registration'?'accepted on the registration form (ticked the acceptance box and typed a signature)':'accepted an updated version on the site (ticked the acceptance box and typed a signature)'}\nRegistration reference: ${a.registration_ref||'—'}\nWaiver version: ${a.waiver_version}${v?` — ${v.title}`:''}\nWording fingerprint (SHA-256): ${a.waiver_sha256}\nAccepted at: ${a.accepted_at} (UTC) = ${tzTime(a.accepted_at)}\nParticipant's device time zone: ${a.client_timezone||'not reported'} (${offsetLabel(a.client_utc_offset_minutes)})\nAccepted by: ${a.age_declaration==='guardian'?`a parent or legal guardian, for the participant ${a.minor_name}`:'the participant (18 or older)'}\nTyped signature: "${a.typed_signature}"\nName and email at acceptance: ${a.participant_name} <${a.email}>\nPhotos and video: ${a.media_consent===true?'consent given (separate optional box ticked)':a.media_consent===false?'not given (separate optional box left unticked)':'no separate choice was offered with this wording'}\nDevice: ${a.user_agent||'not reported'}\n`;
+    if(v)t+=`Wording check: ${v.sha256===a.waiver_sha256?'the fingerprint matches the stored wording below':'WARNING — the stored wording does not match this fingerprint'}\n\nWAIVER WORDING, EXACTLY AS SHOWN (version ${v.version}):\n\n${v.body}\n`;
+    else t+=`The wording of version ${a.waiver_version} could not be loaded.\n`;
+  });
+  return t+line+'\n';
+}
+function downloadText(name,text,type){const blob=new Blob([text],{type:type||'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+const organizerOnly=()=>{if(!(S_me.organizer&&S_me.verified)){toast('Organizer verification required','warn');return false;}return true;};
+async function downloadWaiverRecord(playerId){
+  if(!organizerOnly())return;
+  const p=S.players.find(x=>x.id===playerId);if(!p)return toast('Player not found','warn');
+  try{downloadText(`waiver-record_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.txt`,await waiverRecordText((S.waiverAcc||[]).filter(a=>a.player_id===playerId),{name:p.name,email:p.email,id:p.id,registeredAt:p.registeredAt}));toast('Waiver record downloaded','success');}
+  catch(e){toast('Record not downloaded: '+(e.message||'check the connection'),'error');}
+}
+async function downloadWaiverRecordByEmail(email){
+  if(!organizerOnly())return;
+  const rows=(S.waiverAcc||[]).filter(a=>a.email===email&&(!a.player_id||!S.players.some(p=>p.id===a.player_id)));if(!rows.length)return toast('No records for that email','warn');
+  try{downloadText(`waiver-record_${safeName(rows[0].participant_name)}_${new Date().toISOString().slice(0,10)}.txt`,await waiverRecordText(rows,{name:rows[0].participant_name,email,id:null}));toast('Waiver record downloaded','success');}
+  catch(e){toast('Record not downloaded: '+(e.message||'check the connection'),'error');}
+}
+// CSV of every acceptance; a cell that a spreadsheet would read as a formula is prefixed with an apostrophe.
+function csvCell(v){let x=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return /[",\n\r]/.test(x)?`"${x.replace(/"/g,'""')}"`:x;}
+function downloadWaiverCsv(){
+  if(!organizerOnly())return;
+  const cols=['id','player_id','participant_name','email','waiver_version','waiver_sha256','accepted_at','client_timezone','client_utc_offset_minutes','action','age_declaration','minor_name','media_consent','registration_ref','typed_signature','user_agent'];
+  const rows=(S.waiverAcc||[]).map(a=>[...cols.map(c=>a[c]),tzTime(a.accepted_at)].map(csvCell).join(','));
+  downloadText(`waiver-acceptances_${new Date().toISOString().slice(0,10)}.csv`,[[...cols,'accepted_at_league_time'].join(','),...rows].join('\r\n')+'\r\n','text/csv;charset=utf-8');
+  toast(`${rows.length} acceptance${rows.length===1?'':'s'} downloaded`,'success');
+}
+async function downloadWaiverWording(version){
+  if(!organizerOnly())return;
+  try{await ensureAllWaiverVersions();const v=(S.waiverVersions||[]).find(x=>x.version===version);if(!v)return toast('Version not found','warn');
+    downloadText(`waiver-wording_${version}.txt`,`${v.title}\nVersion ${v.version} · SHA-256 ${v.sha256}\n\n${v.body}\n`);toast(`Wording of ${version} downloaded`,'success');}
+  catch(e){toast('Not downloaded: '+(e.message||'check the connection'),'error');}
+}
+async function publishWaiverVersion(version){
+  if(!organizerOnly())return;
+  if(!confirm(`Make waiver version ${version} the one new sign-ups see?\n\nEvery existing record stays as it is. Registered players will be asked to read and accept this version from their Home page.`))return;
+  try{await rpc('publish_waiver_version',{p_version:version});S.waiver=null;await ensureAllWaiverVersions(true);await loadAll();renderAll();renderWaiverAdmin();toast(`Version ${version} is now the current waiver`,'success');}
+  catch(e){toast('Not published: '+(e.message||'check the connection'),'error');}
+}
+
 function shareMessenger(){
   const text=buildRoundSummary();
   const encoded=encodeURIComponent(text);
@@ -5140,24 +5340,47 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 let toastT;
 function toast(msg,type='info'){
   let t=document.getElementById('_t');
-  if(!t){t=document.createElement('div');t.id='_t';t.style.cssText='position:fixed;bottom:82px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:25px;font-size:13px;font-weight:700;z-index:500;pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center;transition:opacity 0.3s;';document.body.appendChild(t);}
+  if(!t){t=document.createElement('div');t.id='_t';t.style.cssText='position:fixed;bottom:82px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:25px;font-size:13px;font-weight:700;z-index:500;pointer-events:none;white-space:normal;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;overflow-wrap:anywhere;text-align:center;transition:opacity 0.3s;';document.body.appendChild(t);}
   const c={success:'#27ae60',warn:'#f39c12',error:'#e74c3c',info:'#c9a84c'};
   t.style.background=c[type]||c.info;t.style.color='#fff';t.style.opacity='1';t.textContent=msg;
   clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity='0',2800);
 }
-function openModal(title,body){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=body;document.getElementById('modal').classList.add('open');}
-function closeModal(){document.getElementById('modal').classList.remove('open');}
+// The dialog takes the focus when it opens (so a screen reader announces its title), keeps Tab inside it, closes with
+// Escape, and returns the focus to whatever opened it.
+let _modalReturn=null,_lastFocus=null;
+document.addEventListener('focusin',e=>{if(e.target instanceof HTMLElement&&!e.target.closest('#modal'))_lastFocus=e.target;});
+function openModal(title,body){const m=document.getElementById('modal'),was=m.classList.contains('open');document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=body;m.classList.add('open');if(!was){const a=document.activeElement;_modalReturn=a&&a!==document.body&&!a.closest('#modal')?a:_lastFocus;m.querySelector('.modal').focus({preventScroll:true});}}
+function closeModal(){const m=document.getElementById('modal'),was=m.classList.contains('open');m.classList.remove('open');let r=_modalReturn;_modalReturn=null;if(r&&!document.contains(r)&&r.id)r=document.getElementById(r.id);if(was&&r&&r!==document.body&&document.contains(r)&&typeof r.focus==='function')r.focus({preventScroll:true});}
+document.addEventListener('keydown',e=>{const m=document.getElementById('modal');if(!m||!m.classList.contains('open'))return;
+  if(e.key==='Escape'){e.preventDefault();closeModal();return;}
+  if(e.key!=='Tab')return;
+  const box=m.querySelector('.modal'),f=[...box.querySelectorAll('button,[href],input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled&&x.getClientRects().length);
+  if(!f.length){e.preventDefault();box.focus();return;}
+  const first=f[0],last=f[f.length-1],at=document.activeElement;
+  if(e.shiftKey&&(at===first||at===box||!box.contains(at))){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&(at===last||!box.contains(at))){e.preventDefault();first.focus();}
+});
 
 // ══════════════════════════════════════════════
 // RENDER ALL
 // ══════════════════════════════════════════════
+// Fees only where they apply: a spare sees the $20 session fee, a regular the $400 season fee; the organizer and
+// visitors without a player record see both.
+function renderFeeLines(){
+  const me=myPlayer(),org=!!S_me.organizer,spare=!org&&!!me&&me.membershipType==='spare',regular=!org&&!!me&&me.membershipType!=='spare';
+  const both=`Regular season $${FEES.regularSeason} (${REGULAR_CAPACITY} players). Spare session $${FEES.spareSession}, confirmed once the admin verifies the e-transfer.`;
+  const rf=document.getElementById('rules-fee');
+  if(rf)rf.textContent=spare?`Spare session $${FEES.spareSession}, confirmed once the admin verifies the e-transfer.`:regular?`Regular season $${FEES.regularSeason} (${REGULAR_CAPACITY} players).`:both;
+  const a=document.getElementById('sched-fee-amt'),l=document.getElementById('sched-fee-lbl');
+  if(a&&l){a.textContent=spare?`$${FEES.spareSession}`:`$${FEES.regularSeason}`;l.textContent=spare?'Per session':'Season';}
+}
 function renderAll(){
   checkRegistrationStatus();
-  renderHome();renderRegPage();renderCourts();renderRoundTracker();renderSchedule();
+  renderHome();renderRegPage();renderCourts();renderRoundTracker();renderSchedule();renderFeeLines();renderWaiverPrompt();
   renderLeaderboard();renderRankings();renderPlayerStats();renderHeatmap();renderSessionStandings();renderHistory();renderRSVP();renderQA();
   renderPOS('pos-standings');
   renderUndo();renderAdvanceBanner();
-  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderPastPlayers();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();}
+  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderPastPlayers();renderWaiverAdmin();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();}
   // Skip score re-render during background sync to preserve unsaved input values
   if(!_isSyncing){const sel=document.getElementById('sc-sel');if(sel&&sel.value)renderScoreEntry();}
   // Check if all courts scored — trigger notification
@@ -5167,11 +5390,32 @@ function renderAll(){
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
+// ── Environment check (L18). The page's own address says which site it is: /dcbadmintonclub/ is the league site,
+//    anything else is a test site. Before anything loads, the database address must match the site; right after
+//    sign-in (anonymous visitors can read nothing), the database's own marker must agree too. ──
+const SITE_ENV=location.pathname.startsWith('/dcbadmintonclub/')?'production':'test';
+function envStop(m){document.body.innerHTML=`<main id="env-stop" role="alert" style="max-width:520px;margin:14vh auto;padding:24px;font:16px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;color:#14201a;background:#fff;border:2px solid #b42318;border-radius:14px;"><h1 style="font-size:22px;margin:0 0 8px;">This site is connected to the wrong database</h1><p style="margin:0;">${m}</p><p style="margin:12px 0 0;color:#44544a;">Nothing was loaded or saved. Please tell the organizer.</p></main>`;return false;}
+function checkSiteAddress(){
+  const prodDb=SB.includes('bwepvxelvwgwxrnaglrx');
+  if(SITE_ENV==='test'&&prodDb)return envStop('The test site points at the production database.');
+  if(SITE_ENV==='production'&&!prodDb)return envStop('The league site points at a database that is not the league database.');
+  return true;
+}
+async function checkDatabaseMarker(){
+  let r;try{r=await sbFetch('/rest/v1/environment?select=name,schema_version');}catch(e){return true;} // offline: the usual sync error shows instead
+  if(!r.ok)return SITE_ENV==='test'?envStop('The test database is not marked as TEST.'):true;          // a league database from before L18 has no marker yet
+  const rows=await r.json().catch(()=>[]);const env=Array.isArray(rows)&&rows[0]?rows[0]:null;window.DB_ENV=env;
+  if(SITE_ENV==='test'&&(!env||env.name!=='test'))return envStop(env?`The test site is connected to a database marked “${esc(env.name)}”.`:'The test database is not marked as TEST.');
+  if(SITE_ENV==='production'&&env&&env.name!=='production')return envStop(`The league site is connected to a database marked “${esc(env.name)}”.`);
+  return true;
+}
 async function init(){
+  if(!checkSiteAddress())return;
   installUndoCheckpoints();
   signInReset();
   const signed=await initAuth();
   if(!signed){setSS('err');updateNavVisibility();registerServiceWorker();return;}
+  if(!(await checkDatabaseMarker()))return;
   setSS('syncing');
   const ok=await loadAll();
   if(ok){
@@ -5254,30 +5498,31 @@ async function handleAbsentPlayer(){
   if(!confirm(`Remove this player from Court ${assignedCourt}? Courts below will need to cascade fill.`))return;
   await removePlayerFromCourtNow(playerId,assignedCourt);
 }
+// "Players arriving more than 5 minutes late move down one court" — applied at once, through the adjustment engine,
+// so court sizes stay valid. On the bottom court in use the player stays.
 async function markPlayerLate(){
   if(!S.current)return toast('No session','warn');
   const pid=parseInt(document.getElementById('late-player-sel')?.value);
   if(!pid)return toast('Select a player','warn');
   if(!S.current.latePlayers)S.current.latePlayers=[];
-  const lat=S.current.latePlayers;
-  if(lat.find(x=>x.playerId===pid))return toast('Already marked late','warn');
-  let originalCourt=null;
-  for(let c=1;c<=NC;c++){
-    if((S.current.assignments[c]||[]).includes(pid)){originalCourt=c;break;}
-  }
+  const cy=S.current.cycle,lat=S.current.latePlayers;
+  if(lat.find(x=>x.playerId===pid&&(x.round==null||x.round===cy||x.pending)))return toast('Already marked late','warn');
+  const originalCourt=courtOfPlayer(pid);
   if(!originalCourt)return toast('Player not assigned','warn');
-  if(originalCourt!==NC&&(S.current.assignments[NC]||[]).length>=courtCap(NC))return toast(`Court ${NC} already has ${courtCap(NC)} players — use Remove Absent & Replace or Rebalance instead`,'warn');
-  const lastCourt=NC;
-  const a=S.current.assignments;
-  for(let c=1;c<=NC;c++)a[c]=(a[c]||[]).filter(id=>id!==pid);
-  if(!a[lastCourt])a[lastCourt]=[];
-  a[lastCourt].push(pid);
-  lat.push({playerId:pid,originalCourt});
+  const inp={...adjInput(),absent:[],returning:[],late:[pid]},res=adjustCourts(inp),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+  if(!res.ok)return toast(res.problem,'warn');
+  const mv=res.moves.find(m=>m.id===pid&&m.reason==='late'),sk=res.skippedLate.find(x=>x.id===pid);
+  if(!S.current.attendance)S.current.attendance={};S.current.attendance[pid]='present';
+  lat.push({playerId:pid,originalCourt,round:cy,to:mv?mv.to:originalCourt,pending:false,...(sk?{stayed:sk.why}:{})});
+  if(res.changed)S.current.assignments=res.lineup;
   await setKV('current_session',S.current);
-  await loadAll();renderAll();toast('Player marked late','success');
+  await loadAll();renderAll();
+  toast(explainAdjust(res,nm).find(l=>l.startsWith(nm(pid)))||`${nm(pid)} marked late`,mv?'success':'info');
 }
 async function distributeBirds(){
   if(!S.current)return toast('No session','warn');
+  // Each court starts with two shuttlecocks per player: a count above that (or below zero) is a typing mistake.
+  for(let c=1;c<=NC;c++){const el=document.getElementById(`birds_${c}`);if(!el||el.disabled)continue;const v=parseInt(el.value)||0,max=birdsAllotted((S.current.assignments[c]||[]).length);if(v<0||v>max)return toast(`Court ${c} started with ${max} shuttlecocks — enter a number from 0 to ${max}`,'warn');}
   const bd={};
   // For each court, get bird count and assign to top scorers
   for(let c=1;c<=NC;c++){
@@ -5320,6 +5565,219 @@ async function distributeBirds(){
   await loadAll();renderAll();toast('Birds distributed to top scorers!','success');
 }
 
+
+// ═══ COURT ADJUSTMENT ENGINE — pure (no page state); legacy/tests/unit/adjust.test.mjs loads this block by its markers ═══
+// adjustCourts({nc, lineup:{court:[ids]}, absent:[ids], returning:[{id,court}], late:[ids], locked:[courts], closed:[courts], names:{id:name}})
+// Starts from the round's courts and makes only the moves a valid round needs. Returns {ok, changed, lineup, removed,
+// seated, moves:[{id,from,to,reason}], skippedLate, notes, problem}. When ok is false the lineup is the one passed in.
+function adjFormat(n){return n===5?'five doubles games to 15, each player sits out one':n===4?'three doubles games to 21':n===3?'three singles games':n===2?'best of three singles':'not in use';}
+function adjSame(x,y){x=x||[];y=y||[];return x.length===y.length&&x.every(id=>y.includes(id));}
+function validateLineup(L,o){
+  const nc=o.nc||6,probs=[],seen=new Set(),nm=o.nm||(id=>'Player '+id);
+  for(let c=1;c<=nc;c++){const ids=L[c]||[],n=ids.length;
+    for(const id of ids){if(seen.has(id))probs.push(`${nm(id)} is on two courts.`);seen.add(id);}
+    if(o.locked&&o.locked.has(c)&&o.before&&!adjSame(ids,o.before[c]))probs.push(`Court ${c} already has scores this round, so its players can't change.`);
+    if(o.closed&&o.closed.has(c)&&n)probs.push(`Court ${c} is marked unavailable but still has players.`);
+    if(n===1&&!(o.locked&&o.locked.has(c)))probs.push(`Court ${c} would have one player — a game needs at least two.`);
+    if(n>5)probs.push(`Court ${c} would have ${n} players — a court holds at most five.`);}
+  if(o.expect)for(const id of o.expect)if(!seen.has(id))probs.push(`${nm(id)} would be left without a court.`);
+  for(const id of seen)if(o.absent&&o.absent.has(id)&&!(o.lockedSeat&&o.lockedSeat.has(id)))probs.push(`${nm(id)} is absent but still on a court.`);
+  return probs;
+}
+function adjustCourts(inp){
+  const nc=inp.nc||6,MAX=5,nm=id=>(inp.names&&inp.names[id])||('Player '+id);
+  const L={},before={};
+  {const seen=new Set();for(let c=1;c<=nc;c++){L[c]=(inp.lineup&&inp.lineup[c]||[]).map(Number).filter(id=>seen.has(id)?false:(seen.add(id),true));before[c]=[...L[c]];}}
+  const locked=new Set((inp.locked||[]).map(Number)),closed=new Set((inp.closed||[]).map(Number)),absent=new Set((inp.absent||[]).map(Number));
+  const moves=[],notes=[],removed=[],seated=[],skippedLate=[],lockedSeat=new Set();
+  const where=id=>{for(let c=1;c<=nc;c++)if(L[c].includes(id))return c;return 0;};
+  const open=c=>c>=1&&c<=nc&&!locked.has(c)&&!closed.has(c);
+  const count=()=>{let n=0;for(let c=1;c<=nc;c++)n+=L[c].length;return n;};
+  const fail=problem=>({ok:false,changed:false,problem,lineup:before,moves:[],removed:[],seated:[],skippedLate:[],notes});
+  for(const c of closed)if(locked.has(c)&&L[c].length)return fail(`Court ${c} already has scores this round, so it can't be closed now. Finish or clear its games first.`);
+  // 1. Absent players leave their court (a court with scores this round keeps its players until the round ends).
+  for(const id of absent){const c=where(id);if(!c)continue;
+    if(locked.has(c)){lockedSeat.add(id);notes.push(`${nm(id)} is marked absent, but Court ${c} already has scores this round, so ${nm(id)} stays listed there until the round ends.`);continue;}
+    L[c]=L[c].filter(x=>x!==id);removed.push({id,from:c});}
+  // 2. Players who are back go to their own court when it is open and has room; otherwise they are placed below.
+  const displaced=[];
+  for(const r of (inp.returning||[])){const id=Number(r.id),to=Number(r.court)||0;if(where(id)||absent.has(id))continue;
+    if(open(to)&&L[to].length<MAX){L[to].push(id);seated.push({id,to});}
+    else displaced.push({id,from:to>=1&&to<=nc?to:nc+1,why:!(to>=1&&to<=nc)?'back':locked.has(to)?'back-locked':closed.has(to)?'back-closed':'back-full'});}
+  // 3. Unavailable courts empty out; 4. a court over five sends its most recent arrivals on.
+  for(const c of [...closed].sort((x,y)=>x-y)){for(const id of L[c])displaced.push({id,from:c,why:'closed'});L[c]=[];}
+  for(let c=1;c<=nc;c++){if(locked.has(c))continue;const extra=[];while(L[c].length>MAX)extra.unshift(L[c].pop());extra.forEach(id=>displaced.push({id,from:c,why:'full'}));}
+  // Capacity: open courts hold five each; courts with scores keep exactly their players.
+  const total=count()+displaced.length;let capacity=0;for(let c=1;c<=nc;c++)capacity+=closed.has(c)?0:locked.has(c)?L[c].length:MAX;
+  if(total>capacity)return fail(`${total} players need a court, but the available courts hold at most ${capacity}. Mark someone absent, make a court available again, or seat someone out by hand.`);
+  if(total===1)return fail(`Only one player is left to play — a game needs at least two. Nothing was changed.`);
+  const inUse=c=>L[c].length>0;
+  // Placing a player who must move: the nearest court in use below with room; if none, a free court below when another
+  // player still to place can join them there; otherwise the nearest court in use above with room; last, any free court.
+  const below=(from,ok)=>{for(let x=from+1;x<=nc;x++)if(ok(x))return x;return 0;},above=(from,ok)=>{for(let x=Math.min(from,nc+1)-1;x>=1;x--)if(ok(x))return x;return 0;};
+  const room=x=>open(x)&&inUse(x)&&L[x].length<MAX,free=x=>open(x)&&!inUse(x);
+  for(let i=0;i<displaced.length;i++){const d=displaced[i];
+    let to=below(d.from,room);
+    if(!to&&displaced.length-i>=2)to=below(d.from,free);
+    if(!to)to=above(d.from,room);
+    if(!to)to=below(d.from,free)||above(d.from,free);
+    if(!to)return fail(`There is no court with room for ${nm(d.id)}. Nothing was changed.`);
+    L[to].push(d.id);moves.push({id:d.id,from:d.from<=nc?d.from:0,to,reason:d.why});}
+  // 5. Late arrivals move down one court: the next court in use below.
+  for(const id of (inp.late||[]).map(Number)){const c=where(id);
+    if(!c){skippedLate.push({id,c:0,why:'not-seated'});continue;}
+    if(locked.has(c)){skippedLate.push({id,c,why:'locked'});notes.push(`${nm(id)} arrived late, but Court ${c} already has scores this round, so ${nm(id)} stays there.`);continue;}
+    let below=0;for(let x=c+1;x<=nc;x++)if(!closed.has(x)&&inUse(x)){below=x;break;}
+    const stay=(why,msg)=>{skippedLate.push({id,c,why});notes.push(msg);};
+    if(!below){stay('bottom',`${nm(id)} arrived late but is already on the bottom court in use (Court ${c}), so stays there.`);continue;}
+    if(locked.has(below)){stay('below-locked',`${nm(id)} arrived late, but Court ${below} already has scores this round, so ${nm(id)} stays on Court ${c}.`);continue;}
+    if(L[below].length>=MAX){stay('below-full',`${nm(id)} arrived late, but Court ${below} already has five players, so ${nm(id)} stays on Court ${c}.`);continue;}
+    if(L[c].length===2){const other=L[c].find(x=>x!==id);stay('alone',`${nm(id)} arrived late, but moving would leave ${nm(other)} alone on Court ${c}, so ${nm(id)} stays.`);continue;}
+    L[c]=L[c].filter(x=>x!==id);L[below].push(id);moves.push({id,from:c,to:below,reason:'late'});}
+  // 6. Nobody plays alone: a lone player joins the next court in use below; on the bottom court in use, the one above.
+  for(let c=1;c<=nc;c++){if(!open(c)||L[c].length!==1)continue;const id=L[c][0];let to=0,up=false;
+    for(let x=c+1;x<=nc;x++)if(open(x)&&inUse(x)&&L[x].length<MAX){to=x;break;}
+    if(!to)for(let x=c-1;x>=1;x--)if(open(x)&&inUse(x)&&L[x].length<MAX){to=x;up=true;break;}
+    if(!to)return fail(`${nm(id)} would be alone on Court ${c} and no court nearby has room. Nothing was changed — seat them by hand in Session → Assign.`);
+    L[c]=[];L[to].push(id);moves.push({id,from:c,to,reason:up?'alone-up':'alone'});}
+  // 7. Check the result: every player who should play has exactly one court, every court is a real game.
+  const expect=new Set();for(let c=1;c<=nc;c++)for(const id of before[c])if(!absent.has(id)||lockedSeat.has(id))expect.add(id);for(const s of seated)expect.add(s.id);for(const d of displaced)expect.add(d.id);
+  const probs=validateLineup(L,{nc,locked,closed,before,expect,absent,lockedSeat,nm});
+  if(probs.length)return fail(probs[0]);
+  let changed=false;for(let c=1;c<=nc;c++)if(!adjSame(L[c],before[c]))changed=true;
+  for(let c=1;c<=nc;c++)if(L[c].length!==before[c].length&&L[c].length>=2)notes.push(`Court ${c} now has ${L[c].length} players: ${adjFormat(L[c].length)}.`);
+  if(!count())notes.push('Nobody is left to play this round.');
+  return {ok:true,changed,problem:null,lineup:L,moves,removed,seated,skippedLate,notes};
+}
+// The plain-words explanation of an adjustment, one line per change, then the notes.
+function explainAdjust(res,nm){
+  if(!res.ok)return [res.problem];
+  const out=[];
+  for(const r of res.removed)out.push(`${nm(r.id)} is absent — off Court ${r.from}.`);
+  for(const s of res.seated)out.push(`${nm(s.id)} is back — returns to Court ${s.to}.`);
+  for(const m of res.moves){const n=nm(m.id);out.push(
+    m.reason==='late'?`${n} arrived late — moves down from Court ${m.from} to Court ${m.to}.`:
+    m.reason==='alone'?`${n} was the only player left on Court ${m.from}, so joins Court ${m.to} (a game needs at least two).`:
+    m.reason==='alone-up'?`${n} was the only player left on Court ${m.from}, the bottom court in use, so joins Court ${m.to} above.`:
+    m.reason==='closed'?`Court ${m.from} is unavailable, so ${n} moves to Court ${m.to}.`:
+    m.reason==='full'?`Court ${m.from} would have more than five players, so ${n} (the last to join it) moves to Court ${m.to}.`:
+    m.reason==='back-full'?`${n} is back, but Court ${m.from} is full, so plays on Court ${m.to}.`:
+    m.reason==='back-locked'?`${n} is back, but Court ${m.from} already has scores this round, so plays on Court ${m.to}.`:
+    m.reason==='back-closed'?`${n} is back, but Court ${m.from} is unavailable, so plays on Court ${m.to}.`:
+    m.reason==='override'?`${n} moves to Court ${m.to} (your choice).`:
+    `${n} is back and plays on Court ${m.to}.`);}
+  return out.concat(res.notes);
+}
+function adjCount(res){return res&&res.ok?res.removed.length+res.seated.length+res.moves.length:0;}
+// ═══ END COURT ADJUSTMENT ENGINE ═══
+
+// ── Attendance → Adjust courts (the page side of the engine above) ──
+let _adjusting=false,_adjProposal=null;
+function courtOfPlayer(id){const a=S.current?.assignments||{};for(let c=1;c<=NC;c++)if((a[c]||[]).includes(id))return c;return 0;}
+function adjLocked(){if(!S.current)return[];const cy=S.current.cycle,keys=Object.keys(S.current.scores||{});return [1,2,3,4,5,6].filter(c=>keys.some(k=>k.startsWith(`c${c}_y${cy}_`)));}
+function isLateNow(id){const cur=S.current;return !!cur&&(cur.latePlayers||[]).some(l=>l.playerId===id&&(l.pending||l.round===cur.cycle));}
+function adjNames(){const o={};S.players.forEach(p=>o[p.id]=p.name);return o;}
+function adjInput(){
+  const cur=S.current,att=cur.attendance||{},a=cur.assignments||{},seated=new Set(Object.values(a).flat());
+  return {nc:NC,lineup:a,names:adjNames(),locked:adjLocked(),closed:[...(cur.closedCourts||[])],
+    absent:Object.entries(att).filter(([id,v])=>v==='absent'&&seated.has(+id)).map(([id])=>+id),
+    returning:Object.entries(cur.absentFrom||{}).filter(([id])=>att[id]==='present'&&!seated.has(+id)).map(([id,c])=>({id:+id,court:+c})),
+    late:(cur.latePlayers||[]).filter(l=>l.pending).map(l=>l.playerId)};
+}
+function adjustPreview(){if(!S.current||S.current.completed)return null;return adjustCourts(adjInput());}
+function adjustWithOverrides(){
+  const P=_adjProposal;let res=adjustCourts(P.input);
+  if(!res.ok||!Object.keys(P.override).length)return res;
+  const L={};for(let c=1;c<=NC;c++)L[c]=[...(res.lineup[c]||[])];const moves=res.moves.map(m=>({...m}));
+  for(const [k,v] of Object.entries(P.override)){const id=+k,to=+v,from=Object.keys(L).map(Number).find(c=>L[c].includes(id));if(!from||from===to)continue;
+    L[from]=L[from].filter(x=>x!==id);L[to].push(id);const m=moves.find(x=>x.id===id);if(m)m.to=to;else moves.push({id,from,to,reason:'override'});}
+  const before={};for(let c=1;c<=NC;c++)before[c]=[...(P.input.lineup[c]||[])];
+  const nm=id=>P.input.names[id]||'Player';
+  const probs=validateLineup(L,{nc:NC,locked:new Set(P.input.locked),closed:new Set(P.input.closed),before,nm});
+  if(probs.length)return {...res,ok:false,problem:'Your change is not a valid round: '+probs[0]};
+  const kept=moves.filter(m=>m.from!==m.to);let changed=false;for(let c=1;c<=NC;c++)if(!adjSame(L[c],before[c]))changed=true;
+  const notes=res.notes.filter(x=>!/^Court \d now has \d players: /.test(x)&&x!=='Nobody is left to play this round.');
+  for(let c=1;c<=NC;c++)if(L[c].length!==before[c].length&&L[c].length>=2)notes.push(`Court ${c} now has ${L[c].length} players: ${adjFormat(L[c].length)}.`);
+  if(!Object.values(L).flat().length)notes.push('Nobody is left to play this round.');
+  return {...res,lineup:L,moves:kept,changed,notes};
+}
+// Something to apply: a court change, a late arrival to settle (moved or recorded as staying), or a change to the
+// courts marked unavailable. The preview's Apply button and Apply itself both use this.
+function adjCanApply(res,P){return !!res.ok&&(res.changed||(S.current?.latePlayers||[]).some(l=>l.pending&&res.skippedLate.some(x=>x.id===l.playerId))||!adjSame(P.input.closed,S.current?.closedCourts||[]));}
+function adjustModalHtml(again){
+  const P=_adjProposal,res=adjustWithOverrides(),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+  const lines=explainAdjust(res,nm),closed=new Set(P.input.closed),locked=new Set(P.input.locked),L=res.ok?res.lineup:P.input.lineup;
+  const opts=m=>[1,2,3,4,5,6].filter(c=>!closed.has(c)&&!locked.has(c)).map(c=>`<option value="${c}" ${c===m.to?'selected':''}>Court ${c}</option>`).join('');
+  const moved=adjustCourts(P.input).moves;
+  return `${again?'<div class="alert alert-warn" role="status">The courts changed while you were looking — this is the updated proposal.</div>':''}
+    <div id="adj-explain" aria-live="polite">${res.ok?(lines.length?`<ul class="adj-list">${lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:'<p class="adj-none">No changes are needed.</p>'):`<div class="alert alert-error" role="alert">${esc(res.problem)}</div>`}</div>
+    ${moved.length?`<div class="adj-over"><div class="lbl">Change a move (optional)</div>${moved.map(m=>`<label class="adj-ov-row"><span>${esc(nm(m.id))}: Court ${m.from||'—'} →</span> <select class="inp adj-ov" data-id="${m.id}" onchange="adjOverride(${m.id},this.value)">${opts({to:+(P.override[m.id]||m.to)})}</select></label>`).join('')}</div>`:''}
+    <details class="adj-closed"${closed.size?' open':''}><summary>Courts unavailable tonight</summary><div class="adj-closed-grid">${[1,2,3,4,5,6].map(c=>`<label class="chk-row"><input type="checkbox" id="adj-closed-${c}" ${closed.has(c)?'checked':''} ${locked.has(c)?'disabled':''} onchange="adjToggleClosed(${c},this.checked)"> Court ${c}${locked.has(c)?' (has scores)':''}</label>`).join('')}</div></details>
+    <div class="adj-sizes">${[1,2,3,4,5,6].map(c=>{const n=(L[c]||[]).length;return `<span class="tag ${n?'tg-teal':'tg-gray'}">C${c}: ${n}${locked.has(c)?' 🔒':''}${closed.has(c)?' ✕':''}</span>`;}).join(' ')}</div>
+    <div class="adj-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="adj-apply" onclick="applyCourtAdjust()" ${adjCanApply(res,P)?'':'disabled'}>✓ Apply changes</button></div>`;
+}
+function adjRefreshModal(){if(_adjProposal)document.getElementById('modal-body').innerHTML=adjustModalHtml(false);}
+function adjOverride(id,to){if(!_adjProposal)return;_adjProposal.override[id]=+to;adjRefreshModal();}
+function adjToggleClosed(c,on){if(!_adjProposal)return;const s=new Set(_adjProposal.input.closed);on?s.add(c):s.delete(c);_adjProposal.input.closed=[...s].sort((x,y)=>x-y);_adjProposal.override={};adjRefreshModal();}
+async function previewAdjust(again){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  if(_adjusting)return toast('Still working on the last change — try again in a moment','info');
+  if(!S.current)return toast('Start the session first — the starting lineup seats present players by their earned court.','warn');
+  if(S.current.completed)return toast('Both rounds are finished — nothing left to adjust.','info');
+  _adjusting=true;const btn=document.getElementById('adj-btn');if(btn){btn.disabled=true;btn.textContent='Checking…';}
+  try{
+    if(!(await loadAll()))throw new Error('Could not load the latest courts — check the connection and try again');
+    if(!S.current||S.current.completed)return toast('The session changed — nothing to adjust now.','info');
+    const input=adjInput();_adjProposal={version:_stateVersion['current_session'],round:S.current.cycle,input,override:{}};
+    const res=adjustCourts(input);
+    if(res.ok&&!res.changed&&!res.notes.length&&!input.closed.length){_adjProposal=null;return toast('Courts already match attendance — nothing to change','info');}
+    openModal(`Adjust courts — Round ${S.current.cycle}`,adjustModalHtml(again));
+  }catch(e){toast(e.message||'Could not check the courts','error');}
+  finally{_adjusting=false;renderAttendanceTab();}
+}
+async function applyCourtAdjust(){
+  const P=_adjProposal;if(!P||_adjusting)return;
+  const res=adjustWithOverrides();
+  if(!res.ok)return toast(res.problem,'warn');
+  if(!adjCanApply(res,P))return toast('Nothing to change','info');
+  _adjusting=true;const b=document.getElementById('adj-apply');if(b){b.disabled=true;b.textContent='Applying…';}
+  try{
+    if(!S.current||_stateVersion['current_session']!==P.version||S.current.cycle!==P.round){_adjusting=false;closeModal();return previewAdjust(true);}
+    const cur=S.current,cy=cur.cycle,nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+    cur.assignments=res.lineup;cur.closedCourts=[...P.input.closed];
+    for(const id of [...res.seated.map(x=>x.id),...res.moves.filter(m=>/^back/.test(m.reason)).map(m=>m.id)])if(cur.absentFrom)delete cur.absentFrom[id];
+    for(const l of (cur.latePlayers||[])){if(!l.pending)continue;const m=res.moves.find(x=>x.id===l.playerId),sk=res.skippedLate.find(x=>x.id===l.playerId);
+      if(m){l.to=m.to;l.pending=false;l.round=cy;}else if(sk){l.to=sk.c||l.originalCourt;l.pending=false;l.round=cy;l.stayed=sk.why;}}
+    const lines=explainAdjust(res,nm);
+    cur.adjustments=[...(cur.adjustments||[]),{at:new Date().toISOString(),round:cy,by:myEmail()||'',lines}].slice(-20);
+    await setKV('current_session',cur);
+    closeModal();_adjProposal=null;
+    await loadAll();renderAll();
+    const n=adjCount(res);toast(n?`Courts adjusted for Round ${cy} — ${n} change${n===1?'':'s'}. Undo is on the Attendance tab.`:`Recorded for Round ${cy} — no court changes. Undo is on the Attendance tab.`,'success');
+  }catch(e){if(!(e.code==='40001'||/Stale state/.test(e.message||'')))toast('Courts not changed: '+(e.message||'check the connection')+'. Try again.','error');closeModal();_adjProposal=null;await loadAll();renderAll();}
+  finally{_adjusting=false;renderAttendanceTab();}
+}
+function renderAdjustBar(){
+  if(!S.current)return `<div class="adj-bar" id="adj-bar"><div class="adj-sum">Courts are set when the session starts: present players sit by their earned court. After that, mark attendance here and press <strong>Adjust courts</strong>.</div></div>`;
+  if(S.current.completed)return `<div class="adj-bar" id="adj-bar"><div class="adj-sum">Both rounds are finished — nothing left to adjust.</div></div>`;
+  const res=adjustPreview(),n=adjCount(res),cy=S.current.cycle,lk=adjLocked().length;
+  const sum=res&&!res.ok?`⚠️ ${esc(res.problem)}`:n?`<strong>${n} court change${n===1?'':'s'} waiting</strong> for Round ${cy}`:`✓ Courts match attendance for Round ${cy}`;
+  return `<div class="adj-bar${n||(res&&!res.ok)?' adj-pending':''}" id="adj-bar" role="region" aria-label="Adjust courts">
+    <div class="adj-sum" id="adj-sum">${sum}${lk?`<div class="adj-lock">🔒 ${lk} court${lk===1?' has':'s have'} scores this round and stay${lk===1?'s':''} as ${lk===1?'it is':'they are'}.</div>`:''}</div>
+    <label class="adj-lbl" for="adj-round">Round</label>
+    <select id="adj-round" class="inp adj-sel" aria-label="Round to adjust"><option value="${cy}">Round ${cy} — next to play</option></select>
+    <button class="btn btn-primary adj-btn" id="adj-btn" onclick="previewAdjust()" ${_adjusting?'disabled':''}>🔁 Adjust courts</button></div>`;
+}
+function renderLastAdjustment(){
+  const last=(S.current?.adjustments||[]).slice(-1)[0];if(!last)return '';
+  const t=new Date(last.at).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'});
+  const undoable=S.undoTop&&S.undoTop.label===`Adjust courts (Round ${last.round})`;
+  return `<div class="card" id="adj-last"><div class="card-title">🔁 Last court adjustment</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Round ${last.round} · ${esc(t)}</div>
+    <ul class="adj-list">${(last.lines||[]).map(l=>`<li>${esc(l)}</li>`).join('')}</ul>
+    ${undoable?`<button class="btn btn-ghost" id="adj-undo" onclick="undoLast()">↶ Undo this adjustment</button>`:''}</div>`;
+}
+
 // ══════════════════════════════════════════════
 // ATTENDANCE
 // ══════════════════════════════════════════════
@@ -5330,7 +5788,7 @@ function renderAttendanceTab(){
   // Get spare pool (unassigned players)
   const sparePool=S.players.filter(p=>(!p.currentCourt||p.currentCourt===0)&&p.id>0);
   // Build attendance by court
-  let html=`<div class="card"><div class="card-title">📋 Session ${sessionNum} Attendance</div>
+  let html=renderAdjustBar()+`<div class="card"><div class="card-title">📋 Session ${sessionNum} Attendance</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Votes fill this in: “coming” players start as present, “not coming” players are excused for the night. Mark a no-show absent (one court down next week). Confirmed spares are seated when the night starts.</div>`;
   // Count stats — present/absent from attendance data, unmarked from court players
   const absentCount=Object.values(att).filter(v=>v==='absent').length;
@@ -5363,10 +5821,12 @@ function renderAttendanceTab(){
       const status=att[id]||'';
       const vote=(S.rsvp||{})[id];
       const voteTag=vote==='coming'?'<span class="tag tg-green" style="font-size:11px;">voted in</span>':vote==='notcoming'?'<span class="tag tg-red" style="font-size:11px;">voted out</span>':'<span class="tag tg-gray" style="font-size:11px;">no vote</span>';
-      html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name.split(' ')[0])} ${voteTag}</span>
-        <button class="btn btn-sm ${status==='present'?'btn-success':'btn-ghost'}" style="padding:3px 8px;font-size:10px;margin:0;" onclick="markAttForTab(${id},'present')">✅</button>
-        <button class="btn btn-sm ${status==='absent'?'btn-danger':'btn-ghost'}" style="padding:3px 8px;font-size:10px;margin:0;" onclick="markAttForTab(${id},'absent',${c})">❌</button>
+      const late=isLateNow(id),here=status==='present'&&!late;
+      html+=`<div class="att-line${status==='absent'?' att-out':''}" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);">
+        <span style="flex:1 1 120px;font-size:12px;font-weight:700;">${esc(p.name.split(' ')[0])} ${voteTag}</span>
+        <button class="btn btn-sm att-tg ${here?'btn-success':'btn-ghost'}" aria-pressed="${here}" title="Mark ${esc(p.name)} present" style="margin:0;" onclick="markAttForTab(${id},'present',${c})">✅ <span class="att-tl">Present</span></button>
+        ${S.current&&!S.current.completed?`<button class="btn btn-sm att-tg ${late?'btn-warn':'btn-ghost'}" aria-pressed="${late}" title="Mark ${esc(p.name)} late (more than 5 minutes)" style="margin:0;" onclick="markAttForTab(${id},'late',${c})">⏰ <span class="att-tl">Late</span></button>`:''}
+        <button class="btn btn-sm att-tg ${status==='absent'?'btn-danger':'btn-ghost'}" aria-pressed="${status==='absent'}" title="Mark ${esc(p.name)} absent" style="margin:0;" onclick="markAttForTab(${id},'absent',${c})">❌ <span class="att-tl">Absent</span></button>
       </div>`;
     });
     // Show open slots
@@ -5375,7 +5835,11 @@ function renderAttendanceTab(){
     }
     html+=`</div>`;
   }
+  // Players already taken off a court tonight: one tap brings them back (Adjust courts seats them on their own court).
+  if(S.current){const out=Object.entries(att).filter(([id,v])=>v==='absent'&&!courtPlayerIds.has(+id)).map(([id])=>S.players.find(p=>p.id===+id)).filter(Boolean);
+    if(out.length)html+=`<div class="att-out-list" id="att-out"><div class="lbl" style="margin-top:8px;">Marked absent (off the courts)</div>${out.map(p=>`<div class="att-line" style="display:flex;align-items:center;gap:6px;padding:4px 0;"><span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)}</span><button class="btn btn-sm att-tg btn-ghost" style="margin:0;" title="${esc(p.name)} is here after all" onclick="markAttForTab(${p.id},'present')">✅ <span class="att-tl">Here after all</span></button></div>`).join('')}</div>`;}
   html+=`</div>`;
+  html+=renderLastAdjustment();
   // Spare pool
   if(sparePool.length>0){
     html+=`<div class="card"><div class="card-title">🪑 Spare Pool (${sparePool.length})</div>
@@ -5440,26 +5904,35 @@ function renderAttendanceTab(){
   }
   el.innerHTML=html;
 }
+// A toggle records attendance only; Adjust courts moves players. Late counts as present (a late player played).
 async function markAttForTab(id,status,court){
-  // Mark attendance
+  const first=S.players.find(p=>p.id===id)?.name.split(' ')[0]||'Player';
   if(S.current){
-    if(!S.current.attendance)S.current.attendance={};
-    S.current.attendance[id]=status;
+    const cur=S.current,cy=cur.cycle;
+    if(!cur.attendance)cur.attendance={};
+    if(!cur.latePlayers)cur.latePlayers=[];
+    if(status==='late'){
+      if(cur.latePlayers.some(l=>l.playerId===id&&(l.pending||l.round===cy)))return toast(`${first} is already marked late this round`,'info');
+      cur.attendance[id]='present';
+      cur.latePlayers.push({playerId:id,originalCourt:courtOfPlayer(id)||court||0,round:cy,pending:true});
+    }else{
+      cur.latePlayers=cur.latePlayers.filter(l=>!(l.playerId===id&&l.pending));
+      cur.attendance[id]=status;
+      if(status==='absent'){if(!cur.absentFrom)cur.absentFrom={};cur.absentFrom[id]=courtOfPlayer(id)||court||cur.absentFrom[id]||NC;} // remembered for the demotion at session end
+    }
   }else{
+    if(status==='late')status='present';
     if(!S.preAttendance)S.preAttendance={};
     S.preAttendance[id]=status;
-  }
-  // If absent — auto-remove from court
-  if(status==='absent'&&court&&S.current){
-    S.current.assignments[court]=(S.current.assignments[court]||[]).filter(pid=>pid!==id);
-    if(!S.current.absentFrom)S.current.absentFrom={};S.current.absentFrom[id]=court; // remembered for the demotion at session end
   }
   // Save immediately (no debounce — attendance is critical), then confirm
   if(S.current)await setKV('current_session',S.current);
   else await setKV('pre_session_attendance',S.preAttendance||{});
-  const first=S.players.find(p=>p.id===id)?.name.split(' ')[0];
-  if(status==='absent'&&court)toast(first+' marked absent — off Court '+court+' tonight, one court down next week','warn');
-  else if(status==='present')toast(first+' confirmed present','success');
+  const res=S.current?adjustPreview():null,tail=res&&adjCount(res)?' — press Adjust courts to update the courts':'';
+  if(status==='absent'&&court&&!S.current)toast(first+' marked absent — off Court '+court+' tonight, one court down next week','warn');
+  else if(status==='absent')toast(`${first} marked absent${tail}. One court down next week.`,'warn');
+  else if(status==='late')toast(`${first} marked late${tail}`,'warn');
+  else if(status==='present')toast(first+' confirmed present'+tail,'success');
   await loadAll();renderAttendanceTab();renderCourts();renderAdminPlayers();
 }
 async function saveAttendanceTab(){

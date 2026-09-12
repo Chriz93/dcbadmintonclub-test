@@ -5,11 +5,16 @@
 
 Rewrites only: Supabase URL and key, page title, service-worker scope and cache name, manifest start_url.
 Everything else is byte-identical to the tested index.html. Prints a diff summary; never prints the key."""
-import argparse, getpass, pathlib, re, sys
+import argparse, getpass, hashlib, pathlib, re, subprocess, sys
 PROD_URL = "https://bwepvxelvwgwxrnaglrx.supabase.co"
 ap = argparse.ArgumentParser(); ap.add_argument("--key"); ap.add_argument("--out", required=True); ap.add_argument("--cache", default="dcbc-v40")
 ap.add_argument("--reuse-key", action="store_true", help="take the publishable key from the production site already in --out")
 a = ap.parse_args()
+# Production gets exactly the tested artifact: only a committed index.html/sw.js/manifest.json is ever built.
+_root = pathlib.Path(__file__).resolve().parents[2]
+_dirty = subprocess.run(["git", "-C", str(_root), "status", "--porcelain", "--", "index.html", "sw.js", "manifest.json"], capture_output=True, text=True).stdout.strip()
+if _dirty: sys.exit("Not built: index.html, sw.js or manifest.json has uncommitted changes. Build only from the committed, tested version.")
+_commit = subprocess.run(["git", "-C", str(_root), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
 # Without --key the script asks for it (hidden), the same in zsh and bash, and keeps it out of the shell history.
 # --reuse-key takes it from the production build already published (the publishable key is public by design).
 if a.key is None and a.reuse_key:
@@ -46,4 +51,5 @@ man = (root / "manifest.json").read_text().replace("/dcbadmintonclub-test/", "/d
 for extra in [".nojekyll"]:
     if (root / extra).exists(): (out / extra).write_text((root / extra).read_text())
 assert "wgolevihkvmosajumzvl" not in html and "dcbadmintonclub-test" not in sw + man and "TEST</title>" not in html
-print(f"production build written to {out} (index.html {len(html)} bytes, cache {a.cache})")
+src_sha = hashlib.sha256((root / "index.html").read_bytes()).hexdigest()
+print(f"production build written to {out} (index.html {len(html)} bytes, cache {a.cache}) from TEST commit {_commit}, tested index.html sha256 {src_sha[:16]}")

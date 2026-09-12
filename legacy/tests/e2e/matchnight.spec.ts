@@ -7,6 +7,9 @@ import { tossOrder } from "./rules-model";
 const TIE_COURT: [number, number][] = [[21, 19], [19, 21], [21, 19]]; // A, B and D finish 2–1 fully tied; C has no wins
 const FIVE: [number, number][] = [[15, 10], [15, 9], [15, 12], [15, 8], [15, 11]];
 
+/** A court of two plays best of three: when side A wins every game, only the first two are played. */
+const bestOfThree = <T extends { a2: number | null; b2: number | null }>(games: T[]) => (games.length === 3 && games.every((g) => g.a2 === null && g.b2 === null) && (games as unknown as { a1: number }[]).every((g) => g.a1 === (games[0] as unknown as { a1: number }).a1) ? games.slice(0, 2) : games);
+
 test.describe.serial("2026–27 match night on the test copy (mocked database rules)", () => {
   let state: MockState;
   test.beforeEach(async ({ page }) => {
@@ -76,7 +79,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     // Round 2 with whatever lineups resulted; then the session completes after the second round.
     for (let c = 1; c <= 6; c++) {
       const games = await courtGames(page, c);
-      await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 7 + i] : [21, 12 + i])) as [number, number][]);
+      await scoreCourt(page, c, bestOfThree(games).map((_, i) => (games.length === 5 ? [15, 7 + i] : [21, 12 + i])) as [number, number][]);
     }
     await expect.poll(() => page.evaluate(() => S.current?.completed === true), { timeout: 15000 }).toBe(true);
     await page.selectOption("#sc-sel", "1");
@@ -178,7 +181,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.fill("#r-phone", "613-555-0100");
     await page.fill("#r-emergency", "Emergency Person 613-555-0101");
     await page.click("text=Continue →");
-    await page.check("#w1"); await page.check("#w5");
+    await page.check("#w1");
     await page.fill("#r-sig", "Regular Tester");
     await page.click("#reg-btn");
     await page.check("#lf-all");
@@ -251,7 +254,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await signIn(page, "stranger@example.invalid");
     await page.fill("#r-name", "Stranger"); await page.fill("#r-phone", "1"); await page.fill("#r-emergency", "x");
     await page.click("text=Continue →");
-    await page.check("#w1"); await page.check("#w5"); await page.fill("#r-sig", "Stranger"); await page.click("#reg-btn");
+    await page.check("#w1"); await page.fill("#r-sig", "Stranger"); await page.click("#reg-btn");
     await page.check("#lf-all"); await page.fill("#r-sig-lf", "Stranger"); await page.click("#reg-btn-lf");
     await expect(page.locator("#toast-container, body")).toContainText("Registration is closed");
     expect(state.players.some((p) => p.email === "stranger@example.invalid")).toBe(false);
@@ -478,7 +481,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await page.click("#bnav-scores");
     for (let c = 1; c <= 6; c++) {
       const games = await courtGames(page, c);
-      await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 5 + i] : [21, 10 + i])) as [number, number][]);
+      await scoreCourt(page, c, bestOfThree(games).map((_, i) => (games.length === 5 ? [15, 5 + i] : [21, 10 + i])) as [number, number][]);
     }
     await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
     await expect(page.locator("#undo-label")).toContainText("Advance to round 2");
@@ -497,13 +500,13 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect.poll(() => page.evaluate(() => Object.keys(S.current.scores).length)).toBe(15);
     // Re-score Court 6: the round advances again to exactly the same lineup.
     const games6 = await courtGames(page, 6);
-    await scoreCourt(page, 6, games6.map((_, i) => [15, 5 + i]) as [number, number][]);
+    await scoreCourt(page, 6, bestOfThree(games6).map((_, i) => [15, 5 + i]) as [number, number][]);
     await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
     expect(await page.evaluate(() => JSON.stringify(S.current.assignments))).toBe(r2Lineup);
     // Finish the night, then undo End Session: the night is live again and every court and statistic is as it was.
     for (let c = 1; c <= 6; c++) {
       const games = await courtGames(page, c);
-      await scoreCourt(page, c, games.map((_, i) => (games.length === 5 ? [15, 6 + i] : [21, 11 + i])) as [number, number][]);
+      await scoreCourt(page, c, bestOfThree(games).map((_, i) => (games.length === 5 ? [15, 6 + i] : [21, 11 + i])) as [number, number][]);
     }
     await expect.poll(() => page.evaluate(() => S.current.completed === true), { timeout: 20000 }).toBe(true);
     // The final round's step settles (statistics saved) before the organizer sees it on the Undo button.

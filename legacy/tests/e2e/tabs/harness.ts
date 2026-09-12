@@ -1,6 +1,7 @@
 // One signed-in page per suite; each case swaps a whole generated league into the mock database and re-renders.
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { installMock, freshState, ORGANIZER, type MockState } from "../mock-supabase";
+import { waiverVersions, type Acceptance } from "../mock-waiver";
 import { signIn, unlockOrganizer } from "../helpers";
 import type { League } from "./gen";
 import season from "../../../automation/season.json";
@@ -45,6 +46,10 @@ export async function pinSession(page: Page) {
 /** Close a suite's page (saving its coverage when COVERAGE_DIR is set). */
 export async function closeCtx(ctx?: Ctx) {
   if (!ctx) return;
+  try { expect(ctx.state.blocked ?? [], "requests that tried to leave the TEST stand-in (production, another project, the live sites)").toEqual([]); }
+  finally { await closePage(ctx); }
+}
+async function closePage(ctx: Ctx) {
   if (COVER) {
     const main = (await ctx.page.coverage.stopJSCoverage()).filter((e) => e.source?.includes("function renderLeaderboard"));
     fs.mkdirSync(COVER, { recursive: true });
@@ -70,11 +75,20 @@ export async function load(ctx: Ctx, L: League) {
   s.rsvps = structuredClone(L.rsvps); s.payments = structuredClone(L.payments); s.questions = structuredClone(L.questions) as never; s.announcements = structuredClone(L.announcements) as never;
   s.invitations = { ...L.invitations }; s.undo = []; s.rsvpLog = []; s.audit = []; s.requests = []; s.pushSubs = [];
   s.nowMs = L.nowMs;
+  // L20: everyone who registered this season accepted the current waiver when they did, unless the case brings its own records.
+  s.waiverVersions = waiverVersions();
+  const cur = s.waiverVersions.find((v) => v.is_current)!;
+  s.waiverAcceptances = structuredClone((L as { waiverAcceptances?: Acceptance[] }).waiverAcceptances ?? s.players.filter((p) => p.registered_at && String(p.registered_at) >= "2026-09-01").map((p, i) => ({
+    id: i + 1, player_id: p.id, user_id: p.user_id ?? s.users[p.email.toLowerCase()] ?? null, email: p.email, participant_name: p.name, typed_signature: p.name, waiver_version: cur.version, waiver_sha256: cur.sha256,
+    accepted_at: String(p.registered_at), client_timezone: "America/Toronto", client_utc_offset_minutes: -240, action: "registration", age_declaration: "adult", minor_name: "", media_consent: false, registration_ref: `REG-${p.id}-fixture`, user_agent: "fixture",
+  }) as Acceptance));
   await pinSession(ctx.page);
   await ctx.page.clock.setFixedTime(new Date(L.nowMs));
   const ok = await ctx.page.evaluate(async () => {
     // Cancel work the previous league left pending (a save's delayed round advance checks this epoch).
     _undoEpoch++; _autoAdvancing = false; _lastAllScoredState = false;
+    // A whole new database: forget the versions the page cached from the previous one (a real reload starts empty too).
+    for (const k of Object.keys(_stateVersion)) delete _stateVersion[k];
     closeModal(); _expandedHist = {}; _roundSnapshots = []; S.lastUndo = null;
     const t = document.getElementById("_t"); if (t) t.textContent = "";   // no toast carried over from the previous case
     const sel = document.getElementById("sc-sel") as HTMLSelectElement | null; if (sel) sel.value = "";
