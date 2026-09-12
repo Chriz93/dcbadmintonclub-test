@@ -1,6 +1,8 @@
 -- TEST PROJECT ONLY (wgolevihkvmosajumzvl). Replaces the copied real player records with synthetic ones,
 -- keeping ids so historical sessions stay consistent. Originals remain in upgrade_backup_20260906 and in production.
 begin;
+-- Seeding is TEST-only: refuse unless this database identifies itself as the TEST environment (L18 + T01).
+do $$ begin if to_regclass('public.environment') is null or not exists(select 1 from public.environment where name='test') then raise exception 'Refusing: this database is not marked as the TEST environment'; end if; end $$;
 do $$ declare p record; n int=0; newname text; begin
  if to_regnamespace('upgrade_backup_20260906') is null then raise exception 'Protected snapshot missing; refusing to replace player records';end if;
  for p in select id,name from public.players order by id loop
