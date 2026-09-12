@@ -14,6 +14,9 @@ register, be approved and vote before then.
    rate-limited to a handful per hour and 29 players cannot sign in.
 2. **you** Authentication → Email templates → "Magic link": copy the TEST project's template exactly. It must contain
    `{{ .Token }}`, which is the code the site asks for (6 or 8 digits, per the project's setting; the site accepts both).
+   Do the same for **"Confirm sign up"**: a player's first sign-in on a project is a sign-up and gets that email, so it
+   must show the code too (Supabase's default only has a link, which the site cannot use). Done on production
+   September 11.
 3. **you** Authentication → Sign in / Providers: Email enabled, sign-ups allowed. Authentication → Multi-factor:
    TOTP enabled. Authentication → URL configuration: Site URL `https://chriz93.github.io/dcbadmintonclub/`.
    Authentication → Rate limits: raise "Rate limit for sending emails" from 30 to 100 per hour, so the whole league can
