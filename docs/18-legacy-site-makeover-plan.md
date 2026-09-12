@@ -265,5 +265,7 @@ Order of work inside each phase: write the test first, make it pass on the TEST 
   (`verify.sql` 42/42, organizer set). Fresh start: no earlier-season data kept on production or TEST (R01).
 - TEST and production are the same code and the same database structure (L16; the only difference is a Supabase
   helper on production). Details and what production taught us: `27-generated-tab-test-suites.md`.
-- Still to do: organizer authenticator, invitations, smoke test, jobs pointed at production with the production key
-  and Vault token, test email, then real reminders (runbook section E).
+- Organizer authenticator set up. Jobs pointed at production (they still need the production secret key and the
+  Vault token). The 2026-27 player list starts empty; last season's players are in Admin → 📇 Past Players with
+  "Invite back" (L17, R02, p34 on both projects; production cache `dcbc-v41`).
+- Still to do: production job key and Vault token, invitations, smoke test, test email, then real reminders.

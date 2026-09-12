@@ -273,3 +273,23 @@ reaches production through `build-production.py` and the same migration files.
 
 **Results.** Rules rehearsal RULES–PHASE12 and 1,570 / 1,570 database cases on production's real layout; L16 tested on
 a copy with TEST's old layout; restore drill 14 / 14; unit tests 16 / 16; production `verify.sql` 42 / 42.
+
+## Past Players; the 2026-27 player list starts empty (September 11, 2026) — L17, R02, patch p34
+
+At the organizer's request the new season starts with no players. `L17_past_players.sql` adds `past_players`
+(organizer only; the daily backup reads it). `R02_archive_players.sql` moves every player there with all their details
+— name, email, phone, emergency contact, medical note, signature, membership, last court and last season's record
+(recovered from `backup_20260911`, because the fresh start had zeroed it) — and then empties the player list. The same
+file ran on both projects: production 54 past players (53 with an email), TEST 29; 0 players this season on both;
+`verify.sql` 43 / 43 on both; the structure snapshot still differs only by Supabase's own `rls_auto_enable()`.
+
+Admin → **📇 Past Players** (p34) lists them with a search box. **✉️ Invite back** sends the usual invitation with their
+membership and a "Returning player" note; the row then shows "invited". A past player already registered this season
+shows "registered"; one without an email shows "no email" (invite them from Registered with their current address).
+Everyone needs an invitation this season, and the invitation card says so.
+
+Tests: `past-players` suite (40 cases: list, details, search, tags, invite back); rules PHASE13; database cases 1,602 /
+1,602 (past_players readable by the organizer only, nobody writes); restore drill 15 / 15 tables; Registered,
+Admin-extras and the match-night suites pass. `build-production.py --reuse-key` takes the publishable key from the
+published production site, so republishing needs no copy and paste. Caches: TEST `dcbc-test-v61`, production
+`dcbc-v41`.
