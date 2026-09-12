@@ -8,7 +8,7 @@ const h = key.startsWith("sb_secret_") ? { apikey: key } : { apikey: key, Author
 // Every league table, with the column that gives each one a stable paging order (not all have an id).
 const TABLES = {
   players: "id", app_state: "key", announcements: "id", questions: "id", audit_log: "id",
-  reminder_log: "id", rsvp_log: "id", payments: "id", payments_archive: "id", push_subscriptions: "id",
+  reminder_log: "id", rsvp_log: "id", payments: "id", payments_archive: "id", past_players: "id", push_subscriptions: "id",
   rsvps: "session_number,player_id", invitations: "email", app_admins: "user_id", season_dates: "session_number",
 };
 export async function exportAll() {

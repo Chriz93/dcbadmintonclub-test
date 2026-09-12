@@ -8,8 +8,17 @@ Everything else is byte-identical to the tested index.html. Prints a diff summar
 import argparse, getpass, pathlib, re, sys
 PROD_URL = "https://bwepvxelvwgwxrnaglrx.supabase.co"
 ap = argparse.ArgumentParser(); ap.add_argument("--key"); ap.add_argument("--out", required=True); ap.add_argument("--cache", default="dcbc-v40")
+ap.add_argument("--reuse-key", action="store_true", help="take the publishable key from the production site already in --out")
 a = ap.parse_args()
 # Without --key the script asks for it (hidden), the same in zsh and bash, and keeps it out of the shell history.
+# --reuse-key takes it from the production build already published (the publishable key is public by design).
+if a.key is None and a.reuse_key:
+    prev = pathlib.Path(a.out).resolve() / "index.html"
+    m = re.search(r"const SK='(sb_publishable_[A-Za-z0-9_-]+)'", prev.read_text()) if prev.exists() else None
+    test_key = re.search(r"const SK='([^']*)'", (pathlib.Path(__file__).resolve().parents[2] / "index.html").read_text())
+    if not m or (test_key and m.group(1) == test_key.group(1)) or "bwepvxelvwgwxrnaglrx" not in prev.read_text():
+        sys.exit("Not built: no production key found in the existing production site; run without --reuse-key and paste it.")
+    a.key = m.group(1)
 raw = a.key if a.key is not None else getpass.getpass("Production publishable key (starts sb_publishable_; nothing shows while you paste, then press Enter): ")
 # Clean what a paste can bring along: spaces, line breaks, quotes and the terminal's paste markers.
 key = re.sub(r"\x1b\[20[01]~", "", raw).strip().strip("'\"").strip()

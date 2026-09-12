@@ -28,6 +28,7 @@ export interface MockState {
   rsvpLog: { id: number; session_number: number; player_id: number; old_response: string | null; new_response: string; by_admin: boolean; changed_at: string }[];
   questions: { id: number; player_id: number | null; asker: string; question: string; answer: string | null; answered_at: string | null; created_at: string }[];
   invitations: Record<string, string>;
+  pastPlayers?: Record<string, unknown>[];
   admins: string[];
   users: Record<string, string>; // email -> uid
   factors: Record<string, boolean>; // uid -> enrolled
@@ -304,6 +305,7 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "POST") { const b = body(); s.invitations[b.email] = b.membership_type; return json(201, [b]); }
       if (method === "DELETE") { const em = decodeURIComponent(String(f.email || "").replace(/^eq\./, "")); delete s.invitations[em]; return route.fulfill({ status: 204, body: "" }); }
     }
+    if (table === "past_players" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, ordered(s.pastPlayers || [], url)); }
     if (table === "announcements") {
       if (method === "GET") return json(200, ordered(s.announcements, url));
       if (!admin) return json(403, { message: "permission denied", code: "42501" });

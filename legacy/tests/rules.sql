@@ -367,3 +367,14 @@ do $$ begin
  if not has_function_privilege('service_role','public.reminder_targets(int)','execute') or not has_function_privilege('service_role','public.dispatch_reminder_job(text)','execute') then raise exception 'job key lost a function it needs'; end if;
 end $$;
 select 'PHASE12 RULES PASS' as result;
+
+-- ═══ PHASE13: past players (L17) — the organizer reads them, nobody else, nobody writes ═══
+\i legacy/migrations/L17_past_players.sql
+insert into public.past_players(id,season_label,name,email) values(990001,'2025-26','Past Person','past@example.invalid') on conflict do nothing;
+set role authenticated; select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000002',false); select set_config('request.jwt.claims','{"aal":"aal1","email":"test-player-01@example.invalid"}',false);
+do $$ declare n int; begin select count(*) into n from public.past_players; if n<>0 then raise exception 'a player can read past players'; end if;
+ begin insert into public.past_players(id,season_label,name) values(990002,'x','x'); raise exception 'a player wrote a past player'; exception when insufficient_privilege then null; end; end $$;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false); select set_config('request.jwt.claims','{"aal":"aal2","email":"christygeorge993@gmail.com"}',false);
+do $$ declare n int; begin select count(*) into n from public.past_players; if n<1 then raise exception 'the organizer cannot read past players'; end if; end $$;
+reset role;
+select 'PHASE13 RULES PASS' as result;

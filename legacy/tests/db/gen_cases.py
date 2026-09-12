@@ -54,7 +54,8 @@ fx += ["end $f$;",
        f"insert into public.questions(player_id,asker,question) values({ID('P1')},'Dee Bee One','Is there parking?');",
        "insert into public.announcements(type,title,body) values('info','db fixture','notice');",
        f"insert into public.rsvps(session_number,player_id,response) values(25,{ID('P1')},'coming'),(25,{ID('P2')},'coming');",
-       f"insert into public.reminder_log(session_number,player_id,kind) values(1,{ID('P2')},'vote');"]
+       f"insert into public.reminder_log(session_number,player_id,kind) values(1,{ID('P2')},'vote');",
+       "insert into public.past_players(id,season_label,name,email,phone) values(700001,'2025-26','Old Timer','old.timer@example.invalid','613-555-0199');"]
 (HERE / "fixtures.sql").write_text("\n".join(fx) + "\n")
 
 # ── how a case is written ────────────────────────────────────────────────────────────────────────────────────────────
@@ -84,16 +85,16 @@ def total(k): return f"current_setting('dbt.{k}')::bigint"   # counted by the da
 COUNTS = {"players": "public.players", "ann": "public.announcements", "state": "public.app_state", "rsvps": "public.rsvps",
           "q": "public.questions", "inv": "public.invitations", "admins": "public.app_admins", "audit": "public.audit_log",
           "pay": "public.payments", "parch": "public.payments_archive", "push": "public.push_subscriptions", "rlog": "public.reminder_log",
-          "vlog": "public.rsvp_log", "undo": "public.undo_journal", "dates": "public.season_dates",
+          "vlog": "public.rsvp_log", "undo": "public.undo_journal", "dates": "public.season_dates", "past": "public.past_players",
           "state_member": "public.app_state where (key not like 'snapshot\\_%' and key not in ('admin_pin','pin','invite_code')) or key like 'archive\\_%'"}
 TOTALS = "select " + ", ".join(f"set_config('dbt.{k}',(select count(*) from {v})::text,true)" for k, v in COUNTS.items()) + ";"
 
 # ── 1. who can read, add, change, remove and empty each table ────────────────────────────────────────────────────────
 TABLES = ["players", "players_public", "announcements", "app_state", "rsvps", "questions", "invitations", "app_admins", "audit_log",
-          "payments", "payments_archive", "push_subscriptions", "reminder_log", "rsvp_log", "undo_journal", "season_dates"]
+          "payments", "payments_archive", "push_subscriptions", "reminder_log", "rsvp_log", "undo_journal", "season_dates", "past_players"]
 TOT = {"players": "players", "players_public": "players", "announcements": "ann", "app_state": "state", "rsvps": "rsvps", "questions": "q",
        "invitations": "inv", "app_admins": "admins", "audit_log": "audit", "payments": "pay", "payments_archive": "parch",
-       "push_subscriptions": "push", "reminder_log": "rlog", "rsvp_log": "vlog", "undo_journal": "undo", "season_dates": "dates"}
+       "push_subscriptions": "push", "reminder_log": "rlog", "rsvp_log": "vlog", "undo_journal": "undo", "season_dates": "dates", "past_players": "past"}
 AUTH_WRITE = {"players", "announcements", "questions", "invitations"}   # signed-in users may try; row rules decide
 SVC = {"select": set(TABLES) - {"players_public"}, "insert": {"app_state", "reminder_log"}, "update": {"app_state"},
        "delete": {"reminder_log", "push_subscriptions"}}
@@ -143,6 +144,7 @@ INSERTS = [
     ("a vote-log entry", "rsvp_log", f"insert into public.rsvp_log(session_number,player_id,new_response) values(1,{ID('P2')},'coming')", set()),
     ("an undo step", "undo_journal", "insert into public.undo_journal(label,snapshot) values('forged','{}')", set()),
     ("a session date", "season_dates", "insert into public.season_dates values(99,'2027-06-01',now())", set()),
+    ("a past player", "past_players", "insert into public.past_players(id,season_label,name) values(999999,'x','x')", set()),
 ]
 for label, t, stmt, rule in INSERTS:
     for who in CALLERS:
@@ -166,6 +168,7 @@ UPDATES = [
     ("reminder_log", "reminder_log", "update public.reminder_log set kind=kind", None),
     ("push_subscriptions", "push_subscriptions", "update public.push_subscriptions set auth=auth", None),
     ("rsvp_log", "rsvp_log", "update public.rsvp_log set new_response=new_response", None),
+    ("past_players", "past_players", "update public.past_players set name=name", None),
 ]
 for label, t, stmt, rule in UPDATES:
     for who in CALLERS:
@@ -177,7 +180,7 @@ DELETES = [
     ("questions", "questions", "delete from public.questions", ADMIN_ALL["questions"]),
     ("invitations", "invitations", "delete from public.invitations", ADMIN_ALL["invitations"]),
 ] + [(t, t, f"delete from public.{t}", None) for t in ["rsvps", "payments", "payments_archive", "app_state", "audit_log", "app_admins",
-                                                      "rsvp_log", "undo_journal", "season_dates", "push_subscriptions", "reminder_log"]]
+                                                      "rsvp_log", "undo_journal", "season_dates", "push_subscriptions", "reminder_log", "past_players"]]
 for label, t, stmt, rule in DELETES:
     for who in CALLERS:
         e = can_write("delete", t, who, rule)
