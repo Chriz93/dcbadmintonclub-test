@@ -95,6 +95,9 @@ export async function load(ctx: Ctx, L: League) {
   await pinSession(ctx.page);
   await ctx.page.clock.setFixedTime(new Date(L.nowMs));
   const ok = await ctx.page.evaluate(async () => {
+    // A load the previous case left in flight (a save's own reload) must finish first: finishing after the reset below, it
+    // would write the previous database's state versions back and the new league's load would be refused as out of date.
+    for (let k = 0; k < 500 && _activeLoads > 0; k++) await new Promise((r) => setTimeout(r, 20));
     // Cancel work the previous league left pending (a save's delayed round advance checks this epoch).
     _undoEpoch++; _autoAdvancing = false; _lastAllScoredState = false;
     // A whole new database: forget the versions the page cached from the previous one (a real reload starts empty too).

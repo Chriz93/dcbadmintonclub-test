@@ -991,6 +991,8 @@ async function mfaVerify(factorId,code){const c=await fetch(SB+'/auth/v1/factors
 // ── REST helpers: every request carries the signed-in token; the database rules decide what is allowed. ──
 async function sbFetch(path,opts={}){const epoch=_accountEpoch,hadSession=!!_session;await ensureSession();if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(hadSession&&!_session)throw new Error('Signed out — please sign in again');const r=await fetch(SB+path,{...opts,headers:{...authHeaders(),...(opts.headers||{})}});if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(r.status===401&&_session){await signOut(false);throw new Error('Signed out — please sign in again');}return r;}
 async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await sbFetch(`/rest/v1/${t}?${q}`);if(!r.ok)throw new Error(`Load ${t} failed (${r.status})`);return r.json();}
+// p58: successful saves this page has made. A page load that started before the latest one discards its result.
+let _writeSeq=0;const READ_RPCS=new Set(['admin_status','list_league_snapshots']);
 async function sbP(t,d){return restWrite(`/rest/v1/${t}`,'POST',d);}
 async function sbU(t,id,d){return restWrite(`/rest/v1/${t}?id=eq.${id}`,'PATCH',d);}
 async function sbD(t,id){return restWrite(`/rest/v1/${t}?id=eq.${id}`,'DELETE');}
@@ -998,15 +1000,15 @@ async function restWrite(path,method,data){
   const r=await sbFetch(path,{method,headers:{'Prefer':'return=representation'},...(data===undefined?{}:{body:JSON.stringify(data)})});
   const text=await r.text();let j=null;try{j=text?JSON.parse(text):null;}catch(e){if(r.ok)throw new Error('The server returned an invalid response');}
   if(!r.ok){const e=new Error(j?.message||`Save refused (${r.status})`);e.code=j?.code;e.status=r.status;toast(e.message,'error');throw e;}
-  return j;
+  _writeSeq++;return j;
 }
 async function sbUps(t,d,conflict=''){
   const url=`/rest/v1/${t}${conflict?`?on_conflict=${conflict}`:''}`;
   const r=await sbFetch(url,{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(d)});
   if(!r.ok){const txt=await r.text();throw new Error(`sbUps ${t} ${r.status}: ${txt.substring(0,200)}`);}
-  return r.json();
+  _writeSeq++;return r.json();
 }
-async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}return j;}
+async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}if(!READ_RPCS.has(fn))_writeSeq++;return j;}
 // ── Shared state with versions: a stale screen can never overwrite newer data. ──
 const _stateVersion={};
 // _kvRead[k]: the version a read returned and the version this page already held when the reply arrived (p52).
@@ -1365,7 +1367,7 @@ function renderRSVPInto(el,compact){
 let _activeLoads=0;
 async function loadAll(){
   _activeLoads++;
-  const epoch=_accountEpoch,draft={...S},reads={};const loadKV=k=>getKV(k,reads);
+  const seq=_writeSeq,epoch=_accountEpoch,draft={...S},reads={};const loadKV=k=>getKV(k,reads);
   try{
     if(!_session)return false;
     await refreshMe();
@@ -1411,6 +1413,7 @@ async function loadAll(){
     draft.seasonConfig=await loadKV('season_config');draft.seasonDates=await sbG('season_dates','order=session_number.asc');
     for(const [key,rd]of Object.entries(reads))if((_stateVersion[key]||0)>(rd.known||0))return false; // a save completed while this load was in flight
     if(epoch!==_accountEpoch||!_session)return false;
+    if(seq!==_writeSeq)return 'stale'; // p58: a save finished while this load was in flight; the save's own reload shows it
     applySeasonConfig(draft.seasonConfig,draft.seasonDates);for(const [key,rd]of Object.entries(reads)){_kvRead[key]=rd;_stateVersion[key]=rd.version;}_roundSnapshots=roundSnapshots;Object.assign(S,draft);reconcilePlayerStatus();return true;
   }catch(e){console.error('loadAll',e);return false;}finally{_activeLoads--;}
 }
@@ -1987,15 +1990,26 @@ function renderVoteChanges(){
   });
   return html+`</div>`;
 }
+// p57: undo a "present" mark for someone with no court tonight (back to excused if they voted not coming; no penalty).
+async function clearNotSeated(id){
+  if(!S.current||courtOfPlayer(id))return;
+  const next=JSON.parse(JSON.stringify(S.current));next.attendance=next.attendance||{};
+  if((S.rsvp||{})[id]==='notcoming')next.attendance[id]='declined';else delete next.attendance[id];
+  try{await setKV('current_session',next);}catch(e){return toast(e.message,'error');}
+  await loadAll();renderAll();toast(`${S.players.find(p=>p.id===id)?.name||'Player'} is no longer marked present`,'info');
+}
 let _attSaveTimer=null;
 async function togglePlayerPresence(id){
   const p=S.players.find(x=>x.id===id);
   if(S.current){
-    if(!S.current.attendance)S.current.attendance={};
-    const cur=S.current.attendance[id];
-    if(!cur||cur==='unmarked'){S.current.attendance[id]='present';}
-    else if(cur==='present'){S.current.attendance[id]='absent';}
-    else{delete S.current.attendance[id];}
+    // p57: during a session the tag follows the Attendance tab's rule: present means on a court. A player without a
+    // court is seated through the court engine; a seated player marked present is marked absent the same way.
+    const cur=(S.current.attendance||{})[id],seated=!!courtOfPlayer(id);
+    if(!seated||cur==='present')return changePlayerAttendance(id,seated?'absent':'present');
+    if(cur==='absent')return changePlayerAttendance(id,'present');
+    S.current.attendance={...(S.current.attendance||{}),[id]:'present'};renderAdminPlayers();
+    try{await setKV('current_session',S.current);}catch(e){toast(e.message,'error');}
+    await loadAll();renderAll();return;
   }else{
     if(!S.preAttendance)S.preAttendance={};
     const cur=S.preAttendance[id];
@@ -5691,7 +5705,6 @@ function renderAttendanceTab(){
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Votes fill this in: “coming” players start as present, “not coming” players are excused for the night. Mark a no-show absent (one court down next week). Confirmed spares are seated when the night starts.</div>`;
   // Count stats — present/absent from attendance data, unmarked from court players
   const absentCount=Object.values(att).filter(v=>v==='absent').length;
-  const presentCount=Object.values(att).filter(v=>v==='present').length;
   // Unmarked = players on courts who haven't been marked yet
   const courtPlayerIds=new Set();
   for(let c=1;c<=NC;c++){
@@ -5701,10 +5714,20 @@ function renderAttendanceTab(){
     cpids.forEach(id=>courtPlayerIds.add(id));
   }
   const unmarkedCount=[...courtPlayerIds].filter(id=>!att[id]).length;
+  // p57: Present counts players on a court tonight who are marked present, so the numbers add up to the courts. Anyone
+  // marked present without a court is listed below with Seat instead of being counted.
+  const presentCount=[...courtPlayerIds].filter(id=>att[id]==='present').length;
+  const notSeated=S.current?Object.entries(att).filter(([id,v])=>v==='present'&&!courtPlayerIds.has(+id)).map(([id])=>S.players.find(p=>p.id===+id)).filter(Boolean):[];
   html+=`<div style="display:flex;gap:8px;margin-bottom:12px;">
     <span class="tag tg-green">✅ ${presentCount} Present</span>
     <span class="tag tg-red">❌ ${absentCount} Absent</span>
     <span class="tag tg-gray">— ${unmarkedCount} Unmarked</span>
+    <span class="tag tg-teal" id="att-on-courts">🏸 ${courtPlayerIds.size} on courts</span>
+  </div>`;
+  if(notSeated.length)html+=`<div class="alert alert-warn" id="att-not-seated" role="status" style="margin-bottom:10px;font-size:12px;">
+    <strong>Marked present but not on a court (${notSeated.length})</strong>
+    <div style="margin:4px 0 6px;">They are not counted as present until they have a court. Seat puts them on their own court, or the nearest court with room.</div>
+    ${notSeated.map(p=>`<div class="att-line" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:3px 0;"><span style="flex:1 1 120px;font-weight:700;">${esc(p.name)}</span><button class="btn btn-success btn-sm" style="margin:0;" aria-label="Seat ${esc(p.name)} on a court" onclick="changePlayerAttendance(${p.id},'present')">🪑 Seat</button><button class="btn btn-ghost btn-sm" style="margin:0;" aria-label="${esc(p.name)} is not here" onclick="clearNotSeated(${p.id})">Not here</button></div>`).join('')}
   </div>`;
   // Show by court
   for(let c=1;c<=NC;c++){

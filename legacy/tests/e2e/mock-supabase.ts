@@ -40,6 +40,7 @@ export interface MockState {
   environment?: { name: string; schema_version: string } | null; // L18 marker; undefined = marked test
   schemaErrors?: string[]; // queries refused because they name a column the database table does not have
   holdRead?: { key: string; until: Promise<void>; served: () => void }; // a slow refresh: one app_state read's reply is fixed when asked, delivered when released
+  holdTable?: { table: "players" | "payments"; until: Promise<void>; served: () => void }; // the same for one read of a table (p58 tests)
   waiverVersions?: WaiverVersion[];    // L20
   waiverAcceptances?: Acceptance[];
 }
@@ -429,7 +430,9 @@ export async function installMock(page: Page, s: MockState) {
     // ── Tables ──
     const table = path.replace("/rest/v1/", "");
     if (table === "players") {
-      if (method === "GET") { const rows = admin ? s.players : s.players.filter((p) => p.user_id === c.uid || (!p.user_id && p.email.toLowerCase() === c.email)); return json(200, ordered(rows.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url)); }
+      if (method === "GET") { const rows = admin ? s.players : s.players.filter((p) => p.user_id === c.uid || (!p.user_id && p.email.toLowerCase() === c.email)); const reply = ordered(rows.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url);
+        const h = s.holdTable; if (h && h.table === "players") { s.holdTable = undefined; const frozen = JSON.parse(JSON.stringify(reply)); h.served(); await h.until; return json(200, frozen); }
+        return json(200, reply); }
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
       if (method === "PATCH") { const rows = s.players.filter((r) => matches(r as unknown as Record<string, unknown>, f)); rows.forEach((r) => Object.assign(r, body())); return json(200, rows); }
       if (method === "POST") { const b = body(); if (b.id != null && s.players.some((p) => p.id === b.id)) return json(409, { message: "duplicate key value violates unique constraint", code: "23505" }); const id = b.id ?? nextId(s.players); const row = { ...seedPlayers(1)[0], ...b, id, created_at: b.created_at ?? new Date().toISOString() }; s.players.push(row); return json(201, [row]); }
@@ -462,7 +465,9 @@ export async function installMock(page: Page, s: MockState) {
     if (table === "rsvps" && method === "GET") return json(200, ordered(s.rsvps.filter((r) => matches(r as unknown as Record<string, unknown>, f)), url));
     if (table === "undo_journal" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.undo].reverse().slice(0, 10).map(({ snapshot, ...rest }) => rest)); }
     if (table === "rsvp_log" && method === "GET") { if (!admin) return json(403, { message: "permission denied", code: "42501" }); return json(200, [...s.rsvpLog].reverse()); }
-    if (table === "payments" && method === "GET") return json(200, ordered(s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)), url));
+    if (table === "payments" && method === "GET") { const reply = ordered(s.payments.filter((r) => admin || r.player_id === me).filter((r) => matches(r as unknown as Record<string, unknown>, f)), url);
+      const h = s.holdTable; if (h && h.table === "payments") { s.holdTable = undefined; const frozen = JSON.parse(JSON.stringify(reply)); h.served(); await h.until; return json(200, frozen); }
+      return json(200, reply); }
     if (table === "questions") {
       if (method === "GET") return json(200, ordered(s.questions, url));
       if (method === "POST") { const b = body(); if (b.player_id !== me) return json(403, { message: "permission denied", code: "42501" }); const row = { id: nextId(s.questions), player_id: b.player_id, asker: b.asker, question: b.question, answer: null, answered_at: null, created_at: new Date().toISOString() }; s.questions.push(row); return json(201, [row]); }

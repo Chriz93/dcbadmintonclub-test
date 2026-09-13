@@ -65,3 +65,49 @@ The new unit tests execute the actual scheduled callback repeatedly with a file 
 If the migration fails, the combined transaction restores the previous schema/data automatically. After a successful migration, roll back a release by restoring the verified full database backup together with the matching previous frontend; an application snapshot restores league data, not database function definitions. The older L20 rollback script is not an L24 rollback.
 
 Remaining external verification: the migration and Pages release have not run on the hosted TEST project; real email/push delivery and current Safari/iOS/Android behaviour require hosted/provider/device checks. Project-scoped storage prevents accidental TEST/production collisions, but two apps on one origin are not a security sandbox; separate origins remain the stronger deployment boundary. The legacy app still uses inline event handlers, so its CSP permits inline script. Passing the stated checks does not certify that no future defect is possible.
+
+## Takeover review (Claude, 13 September 2026)
+
+Codex stopped with this work uncommitted. It was committed unchanged as `f3037c6` on this branch, then reviewed and
+corrected in separate commits. Nothing was pushed until the checks below passed.
+
+**What the review found in the uncommitted work**
+
+| Finding | Why it mattered | Fix |
+|---|---|---|
+| `legacy-backup.yml` and `legacy-reminders.yml` were retargeted from the production database to TEST | These are production's only backup and reminder jobs (the production repository has none; they run from this repository's default branch). Merging would have stopped production's nightly backup and vote reminders silently (the jobs skip when their secrets are missing). The new `remind.mjs` also refuses to run without the L24 `season_config`, which production does not have. | Both jobs restored exactly and their checkout pinned to `fbd1b1f`, the code production runs today; they change only with the production release. Codex's TEST-only versions are now `test-backup.yml` and `test-reminders.yml`. A unit test checks both. |
+| `build-production.py` could not build the new page | The new service worker has a cache prefix, the new security policy names the TEST database, the page has a TEST banner, and the icons and PDF library are separate files. A production build would have kept TEST's cache names (so the two sites would delete each other's caches again) or failed its own check. | Production cache prefix `dcbc-prod-`, policy rewritten to the production database, banner removed, icons and library copied. The installed app is now named "Maplewood League"; the league site's manifest had said "DC Badminton Club — TEST". Dry run to a scratch folder passes. |
+| `index.html` was edited directly | The patch chain could no longer rebuild the release file. | `p56` applies Codex's diff; the chain c89c894 + p35–p58 reproduces `index.html` byte for byte. |
+| "All 5,613 runnable cases pass" | A full run of the unchanged branch: 5,610 passed, 3 failed, 2 skipped. | See the test corrections below. |
+
+**Defects fixed after the takeover**
+
+- **p57 — Attendance "Present" means on a court** (found by the organizer on TEST: 24 present, 22 on the courts). Two
+  regulars who had declined were marked present after the start without a court. Present now counts players on a
+  court who are marked present, an "on courts" count is shown, and anyone marked present without a court is listed with
+  Seat (through the court engine) and "Not here" (back to excused, no penalty). During a session the Admin → Players tag
+  seats and unseats through the court engine. 40 generated browser cases.
+- **p58 — a background refresh never undoes a table save on screen** (found by the generated tests: a saved private note
+  disappeared from the Players row until the next refresh). The page counts its own saves; a load that started before
+  the latest save is discarded. Three race tests hold one read of a table; all three fail without p58.
+
+**Test corrections (each still checks its behaviour exactly)**
+
+- Season simulation: the score helper waits for the current match's form before typing. Under load it typed into the
+  previous round's form, which the page rightly refuses ("This match changed").
+- Adjust courts keyboard case: tabbing starts from the top of the page and allows one press per focusable element; 80
+  presses from wherever focus landed was too few for a 26-player list.
+- Admin → Players presence cases: during a session the tag follows the courts (— → ✅ → ❌ → ✅), with the court engine's
+  answer taken from the independent reference.
+- The multi-table load unit test lists the page variable p58 added.
+- The job-isolation unit test checks the new layout (TEST jobs TEST-only; production jobs pinned).
+
+**Not reproduced:** the match night score-selector failure in the first full run passed 3 times alone and 12 times under
+four parallel workers. It is watched in the final full run.
+
+**TEST release, as changed by this review:** switching GitHub Pages to Actions and adding a service-role secret is not
+required. With production's jobs pinned, the reviewed branch can be merged into `upgrade/secure-platform` and published
+by the existing branch-based Pages build. Order: copy TEST's data and function definitions into a separate `backup`
+schema (TEST data is synthetic; this is an internal copy, not an independent backup), apply `TEST_2026-09-13.sql` in the
+TEST SQL editor, run `verify.sql`, then push and check the live site. Production stays on hold: it needs its own
+migration bundle for L22–L24 and your approval.

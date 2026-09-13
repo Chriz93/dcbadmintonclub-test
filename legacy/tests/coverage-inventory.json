@@ -1,15 +1,15 @@
 {
- "generated": "2026-09-13T10:17:11.352Z",
+ "generated": "2026-09-13T16:16:41.537Z",
  "summary": [
   {
    "k": "Control handler",
-   "n": 107,
-   "g": 0
+   "n": 114,
+   "g": 6
   },
   {
    "k": "Database function",
-   "n": 36,
-   "g": 0
+   "n": 55,
+   "g": 10
   },
   {
    "k": "Database table",
@@ -23,8 +23,8 @@
   },
   {
    "k": "Form field",
-   "n": 58,
-   "g": 0
+   "n": 75,
+   "g": 12
   },
   {
    "k": "Page",
@@ -60,6 +60,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/announce.spec.ts",
     "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/controls.spec.ts",
@@ -74,9 +75,11 @@
     "e2e/tabs/phone/waiver-phone.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/waiver.spec.ts",
@@ -95,6 +98,7 @@
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -114,6 +118,8 @@
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
     "e2e/tabs/vote.suite.ts",
     "e2e/tabs/waiver.spec.ts",
@@ -143,7 +149,9 @@
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/schedule.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -155,6 +163,7 @@
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
@@ -218,6 +227,7 @@
     "e2e/tabs/adjust-edge.spec.ts",
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -248,6 +258,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -257,10 +268,13 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
@@ -290,6 +304,7 @@
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -444,7 +459,9 @@
     "e2e/tabs/vote.suite.ts",
     "e2e/tabs/wording.spec.ts",
     "legacy/automation/remind.test.mjs",
-    "rules.sql"
+    "legacy/automation/review-regressions.test.mjs",
+    "rules.sql",
+    "unit/review-regressions.test.mjs"
    ]
   },
   {
@@ -490,6 +507,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
@@ -506,11 +524,13 @@
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/lineup.suite.ts",
+    "e2e/tabs/manual-move-oracle.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
@@ -528,6 +548,7 @@
     "unit/helpers.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
+    "unit/review-regressions.test.mjs",
     "unit/starting-reference.mjs"
    ]
   },
@@ -554,7 +575,9 @@
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/isolation.spec.ts",
-    "e2e/tabs/sequences.spec.ts"
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/session.spec.ts"
    ]
   },
   {
@@ -563,7 +586,8 @@
    "tests": [
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
-    "e2e/tabs/registered.spec.ts"
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -585,6 +609,7 @@
    "kind": "Control handler",
    "item": "cancelSession",
    "tests": [
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
   },
@@ -594,6 +619,11 @@
    "tests": [
     "e2e/tabs/controls.spec.ts"
    ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "changePlayerAttendance",
+   "tests": []
   },
   {
    "kind": "Control handler",
@@ -618,9 +648,18 @@
   },
   {
    "kind": "Control handler",
+   "item": "clearNotSeated",
+   "tests": [
+    "e2e/tabs/attendance-count.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
    "item": "closeModal",
    "tests": [
+    "db/season-recovery.sql",
     "e2e/matchnight.spec.ts",
+    "e2e/mock-supabase.ts",
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/adjust.suite.ts",
@@ -631,8 +670,17 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/leaders.spec.ts",
     "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts",
     "e2e/tabs/toss-birds.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "confirmCancelSession",
+   "tests": [
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/session.spec.ts"
    ]
   },
   {
@@ -659,9 +707,7 @@
   {
    "kind": "Control handler",
    "item": "deleteInvitation",
-   "tests": [
-    "e2e/tabs/controls.spec.ts"
-   ]
+   "tests": []
   },
   {
    "kind": "Control handler",
@@ -694,10 +740,8 @@
   },
   {
    "kind": "Control handler",
-   "item": "doLinkWaiver",
-   "tests": [
-    "e2e/tabs/controls.spec.ts"
-   ]
+   "item": "downloadCalendar",
+   "tests": []
   },
   {
    "kind": "Control handler",
@@ -736,13 +780,6 @@
   },
   {
    "kind": "Control handler",
-   "item": "enablePush",
-   "tests": [
-    "e2e/tabs/controls.spec.ts"
-   ]
-  },
-  {
-   "kind": "Control handler",
    "item": "endSession",
    "tests": [
     "e2e/matchnight.spec.ts",
@@ -755,6 +792,11 @@
     "e2e/tabs/session.spec.ts",
     "e2e/tabs/toss-birds.spec.ts"
    ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "endSessionEarly",
+   "tests": []
   },
   {
    "kind": "Control handler",
@@ -807,7 +849,10 @@
    "kind": "Control handler",
    "item": "invitePastPlayer",
    "tests": [
-    "e2e/tabs/past-players.spec.ts"
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
+    "e2e/tabs/registered.spec.ts"
    ]
   },
   {
@@ -817,6 +862,7 @@
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/registered.spec.ts"
    ]
   },
@@ -892,6 +938,11 @@
   },
   {
    "kind": "Control handler",
+   "item": "moveCourtPlayer",
+   "tests": []
+  },
+  {
+   "kind": "Control handler",
    "item": "nav",
    "tests": [
     "e2e/helpers.ts",
@@ -905,12 +956,14 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
     "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/harness.ts",
     "e2e/tabs/history.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop.ts",
@@ -927,6 +980,7 @@
     "e2e/tabs/qa.spec.ts",
     "e2e/tabs/register.suite.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/schedule.spec.ts",
@@ -935,6 +989,7 @@
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
     "e2e/tabs/standings.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
@@ -959,7 +1014,8 @@
    "kind": "Control handler",
    "item": "openAdminNote",
    "tests": [
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -980,6 +1036,11 @@
     "e2e/tabs/announce.spec.ts",
     "e2e/tabs/interop.ts"
    ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "prepareNextSeason",
+   "tests": []
   },
   {
    "kind": "Control handler",
@@ -1053,15 +1114,18 @@
     "e2e/matchnight.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/interop.ts",
-    "e2e/tabs/pay.spec.ts"
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
    "kind": "Control handler",
    "item": "recordPaymentUI",
    "tests": [
+    "e2e/matchnight.spec.ts",
     "e2e/tabs/interop.ts",
-    "e2e/tabs/pay.spec.ts"
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1146,25 +1210,6 @@
   },
   {
    "kind": "Control handler",
-   "item": "renderScoreEntry",
-   "tests": [
-    "e2e/helpers.ts",
-    "e2e/matchnight.spec.ts",
-    "e2e/opener.spec.ts",
-    "e2e/tabs/a11y.spec.ts",
-    "e2e/tabs/best-of-three.spec.ts",
-    "e2e/tabs/controls.spec.ts",
-    "e2e/tabs/harness.ts",
-    "e2e/tabs/phone/reflow.spec.ts",
-    "e2e/tabs/rotation-gaps.spec.ts",
-    "e2e/tabs/round-complete.spec.ts",
-    "e2e/tabs/scores.suite.ts",
-    "e2e/tabs/sync-race.spec.ts",
-    "e2e/tabs/toss-birds.spec.ts"
-   ]
-  },
-  {
-   "kind": "Control handler",
    "item": "renderWaiverAdmin",
    "tests": [
     "e2e/tabs/a11y.spec.ts",
@@ -1191,7 +1236,15 @@
    "kind": "Control handler",
    "item": "restoreSnapshot",
    "tests": [
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/tools.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "retrySync",
+   "tests": [
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1199,7 +1252,10 @@
    "item": "saveAdminNote",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
+    "unit/review-regressions.test.mjs"
    ]
   },
   {
@@ -1238,7 +1294,8 @@
    "tests": [
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
-    "e2e/tabs/scores.suite.ts"
+    "e2e/tabs/scores.suite.ts",
+    "unit/review-regressions.test.mjs"
    ]
   },
   {
@@ -1248,9 +1305,11 @@
     "e2e/helpers.ts",
     "e2e/matchnight.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
-    "e2e/tabs/sync-race.spec.ts"
+    "e2e/tabs/sync-race.spec.ts",
+    "unit/review-regressions.test.mjs"
    ]
   },
   {
@@ -1283,6 +1342,13 @@
    "item": "setView",
    "tests": [
     "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "settleCancellation",
+   "tests": [
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1340,6 +1406,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
     "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/controls.spec.ts",
@@ -1354,9 +1421,11 @@
     "e2e/tabs/phone/waiver-phone.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
@@ -1384,6 +1453,7 @@
    "item": "signInStep",
    "tests": [
     "e2e/helpers.ts",
+    "e2e/login-wait.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/isolation.spec.ts",
     "e2e/tabs/signin.spec.ts"
@@ -1394,7 +1464,9 @@
    "item": "signOut",
    "tests": [
     "e2e/matchnight.spec.ts",
-    "e2e/opener.spec.ts"
+    "e2e/opener.spec.ts",
+    "e2e/tabs/register.suite.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1435,7 +1507,8 @@
    "kind": "Control handler",
    "item": "syncCourtsFromLastSession",
    "tests": [
-    "e2e/tabs/admin-extras.spec.ts"
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1448,6 +1521,14 @@
   {
    "kind": "Control handler",
    "item": "togglePlayerPresence",
+   "tests": [
+    "e2e/tabs/attendance-count.spec.ts",
+    "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "togglePush",
    "tests": [
     "e2e/tabs/controls.spec.ts"
    ]
@@ -1478,10 +1559,14 @@
    "item": "*",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
+    "db/review.sql",
     "db/rollback-check.sql",
     "db/run.sh",
+    "db/season-recovery.sql",
     "e2e/helpers.ts",
     "e2e/isolation.ts",
+    "e2e/login-wait.spec.ts",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/mock-waiver.ts",
@@ -1498,6 +1583,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
     "e2e/tabs/assign.spec.ts",
+    "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
@@ -1525,6 +1611,7 @@
     "e2e/tabs/leaders.spec.ts",
     "e2e/tabs/lineup.spec.ts",
     "e2e/tabs/lineup.suite.ts",
+    "e2e/tabs/manual-move-oracle.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
     "e2e/tabs/past-players.spec.ts",
@@ -1544,6 +1631,7 @@
     "e2e/tabs/register.spec.ts",
     "e2e/tabs/register.suite.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/schedule.spec.ts",
@@ -1557,6 +1645,7 @@
     "e2e/tabs/signin.spec.ts",
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/stats.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
@@ -1568,6 +1657,7 @@
     "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/remind.test.mjs",
     "legacy/automation/restore.test.mjs",
+    "legacy/automation/review-regressions.test.mjs",
     "rules.sql",
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
@@ -1576,6 +1666,9 @@
     "unit/isolation.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
+    "unit/local-login.test.mjs",
+    "unit/release-guard.test.mjs",
+    "unit/review-regressions.test.mjs",
     "unit/starting-reference.mjs"
    ]
   },
@@ -1606,7 +1699,9 @@
    "item": "admin-note-text",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts"
    ]
   },
   {
@@ -1637,9 +1732,28 @@
    "kind": "Form field",
    "item": "birds_*",
    "tests": [
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
+  },
+  {
+   "kind": "Form field",
+   "item": "cancel-amount",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "cancel-reason",
+   "tests": [
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "cancel-resolution",
+   "tests": []
   },
   {
    "kind": "Form field",
@@ -1675,6 +1789,11 @@
    "tests": [
     "e2e/tabs/admin-extras.spec.ts"
    ]
+  },
+  {
+   "kind": "Form field",
+   "item": "end-early-reason",
+   "tests": []
   },
   {
    "kind": "Form field",
@@ -1723,13 +1842,6 @@
   },
   {
    "kind": "Form field",
-   "item": "link-target-select",
-   "tests": [
-    "e2e/tabs/controls.spec.ts"
-   ]
-  },
-  {
-   "kind": "Form field",
    "item": "modal-player-sel",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
@@ -1758,11 +1870,94 @@
   },
   {
    "kind": "Form field",
+   "item": "new-season-ask",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-cancelled",
+   "tests": [
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-capacity",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-dates",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-deadline",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-end-time",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
    "item": "new-season-label",
    "tests": [
     "e2e/matchnight.spec.ts",
     "e2e/tabs/season-rollover.spec.ts"
    ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-name",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-notice",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-refund",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-regular",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-spare",
+   "tests": [
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-start",
+   "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/tabs/season-rollover.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-start-time",
+   "tests": []
+  },
+  {
+   "kind": "Form field",
+   "item": "new-season-zone",
+   "tests": []
   },
   {
    "kind": "Form field",
@@ -1798,7 +1993,8 @@
    "tests": [
     "e2e/matchnight.spec.ts",
     "e2e/tabs/controls.spec.ts",
-    "e2e/tabs/pay.spec.ts"
+    "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -1928,6 +2124,7 @@
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
@@ -1943,6 +2140,7 @@
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
@@ -1957,6 +2155,7 @@
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
@@ -1968,6 +2167,7 @@
    "item": "signin-code-input",
    "tests": [
     "e2e/helpers.ts",
+    "e2e/login-wait.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/signin.spec.ts"
    ]
@@ -1977,6 +2177,7 @@
    "item": "signin-email-input",
    "tests": [
     "e2e/helpers.ts",
+    "e2e/login-wait.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/isolation.spec.ts",
     "e2e/tabs/signin.spec.ts"
@@ -2124,6 +2325,7 @@
    "kind": "Rule / wording",
    "item": "Fees only where they apply",
    "tests": [
+    "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -2241,9 +2443,25 @@
   },
   {
    "kind": "Database function",
+   "item": "add_league_player",
+   "tests": [
+    "db/operations-regressions.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
    "item": "admin_status",
    "tests": [
     "db/gen_cases.py",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "archive_player",
+   "tests": [
+    "db/operations-regressions.sql",
     "e2e/mock-supabase.ts"
    ]
   },
@@ -2258,6 +2476,20 @@
   },
   {
    "kind": "Database function",
+   "item": "cancel_league_session",
+   "tests": [
+    "db/operations-regressions.sql",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "capture_league_snapshot",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
    "item": "capture_state",
    "tests": [
     "db/gen_cases.py",
@@ -2269,6 +2501,7 @@
    "item": "checkpoint",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
@@ -2295,7 +2528,8 @@
    "kind": "Database function",
    "item": "delete_push_subscription",
    "tests": [
-    "db/gen_cases.py"
+    "db/gen_cases.py",
+    "e2e/mock-supabase.ts"
    ]
   },
   {
@@ -2303,6 +2537,9 @@
    "item": "delete_state",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
+    "db/review.sql",
+    "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
@@ -2325,6 +2562,21 @@
   },
   {
    "kind": "Database function",
+   "item": "finalize_session",
+   "tests": [
+    "db/operations-regressions.sql",
+    "db/review.sql",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "game_pairing",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
    "item": "is_admin",
    "tests": [
     "rules.sql"
@@ -2335,6 +2587,13 @@
    "item": "is_admin_any_factor",
    "tests": [
     "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "list_league_snapshots",
+   "tests": [
+    "e2e/mock-supabase.ts"
    ]
   },
   {
@@ -2390,8 +2649,14 @@
    "item": "record_payment",
    "tests": [
     "db/gen_cases.py",
+    "db/review.sql",
+    "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
-    "rules.sql"
+    "e2e/opener.spec.ts",
+    "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
+    "rules.sql",
+    "unit/review-regressions.test.mjs"
    ]
   },
   {
@@ -2400,6 +2665,11 @@
    "tests": [
     "db/gen_cases.py"
    ]
+  },
+  {
+   "kind": "Database function",
+   "item": "refresh_all_paid_flags",
+   "tests": []
   },
   {
    "kind": "Database function",
@@ -2413,6 +2683,7 @@
    "item": "register_me",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "db/rollback-check.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
@@ -2428,11 +2699,50 @@
   },
   {
    "kind": "Database function",
+   "item": "restore_league_snapshot",
+   "tests": [
+    "db/operations-regressions.sql",
+    "db/review.sql",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "restore_snapshot_table",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
+   "item": "rollover_season_internal",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
+   "item": "round_complete",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
    "item": "save_court_scores",
    "tests": [
     "db/gen_cases.py",
+    "db/review.sql",
+    "db/run.sh",
+    "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "save_league_snapshot",
+   "tests": [
+    "db/operations-regressions.sql",
+    "db/review.sql",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/review-regressions.spec.ts"
    ]
   },
   {
@@ -2443,6 +2753,11 @@
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
+  },
+  {
+   "kind": "Database function",
+   "item": "season_setting",
+   "tests": []
   },
   {
    "kind": "Database function",
@@ -2465,6 +2780,7 @@
    "item": "set_rsvp",
    "tests": [
     "db/gen_cases.py",
+    "db/review.sql",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/tabs/vote.suite.ts",
@@ -2476,11 +2792,33 @@
    "item": "set_state",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
+    "db/review.sql",
+    "db/season-recovery.sql",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/tabs/adjust-edge.spec.ts",
     "rules.sql"
    ]
+  },
+  {
+   "kind": "Database function",
+   "item": "settle_cancellation",
+   "tests": [
+    "db/operations-regressions.sql",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "spare_reservation_targets",
+   "tests": []
+  },
+  {
+   "kind": "Database function",
+   "item": "spare_seat_status",
+   "tests": []
   },
   {
    "kind": "Database function",
@@ -2492,9 +2830,19 @@
   },
   {
    "kind": "Database function",
+   "item": "start_league_session",
+   "tests": [
+    "db/operations-regressions.sql",
+    "e2e/mock-supabase.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
    "item": "start_new_season",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
+    "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
@@ -2504,6 +2852,7 @@
    "item": "undo_last",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
@@ -2515,6 +2864,11 @@
     "db/gen_cases.py",
     "e2e/mock-supabase.ts"
    ]
+  },
+  {
+   "kind": "Database function",
+   "item": "validate_lineup",
+   "tests": []
   },
   {
    "kind": "Database function",
@@ -2545,6 +2899,7 @@
    "item": "audit_log",
    "tests": [
     "db/gen_cases.py",
+    "db/season-recovery.sql",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
    ]
@@ -2558,7 +2913,8 @@
     "e2e/mock-supabase.ts",
     "e2e/tabs/isolation.spec.ts",
     "legacy/automation/backup-waiver.test.mjs",
-    "rules.sql"
+    "rules.sql",
+    "unit/release-guard.test.mjs"
    ]
   },
   {
@@ -2566,6 +2922,7 @@
    "item": "invitations",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "db/rollback-check.sql",
     "e2e/mock-supabase.ts",
     "legacy/automation/restore.test.mjs",
@@ -2587,9 +2944,12 @@
    "item": "payments",
    "tests": [
     "db/gen_cases.py",
+    "db/review.sql",
+    "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
     "e2e/tabs/gen.ts",
     "e2e/tabs/pay.spec.ts",
+    "e2e/tabs/sync-race-tables.spec.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
@@ -2598,7 +2958,8 @@
    "kind": "Database table",
    "item": "payments_archive",
    "tests": [
-    "db/gen_cases.py"
+    "db/gen_cases.py",
+    "db/season-recovery.sql"
    ]
   },
   {
@@ -2640,6 +3001,7 @@
    "item": "rsvps",
    "tests": [
     "db/gen_cases.py",
+    "db/review.sql",
     "e2e/mock-supabase.ts",
     "e2e/tabs/gen.ts",
     "legacy/automation/backup-waiver.test.mjs",
@@ -2652,6 +3014,8 @@
    "item": "season_dates",
    "tests": [
     "db/gen_cases.py",
+    "db/season-recovery.sql",
+    "e2e/mock-supabase.ts",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
    ]
@@ -2670,6 +3034,7 @@
    "item": "waiver_acceptances",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "db/rollback-check.sql",
     "db/run.sh",
     "e2e/mock-supabase.ts",
@@ -2682,6 +3047,7 @@
    "item": "waiver_versions",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "e2e/mock-supabase.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
@@ -2734,6 +3100,7 @@
    "kind": "Production isolation",
    "item": "Site refuses a mismatched database",
    "tests": [
+    "e2e/login-wait.spec.ts",
     "e2e/tabs/isolation.spec.ts"
    ]
   },

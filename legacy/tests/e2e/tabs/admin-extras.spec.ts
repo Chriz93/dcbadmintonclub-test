@@ -7,6 +7,8 @@ import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
 import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
+import { adjustInput } from "./adjust-oracle";
+import { reference } from "../../unit/adjust-reference.mjs";
 
 type Act = "note" | "edit" | "court-add" | "sync" | "withdraw" | "presence";
 const ACTS: [Act, Partial<GenOpts>][] = [["note", {}], ["note", { live: "r1-partial" }], ["edit", {}], ["edit", { pending: 2 }], ["court-add", { live: "r1-partial" }],
@@ -112,9 +114,19 @@ for (let i = 0; i < 100; i++) {
       await adminTab(/^👥 Players$/);
       await expect(tag).toHaveText(show(st));
       for (let n = 0; n < 1 + (i % 3); n++) {
-        st = !st || st === "unmarked" ? "present" : st === "present" ? "absent" : undefined;
+        if (cur) {
+          // p57: during a session "present" means on a court. A seated, unmarked player becomes present; a present player
+          // is marked absent through the court engine; a player without a court (or absent) is seated through it and is
+          // present. When the engine refuses (reference model), nothing changes.
+          const cs = kvOf(ctx, "current_session"), seatedNow = courtOf(cs.assignments, p.id) > 0, was = cs.attendance?.[p.id];
+          const want = seatedNow && was === "present" ? "absent" : "present";
+          const viaEngine = !seatedNow || was === "present" || was === "absent";
+          const from = courtOf(cs.assignments, p.id) || p.current_court || 6, base = adjustInput(cs);
+          const ok = !viaEngine || (reference({ ...base, absent: want === "absent" ? [p.id] : [], returning: want === "present" ? [{ id: p.id, court: from }] : [], late: [] }) as { ok: boolean }).ok;
+          if (ok) st = want;
+        } else st = !st || st === "unmarked" ? "present" : st === "present" ? "absent" : undefined;
         await tag.click();
-        await expect(tag, "the tag cycles — / ✅ / ❌").toHaveText(show(st));
+        await expect(tag, cur ? "during a session the tag follows the courts: — → ✅ → ❌ → ✅" : "before the session the tag cycles — / ✅ / ❌").toHaveText(show(st));
       }
       await expect.poll(() => (cur ? kvOf(ctx, "current_session")?.attendance?.[p.id] : kvOf(ctx, "pre_session_attendance")?.[p.id]), { message: "saved after the short pause", timeout: 8000 }).toBe(st);
     }

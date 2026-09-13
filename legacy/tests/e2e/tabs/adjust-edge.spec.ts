@@ -157,8 +157,12 @@ for (const [kind, times] of PLAN) for (let t = 0; t < times; t++) {
     }
     if (kind === "keyboard") {
       await mark(page, victim, "absent");
+      // Start from the top of the page and allow one press per focusable element: Adjust courts must be reachable with
+      // Tab alone. (80 presses from wherever focus happened to land failed on a 26-player list under load.)
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      const stops = await page.evaluate(() => document.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])").length);
       let found = false;
-      for (let k = 0; k < 80 && !found; k++) { await page.keyboard.press("Tab"); found = await page.evaluate(() => document.activeElement?.id === "adj-btn"); }
+      for (let k = 0; k < stops + 5 && !found; k++) { await page.keyboard.press("Tab"); found = await page.evaluate(() => document.activeElement?.id === "adj-btn"); }
       expect(found, "Adjust courts is reachable with Tab").toBe(true);
       const outline = await page.evaluate(() => { const s = getComputedStyle(document.activeElement!); return parseFloat(s.outlineWidth) || 0; });
       expect(outline, "keyboard focus is visible").toBeGreaterThanOrEqual(2);

@@ -21,7 +21,7 @@ test('review · an unavailable state read is not a missing session',async()=>{
 });
 test('review · a failed multi-table load preserves the previous complete state',async()=>{
  const S=session(),before=structuredClone(S);
- const a=app(['loadAll'],{S,_accountEpoch:0,_activeLoads:0,_session:{},S_me:{organizer:true,verified:true},refreshMe:async()=>{},sbG:async()=>[],getKV:async(k)=>{if(k==='completed_sessions')throw Error('unavailable');return null;},console:{error:noop}});
+ const a=app(['loadAll'],{S,_accountEpoch:0,_activeLoads:0,_writeSeq:0,_session:{},S_me:{organizer:true,verified:true},refreshMe:async()=>{},sbG:async()=>[],getKV:async(k)=>{if(k==='completed_sessions')throw Error('unavailable');return null;},console:{error:noop}});
  assert.equal(await a.loadAll(),false);assert.deepEqual(S,before);
 });
 

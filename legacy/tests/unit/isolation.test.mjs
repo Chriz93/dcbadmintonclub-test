@@ -80,10 +80,19 @@ test("isolation · the TEST page is wired to the TEST project only", () => {
   assert.equal((html.match(/bwepvxelvwgwxrnaglrx/g) || []).length, 1, "the production reference appears once, in the guard");
 });
 test("isolation · the TEST reminder and backup jobs use only TEST services and secrets", () => {
-  for (const f of [".github/workflows/legacy-reminders.yml", ".github/workflows/legacy-backup.yml"]) {
+  for (const f of [".github/workflows/test-reminders.yml", ".github/workflows/test-backup.yml"]) {
     const y = readFileSync(join(ROOT, f), "utf8"); assert.match(y, /SUPABASE_URL: https:\/\/wgolevihkvmosajumzvl\.supabase\.co/); assert.doesNotMatch(y, /bwepvxelvwgwxrnaglrx|secrets\.SUPABASE_SERVICE_ROLE_KEY/); assert.match(y, /secrets\.TEST_SUPABASE_SERVICE_ROLE_KEY/);
   }
-  assert.match(readFileSync(join(ROOT, ".github/workflows/legacy-reminders.yml"), "utf8"), /ALLOW_REAL_RECIPIENTS: 'false'/);
+  assert.match(readFileSync(join(ROOT, ".github/workflows/test-reminders.yml"), "utf8"), /ALLOW_REAL_RECIPIENTS: 'false'/);
+  // Production's own backup and reminder jobs live in this repository's default branch (the production repository has
+  // none). They must keep running the exact code they ran before this release, whatever is merged here, until the
+  // production release changes them on purpose.
+  for (const f of [".github/workflows/legacy-reminders.yml", ".github/workflows/legacy-backup.yml"]) {
+    const y = readFileSync(join(ROOT, f), "utf8");
+    assert.match(y, /uses: actions\/checkout@v4\n\s+with:\n(\s+#[^\n]*\n)*\s+ref: fbd1b1f87458fcb7cfe5862f3f318cce01845a9a\n/, `${f}: checkout pinned to fbd1b1f`);
+    assert.equal((y.match(/actions\/checkout@/g) || []).length, 1, `${f}: one checkout, the pinned one`);
+    assert.match(y, /SUPABASE_URL: https:\/\/bwepvxelvwgwxrnaglrx\.supabase\.co/, `${f}: still production's job`);
+  }
   assert.doesNotMatch(readFileSync(join(ROOT, ".github/workflows/quality.yml"), "utf8"), /bwepvxelvwgwxrnaglrx/);
 });
 test("isolation · the browser suites refuse to start when any setting mentions production, and block production requests", () => {
