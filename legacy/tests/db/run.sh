@@ -55,7 +55,7 @@ pass=$(grep -c 'NOTICE:  PASS ' "$LOG/cases.err" || true)
 errors=$(grep -c 'ERROR:' "$LOG/cases.err" || true)
 grep 'ERROR:' "$LOG/cases.err" | sed 's/^psql:[^ ]* //' | head -60
 echo "database cases: $pass of $total passed, $errors errors"
-for suite in legacy/tests/db/review.sql legacy/tests/db/season-recovery.sql legacy/tests/db/operations-regressions.sql; do
+for suite in legacy/tests/db/review.sql legacy/tests/db/season-recovery.sql legacy/tests/db/operations-regressions.sql legacy/tests/db/internal-functions.sql; do
   if ! $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$suite" >> "$LOG/review.out" 2>&1; then tail -30 "$LOG/review.out";exit 1;fi
 done
 grep 'PASS review:' "$LOG/review.out"

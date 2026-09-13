@@ -1365,7 +1365,10 @@ function renderRSVPInto(el,compact){
 }
 
 let _activeLoads=0;
-async function loadAll(){
+// p59: a load that one of this page's saves overtook is repeated (at most three times) instead of dropped, so the load
+// that applies always started after the latest save, even when that save does not reload by itself.
+async function loadAll(){for(let k=0;k<3;k++){const r=await _loadAllOnce();if(r!=='stale')return r;}return 'stale';}
+async function _loadAllOnce(){
   _activeLoads++;
   const seq=_writeSeq,epoch=_accountEpoch,draft={...S},reads={};const loadKV=k=>getKV(k,reads);
   try{

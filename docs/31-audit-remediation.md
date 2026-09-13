@@ -89,7 +89,20 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   seats and unseats through the court engine. 40 generated browser cases.
 - **p58 — a background refresh never undoes a table save on screen** (found by the generated tests: a saved private note
   disappeared from the Players row until the next refresh). The page counts its own saves; a load that started before
-  the latest save is discarded. Three race tests hold one read of a table; all three fail without p58.
+  the latest save does not draw its data. Three race tests hold one read of a table; all three failed without p58.
+- **p59 — an overtaken load is repeated, not dropped** (found by the next full run: the note vanished again when its own
+  reload was overtaken by a later write that does not reload, such as the undo checkpoint that settles after an organizer
+  action). loadAll repeats an overtaken load, at most three times, so the load that applies always started after the
+  latest save.
+
+**Coverage gaps closed.** Codex's new controls and database functions had no test naming them (28 items in the
+coverage matrix). `tabs/audit-controls.spec.ts` covers End play early (a reason is required; only finished rounds count),
+Cancel Session (reason, compensation plan, amount; the date is shown as cancelled), the next-season fields, the season
+calendar file (one event per scheduled date, times computed independently for the league's time zone) and moving a
+player on the Assign tab (manual-move oracle). `legacy/tests/db/internal-functions.sql` checks that the internal
+functions are closed to every site role and what each does (scheduled pairings, round completion, lineup validation,
+season settings, paid-flag recomputation through its triggers). The Seat and withdraw buttons are checked to call the
+engine's handlers.
 
 **Test corrections (each still checks its behaviour exactly)**
 
@@ -111,3 +124,18 @@ by the existing branch-based Pages build. Order: copy TEST's data and function d
 schema (TEST data is synthetic; this is an internal copy, not an independent backup), apply `TEST_2026-09-13.sql` in the
 TEST SQL editor, run `verify.sql`, then push and check the live site. Production stays on hold: it needs its own
 migration bundle for L22–L24 and your approval.
+
+**Results after the takeover (13 September 2026, on the commit that adds p59):**
+
+| Suite | Result |
+|---|---|
+| Browser, all four projects | 5,666 passed, 0 failed, 2 skipped (the phone copies of the opener and season simulations, by design), 20.3 minutes |
+| Unit | 1,079 of 1,079 |
+| Automation | 39 of 39 |
+| Database rehearsal | 17 rule phases; 1,850 of 1,850 cases; 29 review checks (including the new internal-functions suite); rollback rehearsal; an injected failure in the combined TEST upgrade rolls everything back; release verification OK |
+| Patch replay | c89c894 + p35–p59 reproduces `index.html` byte for byte |
+| Coverage matrix | no gaps |
+
+The earlier full run of Codex's unchanged branch had 3 failures (5,610 passed); the run after p57/p58 found the Attendance
+suite's old count expectation and the note race that p59 fixes. Passing tests show that the behaviours they name work in
+the situations they create; they do not prove the absence of defects.

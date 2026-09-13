@@ -45,7 +45,9 @@ for (let i = 0; i < 40; i++) {
 
     // Seat the first through the court engine, or see the refusal with its reason.
     const first = ghosts[0], firstRef = seatRef(kvOf(ctx, "current_session") as Cur, first), seatOk = firstRef.ok;
-    await box.getByRole("button", { name: `Seat ${name(first)} on a court` }).click();
+    const seatBtn = box.getByRole("button", { name: `Seat ${name(first)} on a court` });
+    await expect(seatBtn, "Seat goes through the court engine").toHaveAttribute("onclick", `changePlayerAttendance(${first},'present')`);
+    await seatBtn.click();
     let cs: Cur, onCourts = seated.size;
     if (seatOk) {
       await expect.poll(() => courtOf(kvOf(ctx, "current_session").assignments, first), { message: `${name(first)} seated` }).toBeGreaterThan(0);

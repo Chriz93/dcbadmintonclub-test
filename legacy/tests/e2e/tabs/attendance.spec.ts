@@ -24,7 +24,8 @@ for (let i = 0; i < 100; i++) {
     const courtIds = (c: number) => (cur ? cur.assignments[c] || [] : P.filter((p) => p.current_court === c).map((p) => p.id));
     const all = [1, 2, 3, 4, 5, 6].flatMap(courtIds);
     const tags = (await sec.locator(".card").first().locator("> div[style*='display:flex'] .tag").allTextContents()).map(norm);
-    expect(tags, "present / absent / unmarked").toEqual([`✅ ${Object.values(att).filter((v) => v === "present").length} Present`, `❌ ${Object.values(att).filter((v) => v === "absent").length} Absent`, `— ${all.filter((id) => !att[id]).length} Unmarked`]);
+    // p57: Present counts players on a court tonight who are marked present, and the total on the courts is shown.
+    expect(tags, "present / absent / unmarked / on courts").toEqual([`✅ ${all.filter((id) => att[id] === "present").length} Present`, `❌ ${Object.values(att).filter((v) => v === "absent").length} Absent`, `— ${all.filter((id) => !att[id]).length} Unmarked`, `🏸 ${all.length} on courts`]);
     const vote: Record<number, string> = {}; L.rsvps.filter((x) => x.session_number === U).sort((a, b) => a.updated_at.localeCompare(b.updated_at)).forEach((x) => (vote[x.player_id] = x.response));
     const blocks = sec.locator(".card").first().locator("> div[style*='border-radius:8px;padding:8px']");
     const used = [1, 2, 3, 4, 5, 6].filter((c) => courtIds(c).length);

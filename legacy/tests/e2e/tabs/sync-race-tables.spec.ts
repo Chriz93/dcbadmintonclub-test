@@ -1,7 +1,7 @@
 // A background refresh never undoes a save on screen, for table saves too (p58). The stand-in holds one read of a table:
 // its reply is fixed when the refresh asks (the old rows) and delivered only after the save and the save's own reload.
 // Found by Admin extras 061: a saved private note vanished from the Players row until the next refresh. Each case fails
-// on the page without p58 (the late, older reply replaces the saved rows).
+// on the page without p58 (the late, older reply replaces the saved rows); with p59 the overtaken load is repeated.
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
@@ -36,7 +36,7 @@ for (const [i, live] of [[0, "none"], [1, "r1-partial"]] as const) {
     await expect(page.locator("#_t")).toHaveText("Note saved!");
     await expect(row.locator(".notes-btn")).toHaveText("📝");
     h.release();
-    expect(await bg, "the late refresh is discarded").toBe("stale");
+    expect(await bg, "the overtaken refresh is repeated (p59), never drawn from the old rows").toBe(true);
     await expect(row.locator(".notes-btn"), "the note is still shown after the late refresh").toHaveText("📝");
     expect(await page.evaluate((id) => S.players.find((x: { id: number }) => x.id === id)?.adminNote, p.id)).toBe(text);
   });
@@ -52,6 +52,6 @@ test("Sync race (tables) · a recorded payment stays on screen", async () => {
   await page.evaluate((id) => rpc("record_payment", { p_player: id, p_kind: "season", p_amount: 50, p_session: null, p_received_on: "2026-09-13", p_note: "race test", p_request: crypto.randomUUID() }).then(() => loadAll()).then(() => renderAll()), who.id);
   expect(await page.evaluate(() => S.payments.length)).toBe(before + 1);
   h.release();
-  expect(await bg, "the late refresh is discarded").toBe("stale");
+  expect(await bg, "the overtaken refresh is repeated (p59), never drawn from the old rows").toBe(true);
   expect(await page.evaluate(() => S.payments.length), "the payment is still shown").toBe(before + 1);
 });

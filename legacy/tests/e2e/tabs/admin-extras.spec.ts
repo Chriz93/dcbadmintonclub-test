@@ -102,7 +102,10 @@ for (let i = 0; i < 100; i++) {
       const lines = (await card.locator("div:has(> span + button)").evaluateAll((ds) => ds.map((d) => (d.querySelector("span")!.textContent || "").replace(/\s+/g, " ").trim())));
       expect(lines, "every invitation, with registered / waiting").toEqual(inv.map(([email, type]) => `${email} ${type} ${L.players.some((p) => p.email.toLowerCase() === email) ? "registered" : "waiting"}`));
       const k = Math.floor(r() * inv.length), [email] = inv[k];
-      await card.locator("div:has(> span + button)").nth(k).getByRole("button", { name: "✕" }).click();
+      const withdraw = card.locator("div:has(> span + button)").nth(k).getByRole("button", { name: "✕" });
+      await expect(withdraw, "✕ calls deleteInvitation for this address").toHaveAttribute("onclick", "deleteInvitation(this.dataset.email)");
+      await expect(withdraw).toHaveAttribute("data-email", email);
+      await withdraw.click();
       await expect(toast).toHaveText("Invitation withdrawn");
       expect(Object.keys(ctx.state.invitations), `${email} withdrawn`).not.toContain(email);
       await expect(card.locator("div:has(> span + button)")).toHaveCount(inv.length - 1);

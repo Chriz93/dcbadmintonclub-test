@@ -1,15 +1,15 @@
 {
- "generated": "2026-09-13T16:16:41.537Z",
+ "generated": "2026-09-13T16:32:11.153Z",
  "summary": [
   {
    "k": "Control handler",
    "n": 114,
-   "g": 6
+   "g": 0
   },
   {
    "k": "Database function",
    "n": 55,
-   "g": 10
+   "g": 0
   },
   {
    "k": "Database table",
@@ -24,7 +24,7 @@
   {
    "k": "Form field",
    "n": 75,
-   "g": 12
+   "g": 0
   },
   {
    "k": "Page",
@@ -62,6 +62,7 @@
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -146,6 +147,7 @@
    "item": "schedule",
    "tests": [
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -211,6 +213,7 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -509,6 +512,7 @@
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
@@ -609,6 +613,7 @@
    "kind": "Control handler",
    "item": "cancelSession",
    "tests": [
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
@@ -623,7 +628,9 @@
   {
    "kind": "Control handler",
    "item": "changePlayerAttendance",
-   "tests": []
+   "tests": [
+    "e2e/tabs/attendance-count.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -665,6 +672,7 @@
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/interop.ts",
@@ -679,6 +687,7 @@
    "kind": "Control handler",
    "item": "confirmCancelSession",
    "tests": [
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
@@ -707,7 +716,9 @@
   {
    "kind": "Control handler",
    "item": "deleteInvitation",
-   "tests": []
+   "tests": [
+    "e2e/tabs/admin-extras.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -741,7 +752,9 @@
   {
    "kind": "Control handler",
    "item": "downloadCalendar",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -786,6 +799,7 @@
     "e2e/opener.spec.ts",
     "e2e/rules-model.ts",
     "e2e/season.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/gen.ts",
     "e2e/tabs/interop.ts",
@@ -796,7 +810,9 @@
   {
    "kind": "Control handler",
    "item": "endSessionEarly",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -939,7 +955,9 @@
   {
    "kind": "Control handler",
    "item": "moveCourtPlayer",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -958,6 +976,7 @@
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
@@ -1040,7 +1059,9 @@
   {
    "kind": "Control handler",
    "item": "prepareNextSeason",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Control handler",
@@ -1408,6 +1429,7 @@
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -1559,6 +1581,7 @@
    "item": "*",
    "tests": [
     "db/gen_cases.py",
+    "db/internal-functions.sql",
     "db/operations-regressions.sql",
     "db/review.sql",
     "db/rollback-check.sql",
@@ -1585,6 +1608,7 @@
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
@@ -1740,12 +1764,15 @@
   {
    "kind": "Form field",
    "item": "cancel-amount",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "cancel-reason",
    "tests": [
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
@@ -1753,7 +1780,9 @@
   {
    "kind": "Form field",
    "item": "cancel-resolution",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -1793,7 +1822,9 @@
   {
    "kind": "Form field",
    "item": "end-early-reason",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -1871,7 +1902,9 @@
   {
    "kind": "Form field",
    "item": "new-season-ask",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -1883,7 +1916,9 @@
   {
    "kind": "Form field",
    "item": "new-season-capacity",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -1896,12 +1931,16 @@
   {
    "kind": "Form field",
    "item": "new-season-deadline",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "new-season-end-time",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -1922,22 +1961,29 @@
   {
    "kind": "Form field",
    "item": "new-season-notice",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "new-season-refund",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "new-season-regular",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "new-season-spare",
    "tests": [
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/season-rollover.spec.ts"
    ]
   },
@@ -1946,18 +1992,23 @@
    "item": "new-season-start",
    "tests": [
     "e2e/matchnight.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/season-rollover.spec.ts"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-start-time",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
    "item": "new-season-zone",
-   "tests": []
+   "tests": [
+    "e2e/tabs/audit-controls.spec.ts"
+   ]
   },
   {
    "kind": "Form field",
@@ -2334,6 +2385,7 @@
    "item": "Best of three on a court of two",
    "tests": [
     "db/gen_cases.py",
+    "db/internal-functions.sql",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/opener.spec.ts",
@@ -2353,6 +2405,7 @@
    "kind": "Rule / wording",
    "item": "Five players: five games to 15, each sits out once",
    "tests": [
+    "db/internal-functions.sql",
     "e2e/tabs/adjust-oracle.ts",
     "unit/adjust.test.mjs"
    ]
@@ -2486,7 +2539,9 @@
   {
    "kind": "Database function",
    "item": "capture_league_snapshot",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2573,7 +2628,9 @@
   {
    "kind": "Database function",
    "item": "game_pairing",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2669,7 +2726,9 @@
   {
    "kind": "Database function",
    "item": "refresh_all_paid_flags",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2710,17 +2769,23 @@
   {
    "kind": "Database function",
    "item": "restore_snapshot_table",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
    "item": "rollover_season_internal",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
    "item": "round_complete",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2757,7 +2822,9 @@
   {
    "kind": "Database function",
    "item": "season_setting",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2813,12 +2880,16 @@
   {
    "kind": "Database function",
    "item": "spare_reservation_targets",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
    "item": "spare_seat_status",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2868,7 +2939,9 @@
   {
    "kind": "Database function",
    "item": "validate_lineup",
-   "tests": []
+   "tests": [
+    "db/internal-functions.sql"
+   ]
   },
   {
    "kind": "Database function",
@@ -2944,6 +3017,7 @@
    "item": "payments",
    "tests": [
     "db/gen_cases.py",
+    "db/internal-functions.sql",
     "db/review.sql",
     "db/season-recovery.sql",
     "e2e/mock-supabase.ts",

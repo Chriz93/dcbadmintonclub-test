@@ -98,8 +98,9 @@ export async function load(ctx: Ctx, L: League) {
     // A load the previous case left in flight (a save's own reload) must finish first: finishing after the reset below, it
     // would write the previous database's state versions back and the new league's load would be refused as out of date.
     for (let k = 0; k < 500 && _activeLoads > 0; k++) await new Promise((r) => setTimeout(r, 20));
-    // Cancel work the previous league left pending (a save's delayed round advance checks this epoch).
-    _undoEpoch++; _autoAdvancing = false; _lastAllScoredState = false;
+    // Cancel work the previous league left pending (a save's delayed round advance checks this epoch; the Players tag's
+    // attendance save waits a second and would otherwise write the previous league's marks into this one).
+    _undoEpoch++; _autoAdvancing = false; _lastAllScoredState = false; clearTimeout(_attSaveTimer);
     // A whole new database: forget the versions the page cached from the previous one (a real reload starts empty too).
     for (const k of Object.keys(_stateVersion)) delete _stateVersion[k];
     closeModal(); _expandedHist = {}; _roundSnapshots = []; S.lastUndo = null;
