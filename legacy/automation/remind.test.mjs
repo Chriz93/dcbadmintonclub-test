@@ -53,7 +53,9 @@ test("emails carry one-tap links for the right session and the refund note befor
   assert.match(m.subject, /Session 3\? \(Tuesday, September 29\)/);
   const s = composeEmail({ name: "Sam Spare", stage: "spare", open_seats: 2 }, 3, "https://x/", "org@x");
   assert.match(s.subject, /Spare seat open/); assert.match(s.text, /2 seats have opened/); assert.match(s.text, /\$20/);
-  assert.equal(sessionStart("2026-09-15").getHours(), 20);
+  // 8 PM in the league's time zone whatever zone the job runs in (GitHub's machines use UTC): 20:00 EDT is 00:00 UTC.
+  assert.equal(sessionStart("2026-09-15").toISOString(), "2026-09-16T00:00:00.000Z");
+  assert.equal(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", hourCycle: "h23" }).format(sessionStart("2026-09-15")), "20");
 });
 test("push payloads open the session without changing a vote and never leave test mode", async () => {
   const p = composePush({ name: "Pat", stage: "vote-1" }, 4, "https://site/");

@@ -44,7 +44,7 @@ for (let i = 0; i < 100; i++) {
     const page = ctx.page, r = rng(60 + i), toast = page.locator("#_t");
     await page.evaluate(() => nav("admin"));
     await page.getByRole("button", { name: "💰 Pay" }).click();
-    const fmt = (ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
+    const fmt = (ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
     const regulars = L.players.filter((p) => p.membership_type !== "spare"), spares = L.players.filter((p) => p.membership_type === "spare");
     const pays = L.payments, regPaid = regulars.filter((p) => p.paid).length, sparePaid = spares.filter((p) => p.paid).length;
     await expect(page.locator("#pay-summary")).toContainText(`Regular Members (${regulars.length}/26)`);

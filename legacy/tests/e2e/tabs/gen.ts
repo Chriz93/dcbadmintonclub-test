@@ -29,8 +29,23 @@ export function rng(seed: number) {
   let a = seed >>> 0 || 1;
   return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
-export function sessionStartMs(iso: string) { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d, 20, 0, 0).getTime(); }
-const fmt = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d, 12).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }); };
+/** The league's wall-clock time on a date, as an instant in the league's time zone (season.json), whatever zone the
+ *  tests run in (the page does the same; GitHub's machines use UTC). */
+export function leagueInstant(iso: string, hhmm: string = season.start_time_local, zone: string = season.time_zone) {
+  const [y, mo, d] = iso.split("-").map(Number), [h, mi] = hhmm.split(":").map(Number), want = Date.UTC(y, mo - 1, d, h, mi);
+  let t = want;
+  for (let k = 0; k < 3; k++) {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+    t += want - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  }
+  return t;
+}
+export function sessionStartMs(iso: string) { return leagueInstant(iso); }
+/** Session n's start (8 PM in the league's zone), from the season's own date for that session. */
+export const sessionStartFor = (n: number) => sessionStartMs(season.approved_dates[n - 1]);
+/** A calendar date as the page labels it ("Sep 15, 2026"), the same in every time zone. */
+export const dateLabel = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }); };
+const fmt = dateLabel;
 const slug = (n: string) => n.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]+/g, ".").replace(/^\.+|\.+$/g, "");
 // First names are unique inside a league: the Sessions tab and Court history show first names only.
 const FIRST = ["Aarav", "Priya", "Daniel", "Mei", "Lucas", "Sofia", "Omar", "Hannah", "Mateo", "Aisha", "Ethan", "Fatima", "Noah", "Ananya", "Liam", "Chloe", "Arjun", "Grace", "Samuel", "Isabelle", "Kenji", "Zara", "Ryan", "Nadia", "Vikram", "Emma", "Diego", "Leah", "Tomás", "Anne-Marie", "Zoë", "Kwame", "Ingrid", "Rafael", "Yuki", "Olivia", "Hamza", "Maya", "Jonas", "Amara", "Felix", "Leila", "Marco", "Nia", "Oscar", "Sana", "Theo", "Imani", "Victor", "Elif"];

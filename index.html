@@ -1051,7 +1051,7 @@ const VAPID_PUBLIC_KEY='BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMB
 const FEES={regularSeason:400,spareSession:20,absenceRefund:14,absenceNoticeHours:72,voteDeadlineHours:46,spareAskHours:72,facilityShuttles:2};
 const SHUTTLES_PER_PLAYER=2; // each court starts with two new shuttlecocks per player; players provide extras
 function birdsAllotted(n){return n>=2?SHUTTLES_PER_PLAYER*n:0;}
-function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});}
+function fmtDate(iso){const[y,m,d]=iso.split('-').map(Number);return new Date(Date.UTC(y,m-1,d,12)).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}
 let DATES=APPROVED_DATES.map(fmtDate);
 // Calendar instants use the configured league time zone, independent of the device.
 let FD=APPROVED_DATES.map(iso=>leagueStart(iso));
@@ -1557,7 +1557,7 @@ function renderHome(){
   if(cd&&ni<DATES.length){const diff=FD[ni]-now;if(diff>0){const days=Math.floor(diff/86400000),hrs=Math.floor((diff%86400000)/3600000),mins=Math.floor((diff%3600000)/60000);cd.innerHTML=`<div class="cd-box"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div><div class="cd-box"><div class="cd-num">${hrs}</div><div class="cd-lbl">Hours</div></div><div class="cd-box"><div class="cd-num">${mins}</div><div class="cd-lbl">Mins</div></div>`;}else cd.innerHTML='';}else if(cd)cd.innerHTML='';
   // Announcements
   const ah=document.getElementById('ann-home');
-  if(ah)ah.innerHTML=S.announcements.length?S.announcements.slice(0,3).map(a=>`<div class="ann-card ann-${a.type}"><div class="ann-title">${esc(a.title)}</div><div class="ann-body">${esc(a.body)}</div><div class="ann-time">${new Date(a.created_at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div>`).join(''):'';
+  if(ah)ah.innerHTML=S.announcements.length?S.announcements.slice(0,3).map(a=>`<div class="ann-card ann-${a.type}"><div class="ann-title">${esc(a.title)}</div><div class="ann-body">${esc(a.body)}</div><div class="ann-time">${new Date(a.created_at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:LEAGUE_TZ})}</div></div>`).join(''):'';
   // Player of session
   renderPOS('pos-home');
   renderMySeason();
@@ -1878,7 +1878,7 @@ function renderAdvanceBanner(){
 function renderUndo(){
   const pill=document.getElementById('undo-pill');if(!pill)return;
   const top=adminUnlocked?S.undoTop:null;
-  const at=d=>new Date(d).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'});
+  const at=d=>new Date(d).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit',timeZone:LEAGUE_TZ});
   pill.hidden=!top;document.body.classList.toggle('has-undo',!!top);
   if(top)document.getElementById('undo-label').textContent=`${top.label} · ${at(top.created_at)}`;
   const tb=document.getElementById('undo-tools-btn');if(tb){tb.disabled=!top;tb.textContent=top?`↶ Undo: ${top.label}`:'↶ Nothing to undo';}
@@ -1928,7 +1928,7 @@ async function requestReminderRun(kind){
 function renderReminderTools(){
   const el=document.getElementById('reminder-status');if(!el)return;
   const req=S.reminderRequest,last=S.reminderLastRun;
-  const fmt=x=>{const d=new Date(x);return isNaN(d)?String(x):d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
+  const fmt=x=>{const d=new Date(x);return isNaN(d)?String(x):d.toLocaleString('en-CA',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:LEAGUE_TZ});};
   let html='';
   if(req&&req.kind)html+=`<div class="alert alert-info" style="margin-bottom:8px;" id="reminder-pending">⏳ ${req.kind==='smoke'?'Test email':'Vote reminders'} requested ${fmt(req.at)} — sending now; this line clears when it is done.</div>`;
   if(last&&last.at){
@@ -2267,7 +2267,7 @@ function renderRegPlayers(){
       </div>
       <div style="font-size:11px;color:var(--teal2);">📧 ${esc(p.email)}</div>
       <div style="font-size:11px;margin-top:2px;">📞 ${esc(p.phone)}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;">Registered: ${p.registeredAt?new Date(p.registeredAt).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'Unknown'}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">Registered: ${p.registeredAt?new Date(p.registeredAt).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:LEAGUE_TZ}):'Unknown'}</div>
     </div>`).join('');
     html+='</div>';
   }
@@ -2308,7 +2308,7 @@ async function promoteFromWaitlist(id){
 }
 function regPlayerCard(p,showApprove){
   const isSpare=p.membershipType==='spare';
-  const regDate=p.registeredAt?new Date(p.registeredAt).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'Unknown';
+  const regDate=p.registeredAt?new Date(p.registeredAt).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:LEAGUE_TZ}):'Unknown';
   return `<div style="padding:12px;border-bottom:1px solid var(--border);">
     <div class="flex-between" style="margin-bottom:6px;">
       <div style="font-weight:800;font-size:13px;">${esc(p.name)}${isSpare?'<span class="spare-badge">SPARE</span>':''}</div>
@@ -4724,8 +4724,8 @@ async function renderSnapshots(){
     if(!snaps.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center;">No snapshots yet. Click "📸 Save Snapshot" above to create one.</div>';return;}
     el.innerHTML=snaps.map(s=>{
       const d=new Date(s.value.ts||0);
-      const dateStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-      const timeStr=d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const dateStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric',timeZone:LEAGUE_TZ});
+      const timeStr=d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:LEAGUE_TZ});
       const nPlayers=s.value.player_count||0;
       const hasSession=s.value.active_session?' · 🏸 Active session':'';
       const nCompleted=s.value.completed_count||0;
@@ -4790,7 +4790,7 @@ async function generateSeasonPDF(){
     doc.text('DC Badminton Club',W/2,12,{align:'center'});
     doc.setFontSize(11);doc.setFont(undefined,'normal');
     doc.text(`Maplewood Advanced League · Season ${SEASON_LABEL} Summary`,W/2,20,{align:'center'});
-    doc.setFontSize(9);doc.text(`Generated: ${new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})}`,W/2,27,{align:'center'});
+    doc.setFontSize(9);doc.text(`Generated: ${new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric',timeZone:LEAGUE_TZ})}`,W/2,27,{align:'center'});
     y=38;
     // Season Overview
     doc.setTextColor(...navy);doc.setFontSize(13);doc.setFont(undefined,'bold');
@@ -5686,7 +5686,7 @@ function renderAdjustBar(){
 }
 function renderLastAdjustment(){
   const last=(S.current?.adjustments||[]).slice(-1)[0];if(!last)return '';
-  const t=new Date(last.at).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'});
+  const t=new Date(last.at).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit',timeZone:LEAGUE_TZ});
   const undoable=S.undoTop&&S.undoTop.label===`Adjust courts (Round ${last.round})`;
   return `<div class="card" id="adj-last"><div class="card-title">🔁 Last court adjustment</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Round ${last.round} · ${esc(t)}</div>
@@ -5940,7 +5940,7 @@ function renderQA(){
     const isOwn=q.playerId===S_me.player_id;
     html+=`<div class="qa-card">
       <div class="qa-q">${esc(q.question)}</div>
-      <div class="qa-meta">Asked by ${adminUnlocked?esc(q.playerName):'a player'} · ${new Date(q.ts).toLocaleDateString('en-CA',{month:'short',day:'numeric'})}</div>
+      <div class="qa-meta">Asked by ${adminUnlocked?esc(q.playerName):'a player'} · ${new Date(q.ts).toLocaleDateString('en-CA',{month:'short',day:'numeric',timeZone:LEAGUE_TZ})}</div>
       ${q.answer?`<div class="qa-ans"><strong>Admin:</strong> ${esc(q.answer)}</div>`:'<div class="qa-unanswered">⏳ Awaiting admin response</div>'}
       ${adminUnlocked?`<div style="display:flex;gap:6px;margin-top:8px;">
         <button class="btn btn-primary btn-sm" onclick="answerQuestion(${q.id})">${q.answer?'Edit Answer':'Answer'}</button>

@@ -94,6 +94,20 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   reload was overtaken by a later write that does not reload, such as the undo checkpoint that settles after an organizer
   action). loadAll repeats an overtaken load, at most three times, so the load that applies always started after the
   latest save.
+- **p60 — league dates and times are the same on every device** (found by the first GitHub run of the page's tests,
+  whose machines use UTC; review finding 14 had been fixed only in part). Eleven displays still used the device's own
+  time zone: announcement and registration times, vote-change and adjustment times, payment and refund times,
+  snapshot times, the PDF date and Q&A dates. On a phone set to another zone, Sunday 10 PM showed as Monday 2 AM.
+  Moments are now shown in the league's time zone (America/Toronto from the season settings), and calendar dates are
+  built from the date itself, so they are the same everywhere. The test data generator, the harness and seven
+  formatters had worked out league times on the machine's own clock, so they passed only on a machine in the league's
+  zone; they now use the league's zone. The reminder test checked the hour on the machine's clock; it now checks the
+  exact instant (20:00 EDT is 00:00 UTC). The waiver test's device offset came out as -0 in UTC, which an exact
+  comparison does not treat as the stored 0; it is normalised. The shared Schedule and Home checks decided "Active"
+  or "Prepared" from "<date> 20:00:00" read on the machine's clock (50 interop cases failed under UTC two hours before
+  play); they now use the session's start in the league's zone. Under both UTC and Toronto time: unit 1,079, automation
+  39, the date-and-time browser suites (Home, vote, Pay, vote changes, Tools, Q&A, Schedule, audit controls: 1,117) and
+  Waiver (207) pass. Before these fixes, 252 of 400 Home and vote cases failed under UTC on this Mac, as on GitHub.
 
 **Coverage gaps closed.** Codex's new controls and database functions had no test naming them (28 items in the
 coverage matrix). `tabs/audit-controls.spec.ts` covers End play early (a reason is required; only finished rounds count),
@@ -125,15 +139,15 @@ schema (TEST data is synthetic; this is an internal copy, not an independent bac
 TEST SQL editor, run `verify.sql`, then push and check the live site. Production stays on hold: it needs its own
 migration bundle for L22–L24 and your approval.
 
-**Results after the takeover (13 September 2026, on the commit that adds p59):**
+**Results after the takeover (13 September 2026, on the commit that adds p60):**
 
 | Suite | Result |
 |---|---|
-| Browser, all four projects | 5,666 passed, 0 failed, 2 skipped (the phone copies of the opener and season simulations, by design), 20.3 minutes |
-| Unit | 1,079 of 1,079 |
-| Automation | 39 of 39 |
+| Browser, all four projects | In Toronto time (before p60): 5,666 passed, 0 failed, 2 skipped (the phone copies of the opener and season simulations, by design), 20.3 minutes. In UTC, as GitHub runs it, after p60: the two tab projects 5,644 of 5,644 (22.9 minutes); the desktop and phone projects 22 passed and 2 skipped (by design) |
+| Unit | 1,079 of 1,079, under both UTC and Toronto time |
+| Automation | 39 of 39, under both UTC and Toronto time |
 | Database rehearsal | 17 rule phases; 1,850 of 1,850 cases; 29 review checks (including the new internal-functions suite); rollback rehearsal; an injected failure in the combined TEST upgrade rolls everything back; release verification OK |
-| Patch replay | c89c894 + p35–p59 reproduces `index.html` byte for byte |
+| Patch replay | c89c894 + p35–p60 reproduces `index.html` byte for byte |
 | Coverage matrix | no gaps |
 
 The earlier full run of Codex's unchanged branch had 3 failures (5,610 passed); the run after p57/p58 found the Attendance

@@ -26,7 +26,7 @@ export function define() {
     return { vote, regs, spares, declined, claims, counts: [regs.filter((p) => vote[p.id] === "coming").length, regs.filter((p) => vote[p.id] === "notcoming").length, regs.filter((p) => !vote[p.id]).length].map(String),
       seats: `Spare seats: ${Math.max(declined - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.reserved).length} standby` };
   }
-  const fmtAll = (page: Page, ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
+  const fmtAll = (page: Page, ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
   async function timing(page: Page, start: number, now: number, spare: boolean) {
     const [deadline, cutoff] = await fmtAll(page, [start - 46 * H, start - 72 * H]);
     if (spare) return now < start - 72 * H ? `Spares are asked from ${cutoff} (72 hours before play) whenever a regular declines. You can already say if you are available.` : "Seats open as regulars decline; answer early — seats go in the order spares reply.";

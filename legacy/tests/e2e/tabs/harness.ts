@@ -3,7 +3,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { installMock, freshState, ORGANIZER, type MockState } from "../mock-supabase";
 import { waiverVersions, type Acceptance } from "../mock-waiver";
 import { signIn, unlockOrganizer } from "../helpers";
-import type { League } from "./gen";
+import { dateLabel, sessionStartMs, type League } from "./gen";
 import season from "../../../automation/season.json";
 import fs from "node:fs";
 
@@ -35,10 +35,11 @@ export async function openAs(browser: Browser, who: "admin" | string = "admin", 
   await expect.poll(()=>page.evaluate(()=>_activeLoads===0&&document.getElementById('slbl')?.textContent==='Synced'),{timeout:15000}).toBe(true);
   await page.evaluate(() => { clearInterval(_syncTimer); _syncTimer = null; });
   await pinSession(page);
-  // Expected dates are formatted here, independently of the app's own DATES table.
+  // Expected dates and session starts are worked out here, independently of the app's own DATES table, in the league's
+  // time zone whatever zone the tests run in (GitHub's machines use UTC).
   const iso = season.approved_dates as string[];
-  const dates = await page.evaluate((a) => a.map((s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d, 12).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }); }), iso);
-  const fd = await page.evaluate((a) => a.map((s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d, 20, 0, 0).getTime(); }), iso);
+  const dates = iso.map(dateLabel);
+  const fd = iso.map(sessionStartMs);
   return { page, state, dates, fd, email, prompts };
 }
 

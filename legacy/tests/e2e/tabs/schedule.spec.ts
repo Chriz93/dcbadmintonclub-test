@@ -26,7 +26,7 @@ for (let i = 0; i < 100; i++) {
     const cancelled = norm(await page.locator("#sched-list .card").last().innerText());
     for (const iso of season.cancelled_dates) {
       const [y, m, d] = iso.split("-").map(Number);
-      const label = await page.evaluate(([yy, mm, dd]) => new Date(yy, mm - 1, dd, 12).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }), [y, m, d]);
+      const label = await page.evaluate(([yy, mm, dd]) => new Date(Date.UTC(yy, mm - 1, dd, 12)).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }), [y, m, d]);
       expect(cancelled, "school cancellation listed").toContain(label);
     }
     expect(cancelled).toContain("have no play");

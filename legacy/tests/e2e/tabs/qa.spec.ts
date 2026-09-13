@@ -20,7 +20,7 @@ for (let i = 0; i < 100; i++) {
     await page.locator("#page-standings .ptab").filter({ hasText: /Q&A$/ }).click();
     const sec = page.locator("#sec-qa"), cards = sec.locator(".qa-card");
     const qs = [...L.questions].sort((a, b) => b.created_at.localeCompare(a.created_at));
-    const days = await page.evaluate((ts) => ts.map((t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric" })), qs.map((q) => q.created_at));
+    const days = await page.evaluate((ts) => ts.map((t) => new Date(t).toLocaleDateString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric" })), qs.map((q) => q.created_at));
     if (!qs.length) await expect(sec).toContainText("No questions yet — be the first to ask!");
     await expect(cards).toHaveCount(qs.length);
     for (let k = 0; k < qs.length; k++) {

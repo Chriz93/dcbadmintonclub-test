@@ -2,7 +2,7 @@
 // the independent oracles. Used by the interoperation suite.
 import { expect, type Page } from "@playwright/test";
 import { norm, inOrder, type Ctx } from "./harness";
-import { NC, type League } from "./gen";
+import { NC, sessionStartFor, type League } from "./gen";
 import { leaders, rankings, stats, sessionsTab, history, courtHistory, pos, courts } from "./oracle";
 
 export function kvOf(ctx: Ctx, k: string) { const v = ctx.state.state[k]; return v && v.value !== "null" ? JSON.parse(v.value) : null; }
@@ -86,14 +86,14 @@ export async function checkSchedule(page: Page, L: League) {
   await page.evaluate(() => nav("schedule"));
   const rows = (await page.locator("#sched-list .sched-row").allInnerTexts()).map(norm);
   rows.forEach((t, k) => {
-    const want = L.sessions.some((s) => s.number === k + 1) ? "Done" : L.current?.number === k + 1 ? (L.nowMs>=new Date(L.current!.date+" 20:00:00").getTime()||Object.keys(L.current.scores).length?"Active":"Prepared") : "Scheduled";
+    const want = L.sessions.some((s) => s.number === k + 1) ? "Done" : L.current?.number === k + 1 ? (L.nowMs>=sessionStartFor(L.current!.number)||Object.keys(L.current.scores).length?"Active":"Prepared") : "Scheduled";
     expect(t.endsWith(want), `Schedule row ${k + 1}: ${t}`).toBe(true);
   });
 }
 export async function checkHomeLine(page: Page, L: League, dates: string[]) {
   await page.evaluate(() => nav("home"));
   const done = !L.current && L.sessions.length >= 28, U = L.current ? L.current.number : Math.min(L.sessions.length + 1, 28);
-  await expect(page.locator("#next-date")).toHaveText(done ? "Season Complete! 🎉" : `Session ${U} — ${dates[U - 1]}${L.current ? (L.nowMs>=new Date(dates[U-1]+" 20:00:00").getTime()||Object.keys(L.current.scores).length?" · in progress":" · courts prepared") : ""}`);
+  await expect(page.locator("#next-date")).toHaveText(done ? "Season Complete! 🎉" : `Session ${U} — ${dates[U - 1]}${L.current ? (L.nowMs>=sessionStartFor(U)||Object.keys(L.current.scores).length?" · in progress":" · courts prepared") : ""}`);
 }
 /** Every read-only tab against the database state. */
 export async function checkAllTabs(ctx: Ctx, L: League) {

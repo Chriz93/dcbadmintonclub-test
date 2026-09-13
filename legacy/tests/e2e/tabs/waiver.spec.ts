@@ -91,7 +91,8 @@ test.describe("waiver · registration", () => {
       }
       await expect(page.locator("#rs4")).toHaveClass(/active/);
       const rec = s.waiverAcceptances!.at(-1)!, player = s.players.find((p) => p.email === REG)!;
-      const [tz, offset] = await page.evaluate(() => [Intl.DateTimeFormat().resolvedOptions().timeZone, -new Date().getTimezoneOffset()] as [string, number]);
+      // `|| 0`: in UTC the negated offset is -0, which an exact comparison does not treat as the stored 0.
+      const [tz, offset] = await page.evaluate(() => [Intl.DateTimeFormat().resolvedOptions().timeZone, -new Date().getTimezoneOffset() || 0] as [string, number]);
       expect(s.waiverAcceptances!.length, "one new record").toBe(before + 1);
       expect(rec, "the record names the exact wording, the signer and how they accepted").toMatchObject({
         player_id: back ? back.id : player.id, email: REG, participant_name: name, typed_signature: name, waiver_version: cur, waiver_sha256: sha256(wording(cur)),

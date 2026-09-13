@@ -35,7 +35,7 @@ export function define() {
       }
       // Latest three announcements, newest first.
       const anns = [...L.announcements].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 3);
-      const when = await page.evaluate((ts) => ts.map((t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })), anns.map((a) => a.created_at));
+      const when = await page.evaluate((ts) => ts.map((t) => new Date(t).toLocaleDateString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })), anns.map((a) => a.created_at));
       const cards = await page.$$eval("#ann-home .ann-card", (cs) => cs.map((c) => ({ type: c.className.replace("ann-card ann-", ""), title: c.querySelector(".ann-title")!.textContent, body: c.querySelector(".ann-body")!.textContent, time: c.querySelector(".ann-time")!.textContent })));
       expect(cards, "announcements on Home").toEqual(anns.map((a, k) => ({ type: a.type, title: a.title, body: a.body, time: when[k] })));
       const p = pos(L), banner = page.locator("#pos-home");

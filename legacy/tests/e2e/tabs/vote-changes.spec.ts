@@ -29,7 +29,7 @@ for (let i = 0; i < 100; i++) {
     const expectRows = async () => {
       const log = [...ctx.state.rsvpLog].reverse().slice(0, 20);
       if (!log.length) return expect(card).toContainText("No votes yet.");
-      const times = await page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), log.map((x) => x.changed_at));
+      const times = await page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), log.map((x) => x.changed_at));
       const rows = await card.locator("div:has(> span + span)").evaluateAll((ds) => ds.map((d) => [...d.children].map((c) => (c.textContent || "").replace(/\s+/g, " ").trim())));
       expect(rows, "newest first, at most 20").toEqual(log.map((x, k) => {
         const p = L.players.find((q) => q.id === x.player_id), late = Date.parse(x.changed_at) > ctx.fd[x.session_number - 1] - 46 * H && !x.by_admin;

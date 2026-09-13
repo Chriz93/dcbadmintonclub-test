@@ -29,7 +29,7 @@ for (let i = 0; i < 100; i++) {
     await load(ctx, L);
     const page = ctx.page, r = rng(150 + i), toast = page.locator("#_t"), cur = L.current, U = cur ? cur.number : Math.min(L.sessions.length + 1, 28);
     const kv = (k: string) => { const v = ctx.state.state[k]; return v && v.value !== "null" ? JSON.parse(v.value) : null; };
-    const fmt = (ms: number) => page.evaluate((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }), ms);
+    const fmt = (ms: number) => page.evaluate((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }), ms);
     if (i % 3 === 0) { // a previous check of the reminder job
       ctx.state.state["reminder_last_run"] = { value: JSON.stringify({ at: new Date(L.nowMs - 5 * H).toISOString(), mode: ["live", "test-inbox", "dry-run"][i % 9 / 3], sent: i % 4, planned: 3 + (i % 4), note: i % 2 ? "Session reminder stage vote-2" : "" }), version: 1 };
       await page.evaluate(async () => { await loadAll(); renderAll(); });
