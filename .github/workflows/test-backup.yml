@@ -1,4 +1,4 @@
-name: League site daily backup (PRODUCTION database)
+name: TEST site daily backup (TEST database)
 # Exports every league table to a JSON artifact kept for 90 days. Needs SUPABASE_SERVICE_ROLE_KEY.
 on:
   schedule:
@@ -8,28 +8,25 @@ permissions:
   contents: read
 jobs:
   backup:
+    if: github.repository == 'Chriz93/dcbadmintonclub-test'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Production job: pinned to the automation code production runs today (fbd1b1f). Change only
-          # with the production release, never by merging TEST work into this branch.
-          ref: fbd1b1f87458fcb7cfe5862f3f318cce01845a9a
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Check operator secret
         id: gate
         env:
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SERVICE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ -z "$SERVICE_KEY" ]; then echo "ready=false" >> "$GITHUB_OUTPUT"; echo "Secret not configured; skipping."; else echo "ready=true" >> "$GITHUB_OUTPUT"; fi
       - name: Export
         if: steps.gate.outputs.ready == 'true'
         env:
-          SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_DIR: backup
         run: node legacy/automation/export-backup.mjs
       - uses: actions/upload-artifact@v4

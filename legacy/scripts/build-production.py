@@ -43,13 +43,30 @@ html = sub(html, "const SB='https://wgolevihkvmosajumzvl.supabase.co'; // TEST p
 html = re.sub(r"const SK='sb_publishable_[A-Za-z0-9_-]+'; // browser-safe publishable key", f"const SK='{a.key}'; // browser-safe publishable key", html, count=1)
 assert a.key in html, "key line not found"
 html = sub(html, "<title>🧪 Maplewood League — TEST</title>", "<title>Maplewood League</title>")
+# The content security policy (p56) names the database the page may connect to.
+if "connect-src 'self' https://wgolevihkvmosajumzvl.supabase.co;" in html:
+    html = sub(html, "connect-src 'self' https://wgolevihkvmosajumzvl.supabase.co;", f"connect-src 'self' {PROD_URL};")
+# The TEST banner ("TEST SITE · …") is not shown on the league site.
+html = re.sub(r'<div class="env-banner" id="environment-banner">TEST SITE[^<]*</div>', "", html, count=1)
 sw = (root / "sw.js").read_text()
-sw = re.sub(r"const CACHE_NAME = 'dcbc-test-v\d+';", f"const CACHE_NAME = '{a.cache}';", sw, count=1)
+if "const CACHE_PREFIX = 'dcbc-test-';" in sw:
+    # Service worker with its own cache prefix (p56): the league site owns dcbc-prod-* caches, TEST owns dcbc-test-*,
+    # so neither deletes the other's offline copy.
+    sw = sub(sw, "const CACHE_PREFIX = 'dcbc-test-';", "const CACHE_PREFIX = 'dcbc-prod-';")
+    sw = re.sub(r"const CACHE_NAME = CACHE_PREFIX \+ '[^']+';", f"const CACHE_NAME = CACHE_PREFIX + '{a.cache}';", sw, count=1)
+    assert f"CACHE_PREFIX + '{a.cache}'" in sw, "cache name line not found"
+else:
+    sw = re.sub(r"const CACHE_NAME = 'dcbc-test-v\d+';", f"const CACHE_NAME = '{a.cache}';", sw, count=1)
 sw = sw.replace("/dcbadmintonclub-test/", "/dcbadmintonclub/")
 man = (root / "manifest.json").read_text().replace("/dcbadmintonclub-test/", "/dcbadmintonclub/")
 (out / "index.html").write_text(html); (out / "sw.js").write_text(sw); (out / "manifest.json").write_text(man)
 for extra in [".nojekyll"]:
     if (root / extra).exists(): (out / extra).write_text((root / extra).read_text())
+# Files the page loads besides itself (icons, the pinned PDF library), copied byte for byte.
+for extra in ["icon-192.png", "icon-512.png", "vendor/jspdf-4.2.1.umd.min.js", "vendor/jspdf-LICENSE.txt"]:
+    if (root / extra).exists():
+        (out / extra).parent.mkdir(parents=True, exist_ok=True); (out / extra).write_bytes((root / extra).read_bytes())
 assert "wgolevihkvmosajumzvl" not in html and "dcbadmintonclub-test" not in sw + man and "TEST</title>" not in html
+assert "TEST SITE" not in html and "dcbc-test-" not in sw, "TEST banner or TEST cache name left in the production build"
 src_sha = hashlib.sha256((root / "index.html").read_bytes()).hexdigest()
 print(f"production build written to {out} (index.html {len(html)} bytes, cache {a.cache}) from TEST commit {_commit}, tested index.html sha256 {src_sha[:16]}")

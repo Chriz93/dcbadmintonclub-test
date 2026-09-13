@@ -1,7 +1,6 @@
-name: League site vote reminders (PRODUCTION database)
-# Hourly. SUPABASE_SERVICE_ROLE_KEY may be a new-style secret key (sb_secret_…) or a legacy service_role JWT.
-# Sends nothing until DELIVERY_MODE is live AND the two operator secrets exist; addresses real players only
-# when the repository variable ALLOW_REAL_RECIPIENTS is "true". Otherwise messages go to the league inbox, max 3/run.
+name: TEST site vote reminders (TEST database)
+# TEST database and TEST-prefixed secrets only. Default dry-run; live test deliveries
+# are always redirected to TEST_INBOX, at most three per run. Real player delivery is disabled.
 on:
   schedule:
     - cron: "*/10 * * * *"
@@ -14,10 +13,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: legacy-reminders
+  group: test-reminders
   cancel-in-progress: false
 jobs:
   remind:
+    if: github.repository == 'Chriz93/dcbadmintonclub-test'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     defaults:
@@ -25,18 +25,14 @@ jobs:
         working-directory: legacy/automation
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Production job: pinned to the automation code production runs today (fbd1b1f). Change only
-          # with the production release, never by merging TEST work into this branch.
-          ref: fbd1b1f87458fcb7cfe5862f3f318cce01845a9a
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Check operator secrets
         id: gate
         env:
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GMAIL_KEY: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SERVICE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+          GMAIL_KEY: ${{ secrets.TEST_GMAIL_APP_PASSWORD }}
         run: |
           if [ -z "$SERVICE_KEY" ] || [ -z "$GMAIL_KEY" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"; echo "Secrets not configured; skipping (nothing sent)."
@@ -51,16 +47,16 @@ jobs:
         if: steps.gate.outputs.ready == 'true'
         env:
           TZ: America/Toronto
-          SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SITE_URL: https://chriz93.github.io/dcbadmintonclub/
-          DELIVERY_MODE: ${{ vars.LEGACY_DELIVERY_MODE || 'dry-run' }}
-          ALLOW_REAL_RECIPIENTS: ${{ vars.ALLOW_REAL_RECIPIENTS || 'false' }}
+          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: https://chriz93.github.io/dcbadmintonclub-test/
+          DELIVERY_MODE: ${{ vars.TEST_DELIVERY_MODE || 'dry-run' }}
+          ALLOW_REAL_RECIPIENTS: 'false'
           GMAIL_USER: maplewoodbadmintonleague@gmail.com
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_APP_PASSWORD: ${{ secrets.TEST_GMAIL_APP_PASSWORD }}
           TEST_INBOX: maplewoodbadmintonleague@gmail.com
           ORGANIZER_EMAIL: christygeorge993@gmail.com
           VAPID_PUBLIC_KEY: BIiSiPbF4u3zXEy_PWYHGc6he375fIDM-yXoCBzKLIVCWoTc_BXejLMBFIXG_Zrl8178H9Ztfo1eXFvoDefKiNE
-          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.TEST_VAPID_PRIVATE_KEY }}
           SMOKE_TEST: ${{ inputs.smoke_test == true && 'true' || 'false' }}
         run: node remind.mjs
