@@ -6,6 +6,8 @@ import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC } from "./gen";
 import { courtOf } from "./oracle";
 import { fillCourts } from "../rules-model";
+import {manualMoveExpected} from './manual-move-oracle';
+import {expectAdjust, REFUSAL} from './adjust-oracle';
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
@@ -46,8 +48,8 @@ for (let i = 0; i < 100; i++) {
     if ((act === 0 || act === 1) && p) {
       const c = act === 1 ? 0 : (p.current_court % NC) + 1;
       await rows.nth(k).locator("select").selectOption(String(c));
-      await expect.poll(() => db(p.id)!.current_court, { message: `${p.name} → ${c || "bench"}` }).toBe(c);
-      if (cur) { const a = kv("current_session").assignments; expect(courtOf(a, p.id), "session lineup follows").toBe(c); if (c) expect(a[c].at(-1)).toBe(p.id); }
+      if(cur){const want=manualMoveExpected(L,p.id,c);if(want.message)await expect(toast).toContainText(want.message);expect(kv('current_session').assignments).toEqual(want.lineup);expect(db(p.id)!.current_court,'earned court is unchanged during play').toBe(p.current_court);}
+      else await expect.poll(()=>db(p.id)!.current_court).toBe(c);
     } else if (act === 2 && p) {
       await rows.nth(k).getByRole("button", { name: "🚫" }).click();
       if (!cur) {
@@ -55,22 +57,25 @@ for (let i = 0; i < 100; i++) {
         expect(db(p.id)!.current_court, "nothing changes between sessions").toBe(p.current_court);
         return;
       }
-      await expect(toast).toHaveText(`${p.name} marked absent — off Court ${p.current_court} tonight, one court down next week`);
+      if(!p.approved||p.waitlisted){await expect(toast).toHaveText('Choose an approved, non-waitlisted player');return;}
+      const from=courtOf(cur.assignments,p.id)||p.current_court,ref=expectAdjust(cur,{absent:[p.id],returning:[],late:[]});
+      if(!ref.ok){await expect(toast).toHaveText(REFUSAL[ref.why!]);expect(kv('current_session')).toEqual(cur);return;}
+      await expect(toast).toHaveText(courtOf(ref.lineup,p.id)?`${p.name} marked absent; their scored court stays unchanged until the round ends`:`${p.name} marked absent — off Court ${from} tonight, one court down next week`);
       const cs = kv("current_session");
-      expect({ att: cs.attendance[p.id], from: cs.absentFrom[p.id], seated: courtOf(cs.assignments, p.id) }).toEqual({ att: "absent", from: p.current_court, seated: 0 });
+      expect(cs.assignments).toEqual(ref.lineup);expect(cs.attendance[p.id]).toBe('absent');expect(cs.absentFrom[p.id]).toBe(from);
     } else if (act === 3 && p) {
       await rows.nth(k).getByRole("button", { name: "✕" }).click();
-      await expect.poll(() => !!db(p.id), { message: `${p.name} removed` }).toBe(false);
-      await expect.poll(() => kv("player_approvals")?.[p.id], { message: "approval entry cleaned up" }).toBeUndefined();
-      if (cur) expect(courtOf(kv("current_session").assignments, p.id)).toBe(0);
+      if(cur&&courtOf(cur.assignments,p.id)){await expect(toast).toContainText('Player is assigned tonight');expect(db(p.id)?.archived_at).toBeFalsy();expect(kv('current_session')).toEqual(cur);}
+      else{await expect(toast).toHaveText('Player archived; history retained');expect(db(p.id)?.archived_at).toBeTruthy();expect(db(p.id)?.approved).toBe(false);expect(ctx.state.payments).toEqual(L.payments);}
     } else if (act === 4 && bench.length) {
       const u = bench[Math.floor(r() * bench.length)], j = bench.indexOf(u);
-      let t = NC;
-      if (cur) { const a = Object.fromEntries(Object.entries(cur.assignments).map(([c, ids]) => [c, ids.filter((x) => x !== u.id)])); for (let c = NC; c >= 1; c--) if ((a[c] || []).length < 4) { t = c; break; } }
       await benchRows.nth(j).getByRole("button", { name: "📲 Call In" }).click();
-      await expect(toast).toHaveText(`${u.name} called in → Court ${t}`);
-      expect(db(u.id)!.current_court).toBe(t);
-      if (cur) { const cs = kv("current_session"); expect(cs.assignments[t].at(-1)).toBe(u.id); expect(cs.attendance[u.id]).toBe("present"); }
+      if(!cur){await expect(toast).toHaveText('Start a session before changing tonight’s lineup');return;}
+      if(!u.approved||u.waitlisted){await expect(toast).toHaveText('Choose an approved, non-waitlisted player');return;}
+      const from=courtOf(cur.assignments,u.id)||u.current_court||NC,ref=expectAdjust(cur,{absent:[],returning:[{id:u.id,court:from}],late:[]});
+      if(!ref.ok){await expect(toast).toHaveText(REFUSAL[ref.why!]);expect(kv('current_session')).toEqual(cur);return;}
+      await expect(toast).toHaveText(`${u.name} called in → Court ${courtOf(ref.lineup,u.id)}`);
+      expect(kv('current_session').assignments).toEqual(ref.lineup);expect(kv('current_session').attendance[u.id]).toBe('present');expect(db(u.id)!.current_court).toBe(u.current_court);
     } else if (act === 5) {
       const kind = i % 20 === 5 ? "regular" : r() < 0.5 ? "regular" : "spare", c = Math.floor(r() * 7);
       const pick = r(), existing = active[0], registered = bench.find((x) => x.name);
@@ -79,23 +84,19 @@ for (let i = 0; i < 100; i++) {
       await page.locator("#np-membership").selectOption(kind);
       await page.locator("#np-court").selectOption(String(c));
       await page.getByRole("button", { name: "+ Add Player" }).click();
-      const taken = P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved && x.sig !== "admin" && String(x.registered_at) >= "2026-09-01").length;
+      const taken = P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved).length;
       if (!name) { await expect(toast).toHaveText("Enter a name"); return; }
-      if (kind === "regular" && taken >= 26) { await expect(toast).toHaveText("Regular slots full (26/26). Please choose Spare."); return; }
-      if (registered && name === registered.name) {
-        await expect(toast).toHaveText(`${registered.name} activated from registration → Court ${c}`);
-        expect(db(registered.id)!.current_court).toBe(c);
-        return;
-      }
-      if (existing && name === existing.name.toUpperCase()) { await expect(toast).toHaveText("Player already active on a court"); return; }
-      await expect(toast).toHaveText(`${name} added as ${kind}!`);
+      if(P.some(p=>p.name.toLowerCase()===name.toLowerCase())){await expect(toast).toHaveText('This name is already on file. Open their player record to edit or approve it.');return;}
+      if(kind==='regular'&&taken>=26){await expect(toast).toHaveText('Player not added: Regular places are full');return;}
+      await expect.poll(()=>ctx.state.players.some(p=>p.name===name)).toBe(true);
       const row = ctx.state.players.find((x) => x.name === name)!;
-      expect({ sig: row.sig, court: row.current_court }).toEqual({ sig: "admin", court: c });
-      expect(kv("player_approvals")[row.id]).toEqual({ approved: true, waitlisted: false, membershipType: kind });
-      if (cur && c > 0) expect(kv("current_session").assignments[c]).toContain(row.id);
+      expect({sig:row.sig,court:row.current_court,approved:row.approved,waiver:row.waiver_signed}).toEqual({sig:'admin',court:cur?0:c,approved:true,waiver:false});
+      if(cur&&c>0){const want=manualMoveExpected({...L,players:[...L.players,row]},row.id,c);if(want.message)await expect(toast).toContainText(want.message);expect(kv('current_session').assignments).toEqual(want.lineup);}
+      else await expect(toast).toHaveText(`${name} added as ${kind}!`);
       await expect(page.locator("#np-name")).toHaveValue("");
     } else if (act === 6) {
       await page.locator("#a-pl-court-summary").getByRole("button", { name: /Re-sort/ }).click();
+      if(cur){const ref=expectAdjust(cur),apply=page.locator('#adj-apply');if(await apply.isVisible()&&await apply.isEnabled()){await apply.click();await expect(toast).toContainText('Courts adjusted');expect(kv('current_session').assignments).toEqual(ref.lineup);}else expect(kv('current_session').assignments).toEqual(cur.assignments);return;}
       const filled = fillCourts(active.map((x) => x.id)), want = (id: number) => filled.findIndex((ids) => ids.includes(id));
       await expect(toast).toHaveText(`Courts re-sorted — ${active.length} players across ${filled.slice(1).filter((x) => x.length).length} courts`);
       active.forEach((x) => expect(db(x.id)!.current_court, `${x.name} after re-sort`).toBe(want(x.id)));

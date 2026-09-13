@@ -1,6 +1,7 @@
 // Organizer extras the tab suites had not reached: private notes, editing a registration, adding a player from the court
 // popup (a full court refuses without moving anyone), the sync-to-final-standings banner, withdrawing an invitation and the
 // present / absent tag on the Players tab. 100 leagues.
+import {manualMoveExpected} from "./manual-move-oracle";
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
@@ -80,18 +81,9 @@ for (let i = 0; i < 100; i++) {
       expect((await page.locator("#modal-player-sel option").allTextContents()).slice(1), "players holding a court").toEqual(ctx.state.players.filter((p) => p.current_court > 0).map((p) => `${p.name} (C${p.current_court})`));
       await page.locator("#modal-player-sel").selectOption(String(pick.id));
       await page.getByRole("button", { name: `Add to Court ${c}` }).click();
-      if (!cur) { await expect(toast).toHaveText("No active session"); return; }
-      const a = cur.assignments, others = (a[c] || []).filter((x) => x !== pick.id);
-      if (others.length >= 5) {   // any court takes a fifth player
-        await expect(toast).toHaveText("Court full");
-        expect(kvOf(ctx, "current_session").assignments, "a refused add moves nobody").toEqual(a);
-        expect(await page.evaluate(() => S.current.assignments), "not even on screen").toEqual(a);
-        return;
-      }
-      await expect(toast).toHaveText(`Player added to Court ${c}`);
-      const want = Object.fromEntries(Object.entries(a).map(([k, ids]) => [k, ids.filter((x) => x !== pick.id)]));
-      want[c] = [pick.id, ...want[c]];
-      expect(kvOf(ctx, "current_session").assignments, `${pick.name} → Court ${c}`).toEqual(want);
+      const want=manualMoveExpected(L,pick.id,c);
+      if(want.message)await expect(toast).toContainText(want.message);
+      if(cur){await expect.poll(()=>kvOf(ctx,"current_session").assignments).toEqual(want.lineup);expect(await page.evaluate(()=>S.current.assignments)).toEqual(want.lineup);}
     } else if (act === "sync") {
       const last = L.sessions.at(-1)!, fa = last.finalAssignments!;
       const drift = [1, 2, 3, 4, 5, 6].flatMap((c) => (fa[c] || []).map((id) => ({ id, c }))).filter(({ id, c }) => L.players.find((p) => p.id === id) && L.players.find((p) => p.id === id)!.current_court !== c);

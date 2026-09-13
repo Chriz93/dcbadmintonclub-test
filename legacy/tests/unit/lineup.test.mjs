@@ -9,7 +9,7 @@ import { load } from "./load-app.mjs";
 import { startingCourts, offLine, spareLine, moveLine } from "./starting-reference.mjs";
 import { rng } from "./adjust-reference.mjs";
 
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "autoAssign", "upcomingLineup", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "" });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20},upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
 /** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}. */
@@ -17,7 +17,7 @@ function run(players, votes = {}, pre = {}) {
   const S = {
     players: players.map((p) => ({ id: p.id, name: p.name ?? `P${p.id}`, currentCourt: p.court, membershipType: p.spare ? "spare" : "regular", approved: p.approved ?? true, waitlisted: !!p.waitlisted })),
     rsvp: { ...votes }, rsvpRows: Object.entries(votes).map(([id, response], i) => ({ player_id: +id, response, updated_at: `2026-09-10T12:${String(i).padStart(2, "0")}:00Z` })),
-    preAttendance: pre, current: null,
+    preAttendance: pre, current: null, payments:players.filter(p=>p.spare).map(p=>({player_id:p.id,kind:"spare",session_number:1,amount:20})),
   };
   api.setS(S);
   return api.upcomingLineup();
@@ -30,7 +30,7 @@ function expected(players, votes = {}, pre = {}) {
   const declined = new Set(players.filter((p) => isReg(p) && votes[p.id] === "notcoming" && pre[p.id] !== "present" && !absent.has(p.id)).map((p) => p.id));
   const declines = Object.entries(votes).filter(([id, r]) => r === "notcoming" && isReg(byId(+id))).length;
   const spares = Object.entries(votes).filter(([id, r]) => r === "coming" && isSpare(byId(+id))).map(([id]) => +id).slice(0, declines).filter((id) => !absent.has(id));
-  const earned = players.filter((p) => p.court > 0 && !p.spare && !declined.has(p.id) && !absent.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
+  const earned = players.filter((p) => p.court > 0 && isReg(p) && !declined.has(p.id) && !absent.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
   const ref = startingCourts(earned, spares);
   const off = players.filter((p) => p.court > 0 && !isSpare(p) && (declined.has(p.id) || absent.has(p.id))).sort((a, b) => a.court - b.court || a.id - b.id).map((p) => offLine(name(p.id), p.court, absent.has(p.id)));
   const notes = ref.ok ? [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id])), ...ref.moves.map((m) => moveLine(name(m.id), m, name))] : [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id]))];

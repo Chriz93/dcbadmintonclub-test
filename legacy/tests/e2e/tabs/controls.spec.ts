@@ -55,20 +55,19 @@ test.describe("controls · organizer", () => {
     await sel.selectOption("3");
     await expect.poll(() => ctx.state.players.find((p) => p.id === id)!.current_court).toBe(3);
   });
-  test("Controls · cascadeFillCourt: promoting from an empty court is refused with the reason", async () => {
+  test("Controls · cascadeFillCourt: an empty court does not cause an unvalidated promotion", async () => {
     const L = league(51003, "r1-partial", { regulars: 13, spares: 0, declineRate: 0, absentRate: 0 }); await load(ctx, L);
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-sess"); });
     await ctx.page.locator('button[onclick="cascadeFillCourt(6)"]').click();
-    await expect(toast()).toHaveText("Court 6 has no players to promote from");
+    await expect(toast()).toHaveText("Courts already match attendance — nothing to change");
   });
-  test("Controls · cascadeFillCourt: the first player of a court moves up to fill the court above", async () => {
-    const L = league(51004, "r1-partial", { regulars: 16, spares: 0, declineRate: 0, absentRate: 0 }); const a = L.current!.assignments; const out = a[1].pop()!; void out;
+  test("Controls · cascadeFillCourt: a legal three-player court is preserved", async () => {
+    const L = league(51004, "r1-partial", { regulars: 16, spares: 0, declineRate: 0, absentRate: 0 }); L.current!.assignments[1].pop();
     await load(ctx, L);
-    const first = a[2][0];
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-sess"); });
     await ctx.page.locator('button[onclick="cascadeFillCourt(2)"]').click();
-    await expect(toast()).toHaveText(`${L.players.find((p) => p.id === first)!.name} promoted from Court 2 → Court 1`);
-    expect(kv("current_session").assignments[1][0]).toBe(first);
+    await expect(toast()).toHaveText("Courts already match attendance — nothing to change");
+    expect(kv("current_session").assignments).toEqual(L.current!.assignments);
   });
   test("Controls · copySessionSummary: the end-of-session summary is copied for Messenger", async () => {
     const L = league(51005, "complete"); await load(ctx, L);
@@ -113,10 +112,10 @@ test.describe("controls · organizer", () => {
     const page = ctx.page;
     await page.locator("#inv-email").fill("new.person@example.invalid"); await page.locator("#inv-note").fill("Referred by Kim");
     await page.locator('button[onclick="invitePlayer()"]').click();
-    await expect(toast()).toHaveText("Invited new.person@example.invalid as regular. They sign in with that email and register.");
+    await expect(toast()).toContainText(/no email was sent/i);
     await expect(page.locator("#inv-note"), "the form is cleared").toHaveValue("");
     expect(ctx.state.invitations["new.person@example.invalid"]).toBe("regular");
-    await page.locator(`button[onclick="deleteInvitation('new.person@example.invalid')"]`).click();
+    await page.locator(`button[data-email="new.person@example.invalid"]`).click();
     await expect(toast()).toHaveText("Invitation withdrawn");
     expect(ctx.state.invitations["new.person@example.invalid"]).toBeUndefined();
   });
@@ -138,50 +137,50 @@ test.describe("controls · organizer", () => {
   test("Controls · promptSaveSnapshot then deleteSnapshot: a snapshot is saved and deleted", async () => {
     const L = league(51012, "none"); await load(ctx, L); await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-tools"); });
     await ctx.page.locator("#snap-label").fill("Before the draw");
-    await ctx.page.getByRole("button", { name: "📸 Save Snapshot Now" }).click(); await expect(toast()).toHaveText("📸 Snapshot saved");
+    await ctx.page.getByRole("button", { name: "📸 Save Snapshot Now" }).click(); await expect(toast()).toHaveText("League snapshot saved");
     await expect(ctx.page.locator('#snap-list [onclick^="deleteSnapshot("]')).toHaveCount(1);
     await ctx.page.locator('#snap-list [onclick^="deleteSnapshot("]').first().click();
     await expect(ctx.page.locator('#snap-list [onclick^="deleteSnapshot("]'), "the snapshot is gone from the list").toHaveCount(0);
     expect(Object.keys(ctx.state.state).filter((k) => k.startsWith("snapshot_") && ctx.state.state[k].value !== "null" && !ctx.state.state[k].value.includes("deleted")), "and from the database (or tombstoned)").toEqual([]);
   });
-  test("Controls · linkWaiverToPlayer and doLinkWaiver: a sign-up's waiver is linked to an existing player", async () => {
+  test("Controls · waiver details retain identity and cannot copy a signature", async () => {
     const L = league(51013, "none", { pending: 2 }); await load(ctx, L);
-    const page = ctx.page;
-    expect(await reveal(page, '[onclick^="linkWaiverToPlayer("]')).toBe(true);
-    const btn = page.locator('[onclick^="linkWaiverToPlayer("]').first(), regId = +(await btn.getAttribute("onclick"))!.match(/(\d+)/)![1], reg = ctx.state.players.find((x) => x.id === regId)!;
-    await btn.click();
-    await expect(page.locator("#modal.open")).toContainText(`Link ${reg.name}'s waiver & registration data to an existing player.`);
-    await page.locator("#modal.open").getByRole("button", { name: "Link Waiver" }).click();
-    await expect(toast()).toHaveText("Select a player to link to");
-    const target = ctx.state.players.find((x) => x.id !== regId)!;
-    await page.locator("#link-target-select").selectOption(String(target.id));
-    await page.locator("#modal.open").getByRole("button", { name: "Link Waiver" }).click();
-    await expect(toast()).toHaveText(`Waiver linked: ${reg.name} → ${target.name}`);
-    expect(ctx.state.players.find((x) => x.id === target.id)!.sig).toBe(reg.sig);
-    expect(ctx.state.players.some((x) => x.id === regId), "the separate sign-up is removed after confirming").toBe(false);
+    const before = structuredClone(ctx.state.players), evidence = structuredClone(ctx.state.waiverAcceptances);
+    expect(await reveal(ctx.page, '[onclick^="linkWaiverToPlayer("]')).toBe(true);
+    await ctx.page.locator('[onclick^="linkWaiverToPlayer("]').first().click();
+    await expect(ctx.page.locator("#modal.open")).toContainText("cannot be copied to another player");
+    await expect(ctx.page.locator("#link-target-select")).toHaveCount(0);
+    await ctx.page.evaluate((id) => doLinkWaiver(id), L.players[0].id);
+    expect(ctx.state.players).toEqual(before); expect(ctx.state.waiverAcceptances).toEqual(evidence);
   });
-  test("Controls · rejectPlayer: a pending sign-up is removed after confirming", async () => {
+  test("Controls · rejectPlayer archives a sign-up while retaining its evidence", async () => {
     const L = league(51014, "none", { pending: 2 }); await load(ctx, L);
     expect(await reveal(ctx.page, '[onclick^="rejectPlayer("]')).toBe(true);
     const btn = ctx.page.locator('[onclick^="rejectPlayer("]').first(), id = +(await btn.getAttribute("onclick"))!.match(/(\d+)/)![1];
+    const evidence = structuredClone(ctx.state.waiverAcceptances);
     await btn.click();
-    await expect.poll(() => ctx.state.players.some((x) => x.id === id)).toBe(false);
+    await expect.poll(() => !!ctx.state.players.find((x) => x.id === id)?.archived_at).toBe(true);
+    expect(ctx.state.players.find((x) => x.id === id)?.approved).toBe(false);
+    expect(ctx.state.waiverAcceptances).toEqual(evidence);
   });
-  test("Controls · removePlayer: a player is removed, and taken off tonight's court", async () => {
+  test("Controls · removePlayer refuses to archive a player still on a court", async () => {
     const L = league(51015, "r1-partial"); await load(ctx, L);
     const id = L.current!.assignments[1][0];
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
     await ctx.page.locator(`[onclick="removePlayer(${id})"]`).first().click();
-    await expect.poll(() => ctx.state.players.some((x) => x.id === id)).toBe(false);
-    expect(courtOf(kv("current_session").assignments, id)).toBe(0);
+    await expect(toast()).toContainText("assigned");
+    expect(ctx.state.players.find((x) => x.id === id)?.archived_at).toBeFalsy();
+    expect(kv("current_session").assignments).toEqual(L.current!.assignments);
   });
   test("Controls · markAbsentFromPlayers: from the Players tab, with a session running", async () => {
     const L = league(51016, "r1-partial"); await load(ctx, L);
     const id = L.current!.assignments[2][0], p = L.players.find((x) => x.id === id)!, c = courtOf(L.current!.assignments, id);
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
     await ctx.page.locator(`[onclick="markAbsentFromPlayers(${id})"]`).first().click();
-    await expect(toast()).toHaveText(`${p.name} marked absent — off Court ${p.current_court} tonight, one court down next week`);
-    const cs = kv("current_session"); expect({ att: cs.attendance[id], seated: courtOf(cs.assignments, id), from: cs.absentFrom[id] }).toEqual({ att: "absent", seated: 0, from: p.current_court || c });
+    const locked=Object.keys(L.current!.scores).some(k=>k.startsWith(`c${c}_y${L.current!.cycle}_`));
+    await expect(toast()).toContainText(`${p.name} marked absent`);
+    const cs = kv("current_session"); expect({ att: cs.attendance[id], seated: courtOf(cs.assignments, id), from: cs.absentFrom[id] }).toEqual({ att: "absent", seated: locked?c:0, from: c });
+    if(locked)expect(cs.assignments[c]).toEqual(L.current!.assignments[c]);
   });
   test("Controls · markAbsentFromPlayers: with no session running, the reason is given", async () => {
     const L = league(51017, "none"); await load(ctx, L);
@@ -213,7 +212,7 @@ test.describe("controls · organizer", () => {
     const v0 = ctx.state.state["current_session"].version;
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-assign"); });
     await ctx.page.locator('button[onclick="saveAssignments()"]').first().click();
-    await expect(toast()).toHaveText("Assignments saved!");
+    await expect(toast()).toHaveText("Assignments saved");
     expect(ctx.state.state["current_session"].version).toBe(v0 + 1);
   });
   test("Controls · setView: the Courts page switches between the gym and the list", async () => {
@@ -272,7 +271,8 @@ test.describe("controls · player", () => {
     const L = mine(51100); L.nowMs = Date.parse("2026-09-12T12:00:00-04:00"); await load(ctx, L);
     await ctx.page.evaluate(() => nav("home"));
     await ctx.page.locator('button[onclick="submitRSVP(true)"]').first().click();
-    await expect.poll(() => ctx.state.rsvps.find((r) => r.player_id === L.players[0].id)?.response).toBe("coming");
+    await expect(ctx.page.locator("#_t")).toHaveText("You are coming! 🎉");
+    expect(ctx.state.rsvps.find((r) => r.player_id === L.players[0].id)?.response).toBe("coming");
   });
   test("Controls · setEmailReminders: a player turns reminder emails off", async () => {
     const L = mine(51101); L.nowMs = Date.parse("2026-09-12T12:00:00-04:00"); await load(ctx, L);
@@ -284,8 +284,8 @@ test.describe("controls · player", () => {
   });
   test("Controls · enablePush: a browser that won't grant notifications says so", async () => {
     const L = mine(51102); L.nowMs = Date.parse("2026-09-12T12:00:00-04:00"); await load(ctx, L);
-    expect(await reveal(ctx.page, 'button[onclick="enablePush()"]')).toBe(true);
-    await ctx.page.locator('button[onclick="enablePush()"]').first().click();
+    expect(await reveal(ctx.page, 'button[onclick="togglePush()"]')).toBe(true);
+    await ctx.page.locator('button[onclick="togglePush()"]').first().click();
     await expect(ctx.page.locator("#_t")).toHaveText(/^Notifications (are not available in this browser|stay off \(permission not granted\))$/);
     expect(ctx.state.pushSubs).toEqual([]);
   });

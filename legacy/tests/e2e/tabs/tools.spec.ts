@@ -63,10 +63,11 @@ for (let i = 0; i < 100; i++) {
         const dl = page.waitForEvent("download");
         await tools.getByRole("button", { name: "📤 Export JSON Backup" }).click();
         const file = await dl;
-        expect(file.suggestedFilename()).toBe("dcbc-backup.json");
+        expect(file.suggestedFilename()).toBe("dcbc-TEST-2026-27-backup.json");
         const data = JSON.parse(fs.readFileSync((await file.path())!, "utf8"));
-        expect(data.players.map((p: { name: string }) => p.name).sort(), "backup holds every player").toEqual(L.players.map((p) => p.name).sort());
-        expect(data.sessions.length).toBe(L.sessions.length);
+        expect(data.tables.players.map((p: { name: string }) => p.name).sort(), "backup holds every player").toEqual(L.players.map((p) => p.name).sort());
+        expect(data.format).toBe(2);expect(data.tables.payments).toEqual(ctx.state.payments);expect(data.tables.rsvps).toEqual(ctx.state.rsvps);
+        expect(JSON.parse(data.tables.app_state.find((x:{key:string})=>x.key==='completed_sessions')?.value||'[]').length).toBe(L.sessions.length);
         return;
       }
       await expect(page.locator("#undo-tools-btn")).toHaveText("↶ Undo: Clear round scores");
@@ -90,7 +91,7 @@ for (let i = 0; i < 100; i++) {
       await expect(page.locator("#snap-list")).toContainText('No snapshots yet. Click "📸 Save Snapshot" above to create one.');
       await page.locator("#snap-label").fill(label);
       await tools.getByRole("button", { name: "📸 Save Snapshot Now" }).click();
-      await expect(toast).toHaveText("📸 Snapshot saved");
+      await expect(toast).toHaveText("League snapshot saved");
       const list = page.locator("#snap-list > div");
       await expect(list).toHaveCount(1);
       await expect(list.first().locator("> div").first()).toHaveText(label);
@@ -109,7 +110,7 @@ for (let i = 0; i < 100; i++) {
       delete ctx.state.state["completed_sessions"];
       await page.clock.setFixedTime(new Date(L.nowMs + 60e3));   // a minute later: the automatic pre-restore snapshot gets its own time
       await list.first().getByRole("button", { name: "↩ Restore" }).click();
-      await expect(toast).toHaveText(`✅ Snapshot restored — "${label}"`, { timeout: 20000 });
+      await expect(toast).toHaveText("League snapshot restored", { timeout: 20000 });
       expect(ctx.state.players.map((p) => [p.id, p.name, p.current_court, p.season_wins]).sort(), "players restored with their ids").toEqual(before.players.map((p) => [p.id, p.name, p.current_court, p.season_wins]).sort());
       expect(ctx.state.announcements.map((a) => { const x = a as unknown as { title: string; body: string; type: string }; return [x.type, x.title, x.body]; }), "announcements restored in order").toEqual([...before.anns].sort((a, b) => String((b as never as { created_at: string }).created_at).localeCompare(String((a as never as { created_at: string }).created_at))).reverse().map((x) => [x.type, x.title, x.body]));
       expect(kv("completed_sessions"), "finished sessions restored").toEqual(before.sessions);

@@ -49,6 +49,8 @@ export function define(first: number, count: number, phone = false) {
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         const b = await bar.boundingBox(), vh = page.viewportSize()!.height;
         expect(b && b.y >= 0 && b.y < vh / 2, "Adjust bar still visible near the top after scrolling").toBe(true);
+        const header = (await page.locator('.nav').boundingBox())!;
+        expect(b!.y, 'the fixed header does not cover the adjustment controls').toBeGreaterThanOrEqual(header.y + header.height);
       }
       // The round offered is the one about to be played; later rounds are set by this one's results.
       await expect(bar.locator("#adj-round option")).toHaveText([`Round ${cur.cycle} — next to play`]);

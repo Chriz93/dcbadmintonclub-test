@@ -79,10 +79,11 @@ test("isolation · the TEST page is wired to the TEST project only", () => {
   assert.match(html, /const SB='https:\/\/wgolevihkvmosajumzvl\.supabase\.co'; \/\/ TEST project only/);
   assert.equal((html.match(/bwepvxelvwgwxrnaglrx/g) || []).length, 1, "the production reference appears once, in the guard");
 });
-test("isolation · the reminder and backup jobs name production explicitly and have no test fallback", () => {
+test("isolation · the TEST reminder and backup jobs use only TEST services and secrets", () => {
   for (const f of [".github/workflows/legacy-reminders.yml", ".github/workflows/legacy-backup.yml"]) {
-    const y = readFileSync(join(ROOT, f), "utf8"); assert.match(y, /SUPABASE_URL: https:\/\/bwepvxelvwgwxrnaglrx\.supabase\.co/); assert.doesNotMatch(y, /wgolevihkvmosajumzvl/);
+    const y = readFileSync(join(ROOT, f), "utf8"); assert.match(y, /SUPABASE_URL: https:\/\/wgolevihkvmosajumzvl\.supabase\.co/); assert.doesNotMatch(y, /bwepvxelvwgwxrnaglrx|secrets\.SUPABASE_SERVICE_ROLE_KEY/); assert.match(y, /secrets\.TEST_SUPABASE_SERVICE_ROLE_KEY/);
   }
+  assert.match(readFileSync(join(ROOT, ".github/workflows/legacy-reminders.yml"), "utf8"), /ALLOW_REAL_RECIPIENTS: 'false'/);
   assert.doesNotMatch(readFileSync(join(ROOT, ".github/workflows/quality.yml"), "utf8"), /bwepvxelvwgwxrnaglrx/);
 });
 test("isolation · the browser suites refuse to start when any setting mentions production, and block production requests", () => {

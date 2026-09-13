@@ -22,15 +22,15 @@ export function define() {
     const vote: Record<number, string> = {}; rows.forEach((r) => (vote[r.player_id] = r.response));
     const regs = L.players.filter(isReg), spares = L.players.filter(isSpare);
     const declined = rows.filter((r) => r.response === "notcoming" && isReg(byId(r.player_id))).length;
-    const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id).map((r, k) => ({ id: r.player_id, rank: k + 1, confirmed: k < declined }));
+    const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id).map((r, k) => ({ id: r.player_id, rank: k + 1, reserved:k<declined, confirmed: k < declined && L.payments.filter(x=>x.player_id===r.player_id&&x.kind==="spare"&&x.session_number===U).reduce((n,x)=>n+Number(x.amount),0)>=20 }));
     return { vote, regs, spares, declined, claims, counts: [regs.filter((p) => vote[p.id] === "coming").length, regs.filter((p) => vote[p.id] === "notcoming").length, regs.filter((p) => !vote[p.id]).length].map(String),
-      seats: `Spare seats: ${Math.max(declined - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.confirmed).length} standby` };
+      seats: `Spare seats: ${Math.max(declined - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.reserved).length} standby` };
   }
   const fmtAll = (page: Page, ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
   async function timing(page: Page, start: number, now: number, spare: boolean) {
     const [deadline, cutoff] = await fmtAll(page, [start - 46 * H, start - 72 * H]);
-    if (spare) return now < start - 72 * H ? `Spares are asked from ${cutoff} (3 days before play) whenever a regular declines. You can already say if you are available.` : "Seats open as regulars decline; answer early — seats go in the order spares reply.";
-    return (now <= start - 46 * H ? `Vote by ${deadline} (Sunday 10:00 PM) — after that your answer is final. ` : `Voting closed ${deadline}. To change your answer, message the admin in the group — only the admin can update it now. `)
+    if (spare) return now < start - 72 * H ? `Spares are asked from ${cutoff} (72 hours before play) whenever a regular declines. You can already say if you are available.` : "Seats open as regulars decline; answer early — seats go in the order spares reply.";
+    return (now <= start - 46 * H ? `Vote by ${deadline} (46 hours before play) — after that your answer is final. ` : `Voting closed ${deadline}. To change your answer, message the admin in the group — only the admin can update it now. `)
       + (now <= start - 72 * H ? `$14 refund if you decline by ${cutoff}.` : `The 72-hour refund window closed ${cutoff}.`);
   }
   async function header(ctx: Ctx, card: ReturnType<Page["locator"]>, L: League, U: number, spare: boolean) {
@@ -65,7 +65,7 @@ export function define() {
         const rows = sec.locator(".card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)");
         const list = [...t.regs, ...t.spares];
         await expect(rows).toHaveCount(list.length);
-        const tag = (p: Player, v: string | undefined) => p.membership_type === "spare" ? (v === "coming" ? (t.claims.find((c) => c.id === p.id)?.confirmed ? "✅ Seat confirmed" : "⏳ Standby") : v === "notcoming" ? "❌ Not available" : /^⏳/) : v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not Coming" : "⏳ Not Responded";
+        const tag = (p: Player, v: string | undefined) => p.membership_type === "spare" ? (v === "coming" ? (t.claims.find((c) => c.id === p.id)?.confirmed ? "✅ Seat confirmed" : t.claims.find(c=>c.id===p.id)?.reserved?"Seat reserved — payment pending":"⏳ Standby") : v === "notcoming" ? "❌ Not available" : /^⏳/) : v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not Coming" : "⏳ Not Responded";
         for (let k = 0; k < list.length; k++) {
           const row = rows.nth(k), p = list[k];
           expect(norm(await row.locator("> div").first().innerText())).toBe(`${p.name}${p.membership_type === "spare" ? "SPARE" : ""}`);
@@ -95,7 +95,7 @@ export function define() {
       await expect(card.locator(".email-reminders-toggle")).toBeChecked();
       const status = (v: string | undefined, claims = t.claims, declined = t.declined) => {
         const c = claims.find((x) => x.id === me.id);
-        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed (seat ${c.rank}). Please e-transfer $20 to christygeorge993@gmail.com before Tuesday.` : `⏳ Standby — you are #${c.rank - declined} in line. You will be emailed the moment a seat opens.`;
+        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed and paid (seat ${c.rank}).` : c.reserved ? `Seat reserved (seat ${c.rank}). E-transfer $20 to christygeorge993@gmail.com. Confirmation follows payment verification.` : `⏳ Standby — you are #${c.rank - declined} in line. A reservation update will be sent on the next scheduled reminder run when a seat opens (if email reminders are on).`;
         return v ? `${v === "coming" ? "✅ You confirmed - See you there!" : "❌ Noted - Sit this one out"}${locked ? "" : " · You can change your answer above."}` : null;
       };
       const alerts = async () => (await card.locator(".alert").allInnerTexts()).map(norm);
@@ -105,7 +105,7 @@ export function define() {
         await expect(yes).toBeDisabled(); await expect(no).toBeDisabled();
         expect(await alerts()).toContain(`🔒 Voting is closed for this session${mine ? ` — your answer is ${mine === "coming" ? "coming" : "not coming"}` : " — you did not answer"}. Any change needs the admin: message the group.`);
         const res = await page.evaluate(({ U, id }) => rpc("set_rsvp", { p_session: U, p_player: id, p_response: "coming" }).then(() => "saved", () => "refused"), { U, id: me.id });
-        expect(res, "the database refuses a late change too").toBe("refused");
+        expect(res, "unchanged retries are idempotent; actual late changes are refused").toBe(mine==="coming"?"saved":"refused");
         expect(dbVote(me.id)).toBe(mine);
         return;
       }

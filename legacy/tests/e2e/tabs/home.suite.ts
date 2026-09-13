@@ -20,7 +20,7 @@ export function define() {
       const page = ctx.page;
       await page.evaluate(() => nav("home"));
       const done = !L.current && L.sessions.length >= 28, U = L.current ? L.current.number : Math.min(L.sessions.length + 1, 28);
-      await expect(page.locator("#next-date")).toHaveText(done ? "Season Complete! 🎉" : `Session ${U} — ${ctx.dates[U - 1]}${L.current ? " · in progress" : ""}`);
+      await expect(page.locator("#next-date")).toHaveText(done ? "Season Complete! 🎉" : `Session ${U} — ${ctx.dates[U - 1]}${L.current ? (L.nowMs>=ctx.fd[U-1]||Object.keys(L.current.scores).length?" · in progress":" · courts prepared") : ""}`);
       // Countdown to 8 PM on the Tuesday, cleared once play has started.
       const diff = ctx.fd[U - 1] - L.nowMs;
       const boxes = await page.$$eval("#countdown .cd-box", (bs) => bs.map((b) => `${b.querySelector(".cd-num")!.textContent} ${b.querySelector(".cd-lbl")!.textContent}`));
@@ -42,8 +42,9 @@ export function define() {
       if (p) { await expect(banner.locator(".pos-name")).toHaveText(p.name); expect(norm(await banner.locator(".pos-stat").innerText())).toBe(p.stat); }
       else expect(norm(await banner.innerText())).toBe("");
       // Admin checklist.
-      const ap = L.players.filter((x) => x.current_court > 0), total = ap.length, paid = ap.filter((x) => x.paid).length;
-      const regPaid = ap.filter((x) => x.paid && x.membership_type !== "spare").length * 400, sparePaid = ap.filter((x) => x.paid && x.membership_type === "spare").length;
+      const paidFor=(id:number)=>{const p=L.players.find(x=>x.id===id)!;return L.payments.filter(x=>x.player_id===id&&(p.membership_type==='spare'?x.kind==='spare'&&x.session_number===U:x.kind==='season'||x.kind==='adjustment')).reduce((n,x)=>n+Number(x.amount),0)>=(p.membership_type==='spare'?20:400);};
+      const ap = L.players.filter((x) => x.current_court > 0), total = ap.length, paid = ap.filter((x) => paidFor(x.id)).length;
+      const regPaid = L.payments.filter(x=>x.kind==="season"||x.kind==="adjustment").reduce((n,x)=>n+Number(x.amount),0), sparePaid = ap.filter((x) => paidFor(x.id) && x.membership_type === "spare").length;
       const waiver = ap.filter((x) => x.waiver_signed).length, selfReg = L.players.filter((x) => x.sig && x.sig !== "admin"), pending = selfReg.filter((x) => !x.approved).length;
       const regWaiver = selfReg.filter((x) => x.waiver_signed).length, assigned = L.current ? Object.values(L.current.assignments).flat().length : total;
       const want = [

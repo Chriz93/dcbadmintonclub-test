@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
-import { rankings, streaks, lbPlayers, courtOf } from "./oracle";
+import { rankings, streaks, lbPlayers, courtOf, spareBalance } from "./oracle";
 
 const PLAYER = "my.season@example.invalid";
 let ctx: Ctx;
@@ -26,7 +26,7 @@ for (let i = 0; i < 100; i++) {
     const streak = streaks(L)[me.id].streak, courts = L.sessions.map((s) => courtOf(s.finalAssignments || s.assignments, me.id) || null);
     const mine = L.payments.filter((x) => x.player_id === me.id), sum = (k: string[]) => mine.filter((x) => k.includes(x.kind)).reduce((n, x) => n + Number(x.amount), 0);
     let fee: string;
-    if (spare) { const owed = played * 20, paid = sum(["spare"]), due = Math.max(0, owed - paid); fee = owed ? `Spare fees: $${paid} paid${due ? `, $${due} owing` : ""}` : "Spare fees: none yet"; }
+    if (spare) { const {owed,paid,due}=spareBalance(L,me.id); fee = owed ? `Spare fees: $${paid} paid${due ? `, $${due} owing` : ""}` : "Spare fees: none yet"; }
     else { const due = Math.max(0, 400 - sum(["season", "adjustment"])); fee = due === 0 ? "Season fee paid ✅" : me.declared_payment === "paid_full" ? "Season fee: payment reported — the admin will confirm it" : `Season fee: $${due} owing · e-transfer to christygeorge993@gmail.com`; }
     await expect(card.locator(".sbox .sv")).toHaveText([`${me.season_wins}–${me.season_losses}`, String(elo[me.id] || 0), me.current_court ? `C${me.current_court}` : "—", `${played}/${L.sessions.length}`]);
     expect((await card.locator(".sbox .sl").allTextContents()).map(norm)).toEqual([`Record · ${wr}%`, `Elo · #${rank || "–"} of ${lbPlayers(L).length}`, "Court now", "Sessions played"]);

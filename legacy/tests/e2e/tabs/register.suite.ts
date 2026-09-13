@@ -33,7 +33,7 @@ export function define() {
         await expect(card).toContainText(`${me!.name}`);
         await expect(card).toContainText("✅ Approved");
         await expect(card).toContainText("Membership: Regular Member");
-        await expect(card.getByRole("button", { name: "Register different player" })).toBeVisible();
+        await expect(card.getByRole("button", { name: "Switch account to register another player" })).toBeVisible();
         return;
       }
       await expect(page.locator("#r-email")).toHaveValue(REG);
@@ -86,6 +86,13 @@ export function define() {
       await page.locator("#lf-all").check();
       await page.locator("#r-sig-lf").fill(name);
       await page.locator("#reg-btn-lf").click();
+      // Success text and the previous status card remain in hidden DOM between cases.
+      // Wait for this submission's complete UI transition before inspecting them
+      // or replacing the synthetic database for the next registrant.
+      await expect(page.locator("#reg-btn-lf")).toBeEnabled();
+      await expect(page.locator("#rs4")).toHaveClass(/active/);
+      await expect(page.locator("#reg-already")).toBeVisible();
+      await expect(page.locator("#reg-already")).toContainText(name);
       const waitlisted = !spare && taken >= 26;   // a full league puts new regulars on the waitlist
       await expect(page.locator("#reg-success-msg")).toContainText(spare ? "Registered as Spare — Admin will contact you when needed." : waitlisted ? "You have been added to the Regular Waitlist. Admin will promote you when a spot opens." : "Your registration");
       const row = await expect.poll(() => ctx.state.players.find((p) => p.email === REG && p.name === name)).toBeTruthy().then(() => ctx.state.players.find((p) => p.email === REG && p.name === name)!);

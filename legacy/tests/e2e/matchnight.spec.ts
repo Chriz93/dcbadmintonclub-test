@@ -10,7 +10,7 @@ const FIVE: [number, number][] = [[15, 10], [15, 9], [15, 12], [15, 8], [15, 11]
 /** A court of two plays best of three: when side A wins every game, only the first two are played. */
 const bestOfThree = <T extends { a2: number | null; b2: number | null }>(games: T[]) => (games.length === 3 && games.every((g) => g.a2 === null && g.b2 === null) && (games as unknown as { a1: number }[]).every((g) => g.a1 === (games[0] as unknown as { a1: number }).a1) ? games.slice(0, 2) : games);
 
-test.describe.serial("2026–27 match night on the test copy (mocked database rules)", () => {
+test.describe("2026–27 match night on the test copy (mocked database rules)", () => {
   let state: MockState;
   test.beforeEach(async ({ page }) => {
     state = freshState();
@@ -224,7 +224,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     // Once the organizer starts Session 2 (Session 1 done elsewhere), the same card asks about Session 2.
     state.state["current_session"] = { value: JSON.stringify({ number: 2, cycle: 1, assignments: { 1: [1, 2, 3, 4] }, scores: {}, movements: [], preTosses: {} }), version: 3 };
     await page.evaluate(async () => { await loadAll(); renderAll(); });
-    await expect(page.locator("#next-date")).toContainText("Session 2 — Sep 22, 2026 · in progress");
+    await expect(page.locator("#next-date")).toContainText("Session 2 — Sep 22, 2026 · courts prepared");
     await expect(page.locator("#home-vote")).toContainText("Vote: are you playing Session 2");
     await page.locator("#home-vote button", { hasText: "I'm Coming" }).click();
     await expect.poll(() => state.rsvps.find((r) => r.player_id === newId && r.session_number === 2)?.response).toBe("coming");
@@ -238,7 +238,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await unlockOrganizer(page);
     await page.evaluate(() => showSec("admin", "a-reg"));
     await page.fill("#inv-email", "Newbie@Example.invalid"); await page.selectOption("#inv-type", "spare");
-    await page.click("#invite-card button:has-text('Send invitation')");
+    await page.click("#invite-card button:has-text('Allow registration')");
     await expect.poll(() => state.invitations["newbie@example.invalid"]).toBe("spare");
     await expect(page.locator("#invite-card")).toContainText("newbie@example.invalid");
     await page.evaluate(() => nav("register"));
@@ -278,6 +278,7 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await unlockOrganizer(page);
     await page.click("#admin-panel .ptab:has-text('Tools')");
     await page.fill("#new-season-label", "2025-26");
+    await page.fill("#new-season-name","2027-28");await page.fill("#new-season-start","2027-09-01");await page.fill("#new-season-dates","2027-09-14\n2027-09-21");
     await page.click("text=Archive season and start fresh");
     await expect.poll(() => state.players[0].season_wins).toBe(0);
     expect(state.state["archive_2025-26"]).toBeTruthy();
@@ -314,8 +315,8 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     // A regular declines (their own answer, recorded earlier): a seat opens and the spare is confirmed automatically.
     state.rsvps.push({ session_number: 1, player_id: 1, response: "notcoming", note: "", updated_at: new Date().toISOString() });
     await page.evaluate(async () => { await loadAll(); renderAll(); });
-    await expect(page.locator("#home-vote .spare-status")).toContainText("Seat confirmed (seat 1)");
-    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open · 1 confirmed · 0 standby");
+    await expect(page.locator("#home-vote .spare-status")).toContainText("Seat reserved (seat 1)");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open · 0 confirmed · 0 standby");
     // Reminder opt-out is the player's own switch.
     await page.uncheck("#home-vote .email-reminders-toggle");
     await expect.poll(() => state.players.find((p) => p.id === spareId)!.email_reminders).toBe(false);
@@ -335,9 +336,12 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
     await page.evaluate(() => showSec("admin", "a-att"));
-    await expect(page.locator("#confirmed-spares")).toContainText("1 regular declined · 1 confirmed · 0 standby");
+    await expect(page.locator("#confirmed-spares")).toContainText("1 regular declined · 0 confirmed · 0 standby");
     await expect(page.locator("#confirmed-spares")).toContainText("Spare Tester");
     await expect(page.locator("#confirmed-spares button", { hasText: "Seat" })).toBeVisible();
+    // Reservation becomes confirmed only when the organizer records the full session payment.
+    await page.evaluate(id=>recordPaymentUI(id),spareId);await page.getByRole('button',{name:'Save payment'}).click();
+    await expect(page.locator('#confirmed-spares')).toContainText('1 regular declined · 1 confirmed · 0 standby');
     // Starting the night: the declined regular is excused (no court penalty), the confirmed spare is seated, votes pre-fill attendance.
     await page.evaluate(() => startSession());
     await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
@@ -354,9 +358,10 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     await expect(page.locator("#excused-tonight")).toContainText("TEST Player 01");
     await expect(page.locator("#excused-tonight")).toContainText("excused");
     await expect(page.locator("#confirmed-spares")).toContainText("seated");
-    // Ending the night without scores: the excused regular keeps Court 1 and no no-show is recorded.
+    // Ending without scores is refused, and leaves the excused regular and active session unchanged.
     await page.evaluate(() => endSession());
-    await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 15000 }).toBe(1);
+    await expect(page.locator('#_t')).toContainText('Finish both rounds');
+    expect(JSON.parse(state.state["completed_sessions"]?.value || "[]")).toHaveLength(0);expect(state.state.current_session).toBeTruthy();
     expect(state.players.find((p) => p.id === 1)!.current_court).toBe(1);
     expect(state.players.find((p) => p.id === 1)!.no_show_count).toBe(0);
   });

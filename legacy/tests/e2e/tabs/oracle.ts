@@ -189,9 +189,9 @@ export function upcoming(L: League) {
   const declined = new Set(L.players.filter((p) => isReg(p) && vote[p.id] === "notcoming" && pre[p.id] !== "present" && !preAbsent.has(p.id)).map((p) => p.id));
   const declinedRows = rows.filter((r) => r.response === "notcoming" && isReg(byId(r.player_id))).length;
   const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id);
-  const spares = claims.slice(0, declinedRows).map((r) => r.player_id).filter((id) => !preAbsent.has(id));
+  const spares = claims.slice(0, declinedRows).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
   // Everyone coming keeps the court they earned; spares fill open seats from the bottom; lone or over-five courts are settled (p54).
-  const earned = L.players.filter((p) => p.current_court > 0 && p.membership_type !== "spare" && !declined.has(p.id) && !preAbsent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
+  const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
   const start = startingCourts(earned, spares);
   const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), start.lineup[i + 1]]));
   return { vote, declined, preAbsent, spares, assign, start };
@@ -208,4 +208,15 @@ export function courts(L: League) {
   });
   const sub = L.current ? `Session ${L.current.number} · ${L.current.date} · Round ${cy}` : L.sessions.length ? `${L.sessions.length}/28 sessions done` : "No active session";
   return { courts: out, sub, medals: !L.current || !!L.current.completed };
+}
+
+/** Charges are tied to played, assigned or reserved session identities, so unrelated credits cannot offset them. */
+export function spareBalance(L:League,id:number,pays=L.payments){
+ const charged=new Set(L.sessions.filter(s=>Object.values(s.scores).some(sc=>[sc.a1,sc.a2,sc.b1,sc.b2].includes(id))).map(s=>s.number));
+ if(L.current&&Object.values(L.current.assignments).some(ids=>ids.includes(id)))charged.add(L.current.number);
+ const votes=L.rsvps.filter(r=>r.session_number===L.upcoming),declines=votes.filter(r=>r.response==='notcoming'&&L.players.some(p=>p.id===r.player_id&&p.approved&&!p.waitlisted&&p.membership_type!=='spare')).length;
+ const claims=votes.filter(r=>r.response==='coming'&&L.players.some(p=>p.id===r.player_id&&p.approved&&p.membership_type==='spare')).sort((a,b)=>a.updated_at.localeCompare(b.updated_at)||a.player_id-b.player_id);
+ if(claims.slice(0,declines).some(r=>r.player_id===id))charged.add(L.upcoming);
+ const credits=[...charged].map(n=>Math.min(20,pays.filter(x=>x.player_id===id&&x.kind==='spare'&&x.session_number===n).reduce((t,x)=>t+Number(x.amount),0))),paid=credits.reduce((t,n)=>t+n,0);
+ return{owed:charged.size*20,paid,due:charged.size*20-paid,settled:credits.filter(n=>n===20).length,outstanding:credits.filter(n=>n<20).length};
 }

@@ -30,7 +30,7 @@ test.describe("isolation · the site checks its database", () => {
     const { page, s } = await fresh(browser, (x) => (x.environment = { name: "production", schema_version: "L20" }));
     await page.goto("/"); await expect(page.locator("#invite-gate"), "nothing is read before sign-in").toBeVisible();
     await signIn(page, INVITED);
-    await expect(page.locator(STOP)).toContainText("This site is connected to the wrong database");
+    await expect(page.locator(STOP)).toContainText("This build cannot connect safely");
     await expect(page.locator(STOP)).toContainText("The test site is connected to a database marked “production”.");
     await expect(page.locator(STOP)).toContainText("Nothing was loaded or saved.");
     expect(s.requests.filter((r) => r.includes("/rest/v1/")), "no league data was read").toEqual([]); await page.close();
@@ -54,8 +54,8 @@ test.describe("isolation · the site checks its database", () => {
       await page.goto("/"); await signIn(page, INVITED); await expect(page.locator(STOP)).toContainText("The test database is not marked as TEST.");
       expect(s.requests.filter((r) => r.includes("/rest/v1/")), "no league data was read").toEqual([]); await page.close();
     });
-  test("Isolation · a database marked test at a later schema version (L21): the test site loads", async ({ browser }) => {
-    const { page, s } = await fresh(browser, (x) => (x.environment = { name: "test", schema_version: "L21" }));
+  test("Isolation · a database marked test at a current schema version (L24): the test site loads", async ({ browser }) => {
+    const { page, s } = await fresh(browser, (x) => (x.environment = { name: "test", schema_version: "L24" }));
     await page.goto("/"); await signIn(page, INVITED); await expect(page.locator("#page-home")).toBeVisible(); await expect(page.locator(STOP)).toHaveCount(0);
     expect(s.blocked).toEqual([]); await page.close();
   });
@@ -85,7 +85,7 @@ test.describe("isolation · the site checks its database", () => {
   test("Isolation · the league-site address, run in a test, never reaches production: every request is stopped", async ({ browser }) => {
     const { page, s } = await fresh(browser);
     const answered: string[] = []; page.on("response", (r) => { if (r.url().includes(PROD_REF)) answered.push(r.url()); });
-    await serve(page, "http://127.0.0.1:8790/dcbadmintonclub/", INDEX.replace(`const SB='https://${TEST_REF}.supabase.co'; // TEST project only`, `const SB='${PROD}';`));
+    await serve(page, "http://127.0.0.1:8790/dcbadmintonclub/", INDEX.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "").replace(`const SB='https://${TEST_REF}.supabase.co'; // TEST project only`, `const SB='${PROD}';`));
     await page.goto("/dcbadmintonclub/");
     // Signed out, the site reads nothing; asking for a sign-in code is the first request to the database it points at.
     await page.locator("#signin-email-input").fill(INVITED); await page.locator("#signin-btn").click();
@@ -99,7 +99,7 @@ test.describe("isolation · the site checks its database", () => {
 
 test.describe("isolation · the harness", () => {
   let page: Page, s: MockState;
-  test.beforeAll(async ({ browser }) => { ({ page, s } = await fresh(browser)); await page.goto("/"); });
+  test.beforeAll(async ({ browser }) => { ({ page, s } = await fresh(browser)); await serve(page,"http://127.0.0.1:8790/",INDEX.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/,"")); await page.goto("/"); });
   test.afterAll(async () => { await page.close(); });
   for (const [label, url] of [["production", `${PROD}/rest/v1/players?select=*`], ["another Supabase project", "https://abcdefghijklmnopqrst.supabase.co/rest/v1/"], ["the live league site", "https://chriz93.github.io/dcbadmintonclub/"], ["the live test site", "https://chriz93.github.io/dcbadmintonclub-test/"], ["the Supabase dashboard", "https://supabase.com/dashboard/project/" + PROD_REF]] as const)
     test(`Isolation · a request from the page to ${label} is stopped and recorded`, async () => {

@@ -41,7 +41,7 @@ for (let i = 0; i < 60; i++) {
     await page.evaluate(() => nav("scores"));
     await page.locator("#sc-sel").selectOption(String(two));
     const area = page.locator("#score-area");
-    await expect(area.locator(".alert").first()).toHaveText(`Court ${two} · Round ${cy} · ⚠️ 2 Players — Singles Best of 3`);
+    await expect(area.locator(".alert").first()).toHaveText(`Court ${two} · Round ${cy} · 2 Players — Singles Best of 3`);
     const fill = async (g: number, x: string, y: string) => { await page.locator(`#si_${two}_${g}_a`).fill(x); await page.locator(`#si_${two}_${g}_b`).fill(y); };
     const saveGame = async (g: number) => page.locator(".game-block").nth(g - 1).getByRole("button", { name: `💾 Save Game ${g}` }).click();
     if (kind === "two-nil-game-by-game") {
@@ -88,10 +88,12 @@ for (let i = 0; i < 60; i++) {
       await fill(3, "21", "17"); await saveGame(3); await expect(toast).toHaveText("Game 3 saved!");
       await fill(1, "21", "10"); await saveGame(1); await expect(toast).toHaveText("Game 1 saved!");
       await fill(2, "21", "11"); await saveGame(2);
-      await expect(toast).toHaveText("Score not saved: Best of three: there is no Game 3 after one player wins the first two games");
-      expect(keys(), "the 2–0 is not stored on top of a Game 3").toEqual([`c${two}_y${cy}_g1`, `c${two}_y${cy}_g3`]);
+      await expect(toast).toHaveText("Game 2 saved!");
+      expect(keys(), "the corrected 2–0 removes the old deciding game").toEqual([`c${two}_y${cy}_g1`, `c${two}_y${cy}_g2`]);
       await fill(2, "15", "21"); await saveGame(2); await expect(toast).toHaveText("Game 2 saved!");
-      expect(keys(), "a split keeps all three").toEqual([1, 2, 3].map((g) => `c${two}_y${cy}_g${g}`));
+      expect(keys(), "a new split needs a fresh deciding score").toEqual([`c${two}_y${cy}_g1`, `c${two}_y${cy}_g2`]);
+      await fill(3,"21","17");await saveGame(3);await expect(toast).toHaveText("Game 3 saved!");
+      expect(keys()).toEqual([1,2,3].map(g=>`c${two}_y${cy}_g${g}`));
     }
   });
 }

@@ -6,7 +6,7 @@ import { genLeague, variety, rng, combos, target, NC, type LiveState, gamesNeede
 /** The suite's cases; the desktop and phone spec files both call this. */
 export function define() {
   const LIVES: LiveState[] = ["r1-partial", "r2-partial", "r1-partial", "r1-done", "r2-partial", "complete", "r1-partial", "none"];
-  const modeLabel = (n: number) => (n === 5 ? "Five players — rotating doubles, 5 games to 15" : n === 4 ? "Doubles (4 players) — 3 games to 21" : n === 3 ? "⚠️ 3 Players — Round-Robin Singles" : "⚠️ 2 Players — Singles Best of 3");
+  const modeLabel = (n: number) => (n === 5 ? "Five players — rotating doubles, 5 games to 15" : n === 4 ? "Doubles (4 players) — 3 games to 21" : n === 3 ? "3 Players — Round-Robin Singles" : "2 Players — Singles Best of 3");
   function verdict(a: string, b: string, T: number) {
     const sa = parseInt(a), sb = parseInt(b);
     if (isNaN(sa) || isNaN(sb)) return { err: "Enter both scores", sa, sb };
@@ -79,11 +79,8 @@ export function define() {
         expect(JSON.parse(ctx.state.state["current_session"].value).scores, "nothing saved").toEqual(before.scores);
         return;
       }
-      // Best of three: correcting Game 1 or 2 into a 2–0 while a Game 3 is on record is refused by the database.
-      if (ids.length === 2 && g <= 2 && cur.scores[`c${c}_y${cy}_g3`]) {
-        const other = cur.scores[`c${c}_y${cy}_g${3 - g}`], w = v.sa > v.sb ? "A" : "B";
-        if (other && other.w === w) { await expect(page.locator("#_t")).toHaveText("Score not saved: Best of three: there is no Game 3 after one player wins the first two games"); expect(JSON.parse(ctx.state.state["current_session"].value).scores, "nothing saved").toEqual(before.scores); return; }
-      }
+      // Corrections that produce a 2–0 remove the obsolete decider in the same transaction.
+      if(ids.length===2&&g<=2){const other=cur.scores[`c${c}_y${cy}_g${3-g}`];if(other?.w===(v.sa>v.sb?'A':'B'))await expect.poll(()=>JSON.parse(ctx.state.state.current_session.value).scores[`c${c}_y${cy}_g3`]).toBeUndefined();}
       await expect(page.locator("#_t")).toHaveText(`Game ${g} saved!`);
       const gm = games[g - 1];
       const stored = JSON.parse(ctx.state.state["current_session"].value).scores[`c${c}_y${cy}_g${g}`];

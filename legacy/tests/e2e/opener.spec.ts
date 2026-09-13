@@ -48,12 +48,12 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   for (const n of everyone) {
     await page.fill("#inv-email", emailOf(n));
     await page.selectOption("#inv-type", SPARES.includes(n) ? "spare" : "regular");
-    await page.click("#invite-card button:has-text('Send invitation')");
+    await page.click("#invite-card button:has-text('Allow registration')");
     await expect.poll(() => state.invitations[emailOf(n)]).toBe(SPARES.includes(n) ? "spare" : "regular");
     await expect(page.locator("#invite-card")).toContainText(emailOf(n));
   }
-  await shot("02-invitations", "Admin → Registered: 25 regulars and 4 spares invited by email");
-  timeline.push("The admin invited 29 people from Admin → Registered: 25 regulars and 4 spares.");
+  await shot("02-invitations", "Admin → Registered: registration allowed for 25 regulars and 4 spares; no email is sent by this control");
+  timeline.push("The admin allowed 29 people to register from Admin → Registered: 25 regulars and 4 spares.");
   await page.evaluate(() => signOut());
 
   // ── 2. Self-registration ──────────────────────────────────────────────────────────────────────────
@@ -101,11 +101,11 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
     await expect.poll(() => state.rsvps.find((r) => r.player_id === p.id && r.session_number === 1)?.response).toBe(coming ? "coming" : "notcoming");
     if (n === REGULARS[1]) await shot("07-home-vote", `${n} votes on Home: one tap, with the Sunday deadline and the refund cutoff shown`);
     if (n === "Hannah Kim") await shot("08-decline", `${n} declines on Friday, before the Saturday 8 PM cutoff, so she is owed $14`);
-    if (n === "Emma Clarke") { await expect(page.locator("#home-vote .spare-status")).toContainText("Seat confirmed"); await shot("09-spare-confirmed", `${n} (spare) is confirmed for a seat a regular gave up`); }
+    if (n === "Emma Clarke") { await expect(page.locator("#home-vote .spare-status")).toContainText("Seat reserved"); await shot("09-spare-reserved", `${n} (spare) has a reserved seat awaiting payment verification`); }
     if (n === "Leah Cohen") { await expect(page.locator("#home-vote .spare-status")).toContainText("Standby"); await shot("10-spare-standby", `${n} (spare) is on standby: both open seats are already taken`); }
     await page.evaluate(() => signOut());
   }
-  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares Emma and Diego took the two open seats, Leah went on standby, Tomás was not available.`);
+  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares Emma and Diego reserved the two open seats, Leah went on standby, Tomás was not available.`);
 
   // ── 5. Match night ────────────────────────────────────────────────────────────────────────────────
   await signIn(page, ORGANIZER); await unlockOrganizer(page);
@@ -114,6 +114,12 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await expect(page.locator("#vote-changes")).toContainText("Tomás Silva: — → not coming · S1");
   await expect(page.locator("#vote-changes")).toContainText("Ryan Gill: — → not coming · S1");
   await shot("11-admin-home", "Admin Home: every vote as it came in");
+  // A reservation becomes confirmed only after the organizer verifies this session's payment.
+  for (const name of ["Emma Clarke", "Diego Alvarez"]) await page.evaluate(id => rpc('record_payment', {
+    p_player:id,p_kind:'spare',p_amount:20,p_session:1,p_received_on:'2026-09-11',p_note:'Verified opener fixture',p_request:crypto.randomUUID(),
+  }), byName(name).id);
+  await page.evaluate(async()=>{await loadAll();renderAll();});
+  timeline.push("The organizer verified Emma's and Diego's $20 payments for Session 1; both reserved seats became confirmed.");
   await page.evaluate(() => { nav("admin"); showSec("admin", "a-att"); });
   await expect(page.locator("#confirmed-spares")).toContainText("2 regulars declined · 2 confirmed · 1 standby");
   await shot("12-attendance", "Attendance before the night: two regulars excused, two spares confirmed");

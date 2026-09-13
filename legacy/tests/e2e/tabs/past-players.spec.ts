@@ -35,7 +35,7 @@ for (let i = 0; i < 40; i++) {
     const stateOf = (p: Past) => !p.email ? "no email" : withEmail && p.email === withEmail.email ? "registered" : L.invitations[p.email] ? "invited" : "button";
     for (const p of past) {
       const row = rowOf(p), st = stateOf(p);
-      if (st === "button") await expect(row.getByRole("button", { name: "✉️ Invite back" }), `${p.name} can be invited back`).toBeVisible();
+      if (st === "button") await expect(row.getByRole("button", { name: "Allow registration" }), `${p.name} can be invited back`).toBeVisible();
       else await expect(row.locator(".flex-between > .tag"), `${p.name}: ${st}`).toHaveText(st);
     }
     // One row in detail: contact, medical note and last season's record.
@@ -53,8 +53,8 @@ for (let i = 0; i < 40; i++) {
     await sec.locator("#past-q").fill("");
     // Invite one back: the usual invitation, with their membership; the row then shows "invited".
     const invitable = past.filter((x) => stateOf(x) === "button"), pick = invitable[Math.floor(r() * invitable.length)];
-    await rowOf(pick).getByRole("button", { name: "✉️ Invite back" }).click();
-    await expect(toast).toHaveText(`Invited ${pick.name} back as ${pick.membership_type}. They sign in with ${pick.email} and register.`);
+    await rowOf(pick).getByRole("button", { name: "Allow registration" }).click();
+    await expect(toast).toHaveText(`Invited ${pick.name} back as ${pick.membership_type}. Registration allowed for ${pick.email}; share this site link with them. No email was sent.`);
     expect(ctx.state.invitations[pick.email!], "invitation saved with their membership").toBe(pick.membership_type);
     await expect(rowOf(pick).locator(".flex-between > .tag")).toHaveText("invited");
     await expect(page.locator("#invite-card"), "the Registered tab lists it too").toContainText(pick.email!);

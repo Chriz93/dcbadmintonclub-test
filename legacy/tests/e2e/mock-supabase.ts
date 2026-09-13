@@ -14,7 +14,7 @@ export const ORGANIZER = "christygeorge993@gmail.com";
 
 export interface Player {
   id: number; name: string; email: string; phone: string; emergency: string; medical: string; sig: string;
-  waiver_signed: boolean; paid: boolean; email_reminders?: boolean; declared_payment?: string; current_court: number; highest_court: number; season_wins: number;
+  archived_at?: string | null; legacy_paid?: boolean; waiver_signed: boolean; paid: boolean; email_reminders?: boolean; declared_payment?: string; current_court: number; highest_court: number; season_wins: number;
   season_losses: number; games_played: number; no_show_count: number; membership_type: string; created_at: string;
   approved: boolean; waitlisted: boolean; registered_at: string | null; admin_note: string; user_id: string | null;
 }
@@ -23,7 +23,7 @@ export interface MockState {
   announcements: { id: number; content: string; created_at: string }[];
   state: Record<string, { value: string; version: number }>;
   rsvps: { session_number: number; player_id: number; response: string; note: string; updated_at: string }[];
-  payments: { id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
+  payments: { request_id?: string; id: number; player_id: number; kind: string; amount: number; session_number: number | null; method: string; received_on: string; note: string }[];
   pushSubs: { player_id: number; endpoint: string; p256dh: string; auth: string }[];
   nowMs?: number; // fake "now" for the database clock (voting lock)
   undo: { id: number; created_at: string; label: string; actor_email: string; snapshot: string }[];
@@ -44,9 +44,12 @@ export interface MockState {
   waiverAcceptances?: Acceptance[];
 }
 
+const defaultSeason={...season,registration_start:'2026-09-01',regular_capacity:26,end_time_local:'22:00'};
+function leagueInstant(d:string,time:string,zone:string){const[y,m,day]=d.split('-').map(Number),[h,min]=time.split(':').map(Number),target=Date.UTC(y,m-1,day,h,min);let instant=target;const f=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});for(let i=0;i<3;i++){const p=Object.fromEntries(f.formatToParts(new Date(instant)).map(p=>[p.type,p.value]));instant+=target-Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute);}return new Date(instant).toISOString();}
+function roundComplete(cur:any){const courts=Object.entries(cur.assignments||{}).filter(([,ids])=>(ids as number[]).length);return courts.length>0&&courts.every(([c,ids])=>{const n=(ids as number[]).length,p=`c${c}_y${cur.cycle}_g`,sc=cur.scores||{},count=n===5?5:n===2&&sc[p+'1']&&sc[p+'1'].w===sc[p+'2']?.w?2:3;return n>=2&&n<=5&&Array.from({length:count},(_,i)=>sc[p+(i+1)]).every(Boolean);});}
 const b64url = (s: string) => Buffer.from(s).toString("base64url");
 export function token(uid: string, email: string, aal: "aal1" | "aal2") {
-  return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify({ sub: uid, email, aal, exp: 4102444800 }))}.sig`;
+  return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify({ iss:SB+"/auth/v1", sub: uid, email, aal, exp: 4102444800 }))}.sig`;
 }
 function claims(req: { headers(): Record<string, string> }, state: MockState) {
   const auth = req.headers()["authorization"] || "";
@@ -64,13 +67,33 @@ function claims(req: { headers(): Record<string, string> }, state: MockState) {
 function refreshPaid(s: MockState, playerId: number) {
   const p = s.players.find((x) => x.id === playerId); if (!p) return;
   const rows = s.payments.filter((x) => x.player_id === playerId);
-  p.paid = p.membership_type === "spare" ? rows.some((x) => x.kind === "spare") : rows.filter((x) => x.kind === "season" || x.kind === "adjustment").reduce((n, x) => n + x.amount, 0) >= 400;
+  const config=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason)),cur=JSON.parse(s.state.current_session?.value||'null'),done=new Set(JSON.parse(s.state.completed_sessions?.value||'[]').map((x:{number:number})=>x.number)),n=cur?.number||config.approved_dates.findIndex((_:string,i:number)=>!done.has(i+1))+1;
+  p.paid=p.membership_type==='spare'?rows.filter(x=>x.kind==='spare'&&x.session_number===n).reduce((t,x)=>t+x.amount,0)>=config.fees.spare_session:rows.filter(x=>x.kind==='season'||x.kind==='adjustment').reduce((t,x)=>t+x.amount,0)>=config.fees.regular_season;
+}
+function rebuildMockStats(s:MockState){
+        const sessions = JSON.parse(s.state["completed_sessions"]?.value || "[]") as { scores?: Record<string, { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string }> }[];
+        const cur = s.state["current_session"] ? JSON.parse(s.state["current_session"].value) : null;
+        const counted = new Set<number>((cur?.movements || []).map((m: { cycle: number }) => m.cycle));
+        const games = sessions.flatMap((x) => Object.values(x.scores || {}));
+        if (cur?.scores) for (const [k, sc] of Object.entries(cur.scores as Record<string, never>)) { const m = k.match(/_y(\d+)_/); if (m && counted.has(parseInt(m[1]))) games.push(sc); }
+        const t: Record<number, { g: number; w: number; l: number }> = {};
+        for (const sc of games) {
+          for (const id of [sc.a1, sc.a2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "A") t[id].w++; else if (sc.w === "B") t[id].l++; }
+          for (const id of [sc.b1, sc.b2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "B") t[id].w++; else if (sc.w === "A") t[id].l++; }
+        }
+        let n = 0;
+        for (const p of s.players) { const x = t[p.id] || { g: 0, w: 0, l: 0 }; if (p.season_wins !== x.w || p.season_losses !== x.l || p.games_played !== x.g) { Object.assign(p, { season_wins: x.w, season_losses: x.l, games_played: x.g }); n++; } }
+return n;
+}
+function snapshot(s:MockState,label:string){
+ const key='snapshot_'+crypto.randomUUID(),tables={players:s.players,payments:s.payments,rsvps:s.rsvps,announcements:s.announcements,questions:s.questions,invitations:Object.entries(s.invitations).map(([email,membership_type])=>({email,membership_type})),past_players:s.pastPlayers,waiver_versions:s.waiverVersions,waiver_acceptances:s.waiverAcceptances,app_state:Object.entries(s.state).filter(([k])=>!k.startsWith('snapshot_')&&!['reminder_request','reminder_last_run','vote_digest_last_id'].includes(k)).map(([key,v])=>({key,...v}))};
+ s.state[key]={value:JSON.stringify({format:2,environment:'test',label,ts:new Date().toISOString(),tables}),version:1};return key;
 }
 const TRACKED = ["current_session", "completed_sessions", "player_approvals", "membership_overrides", "pre_session_attendance"];
 export function captureState(s: MockState) {
   return JSON.stringify({
     app_state: Object.fromEntries(TRACKED.filter((k) => s.state[k]).map((k) => [k, s.state[k].value])),
-    players: [...s.players].sort((a, b) => a.id - b.id).map((p) => ({ id: p.id, current_court: p.current_court, highest_court: p.highest_court, no_show_count: p.no_show_count, approved: p.approved, waitlisted: p.waitlisted, membership_type: p.membership_type, season_wins: p.season_wins, season_losses: p.season_losses, games_played: p.games_played })),
+    players: [...s.players].sort((a, b) => a.id - b.id).map((p) => ({ id: p.id, archived_at:p.archived_at||null, current_court: p.current_court, highest_court: p.highest_court, no_show_count: p.no_show_count, approved: p.approved, waitlisted: p.waitlisted, membership_type: p.membership_type, season_wins: p.season_wins, season_losses: p.season_losses, games_played: p.games_played })),
   });
 }
 export function seedPlayers(n = 25): Player[] {
@@ -95,10 +118,10 @@ export function freshState(): MockState {
 }
 
 const PUBLIC_COLS = ["id", "name", "paid", "current_court", "highest_court", "season_wins", "season_losses", "games_played", "no_show_count", "membership_type", "approved", "waitlisted", "registered_at", "created_at"];
-function publicRow(p: Player) {
+function publicRow(p: Player,s: MockState) {
   const o: Record<string, unknown> = {};
   for (const c of PUBLIC_COLS) o[c] = (p as unknown as Record<string, unknown>)[c];
-  o.waiver_ok = p.waiver_signed || (!!p.sig && p.sig !== "admin");
+  o.waiver_ok = (s.waiverAcceptances||[]).some(a=>a.waiver_version===(s.waiverVersions||[]).find(v=>v.is_current)?.version&&(a.player_id===p.id||!!p.user_id&&a.user_id===p.user_id));
   o.has_account = !!p.user_id;
   return o;
 }
@@ -165,7 +188,7 @@ export async function installMock(page: Page, s: MockState) {
     // L18: signed-in users read the environment marker; the site checks it right after sign-in (anonymous: nothing).
     // L20: signed-in users read the waiver wording (not logged: the site checks the current version on every sync).
     if (path === "/rest/v1/waiver_versions" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); const vs = (s.waiverVersions ??= waiverVersions()); return json(200, ordered(vs.filter((r) => matches(r as unknown as Record<string, unknown>, filters(url))), url)); }
-    if (path === "/rest/v1/environment" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); return json(200, s.environment === undefined ? [{ name: "test", schema_version: "L19" }] : s.environment ? [s.environment] : []); }
+    if (path === "/rest/v1/environment" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); return json(200, s.environment === undefined ? [{ name: "test", schema_version: "L24" }] : s.environment ? [s.environment] : []); }
     // ── Auth ──
     if (path === "/auth/v1/otp") return json(200, {});
     if (path === "/auth/v1/verify") {
@@ -206,6 +229,18 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "admin_status") return json(200, { organizer: s.admins.includes(c.email), verified: admin, player_id: me, email: c.email });
       if (fn === "set_state") {
         if (!admin) return deny("Organizer verification required");
+        if(['pin','admin_pin','invite_code','season_config'].includes(a.k))return deny('Retired key');
+        const data=JSON.parse(a.v),old=s.state[a.k];
+        if(old&&a.expected!==old.version||!old&&(a.expected??0)!==0)return deny('Stale state: refresh before saving','40001');
+        if(a.k==='player_approvals'||a.k==='membership_overrides'){
+          const next=structuredClone(s.players);
+          for(const [id,x] of Object.entries(data)){const p=next.find(p=>p.id===Number(id));if(!p)continue;if(a.k==='membership_overrides')p.membership_type=String(x);else{const v=x as {approved?:boolean;waitlisted?:boolean;membershipType?:string};if(v.approved!==undefined)p.approved=v.approved;if(v.waitlisted!==undefined)p.waitlisted=v.waitlisted;if(v.membershipType)p.membership_type=v.membershipType;}}
+          if(next.some(p=>!['regular','spare'].includes(p.membership_type)))return deny('Invalid membership type');
+          const capacity=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason)).regular_capacity;
+          if(next.filter(p=>!p.archived_at&&p.approved&&!p.waitlisted&&p.membership_type==='regular').length>Math.max(capacity,s.players.filter(p=>!p.archived_at&&p.approved&&!p.waitlisted&&p.membership_type==='regular').length))return deny('Regular places are full; keep the player on the waitlist');
+          s.players=next;
+        }
+        if (!admin) return deny("Organizer verification required");
         const cur = s.state[a.k];
         if (!cur) { if ((a.expected ?? 0) !== 0) return deny("Stale state: refresh before saving", "40001"); s.state[a.k] = { value: a.v, version: 1 }; return json(200, 1); }
         if (a.expected !== cur.version) return deny("Stale state: refresh before saving", "40001");
@@ -215,6 +250,8 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "set_rsvp") {
         if (a.p_player !== me && !admin) return deny("You can only answer for yourself");
         const target = s.players.find((x) => x.id === a.p_player);
+        const prior=s.rsvps.find(r=>r.session_number===a.p_session&&r.player_id===a.p_player);
+        if(prior?.response===a.p_response){prior.note=a.p_note||'';return json(200,null);}
         const startIso = season.approved_dates[a.p_session - 1];
         const startMs = startIso ? new Date(`${startIso}T20:00:00-04:00`).getTime() : 0; // Ottawa (EDT during the test dates)
         if (!admin && target && target.membership_type !== "spare" && startMs && (s.nowMs ?? Date.now()) > startMs - 46 * 3600000) return deny("Voting closed Sunday 10:00 PM. Message the admin in the group to change your answer.");
@@ -227,14 +264,14 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "register_me") {
         const inv = s.invitations[c.email];
         const existing = s.players.find((x) => x.user_id === c.uid) || s.players.find((x) => !x.user_id && x.email.toLowerCase() === c.email);
-        if (!existing && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
+        if ((!existing || existing.archived_at) && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
         // L20: the registration also records the acceptance of the exact current waiver wording, or is refused.
         const wa = { player_id: null as number | null, user_id: c.uid, email: c.email, name: a.p_name, version: a.p_waiver_version, sha: a.p_waiver_sha, sig: a.p_waiver_sig, tz: a.p_tz, offset: a.p_offset, action: "registration" as const, age: a.p_age, minor: a.p_minor, media: a.p_media, ua: a.p_ua };
         const wp = acceptanceProblem(s.waiverVersions ??= waiverVersions(), wa);
         if (wp) return json(400, { message: wp, code: "22023" });
         const wNow = new Date(s.nowMs ?? Date.now()).toISOString();
         const declared = ["paid_full", "will_pay", "per_session"].includes(a.p_payment) ? a.p_payment : "";
-        if (existing) { Object.assign(existing, { declared_payment: declared || existing.declared_payment || "", name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); recordAcceptance(s.waiverVersions!, s.waiverAcceptances ??= [], { ...wa, player_id: existing.id }, wNow); return json(200, existing.id); }
+        if (existing) { Object.assign(existing, { approved:existing.archived_at?false:existing.approved,waitlisted:existing.archived_at?false:existing.waitlisted,archived_at:null,membership_type:inv||existing.membership_type,declared_payment: declared || existing.declared_payment || "", name: a.p_name, phone: a.p_phone ?? existing.phone, emergency: a.p_emergency ?? existing.emergency, medical: a.p_medical ?? existing.medical, sig: a.p_sig || existing.sig, waiver_signed: !!a.p_sig || existing.waiver_signed, registered_at: new Date().toISOString(), user_id: c.uid }); recordAcceptance(s.waiverVersions!, s.waiverAcceptances ??= [], { ...wa, player_id: existing.id }, wNow); return json(200, existing.id); }
         const id = Math.max(0, ...s.players.map((p) => p.id)) + 1;
         s.players.push({ id, name: a.p_name, email: c.email, phone: a.p_phone || "", emergency: a.p_emergency || "", medical: a.p_medical || "", sig: a.p_sig || "", waiver_signed: !!a.p_sig, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: inv || a.p_membership || "regular", declared_payment: declared, created_at: new Date().toISOString(), approved: false, waitlisted: false, registered_at: new Date().toISOString(), admin_note: "", user_id: c.uid });
         recordAcceptance(s.waiverVersions!, s.waiverAcceptances ??= [], { ...wa, player_id: id }, wNow);
@@ -243,11 +280,12 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "save_court_scores") {
         const st = s.state["current_session"]; if (!st) return json(400, { message: "No active session" });
         const cur = JSON.parse(st.value);
-        if (a.p_expected != null && a.p_expected !== st.version) return deny("Stale state: refresh before saving", "40001");
+        if (a.p_expected !== st.version || String(a.p_session)!==String(cur.id)) return deny("Stale state: refresh before saving", "40001");
         if ((cur.cycle || 1) !== a.p_cycle) return deny("That round is over — refresh to see the current round", "40001");
         if (cur.completed) return json(400, { message: "Session is complete; scores are locked" });
         const assigned: number[] = cur.assignments?.[String(a.p_court)] || [];
         if (!admin && (me == null || !assigned.includes(me))) return deny("Only players on this court (or the organizer) can enter its scores");
+        if(JSON.stringify(a.p_lineup)!==JSON.stringify(assigned))return deny('Stale state: court lineup changed','40001');
         const target = assigned.length === 5 ? 15 : 21;
         let cnt = 0;
         for (const [k, sc] of Object.entries(a.p_scores as Record<string, { sA: number; sB: number; w: string }>)) {
@@ -258,7 +296,7 @@ export async function installMock(page: Page, s: MockState) {
           cur.scores = cur.scores || {}; cur.scores[k] = sc; cnt++;
         }
         // L19: two players play best of three — no Game 3 once one player has won the first two.
-        if (assigned.length === 2) { const g = (n: number) => cur.scores?.[`c${a.p_court}_y${a.p_cycle}_g${n}`]; if (g(1) && g(2) && g(1).w === g(2).w && g(3)) return json(400, { message: "Best of three: there is no Game 3 after one player wins the first two games" }); }
+        if (assigned.length === 2) { const g = (n: number) => cur.scores?.[`c${a.p_court}_y${a.p_cycle}_g${n}`]; if(g(1)&&g(2)&&g(1).w===g(2).w){const k=`c${a.p_court}_y${a.p_cycle}_g3`;if(a.p_scores[k])return json(400,{message:'Best of three: there is no Game 3 after one player wins the first two games'});delete cur.scores[k];} }
         if (!cnt) return json(400, { message: "No scores supplied" });
         s.undo.push({ id: (s.undo.at(-1)?.id || 0) + 1, created_at: new Date().toISOString(), label: `Scores: Court ${a.p_court}, Round ${a.p_cycle}`, actor_email: c.email, snapshot: captureState(s) });
         st.value = JSON.stringify(cur); st.version += 1; s.audit.push({ action: "scores.saved", subject: `court ${a.p_court}` });
@@ -266,6 +304,7 @@ export async function installMock(page: Page, s: MockState) {
       }
       if (fn === "start_new_season") {
         if (!admin) return deny("Organizer verification required");
+        if(!a.p_config?.approved_dates?.length||!a.p_config?.registration_start)return deny("Enter next-season dates and registration start");
         if (s.state["current_session"]) return json(400, { message: "End the active session before starting a new season" });
         if (s.state[`archive_${a.p_label}`]) return json(400, { message: "Unique archive label required" });
         s.state[`archive_${a.p_label}`] = { value: JSON.stringify({ label: a.p_label, completed_sessions: JSON.parse(s.state["completed_sessions"]?.value || "[]"), players: s.players.map((p) => ({ id: p.id, season_wins: p.season_wins })) }), version: 1 };
@@ -273,22 +312,61 @@ export async function installMock(page: Page, s: MockState) {
         s.rsvps = [];
         const np = s.payments.length; s.payments = [];   // L15: last season's ledger moves to payments_archive
         let n = 0; for (const p of s.players) { Object.assign(p, { season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, paid: false, approved: false, waitlisted: false, registered_at: null }); n++; }
-        return json(200, { archived: a.p_label, players_reset: n, payments_archived: np });
+        s.state.season_config={value:JSON.stringify(a.p_config),version:(s.state.season_config?.version||0)+1};return json(200, { archived: a.p_label, players_reset: n, payments_archived: np,season:a.p_config.season,sessions:a.p_config.approved_dates.length });
       }
+      if(fn==='start_league_session'){
+        if(!admin)return deny('Organizer verification required');if(s.state.current_session&&s.state.current_session.value!=='null')return deny('Session already active');
+        const cur=a.p_session;
+        if(Object.values(cur.assignments as Record<string,number[]>).some(ids=>ids.length===1||ids.length>5))return deny('Courts must have zero or 2–5 players');
+        for(const [c,ids]of Object.entries(cur.assignments as Record<string,number[]>))for(const id of ids){const p=s.players.find(p=>p.id===id);if(!p?.approved||p.waitlisted)return deny('Only approved players can start');if(p.membership_type==='spare')p.current_court=Number(c);}
+        s.state.current_session={value:JSON.stringify(cur),version:1};delete s.state.pre_session_attendance;return json(200,1);
+      }
+      if(fn==='add_league_player'){
+        if(!admin)return deny('Organizer verification required');const cap=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason)).regular_capacity;
+        if(a.p_membership==='regular'&&s.players.filter(p=>!p.archived_at&&p.approved&&!p.waitlisted&&p.membership_type==='regular').length>=cap)return deny('Regular places are full');
+        const id=nextId(s.players),court=s.state.current_session?0:a.p_court;s.players.push({...seedPlayers(1)[0],id,name:a.p_name,email:'',membership_type:a.p_membership,current_court:court,highest_court:court,waiver_signed:false,paid:false,registered_at:null});return json(200,id);
+      }
+      if(fn==='finalize_session'){
+        if(!admin)return deny('Organizer verification required');
+        const st=s.state.current_session,cur=JSON.parse(st?.value||'null');if(!cur||a.p_expected!==st.version||String(cur.id)!==a.p_session)return deny('Stale state: refresh before ending','40001');
+        if(!a.p_early&&(!cur.completed&&!roundComplete(cur)||cur.cycle<2))return deny('Finish both rounds and every court');
+        if(a.p_early&&(!a.p_reason?.trim()||!cur.movements?.length))return deny('No completed rounds or early finish reason');
+        const final={...a.p_finished,completed:true,ended_early:!!a.p_early,end_reason:a.p_reason||''};
+        for(const [court,ids] of Object.entries(final.finalAssignments as Record<string,number[]>))for(const id of ids){const p=s.players.find(p=>p.id===id);if(p&&cur.attendance?.[id]!=='absent'){p.current_court=Number(court);p.highest_court=Math.min(p.highest_court||Number(court),Number(court));}}
+        for(const [id,status]of Object.entries(cur.attendance||{}))if(status==='absent'){const p=s.players.find(p=>p.id===Number(id));if(p){p.no_show_count++;p.current_court=Math.min(6,(cur.absentFrom?.[id]||p.current_court||6)+1);}}
+        const sessions=JSON.parse(s.state.completed_sessions?.value||'[]');if(sessions.some((x:{number:number})=>x.number===cur.number))return deny('Already completed');sessions.push(final);
+        s.state.completed_sessions={value:JSON.stringify(sessions),version:(s.state.completed_sessions?.version||0)+1};delete s.state.current_session;delete s.state.round_snapshots;rebuildMockStats(s);return json(200,final);
+      }
+      if(fn==='archive_player'){if(!admin)return deny('Organizer verification required');const cur=JSON.parse(s.state.current_session?.value||'null');if(cur&&Object.values(cur.assignments).flat().includes(a.p_player))return deny('Player is assigned tonight; use Adjust courts before archiving');const p=s.players.find(p=>p.id===a.p_player);if(p)Object.assign(p,{archived_at:new Date().toISOString(),approved:false,current_court:0});return json(200,null);}
+      if(fn==='save_league_snapshot'){if(!admin)return deny('Organizer verification required');return json(200,snapshot(s,a.p_label));}
+      if(fn==='restore_league_snapshot'){
+       if(!admin)return deny('Organizer verification required');const d=JSON.parse(s.state[a.p_key]?.value||'null');if(d?.format!==2)return deny('Unsupported snapshot format');
+       snapshot(s,'Before restoring '+d.label);
+       const snapshots=Object.fromEntries(Object.entries(s.state).filter(([k])=>k.startsWith('snapshot_'))),versions=Object.fromEntries(Object.entries(s.state).map(([k,v])=>[k,v.version]));
+       const extra=s.players.filter(p=>!d.tables.players.some((x:Player)=>x.id===p.id)).map(p=>({...p,archived_at:new Date().toISOString(),approved:false,current_court:0}));
+       s.players=[...structuredClone(d.tables.players),...extra];s.payments=structuredClone(d.tables.payments);s.rsvps=structuredClone(d.tables.rsvps);s.announcements=structuredClone(d.tables.announcements);s.invitations=Object.fromEntries(d.tables.invitations.map((i:any)=>[i.email,i.membership_type]));s.questions=structuredClone(d.tables.questions);s.state={...Object.fromEntries(d.tables.app_state.map(({key,...v}:any)=>[key,v])),...snapshots};
+       for(const [k,v]of Object.entries(s.state))if(!k.startsWith('snapshot_'))v.version=Math.max(versions[k]||0,v.version)+1;
+       s.undo=[];return json(200,{restored:a.p_key});
+      }
+      if(fn==='cancel_league_session'){
+       if(!admin)return deny('Organizer verification required');const cur=JSON.parse(s.state.current_session?.value||'null'),config=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason)),history=JSON.parse(s.state.completed_sessions?.value||'[]');
+       if(a.p_expected!==(s.state.current_session?.version||0)||cur&&cur.number!==a.p_session)return deny('Session changed; refresh first','40001');
+       if(!config.approved_dates[a.p_session-1]||history.some((x:any)=>x.number===a.p_session))return deny('Invalid or completed session');
+       if(!a.p_reason?.trim()||!['shuttles','refund','makeup','none'].includes(a.p_resolution))return deny('Reason and compensation required');
+       snapshot(s,'Before cancelling session '+a.p_session);
+       const compensation=s.players.filter(p=>p.approved&&!p.waitlisted&&!p.archived_at).flatMap(p=>{const paid=s.payments.filter(x=>x.player_id===p.id&&x.kind==='spare'&&x.session_number===a.p_session).reduce((t,x)=>t+x.amount,0);if(p.membership_type==='spare'&&!paid)return[];return[{player_id:p.id,amount:p.membership_type==='spare'?paid:a.p_resolution==='shuttles'?2:a.p_amount,unit:p.membership_type==='spare'||a.p_resolution==='refund'?'CAD':a.p_resolution==='shuttles'?'shuttles':'plan',resolution:a.p_resolution,status:a.p_resolution==='none'?'fulfilled':'pending'}];});
+       const finished={number:a.p_session,id:cur?.id||'cancelled-'+a.p_session,date:config.approved_dates[a.p_session-1],status:'cancelled',completed:true,reason:a.p_reason,compensation,scores:{},assignments:{},movements:[]};history.push(finished);
+       s.state.completed_sessions={value:JSON.stringify(history),version:(s.state.completed_sessions?.version||0)+1};delete s.state.current_session;delete s.state.round_snapshots;s.undo=[];rebuildMockStats(s);return json(200,finished);
+      }
+      if(fn==='settle_cancellation'){
+       if(!admin)return deny('Organizer verification required');const history=JSON.parse(s.state.completed_sessions?.value||'[]'),entry=history.find((x:any)=>x.number===a.p_session&&x.status==='cancelled')?.compensation.find((x:any)=>x.player_id===a.p_player);if(!entry)return deny('No compensation');if(entry.status!=='fulfilled'){
+       if(entry.unit==='CAD'){const paid=s.payments.filter(p=>p.kind==='refund'&&p.player_id===a.p_player&&p.session_number===a.p_session).reduce((t,p)=>t+p.amount,0);if(entry.amount>paid)s.payments.push({id:nextId(s.payments),request_id:crypto.randomUUID(),player_id:a.p_player,kind:'refund',amount:entry.amount-paid,session_number:a.p_session,method:'e-transfer',received_on:'2026-09-13',note:'Cancellation refund'});}
+       entry.status='fulfilled';s.state.completed_sessions={value:JSON.stringify(history),version:s.state.completed_sessions.version+1};}return json(200,entry);
+      }
+      if(fn==='list_league_snapshots'){if(!admin)return deny('Organizer verification required');return json(200,Object.entries(s.state).filter(([k,v])=>k.startsWith('snapshot_')&&v.value!=='null'&&!JSON.parse(v.value)._deleted).map(([key,v])=>{const d=JSON.parse(v.value);return{key,format:d.format||1,label:d.label,ts:d.ts,player_count:d.tables?.players?.length||d.players?.length||0,completed_count:JSON.parse(d.tables?.app_state?.find((x:any)=>x.key==='completed_sessions')?.value||'[]')?.length||0,active_session:!!d.tables?.app_state?.find((x:any)=>x.key==='current_session'&&x.value!=='null')};}));}
       if (fn === "rebuild_player_stats") {
         if (!admin) return deny("Organizer verification required");
-        const sessions = JSON.parse(s.state["completed_sessions"]?.value || "[]") as { scores?: Record<string, { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string }> }[];
-        const cur = s.state["current_session"] ? JSON.parse(s.state["current_session"].value) : null;
-        const counted = new Set<number>((cur?.movements || []).map((m: { cycle: number }) => m.cycle));
-        const games = sessions.flatMap((x) => Object.values(x.scores || {}));
-        if (cur?.scores) for (const [k, sc] of Object.entries(cur.scores as Record<string, never>)) { const m = k.match(/_y(\d+)_/); if (m && counted.has(parseInt(m[1]))) games.push(sc); }
-        const t: Record<number, { g: number; w: number; l: number }> = {};
-        for (const sc of games) {
-          for (const id of [sc.a1, sc.a2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "A") t[id].w++; else if (sc.w === "B") t[id].l++; }
-          for (const id of [sc.b1, sc.b2]) if (typeof id === "number") { t[id] = t[id] || { g: 0, w: 0, l: 0 }; t[id].g++; if (sc.w === "B") t[id].w++; else if (sc.w === "A") t[id].l++; }
-        }
-        let n = 0;
-        for (const p of s.players) { const x = t[p.id] || { g: 0, w: 0, l: 0 }; if (p.season_wins !== x.w || p.season_losses !== x.l || p.games_played !== x.g) { Object.assign(p, { season_wins: x.w, season_losses: x.l, games_played: x.g }); n++; } }
+        const n=rebuildMockStats(s);
         s.audit.push({ action: "stats.rebuilt" });
         return json(200, { players_changed: n });
       }
@@ -307,12 +385,16 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "set_email_reminders") { const p = s.players.find((x) => x.id === me); if (!p) return deny("No player record"); p.email_reminders = !!a.p_on; return json(200, null); }
       if (fn === "record_payment") {
         if (!admin) return deny("Organizer verification required");
+        if(!a.p_request||!Number.isFinite(Number(a.p_amount))||Number(a.p_amount)<=0)return deny('A positive payment and request ID are required');
+        const prior=s.payments.find(p=>p.request_id===a.p_request);if(prior){if(prior.player_id!==a.p_player||prior.amount!==Number(a.p_amount)||prior.kind!==a.p_kind||prior.session_number!==(a.p_session??null)||prior.note!==(a.p_note||''))return deny('Request ID was used for a different payment');return json(200,prior.id);}
+        if(['spare','refund'].includes(a.p_kind)&&(!Number.isInteger(a.p_session)||a.p_session<1||a.p_session>season.approved_dates.length))return deny('A valid session is required');
         const id = nextId(s.payments);
-        s.payments.push({ id, player_id: a.p_player, kind: a.p_kind, amount: Number(a.p_amount), session_number: a.p_session ?? null, method: "e-transfer", received_on: a.p_received_on || new Date().toISOString().slice(0, 10), note: a.p_note || "" });
+        s.payments.push({ id, request_id:a.p_request, player_id: a.p_player, kind: a.p_kind, amount: Number(a.p_amount), session_number: a.p_session ?? null, method: "e-transfer", received_on: a.p_received_on || new Date().toISOString().slice(0, 10), note: a.p_note || "" });
         refreshPaid(s, a.p_player); s.audit.push({ action: "payment.recorded", subject: String(a.p_player) });
         return json(200, id);
       }
       if (fn === "delete_payment") { if (!admin) return deny("Organizer verification required"); const row = s.payments.find((x) => x.id === a.p_id); s.payments = s.payments.filter((x) => x.id !== a.p_id); if (row) refreshPaid(s, row.player_id); return json(200, null); }
+      if(fn==='delete_push_subscription'){s.pushSubs=s.pushSubs.filter(x=>!(x.player_id===me&&x.endpoint===a.p_endpoint));return json(200,null);}
       if (fn === "save_push_subscription") { if (!me) return deny("No player record"); if (!String(a.p_endpoint).startsWith("https://")) return json(400, { message: "Invalid subscription" }); s.pushSubs = s.pushSubs.filter((x) => x.endpoint !== a.p_endpoint); s.pushSubs.push({ player_id: me, endpoint: a.p_endpoint, p256dh: a.p_p256dh, auth: a.p_auth }); return json(200, null); }
       if (fn === "checkpoint") { if (!admin) return deny("Organizer verification required"); const id = (s.undo.at(-1)?.id || 0) + 1; s.undo.push({ id, created_at: new Date().toISOString(), label: String(a.p_label || "Admin action").slice(0, 120), actor_email: c.email, snapshot: captureState(s) }); return json(200, id); }
       if (fn === "checkpoint_settle") { if (!admin) return deny("Organizer verification required"); const e = s.undo.find((x) => x.id === a.p_id); if (e && e.snapshot === captureState(s)) { s.undo = s.undo.filter((x) => x.id !== a.p_id); return json(200, true); } return json(200, false); }
@@ -353,7 +435,7 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "POST") { const b = body(); if (b.id != null && s.players.some((p) => p.id === b.id)) return json(409, { message: "duplicate key value violates unique constraint", code: "23505" }); const id = b.id ?? nextId(s.players); const row = { ...seedPlayers(1)[0], ...b, id, created_at: b.created_at ?? new Date().toISOString() }; s.players.push(row); return json(201, [row]); }
       if (method === "DELETE") { s.players = s.players.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
     }
-    if (table === "players_public" && method === "GET") return json(200, ordered(s.players.map(publicRow).filter((r) => matches(r, f)), url));
+    if (table === "players_public" && method === "GET") return json(200, ordered(s.players.filter(p=>!p.archived_at).map(p=>publicRow(p,s)).filter((r) => matches(r, f)), url));
     if (table === "invitations") {
       if (!admin) return json(403, { message: "permission denied", code: "42501" });
       if (method === "GET") return json(200, Object.entries(s.invitations).map(([email, membership_type]) => ({ email, membership_type, note: "", created_at: "2026-09-01T00:00:00Z" })));
@@ -368,7 +450,9 @@ export async function installMock(page: Page, s: MockState) {
       if (method === "POST") { const row = { id: nextId(s.announcements), created_at: new Date().toISOString(), ...body() }; s.announcements.push(row); return json(201, [row]); }
       if (method === "DELETE") { s.announcements = s.announcements.filter((r) => !matches(r as unknown as Record<string, unknown>, f)); return route.fulfill({ status: 204, body: "" }); }
     }
+    if(table==='season_dates'&&method==='GET'){const config=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason));return json(200,config.approved_dates.map((d:string,i:number)=>({session_number:i+1,play_on:d,start_at:leagueInstant(d,config.start_time_local,config.time_zone),cancelled:JSON.parse(s.state.completed_sessions?.value||'[]').some((x:{number:number;status?:string})=>x.number===i+1&&x.status==='cancelled'),cancellation_reason:''})));}
     if (table === "app_state" && method === "GET") {
+      if(f.key==='season_config'&&!s.state.season_config)return json(200,[{key:'season_config',value:JSON.stringify(defaultSeason),version:1}]);
       const rows = Object.entries(s.state).filter(([k]) => admin || (!k.startsWith("snapshot_") && !["admin_pin", "pin", "invite_code"].includes(k))).map(([key, v]) => ({ key, value: v.value, version: v.version, created_at: "2026-09-01T00:00:00Z" }));
       const reply = rows.filter((r) => matches(r, f));
       // A slow background refresh (p52 tests): the reply's contents are fixed now; it arrives when the test releases it.

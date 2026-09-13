@@ -29,6 +29,10 @@ export async function openAs(browser: Browser, who: "admin" | string = "admin", 
   await page.goto("/");
   await signIn(page, email);
   if (who === "admin") await unlockOrganizer(page);
+  // The sign-in gate closes before its first load completes. Wait for that load
+  // before stopping the timer, otherwise startSync can run after we cleared it
+  // and race a later synthetic database replacement.
+  await expect.poll(()=>page.evaluate(()=>_activeLoads===0&&document.getElementById('slbl')?.textContent==='Synced'),{timeout:15000}).toBe(true);
   await page.evaluate(() => { clearInterval(_syncTimer); _syncTimer = null; });
   await pinSession(page);
   // Expected dates are formatted here, independently of the app's own DATES table.
@@ -69,6 +73,9 @@ export async function refresh(ctx: Ctx) {
   expect(ok, "page caught up with the database").toBe(true);
 }
 export async function load(ctx: Ctx, L: League) {
+  // A synthetic database replacement must wait for the previous UI action and read transaction to settle.
+  // Otherwise an old league's in-flight reply correctly causes the new optimistic-load guard to discard the result.
+  await expect.poll(()=>ctx.page.evaluate(()=>_ckDepth===0&&_activeLoads===0),{timeout:15000}).toBe(true);
   const s = ctx.state;
   s.players = structuredClone(L.players);
   s.state = {};

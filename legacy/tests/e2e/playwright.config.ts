@@ -13,7 +13,7 @@ export default defineConfig({
   timeout: 90000,
   retries: 0,
   use: {
-    actionTimeout: 15000, baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: existsSync(shell) ? { executablePath: shell } : {} },
+    actionTimeout: 15000, baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : existsSync(shell) ? { executablePath: shell } : {} },
   projects: [
     { name: "desktop", testIgnore: /tabs\//, use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", testIgnore: /tabs\//, use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },

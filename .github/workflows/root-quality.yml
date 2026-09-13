@@ -1,0 +1,98 @@
+name: GitHub Pages application quality
+on:
+  pull_request:
+  push:
+    branches: ['upgrade/**', 'fix/**']
+  workflow_dispatch:
+    inputs:
+      deploy_test:
+        description: Deploy the tested root artifact to TEST Pages (requires migrations through L24)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node legacy/scripts/check-root-build.mjs root-dist
+      - run: node legacy/scripts/build-audit-migration.mjs --check
+      - run: node --import ./legacy/tests/unit/fetch-guard.mjs --test legacy/tests/unit/*.test.mjs
+      - run: node --test legacy/automation/*.test.mjs
+      - name: Start disposable local PostgreSQL
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "create role runner login superuser"
+      - name: Database rules and recovery
+        env:
+          PGSOCK: /var/run/postgresql
+          PGPORT: 5432
+          PGUSER: runner
+        run: sh legacy/tests/db/run.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tested-root-site
+          path: root-dist/
+  browsers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop, mobile, tabs, tabs-phone]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - run: pnpm --dir platform install --frozen-lockfile
+      - run: ln -s ../../../platform/node_modules legacy/tests/e2e/node_modules
+      - run: node platform/node_modules/@playwright/test/cli.js install --with-deps chromium
+      - run: node platform/node_modules/@playwright/test/cli.js test -c legacy/tests/e2e/playwright.config.ts --project=${{ matrix.project }} --workers=4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: root-browser-${{ matrix.project }}
+          path: test-results/
+  deploy-test:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_test && github.repository == 'Chriz93/dcbadmintonclub-test'
+    needs: [rules, browsers]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: test-pages-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify TEST database identity and migration level
+        env:
+          TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node legacy/scripts/check-test-release.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-root-site
+          path: root-dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: root-dist
+      - uses: actions/deploy-pages@v4
+        id: deploy
+# Tests receive no hosted database/provider credentials. Only the explicit release job reads the TEST environment marker.

@@ -44,6 +44,11 @@ for (const role of ["organizer", "regular", "spare", "newcomer"] as Role[]) {
     CHECKS.forEach(([label, check], k) => test(`Wording ${role} · ${label}`, async () => {
       await load(ctx, leagueFor(role, 49000 + k * 7 + role.length));
       await ctx.page.evaluate(() => nav("home"));
+      if (label.startsWith('Home rules:')) {
+        const rules=ctx.page.locator('#season-rules-card');
+        if (!(await rules.evaluate(e=>(e as HTMLDetailsElement).open))) await rules.locator('summary').click();
+        await expect(rules).toHaveAttribute('open','');
+      }
       await check(ctx.page);
     }));
   });

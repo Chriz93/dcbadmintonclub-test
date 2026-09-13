@@ -1,6 +1,8 @@
 // Admin → Registered: overview counts, pending / regular / spare / waitlist / not-registered lists, each registration card,
 // invitations (valid, invalid, already a player), approve (including the full-capacity waitlist path), reject, promote from
 // the waitlist, and assigning a court from the card. 100 leagues.
+import {manualMoveExpected} from "./manual-move-oracle";
+import {courtOf} from "./oracle";
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type Player } from "./gen";
@@ -15,15 +17,15 @@ for (let i = 0; i < 100; i++) {
     const r = rng(80 + i);
     // Some leagues carry a waitlist and a walk-in added by the organizer without a waiver.
     if (i % 3 === 0) L.players.filter((p) => !p.approved && p.membership_type !== "spare").slice(0, 2).forEach((p, k) => { p.approved = true; p.waitlisted = true; p.registered_at = new Date(Date.parse("2026-09-05T12:00:00Z") + k * 6e4).toISOString(); });
-    if (i % 5 === 0) L.players.push({ ...L.players[0], id: 900 + i, name: "Walk-in Guest", email: "", sig: "admin", waiver_signed: false, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: "regular", approved: true, waitlisted: false, medical: "" } as Player);
+    if (i % 5 === 0) L.players.push({ ...L.players[0], id: 900 + i, name: "Walk-in Guest", email: "", sig: "admin", registered_at: null, user_id: null, waiver_signed: false, paid: false, current_court: 0, highest_court: 0, season_wins: 0, season_losses: 0, games_played: 0, no_show_count: 0, membership_type: "regular", approved: true, waitlisted: false, medical: "" } as Player);
     await load(ctx, L);
     const page = ctx.page, toast = page.locator("#_t"), sec = page.locator("#sec-a-reg");
     await page.evaluate(() => nav("admin"));
     await page.getByRole("button", { name: /^📋 Registered/ }).click();
     const P = L.players, selfReg = P.filter((p) => p.sig && p.sig !== "admin"), adminAdded = P.filter((p) => p.sig === "admin");
     const waitlisted = selfReg.filter((p) => p.waitlisted), pending = selfReg.filter((p) => !p.approved && !p.waitlisted), approved = selfReg.filter((p) => p.approved && !p.waitlisted);
-    const waiver = (p: Player) => !!p.waiver_signed, notReg = adminAdded.filter((p) => !waiver(p) && !selfReg.some((s) => s.name.toLowerCase().includes(p.name.split(" ")[0].toLowerCase()) && waiver(s)));
-    const taken = (except?: number) => P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved && x.sig !== "admin" && String(x.registered_at) >= "2026-09-01" && x.id !== except).length;
+    const waiver = (p: Player) => !!p.waiver_signed, notReg = adminAdded.filter((p) => !waiver(p));
+    const taken = (except?: number) => P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved && x.id !== except).length;
     expect(await sec.locator("div[style*='repeat(4,1fr)'] > div > div:first-child").allTextContents(), "overview").toEqual([P.length, selfReg.length, selfReg.filter((p) => p.membership_type !== "spare").length, selfReg.filter((p) => p.membership_type === "spare").length,
       P.filter(waiver).length, P.filter((p) => p.paid).length, notReg.length, P.filter((p) => !p.paid && (p.current_court > 0 || p.sig !== "admin")).length].map(String));
     const cardOf = (title: RegExp) => sec.locator(".card").filter({ has: page.locator(".card-title", { hasText: title }) });
@@ -52,9 +54,9 @@ for (let i = 0; i < 100; i++) {
       const email = act === 0 ? `new.player${i}@example.invalid` : r() < 0.5 ? "not-an-email" : (P.find((p) => p.email) || { email: "x" }).email;
       await page.locator("#inv-email").fill(email.toUpperCase());
       await page.locator("#inv-type").selectOption(i % 2 ? "spare" : "regular");
-      await sec.getByRole("button", { name: "Send invitation" }).click();
+      await sec.getByRole("button", { name: "Allow registration" }).click();
       if (act === 0) {
-        await expect(toast).toHaveText(`Invited ${email} as ${i % 2 ? "spare" : "regular"}. They sign in with that email and register.`);
+        await expect(toast).toHaveText(`Invited ${email} as ${i % 2 ? "spare" : "regular"}. Registration allowed. Share this site link with them; no email was sent.`);
         expect(ctx.state.invitations[email], "invitation saved in lower case").toBe(i % 2 ? "spare" : "regular");
         await expect(page.locator("#inv-email")).toHaveValue("");
         await expect(page.locator("#invite-card")).toContainText(email);
@@ -68,8 +70,9 @@ for (let i = 0; i < 100; i++) {
     } else if (act === 3 && shown.length) {
       const p = shown[0];
       await sec.locator("div[style*='padding:12px']").filter({ hasText: p.email }).first().getByRole("button", { name: "✕" }).click();
-      await expect(toast).toHaveText("Registration removed");
-      expect(ctx.state.players.some((x) => x.id === p.id), `${p.name} removed`).toBe(false);
+      if(L.current&&courtOf(L.current.assignments,p.id)){await expect(toast).toContainText('Player is assigned tonight');expect(ctx.state.players.find(x=>x.id===p.id)?.archived_at).toBeFalsy();}
+      else {await expect(toast).toHaveText('Registration archived');expect(ctx.state.players.find(x=>x.id===p.id)?.archived_at).toBeTruthy();}
+      expect(ctx.state.payments).toEqual(L.payments);
     } else if (act === 4 && first && free > 0) {
       await sec.locator("#waitlist-offer").getByRole("button", { name: `Promote ${first.name.split(" ")[0]} to regular` }).click();
       await expect(toast).toHaveText(`${first.name} promoted from the waitlist`);
@@ -77,8 +80,8 @@ for (let i = 0; i < 100; i++) {
     } else if (act === 5 && shown.length) {
       const p = shown[shown.length - 1], c = (p.current_court % 6) + 1;
       await sec.locator("div[style*='padding:12px']").filter({ hasText: p.email }).first().locator("select").selectOption(String(c));
-      await expect(toast).toHaveText(`${p.name} assigned to Court ${c}`);
-      expect(ctx.state.players.find((x) => x.id === p.id)!.current_court).toBe(c);
+      if(L.current){const want=manualMoveExpected(L,p.id,c);if(want.message)await expect(toast).toContainText(want.message);expect(JSON.parse(ctx.state.state.current_session.value).assignments).toEqual(want.lineup);}
+      else await expect.poll(()=>ctx.state.players.find(x=>x.id===p.id)!.current_court).toBe(c);
     }
   });
 }

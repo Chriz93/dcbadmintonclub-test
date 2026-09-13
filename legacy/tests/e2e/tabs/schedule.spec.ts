@@ -20,8 +20,8 @@ for (let i = 0; i < 100; i++) {
     rows.forEach((t, k) => {
       const done = L.sessions.some((s) => s.number === k + 1), active = L.current?.number === k + 1;
       expect(t, `row ${k + 1}: date`).toContain(`Session ${k + 1} — ${ctx.dates[k]}`);
-      expect(t, `row ${k + 1}: time`).toContain("Tuesday · 8:00–10:00 PM");
-      expect(t.endsWith(done ? "Done" : active ? "Active" : "—"), `row ${k + 1}: status — "${t}"`).toBe(true);
+      expect(t, `row ${k + 1}: time`).toContain("Tuesday · 20:00–22:00 (America/Toronto)");
+      expect(t.endsWith(done ? "Done" : active ? (L.nowMs>=ctx.fd[k]||Object.keys(L.current!.scores).length?"Active":"Prepared") : "Scheduled"), `row ${k + 1}: status — "${t}"`).toBe(true);
     });
     const cancelled = norm(await page.locator("#sched-list .card").last().innerText());
     for (const iso of season.cancelled_dates) {
@@ -29,7 +29,7 @@ for (let i = 0; i < 100; i++) {
       const label = await page.evaluate(([yy, mm, dd]) => new Date(yy, mm - 1, dd, 12).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }), [y, m, d]);
       expect(cancelled, "school cancellation listed").toContain(label);
     }
-    expect(cancelled).toContain("not part of the 28 sessions");
-    await expect(page.locator("#page-schedule .page-sub")).toHaveText("28 Tuesdays · Sep 15, 2026 – May 18, 2027");
+    expect(cancelled).toContain("have no play");
+    await expect(page.locator("#page-schedule .page-sub")).toHaveText("28 sessions · Sep 15, 2026 – May 18, 2027 · America/Toronto");
   });
 }

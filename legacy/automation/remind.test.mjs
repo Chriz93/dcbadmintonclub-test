@@ -5,7 +5,7 @@ import { SEASON, upcomingSession, voteStage, spareWindow, planReminders, redirec
 
 test("season file matches the dates compiled into index.html", () => {
   const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
-  const pick = (name) => [...html.match(new RegExp(`const ${name}=\\[([^\\]]*)\\]`))[1].matchAll(/'(\d{4}-\d\d-\d\d)'/g)].map((m) => m[1]);
+  const pick = (name) => [...html.match(new RegExp(`(?:const|let) ${name}=\\[([^\\]]*)\\]`))[1].matchAll(/'(\d{4}-\d\d-\d\d)'/g)].map((m) => m[1]);
   assert.deepEqual(SEASON.approved_dates, pick("APPROVED_DATES"));
   assert.deepEqual(SEASON.cancelled_dates, pick("CANCELLED_DATES"));
   assert.equal(SEASON.approved_dates.length, 28);
@@ -16,7 +16,7 @@ test("season file matches the dates compiled into index.html", () => {
 test("upcoming session follows completed sessions, then the active night", () => {
   assert.deepEqual(upcomingSession(0, null), { number: 1, started: false, complete: false });
   assert.deepEqual(upcomingSession(3, null), { number: 4, started: false, complete: false });
-  assert.deepEqual(upcomingSession(3, { number: 4 }), { number: 4, started: true });
+  assert.deepEqual(upcomingSession(3, { number: 4 },sessionStart(SEASON.approved_dates[3]).getTime()), { number: 4, started: true, complete: false });
   assert.equal(upcomingSession(28, null).complete, true);
 });
 test("stage bands: Thursday night, Saturday before the cutoff, Monday afternoon; spares up to 3 hours before", () => {
@@ -55,9 +55,9 @@ test("emails carry one-tap links for the right session and the refund note befor
   assert.match(s.subject, /Spare seat open/); assert.match(s.text, /2 seats have opened/); assert.match(s.text, /\$20/);
   assert.equal(sessionStart("2026-09-15").getHours(), 20);
 });
-test("push payloads open the one-tap vote link and never leave test mode", async () => {
+test("push payloads open the session without changing a vote and never leave test mode", async () => {
   const p = composePush({ name: "Pat", stage: "vote-1" }, 4, "https://site/");
-  assert.equal(p.url, "https://site/?vote=coming&s=4"); assert.equal(p.actions.length, 2);
+  assert.equal(p.url, "https://site/?s=4"); assert.equal(p.actions.length, 2);
   const db = { state: async () => null, targets: async () => [{ player_id: 1, name: "P", email: "p@x", membership_type: "regular", kind: "vote", open_seats: 0 }], logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, subscriptions: async () => [{ player_id: 1, endpoint: "https://push/1", p256dh: "k", auth: "a" }], dropSubscription: async () => {} };
   const pushes = [];
   const now = sessionStart(SEASON.approved_dates[0]).getTime() - 50 * 3600000;
@@ -137,7 +137,7 @@ test("a requested test email only goes to an address the league owns", async () 
 test("run: dry run plans without sending; live test mode claims, redirects and caps at three", async () => {
   const claims = [];
   const db = {
-    state: async (k) => (k === "completed_sessions" ? [{}, {}] : null),
+    state: async (k) => (k === "completed_sessions" ? [{number:1}, {number:2}] : null),
     targets: async () => Array.from({ length: 5 }, (_, i) => ({ player_id: i + 1, name: `P ${i + 1}`, email: `p${i + 1}@x`, membership_type: "regular", kind: "vote", open_seats: 0 })),
     logged: async () => new Set(),
     claim: async (s, p, k) => { claims.push(`${s}:${p}:${k}`); return true; },

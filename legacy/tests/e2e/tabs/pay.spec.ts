@@ -5,15 +5,15 @@ import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type League, type Player } from "./gen";
 import type { MockState } from "../mock-supabase";
 
+import {spareBalance} from "./oracle";
 type Pay = MockState["payments"][number];
 const H = 3600e3, KINDS = ["season", "spare", "refund", "adjustment"] as const, DEFAULT = { season: "400", spare: "20", refund: "14", adjustment: "0" };
 const money = (xs: Pay[], k: string) => xs.filter((x) => x.kind === k).reduce((n, x) => n + Number(x.amount), 0);
 function status(p: Player, pays: Pay[], L: League) {
   const mine = pays.filter((x) => x.player_id === p.id);
   if (p.membership_type === "spare") {
-    const owed = L.sessions.filter((s) => Object.values(s.scores).some((sc) => [sc.a1, sc.a2, sc.b1, sc.b2].includes(p.id))).length * 20;
-    const due = Math.max(0, owed - money(mine, "spare")), n = mine.filter((x) => x.kind === "spare").length;
-    return owed === 0 ? "No spare sessions yet" : due === 0 ? `✅ ${n} session fee${n === 1 ? "" : "s"} paid` : `⏳ $${due} owing for ${Math.round(due / 20)} session${due > 20 ? "s" : ""}`;
+    const {owed,due,settled,outstanding}=spareBalance(L,p.id,pays);
+    return owed === 0 ? "No spare sessions yet" : due === 0 ? `✅ ${settled} session fee${settled === 1 ? "" : "s"} paid` : `⏳ $${due} owing for ${outstanding} session${outstanding > 1 ? "s" : ""}`;
   }
   const paid = money(mine, "season") + money(mine, "adjustment"), due = Math.max(0, 400 - paid);
   return (due === 0 ? `✅ Season fee paid ($${paid})` : paid > 0 ? `⏳ $${due} still owing (paid $${paid})` : "⏳ $400 e-transfer pending")
@@ -87,7 +87,7 @@ for (let i = 0; i < 100; i++) {
       if (act === 1) {
         await page.locator("#pay-amount").fill("");
         await page.getByRole("button", { name: "Save payment" }).click();
-        await expect(toast).toHaveText("Enter the amount");
+        await expect(toast).toHaveText("Enter a positive amount in cents");
         expect(ctx.state.payments.length, "nothing recorded").toBe(pays.length);
         await page.evaluate(() => closeModal());
         return;
@@ -98,7 +98,7 @@ for (let i = 0; i < 100; i++) {
       await page.getByRole("button", { name: "Save payment" }).click();
       await expect(toast).toHaveText("Payment recorded");
       const U = L.current ? L.current.number : Math.min(L.sessions.length + 1, 28), row = ctx.state.payments.at(-1)!;
-      expect({ ...row, id: 0 }).toEqual({ id: 0, player_id: p.id, kind, amount, session_number: kind === "spare" || kind === "refund" ? U : null, method: row.method, received_on: today, note });
+      expect({ ...row, id: 0 }).toEqual({ id: 0, request_id:expect.any(String), player_id: p.id, kind, amount, session_number: kind === "spare" || kind === "refund" ? U : null, method: row.method, received_on: today, note });
       await check(k, ctx.state.payments);
     } else if (act === 2) {
       const due = flat.find((x) => !x.refund);

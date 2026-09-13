@@ -42,7 +42,7 @@ for (let i = 0; i < 100; i++) {
     const ui = page.locator("#sess-ui");
     const dates = (await ui.locator(".card").filter({ hasText: "Dates" }).locator(".flex-between").allInnerTexts()).map(norm);
     expect(dates.length, "28 dates listed").toBe(28);
-    dates.forEach((t, k) => expect(t, `date row ${k + 1}`).toBe(`Session ${k + 1} — ${ctx.dates[k]} 8:00–10:00 PM ${L.sessions.some((s) => s.number === k + 1) ? "✓ Done" : L.current?.number === k + 1 ? "● Active" : "—"}`));
+    dates.forEach((t, k) => expect(t, `date row ${k + 1}`).toBe(`Session ${k + 1} — ${ctx.dates[k]} 20:00–22:00 (America/Toronto) ${L.sessions.some((s) => s.number === k + 1) ? "✓ Done" : L.current?.number === k + 1 ? "● Active" : "—"}`));
 
     if (!L.current) {
       const n = L.sessions.length + 1;
@@ -126,9 +126,11 @@ for (let i = 0; i < 100; i++) {
       expect(dbStats(), "statistics rebuilt from finished sessions").toEqual(statsFrom(L.sessions));
     } else if (k === "cancel") {
       await ui.getByRole("button", { name: "✕ Cancel Session" }).click();
-      await expect(toast).toHaveText("Session cancelled — earlier results kept");
+      await page.locator('#cancel-reason').fill('School closure');await page.locator('#modal.open').getByRole('button',{name:'Record cancellation'}).click();
+      await expect(toast).toHaveText("Cancellation recorded. Review compensation in Pay.");
       expect(kv("current_session")).toBeNull();
-      expect(kv("completed_sessions") || [], "finished sessions untouched").toEqual(L.sessions);
+      expect(kv("completed_sessions").slice(0,-1), "earlier finished sessions untouched").toEqual(L.sessions);
+      expect(kv("completed_sessions").at(-1)).toMatchObject({number:cur.number,status:"cancelled",reason:"School closure"});
       expect(dbStats(), "earlier weeks' statistics kept").toEqual(statsFrom(L.sessions));
     } else if (k === "late") {
       const pool = ctx.state.players.filter((p) => p.current_court > 0);
@@ -160,29 +162,17 @@ for (let i = 0; i < 100; i++) {
       await page.locator("#absent-player-sel").selectOption(`${out}|${c}`);
       if (rep) await page.locator("#spare-replace-sel").selectOption(String(rep));
       await ui.getByRole("button", { name: /Remove Absent/ }).click();
-      await expect(toast).toHaveText(`${name(out)} removed from Court ${c} (marked absent)${rep ? ` → ${name(rep)} added to Court ${c}` : ""}`);
-      const cs = kv("current_session");
-      expect(cs.assignments[c], `Court ${c} after the swap`).toEqual([...ids.filter((x) => x !== out), ...(rep ? [rep] : [])]);
-      expect(cs.attendance[out]).toBe("absent");
-      if (rep) expect(cs.attendance[rep]).toBe("present");
-    } else if (k === "rebalance") {
-      await ui.getByRole("button", { name: "🔄 Rebalance Courts" }).click();
-      const ids = [...new Set(assigned)].map((id) => ctx.state.players.find((p) => p.id === id)!).filter(Boolean).sort((x, y) => x.current_court - y.current_court);
-      const filled = fillCourts(ids.map((p) => p.id));
-      await expect(toast).toHaveText(`Courts re-sorted — ${ids.length} players across ${filled.slice(1).filter((x) => x.length).length} courts`);
-      const want: Record<string, number[]> = Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [String(c), filled[c]]));
-      expect(kv("current_session").assignments).toEqual(want);
-    } else if (k === "cascade") {
-      const from = 2 + Math.floor(r() * 5);
-      await ui.getByRole("button", { name: `↑C${from}`, exact: true }).click();
-      if (!(a[from] || []).length) { await expect(toast).toHaveText(`Court ${from} has no players to promote from`); return; }
-      let t = from - 1; while (t >= 1 && (a[t] || []).length >= 4) t--;
-      if (t < 1) { await expect(toast).toHaveText("All courts above are full (4/4)"); return; }
-      const pid = a[from][0];
-      await expect(toast).toHaveText(`${name(pid)} promoted from Court ${from} → Court ${t}`);
-      const cs = kv("current_session");
-      expect(cs.assignments[from]).toEqual(a[from].slice(1));
-      expect(cs.assignments[t]).toEqual([pid, ...(a[t] || [])]);
+      const ref=expectAdjust(cur,{absent:[out],returning:rep?[{id:rep,court:+c}]:[],late:[]});
+      if(!ref.ok){expect(kv('current_session').assignments).toEqual(a);return;}
+      await expect(toast).toHaveText('Absence and court adjustment saved');
+      const cs=kv('current_session');expect(cs.assignments).toEqual(ref.lineup);expect(cs.attendance[out]).toBe('absent');if(rep)expect(cs.attendance[rep]).toBe('present');
+    } else if (k === 'rebalance' || k === 'cascade') {
+      const ref=expectAdjust(cur);
+      await ui.getByRole('button',{name:k==='rebalance'?'🔄 Rebalance Courts':`↑C${2+Math.floor(r()*5)}`,exact:true}).click();
+      // The legacy shortcuts now preview the same safe adjustment rather than moving players blindly.
+      const apply=page.locator('#adj-apply');
+      if(await apply.isVisible()&&await apply.isEnabled()){await apply.click();await expect(toast).toContainText('Courts adjusted');expect(kv('current_session').assignments).toEqual(ref.lineup);}
+      else expect(kv('current_session').assignments).toEqual(a);
     } else if (k === "attendance") {
       const list = L.players.filter((p) => assigned.includes(p.id) || cur.attendance[p.id]);
       const rows = page.locator("#attendance-list .att-row");

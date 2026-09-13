@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   backup:
+    if: github.repository == 'Chriz93/dcbadmintonclub-test'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -18,14 +19,14 @@ jobs:
       - name: Check operator secret
         id: gate
         env:
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SERVICE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ -z "$SERVICE_KEY" ]; then echo "ready=false" >> "$GITHUB_OUTPUT"; echo "Secret not configured; skipping."; else echo "ready=true" >> "$GITHUB_OUTPUT"; fi
       - name: Export
         if: steps.gate.outputs.ready == 'true'
         env:
-          SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://wgolevihkvmosajumzvl.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_DIR: backup
         run: node legacy/automation/export-backup.mjs
       - uses: actions/upload-artifact@v4
