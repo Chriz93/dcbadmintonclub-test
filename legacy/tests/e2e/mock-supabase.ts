@@ -41,6 +41,10 @@ export interface MockState {
   schemaErrors?: string[]; // queries refused because they name a column the database table does not have
   holdRead?: { key: string; until: Promise<void>; served: () => void }; // a slow refresh: one app_state read's reply is fixed when asked, delivered when released
   holdTable?: { table: "players" | "payments"; until: Promise<void>; served: () => void }; // the same for one read of a table (p58 tests)
+  // A slow, uneven connection (p63 tests): every reply is fixed when the request arrives and delivered min–max ms later,
+  // so replies can arrive in a different order than they were asked for, as on a busy phone or a slow machine.
+  latency?: { min: number; max: number; seed: number };
+  holdRpc?: { fn: string; until: Promise<void>; served: () => void }; // a save's reply held after the database applied it (p63 tests)
   waiverVersions?: WaiverVersion[];    // L20
   waiverAcceptances?: Acceptance[];
 }
@@ -168,6 +172,9 @@ const REAL_COLUMNS: Record<string, string[]> = {
 
 export async function installMock(page: Page, s: MockState) {
   s.blocked = s.blocked || [];
+  // SLOW_NET=40-400 runs any suite on a slow, uneven connection (see MockState.latency).
+  const slow = process.env.SLOW_NET?.match(/^(\d+)-(\d+)$/);
+  if (slow && !s.latency) s.latency = { min: Number(slow[1]), max: Number(slow[2]), seed: 1 };
   await guardContext(page.context(), s.blocked);
   await page.route(`${SB}/**`, async (route: Route) => {
     const req = route.request();
@@ -175,7 +182,12 @@ export async function installMock(page: Page, s: MockState) {
     const path = url.pathname;
     const method = req.method();
     s.requests.push(`${method} ${path}${url.search}`);
-    const json = (status: number, body: unknown) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    const json = async (status: number, body: unknown) => {
+      const text = JSON.stringify(body), l = s.latency;   // the reply as it is now, whenever it arrives
+      if (l) { l.seed = (l.seed * 1103515245 + 12345) % 2147483648; await new Promise((r) => setTimeout(r, l.min + (l.seed / 2147483648) * (l.max - l.min))); }
+      const hr = s.holdRpc; if (hr && path === `/rest/v1/rpc/${hr.fn}`) { s.holdRpc = undefined; hr.served(); await hr.until; }
+      return route.fulfill({ status, contentType: "application/json", body: text });
+    };
     const body = () => (req.postData() ? JSON.parse(req.postData()!) : {});
     const c = claims(req, s);
     // A query naming a column the table does not have is refused, as the database refuses it (a missing created_at took the

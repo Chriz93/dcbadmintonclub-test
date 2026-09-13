@@ -10,7 +10,7 @@ const session=(ids=[1,2,3,4])=>({players:ids.map(id=>({id,name:'Player '+id})),c
 
 test('review · a refused HTTP update never reports the admin note as saved',async()=>{
  const messages=[];
- const a=app(['restWrite','sbU','saveAdminNote'],{sbFetch:async()=>new Response(JSON.stringify({message:'Organizer verification required',code:'42501'}),{status:403}),document:{getElementById:()=>({value:'Retain this draft'})},toast:(...m)=>messages.push(m),loadAll:()=>assert.fail('a failed save must retain its form'),renderAll:noop,closeModal:()=>assert.fail('a failed save must not close the form')});
+ const a=app(['_writing','restWrite','_restWrite','sbU','saveAdminNote'],{_writeStarts:0,_writesOpen:0,sbFetch:async()=>new Response(JSON.stringify({message:'Organizer verification required',code:'42501'}),{status:403}),document:{getElementById:()=>({value:'Retain this draft'})},toast:(...m)=>messages.push(m),loadAll:()=>assert.fail('a failed save must retain its form'),renderAll:noop,closeModal:()=>assert.fail('a failed save must not close the form')});
  await assert.rejects(a.saveAdminNote(1),/Organizer verification required/);
  assert.equal(messages.some(m=>m[1]==='success'),false);
 });
@@ -21,7 +21,7 @@ test('review · an unavailable state read is not a missing session',async()=>{
 });
 test('review · a failed multi-table load preserves the previous complete state',async()=>{
  const S=session(),before=structuredClone(S);
- const a=app(['loadAll','_loadAllOnce'],{S,_accountEpoch:0,_activeLoads:0,_writeSeq:0,_session:{},S_me:{organizer:true,verified:true},refreshMe:async()=>{},sbG:async()=>[],getKV:async(k)=>{if(k==='completed_sessions')throw Error('unavailable');return null;},console:{error:noop}});
+ const a=app(['loadAll','_loadAllOnce','_savesSettled'],{S,_accountEpoch:0,_activeLoads:0,_writeSeq:0,_writeStarts:0,_writesOpen:0,_attSaveTimer:null,_session:{},S_me:{organizer:true,verified:true},refreshMe:async()=>{},sbG:async()=>[],getKV:async(k)=>{if(k==='completed_sessions')throw Error('unavailable');return null;},console:{error:noop}});
  assert.equal(await a.loadAll(),false);assert.deepEqual(S,before);
 });
 

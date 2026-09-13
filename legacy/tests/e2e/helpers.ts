@@ -45,8 +45,9 @@ export async function scoreCourt(page: Page, court: number, scores: [number, num
   await page.selectOption("#sc-sel", String(court));
   // Type only into the form of the current match (the page's own identity: session, round and lineup). Right after the
   // last save of a round the round advances by itself; typing into the previous round's form is refused by the page
-  // ("This match changed"), as it should be, so wait for the new round's form like a person would.
-  await expect.poll(() => page.evaluate((c) => { const el = document.getElementById("score-area"); return !!S.current && !S.current.completed && el?.dataset.match === scoreMatchId(c) && !!el.querySelector(`#si_${c}_1_a`); }, court), { message: `the current match's form on Court ${court}`, timeout: 15000 }).toBe(true);
+  // ("This match changed"), as it should be, so wait for the new round's form like a person would, and for its Save
+  // button to be on (it is off while the round is still being saved, p63).
+  await expect.poll(() => page.evaluate((c) => { const el = document.getElementById("score-area"); return !!S.current && !S.current.completed && el?.dataset.match === scoreMatchId(c) && !!el.querySelector(`#si_${c}_1_a`) && !(document.getElementById(`sbtn_${c}`) as HTMLButtonElement | null)?.disabled; }, court), { message: `the current match's form on Court ${court}, Save on`, timeout: 15000 }).toBe(true);
   for (const [i, [a, b]] of scores.entries()) {
     await page.fill(`#si_${court}_${i + 1}_a`, String(a));
     await page.fill(`#si_${court}_${i + 1}_b`, String(b));

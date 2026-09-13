@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-13T18:40:57.082Z",
+ "generated": "2026-09-13T22:33:37.128Z",
  "summary": [
   {
    "k": "Control handler",
@@ -64,9 +64,12 @@
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/call-in.spec.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/interop.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/lineup.suite.ts",
@@ -80,6 +83,7 @@
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
@@ -163,12 +167,15 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -186,6 +193,7 @@
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/history.spec.ts",
     "e2e/tabs/interop.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/leaders.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/qa.spec.ts",
@@ -202,6 +210,7 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -214,6 +223,8 @@
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
+    "e2e/tabs/census.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -232,11 +243,14 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/interop.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -245,6 +259,7 @@
    "item": "admin → a-past",
    "tests": [
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -259,6 +274,7 @@
     "e2e/opener.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
@@ -272,11 +288,16 @@
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
+    "e2e/tabs/call-in.spec.ts",
+    "e2e/tabs/census.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -291,6 +312,8 @@
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/census.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -304,6 +327,7 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -318,6 +342,7 @@
     "e2e/matchnight.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/tools.spec.ts",
@@ -329,6 +354,7 @@
    "item": "admin → a-wv",
    "tests": [
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
@@ -343,6 +369,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
@@ -359,9 +386,11 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/history.spec.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
@@ -376,6 +405,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/leaders.spec.ts",
@@ -392,6 +422,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -406,6 +437,7 @@
    "item": "standings → qa",
    "tests": [
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -422,6 +454,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -438,6 +471,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -453,6 +487,7 @@
     "db/gen_cases.py",
     "e2e/matchnight.spec.ts",
     "e2e/tabs/a11y.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -514,7 +549,10 @@
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/buttons.suite.ts",
+    "e2e/tabs/call-in.spec.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
     "e2e/tabs/courts.spec.ts",
@@ -533,6 +571,7 @@
     "e2e/tabs/oracle.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/players.spec.ts",
+    "e2e/tabs/pool.ts",
     "e2e/tabs/registered.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
@@ -541,6 +580,8 @@
     "e2e/tabs/seating.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/stats.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
@@ -553,6 +594,7 @@
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
     "unit/review-regressions.test.mjs",
+    "unit/slow-replies.test.mjs",
     "unit/starting-reference.mjs"
    ]
   },
@@ -606,7 +648,8 @@
    "item": "callInSpare",
    "tests": [
     "e2e/tabs/attendance.spec.ts",
-    "e2e/tabs/players.spec.ts"
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/pool.ts"
    ]
   },
   {
@@ -673,6 +716,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
+    "e2e/tabs/buttons.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/interop.ts",
@@ -804,7 +848,8 @@
     "e2e/tabs/gen.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/session.spec.ts",
-    "e2e/tabs/toss-birds.spec.ts"
+    "e2e/tabs/toss-birds.spec.ts",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {
@@ -923,7 +968,8 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/isolation.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
-    "e2e/tabs/sequences.spec.ts"
+    "e2e/tabs/sequences.spec.ts",
+    "e2e/tabs/slow-network.spec.ts"
    ]
   },
   {
@@ -978,7 +1024,10 @@
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/call-in.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -986,6 +1035,7 @@
     "e2e/tabs/history.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/leaders.spec.ts",
@@ -1007,6 +1057,8 @@
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
@@ -1060,7 +1112,8 @@
    "kind": "Control handler",
    "item": "prepareNextSeason",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1316,6 +1369,7 @@
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "unit/review-regressions.test.mjs"
    ]
   },
@@ -1329,6 +1383,7 @@
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
     "unit/review-regressions.test.mjs"
    ]
@@ -1362,6 +1417,7 @@
    "kind": "Control handler",
    "item": "setView",
    "tests": [
+    "e2e/tabs/buttons.suite.ts",
     "e2e/tabs/controls.spec.ts"
    ]
   },
@@ -1431,9 +1487,13 @@
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/call-in.spec.ts",
+    "e2e/tabs/census.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/interop.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/lineup.suite.ts",
@@ -1447,6 +1507,7 @@
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
@@ -1545,7 +1606,10 @@
    "item": "togglePlayerPresence",
    "tests": [
     "e2e/tabs/attendance-count.spec.ts",
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {
@@ -1600,6 +1664,7 @@
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/adjust-edge.spec.ts",
     "e2e/tabs/adjust-oracle.ts",
+    "e2e/tabs/adjust-slow.spec.ts",
     "e2e/tabs/adjust.spec.ts",
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin-extras.spec.ts",
@@ -1610,7 +1675,13 @@
     "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/buttons.spec.ts",
+    "e2e/tabs/buttons.suite.ts",
+    "e2e/tabs/call-in.spec.ts",
+    "e2e/tabs/census-discover.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
     "e2e/tabs/courts.spec.ts",
@@ -1629,6 +1700,8 @@
     "e2e/tabs/interop-5.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/keyboard-redraw.spec.ts",
+    "e2e/tabs/keys.spec.ts",
     "e2e/tabs/ladder.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
@@ -1641,6 +1714,8 @@
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
     "e2e/tabs/phone/adjust.spec.ts",
+    "e2e/tabs/phone/buttons.spec.ts",
+    "e2e/tabs/phone/census-discover.spec.ts",
     "e2e/tabs/phone/courts.spec.ts",
     "e2e/tabs/phone/home.spec.ts",
     "e2e/tabs/phone/lineup.spec.ts",
@@ -1650,6 +1725,7 @@
     "e2e/tabs/phone/vote.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
     "e2e/tabs/players.spec.ts",
+    "e2e/tabs/pool.ts",
     "e2e/tabs/qa.spec.ts",
     "e2e/tabs/rankings.spec.ts",
     "e2e/tabs/register.spec.ts",
@@ -1667,6 +1743,8 @@
     "e2e/tabs/session.spec.ts",
     "e2e/tabs/sessions.spec.ts",
     "e2e/tabs/signin.spec.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/stats.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
@@ -1685,14 +1763,18 @@
     "rules.sql",
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
+    "unit/button-feedback.test.mjs",
+    "unit/coverage-gate.test.mjs",
     "unit/fetch-guard.mjs",
     "unit/helpers.test.mjs",
     "unit/isolation.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
     "unit/local-login.test.mjs",
+    "unit/production-build.test.mjs",
     "unit/release-guard.test.mjs",
     "unit/review-regressions.test.mjs",
+    "unit/slow-replies.test.mjs",
     "unit/starting-reference.mjs"
    ]
   },
@@ -1903,7 +1985,8 @@
    "kind": "Form field",
    "item": "new-season-ask",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1917,7 +2000,8 @@
    "kind": "Form field",
    "item": "new-season-capacity",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1932,14 +2016,16 @@
    "kind": "Form field",
    "item": "new-season-deadline",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-end-time",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1962,21 +2048,24 @@
    "kind": "Form field",
    "item": "new-season-notice",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-refund",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-regular",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1984,7 +2073,8 @@
    "item": "new-season-spare",
    "tests": [
     "e2e/tabs/audit-controls.spec.ts",
-    "e2e/tabs/season-rollover.spec.ts"
+    "e2e/tabs/season-rollover.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -1993,21 +2083,24 @@
    "tests": [
     "e2e/matchnight.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
-    "e2e/tabs/season-rollover.spec.ts"
+    "e2e/tabs/season-rollover.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-start-time",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
    "kind": "Form field",
    "item": "new-season-zone",
    "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "unit/button-feedback.test.mjs"
    ]
   },
   {
@@ -2172,6 +2265,7 @@
     "e2e/opener.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
+    "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -2179,6 +2273,8 @@
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
     "e2e/tabs/toss-birds.spec.ts"
    ]
@@ -2195,6 +2291,7 @@
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race.spec.ts"
    ]
   },
@@ -2210,6 +2307,7 @@
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race.spec.ts"
    ]
   },
@@ -2396,6 +2494,8 @@
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/slow-end-session.spec.ts",
+    "e2e/tabs/slow-network.spec.ts",
     "rules.sql",
     "unit/adjust.test.mjs",
     "unit/helpers.test.mjs"
@@ -2507,7 +2607,8 @@
    "item": "admin_status",
    "tests": [
     "db/gen_cases.py",
-    "e2e/mock-supabase.ts"
+    "e2e/mock-supabase.ts",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {
@@ -2650,7 +2751,8 @@
    "kind": "Database function",
    "item": "list_league_snapshots",
    "tests": [
-    "e2e/mock-supabase.ts"
+    "e2e/mock-supabase.ts",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {
@@ -2865,7 +2967,9 @@
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/tabs/adjust-edge.spec.ts",
-    "rules.sql"
+    "e2e/tabs/slow-network.spec.ts",
+    "rules.sql",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {
@@ -3080,7 +3184,8 @@
     "e2e/tabs/gen.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs",
-    "rules.sql"
+    "rules.sql",
+    "unit/slow-replies.test.mjs"
    ]
   },
   {

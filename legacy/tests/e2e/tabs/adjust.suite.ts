@@ -13,7 +13,7 @@ type Ref = RefResult & { moves: { id: number; from: number; to: number; reason?:
 const run = (inp: ReturnType<typeof adjustInput>) => reference(inp) as Ref;
 
 /** The desktop and phone spec files both call this, each on its own leagues. */
-export function define(first: number, count: number, phone = false) {
+export function define(first: number, count: number, phone = false, slow = false) {
   let ctx: Ctx;
   test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
   test.afterAll(async () => { await closeCtx(ctx); });
@@ -21,9 +21,12 @@ export function define(first: number, count: number, phone = false) {
   for (let k = 0; k < count; k++) {
     const i = first + k, live = LIVES[i % LIVES.length];
     const opts: GenOpts = { ...variety(i + 7), live, absentRate: 0.3, declineRate: 0.15, ...(i % 11 === 5 ? { regulars: 26, spares: 3 } : {}), ...(i % 13 === 6 ? { regulars: 7 } : {}) };
-    test(`Adjust ${phone ? "phone " : ""}${String(k + 1).padStart(3, "0")} · ${live} · ${genLeague(45000 + i, opts).title}`, async () => {
+    test(`Adjust ${phone ? "phone " : ""}${slow ? "slow " : ""}${String(k + 1).padStart(3, "0")} · ${live} · ${genLeague(45000 + i, opts).title}`, async () => {
       const L = genLeague(45000 + i, { ...opts, dates: ctx.dates });
       await load(ctx, L);
+      // Replies 20–120 ms late and out of order (p63). Heavier delays (SLOW_NET=40-400) make each page reload take several
+      // seconds, longer than these checks wait for the Adjust preview, which reloads first while showing "Checking…".
+      if (slow) ctx.state.latency = { min: 20, max: 120, seed: i + 1 };
       const page = ctx.page, r = rng(4500 + i), toast = page.locator("#_t");
       const kv = () => JSON.parse(ctx.state.state["current_session"]?.value ?? "null");
       const ver = () => ctx.state.state["current_session"]?.version ?? 0;

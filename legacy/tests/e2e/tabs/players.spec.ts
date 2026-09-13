@@ -8,6 +8,7 @@ import { courtOf } from "./oracle";
 import { fillCourts } from "../rules-model";
 import {manualMoveExpected} from './manual-move-oracle';
 import {expectAdjust, REFUSAL} from './adjust-oracle';
+import { poolAction, rowActions, COURT_LOCK } from "./pool";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
@@ -41,8 +42,12 @@ for (let i = 0; i < 100; i++) {
       expect(norm((await info.nth(1).textContent()) || "")).toBe(`${p.email || "—"} · C${p.current_court} · ${p.season_wins}W ${p.season_losses}L · Absent:${p.no_show_count}`);
       await expect(rows.nth(k).locator("select")).toHaveValue(String(p.current_court));
     }
-    const benchRows = list.locator(".card > div:has(> button:has-text('📲 Call In'))");
+    // p61: a spare already coming to the next session shows their status instead of Call In; p62: Call In is disabled,
+    // with the reason, once both rounds are finished.
+    const benchRows = list.locator(".card > div:has(> button[onclick^='callInSpare']), .card > div:has(> span.tag[title*=' is coming to the next session'])");
     expect((await benchRows.locator("> div:first-child > div:first-child").allTextContents()).map(norm), "spare pool / unassigned").toEqual(bench.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
+    expect(await benchRows.evaluateAll(rowActions), "each pool player's action").toEqual(bench.map((p) => poolAction(ctx, L, p.id)));
+    if (cur?.completed) for (let j = 0; j < bench.length; j++) { const b = benchRows.nth(j).locator("> button[onclick^='callInSpare']"); await expect(b).toBeDisabled(); await expect(b).toHaveAttribute("title", COURT_LOCK); }
 
     const act = i % 7, k = Math.floor(r() * Math.max(1, active.length)), p = active[k];
     if ((act === 0 || act === 1) && p) {
@@ -67,10 +72,25 @@ for (let i = 0; i < 100; i++) {
       await rows.nth(k).getByRole("button", { name: "✕" }).click();
       if(cur&&courtOf(cur.assignments,p.id)){await expect(toast).toContainText('Player is assigned tonight');expect(db(p.id)?.archived_at).toBeFalsy();expect(kv('current_session')).toEqual(cur);}
       else{await expect(toast).toHaveText('Player archived; history retained');expect(db(p.id)?.archived_at).toBeTruthy();expect(db(p.id)?.approved).toBe(false);expect(ctx.state.payments).toEqual(L.payments);}
-    } else if (act === 4 && bench.length) {
-      const u = bench[Math.floor(r() * bench.length)], j = bench.indexOf(u);
-      await benchRows.nth(j).getByRole("button", { name: "📲 Call In" }).click();
-      if(!cur){await expect(toast).toHaveText('Start a session before changing tonight’s lineup');return;}
+    } else if (act === 4 && bench.some((x) => poolAction(ctx, L, x.id) === "📲 Call In")) {
+      const offered = bench.filter((x) => poolAction(ctx, L, x.id) === "📲 Call In"), u = offered[Math.floor(r() * offered.length)], j = bench.indexOf(u);
+      const callIn = benchRows.nth(j).getByRole("button", { name: `Call in ${u.name}` });
+      if (cur?.completed) { await expect(callIn).toBeDisabled(); await expect(callIn).toHaveAttribute("title", COURT_LOCK); return; }
+      await callIn.click();
+      if (!cur) {
+        // p61: before a session Call In answers a spare "coming" for the next session and puts a regular on the ladder at the
+        // bottom court in use (call-in.spec.ts checks the seat and the next session's court against the reference).
+        if (!u.approved || u.waitlisted) { await expect(toast).toHaveText("Approve this player before calling them in"); return; }
+        if (u.membership_type === "spare") {
+          await expect.poll(() => ctx.state.rsvps.filter((v) => v.session_number === L.upcoming && v.player_id === u.id).at(-1)?.response, { message: "answered coming" }).toBe("coming");
+          await expect(toast).toContainText(`${u.name} is coming to Session ${L.upcoming}`);
+          return;
+        }
+        const used = P.filter((x) => x.id !== u.id && x.approved && !x.waitlisted && x.membership_type !== "spare" && x.current_court > 0).map((x) => x.current_court), bottom = used.length ? Math.max(...used) : 1;
+        await expect.poll(() => db(u.id)!.current_court, { message: "earned court saved" }).toBe(bottom);
+        await expect(toast).toContainText(`${u.name} joins the ladder on Court ${bottom} (the bottom court)`);
+        return;
+      }
       if(!u.approved||u.waitlisted){await expect(toast).toHaveText('Choose an approved, non-waitlisted player');return;}
       const from=courtOf(cur.assignments,u.id)||u.current_court||NC,ref=expectAdjust(cur,{absent:[],returning:[{id:u.id,court:from}],late:[]});
       if(!ref.ok){await expect(toast).toHaveText(REFUSAL[ref.why!]);expect(kv('current_session')).toEqual(cur);return;}

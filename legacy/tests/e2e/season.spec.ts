@@ -74,6 +74,8 @@ test.describe("ten-session season simulation", () => {
       // ── End session ───────────────────────────────────────────────────────────────────────────
       const playedR2 = new Map<number, number>();
       for (const g of rounds[1].games) for (const id of [...g.A, ...g.B]) { /* court recovered below from the app's score keys */ void id; }
+      // A person waits for End Session to turn on: it is off while the last round is still being saved (p63).
+      await expect.poll(() => page.evaluate(() => !_autoAdvancing), { message: "the last round is saved", timeout: 20000 }).toBe(true);
       await page.evaluate(() => endSession());
       await expect.poll(() => JSON.parse(state.state["completed_sessions"]?.value || "[]").length, { timeout: 20000 }).toBe(k);
       await page.evaluate(() => closeModal());

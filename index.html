@@ -993,22 +993,28 @@ async function sbFetch(path,opts={}){const epoch=_accountEpoch,hadSession=!!_ses
 async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await sbFetch(`/rest/v1/${t}?${q}`);if(!r.ok)throw new Error(`Load ${t} failed (${r.status})`);return r.json();}
 // p58: successful saves this page has made. A page load that started before the latest one discards its result.
 let _writeSeq=0;const READ_RPCS=new Set(['admin_status','list_league_snapshots']);
+// p63: saves started, and saves on their way (a reload that overlaps one is repeated, not shown).
+let _writeStarts=0,_writesOpen=0;
+async function _writing(f){_writeStarts++;_writesOpen++;try{return await f();}finally{_writesOpen--;}}
 async function sbP(t,d){return restWrite(`/rest/v1/${t}`,'POST',d);}
 async function sbU(t,id,d){return restWrite(`/rest/v1/${t}?id=eq.${id}`,'PATCH',d);}
 async function sbD(t,id){return restWrite(`/rest/v1/${t}?id=eq.${id}`,'DELETE');}
-async function restWrite(path,method,data){
+async function restWrite(path,method,data){return _writing(()=>_restWrite(path,method,data));}
+async function _restWrite(path,method,data){
   const r=await sbFetch(path,{method,headers:{'Prefer':'return=representation'},...(data===undefined?{}:{body:JSON.stringify(data)})});
   const text=await r.text();let j=null;try{j=text?JSON.parse(text):null;}catch(e){if(r.ok)throw new Error('The server returned an invalid response');}
   if(!r.ok){const e=new Error(j?.message||`Save refused (${r.status})`);e.code=j?.code;e.status=r.status;toast(e.message,'error');throw e;}
   _writeSeq++;return j;
 }
-async function sbUps(t,d,conflict=''){
+async function sbUps(t,d,conflict=''){return _writing(()=>_sbUps(t,d,conflict));}
+async function _sbUps(t,d,conflict=''){
   const url=`/rest/v1/${t}${conflict?`?on_conflict=${conflict}`:''}`;
   const r=await sbFetch(url,{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(d)});
   if(!r.ok){const txt=await r.text();throw new Error(`sbUps ${t} ${r.status}: ${txt.substring(0,200)}`);}
   _writeSeq++;return r.json();
 }
-async function rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}if(!READ_RPCS.has(fn))_writeSeq++;return j;}
+async function rpc(fn,args){return READ_RPCS.has(fn)?_rpc(fn,args):_writing(()=>_rpc(fn,args));}
+async function _rpc(fn,args){const r=await sbFetch(`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null;}catch(e){j=txt;}if(!r.ok){const err=new Error((j&&j.message)||'Request refused');err.code=j&&j.code;err.status=r.status;throw err;}if(!READ_RPCS.has(fn))_writeSeq++;return j;}
 // ── Shared state with versions: a stale screen can never overwrite newer data. ──
 const _stateVersion={};
 // _kvRead[k]: the version a read returned and the version this page already held when the reply arrived (p52).
@@ -1029,7 +1035,12 @@ async function mirrorApprovals(v){
     if(Object.keys(patch).length)await sbU('players',id,patch);
   }
 }
-async function setKV(k,v){try{const nv=await rpc('set_state',{k,v:JSON.stringify(v),expected:_stateVersion[k]||0});_stateVersion[k]=nv;}catch(e){if(e.code==='40001'||/Stale state/.test(e.message||'')){toast('⚠️ Someone else saved newer changes — reloading','warn');await loadAll();renderAll();throw e;}console.error('setKV failed:',k,e);toast('⚠️ Save failed: '+String(e.message||'check connection').substring(0,80),'error');throw e;}}
+// p63: this page's saves of one shared record go one after another, each with the version the previous one
+// returned (a quick second tap was sent with the older version and refused as someone else's newer change).
+const _kvQueue={};
+async function setKV(k,v){const prev=_kvQueue[k];let done;const mine=new Promise(r=>done=r);_kvQueue[k]=mine;
+ try{if(prev)await prev;return await _setKV(k,v);}finally{done();if(_kvQueue[k]===mine)delete _kvQueue[k];}}
+async function _setKV(k,v){try{const nv=await rpc('set_state',{k,v:JSON.stringify(v),expected:_stateVersion[k]||0});_stateVersion[k]=nv;}catch(e){if(e.code==='40001'||/Stale state/.test(e.message||'')){toast('⚠️ Someone else saved newer changes — reloading','warn');await loadAll();renderAll();throw e;}console.error('setKV failed:',k,e);toast('⚠️ Save failed: '+String(e.message||'check connection').substring(0,80),'error');throw e;}}
 async function deleteKV(k){await rpc('delete_state',{k});delete _stateVersion[k];}
 // Season wins/losses/games are derived from the stored scores by the database; never incremented in the browser.
 async function rebuildStats(){try{await rpc('rebuild_player_stats');}catch(e){toast('Statistics not rebuilt: '+(e.message||'refresh and retry'),'error');}}
@@ -1367,10 +1378,12 @@ function renderRSVPInto(el,compact){
 let _activeLoads=0;
 // p59: a load that one of this page's saves overtook is repeated (at most three times) instead of dropped, so the load
 // that applies always started after the latest save, even when that save does not reload by itself.
-async function loadAll(){for(let k=0;k<3;k++){const r=await _loadAllOnce();if(r!=='stale')return r;}return 'stale';}
+async function loadAll(){for(let k=0;k<3;k++){const r=await _loadAllOnce();if(r!=='stale')return r;await _savesSettled();}return 'stale';}
+// p63: wait (at most three seconds) for saves on their way and the attendance save that is waiting.
+async function _savesSettled(){for(let i=0;i<150&&(_writesOpen||_attSaveTimer);i++)await new Promise(r=>setTimeout(r,20));}
 async function _loadAllOnce(){
   _activeLoads++;
-  const seq=_writeSeq,epoch=_accountEpoch,draft={...S},reads={};const loadKV=k=>getKV(k,reads);
+  const seq=_writeSeq,ws=_writeStarts,epoch=_accountEpoch,draft={...S},reads={};const loadKV=k=>getKV(k,reads);
   try{
     if(!_session)return false;
     await refreshMe();
@@ -1417,6 +1430,7 @@ async function _loadAllOnce(){
     for(const [key,rd]of Object.entries(reads))if((_stateVersion[key]||0)>(rd.known||0))return false; // a save completed while this load was in flight
     if(epoch!==_accountEpoch||!_session)return false;
     if(seq!==_writeSeq)return 'stale'; // p58: a save finished while this load was in flight; the save's own reload shows it
+    if(ws!==_writeStarts||_writesOpen||_attSaveTimer)return 'stale'; // p63: a save started, is on its way, or is waiting
     applySeasonConfig(draft.seasonConfig,draft.seasonDates);for(const [key,rd]of Object.entries(reads)){_kvRead[key]=rd;_stateVersion[key]=rd.version;}_roundSnapshots=roundSnapshots;Object.assign(S,draft);reconcilePlayerStatus();return true;
   }catch(e){console.error('loadAll',e);return false;}finally{_activeLoads--;}
 }
@@ -2024,7 +2038,7 @@ async function togglePlayerPresence(id){
   renderAdminPlayers();
   // Debounce the save — batch multiple clicks into one network request
   clearTimeout(_attSaveTimer);
-  _attSaveTimer=setTimeout(async()=>{
+  _attSaveTimer=setTimeout(async()=>{_attSaveTimer=null;
     if(S.current){await setKV('current_session',S.current);}
     else{await setKV('pre_session_attendance',S.preAttendance);}
   },1000);
@@ -2037,7 +2051,8 @@ async function changePlayerAttendance(id,status){
  if(!res.ok)return toast(res.problem,'warn');
  const next=JSON.parse(JSON.stringify(S.current));next.assignments=res.lineup;next.attendance={...next.attendance,[id]:status};
  next.absentFrom={...next.absentFrom};if(status==='absent')next.absentFrom[id]=from;else delete next.absentFrom[id];
- try{await setKV('current_session',next);await loadAll();renderAll();
+ try{await setKV('current_session',next);S.current=next;renderAll(); // p63: shown once saved; the reload follows
+ await loadAll();renderAll();
  const seated=courtOfPlayer(id);toast(status==='absent'?(seated?`${p.name} marked absent; their scored court stays unchanged until the round ends`:`${p.name} marked absent — off Court ${from} tonight, one court down next week`):`${p.name} called in → Court ${seated}`,'success');}
  catch(e){await loadAll();renderAll();toast(e.message,'error');}
 }
@@ -2535,6 +2550,10 @@ function allCourtsDone(){
 }
 // ── Auto-Advance: when ALL courts are done, automatically go to next round ──
 let _autoAdvancing=false;
+// p63: while a round advances, Save is shown disabled with the reason; when it is saved the form is drawn again
+// (keeping anything typed) with Save on.
+function advanceLock(){return _autoAdvancing?' disabled title="The round is advancing. Save when this button turns on."':'';}
+function endAdvance(){_autoAdvancing=false;if(parseInt(document.getElementById('sc-sel')?.value))renderScoreEntry();}
 async function autoAdvanceCheck(){
   if(!S.current||_autoAdvancing)return;
   if(S.current.completed)return; // session already complete, no further advances
@@ -2579,7 +2598,7 @@ async function autoAdvanceCheck(){
       toast('Advance error','error');
     }
   }
-  finally{_autoAdvancing=false;}
+  finally{endAdvance();}
 }
 async function undoRound(){
   if(!_roundSnapshots.length)return toast('No rounds to undo','warn');
@@ -2632,7 +2651,7 @@ async function resetSession(){
     delete S.current.completed;
     await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();
     toast('Session reset — current session cleared, completed session stats preserved','success');
-  }finally{_autoAdvancing=false;}
+  }finally{endAdvance();}
 }
 async function nextCycle(){
   if(!S.current)return toast('No active session','warn');
@@ -2682,7 +2701,7 @@ async function nextCycle(){
     if(_scArea)_scArea.innerHTML='';
     await setKV('current_session',S.current);await rebuildStats();await loadAll();renderAll();
     toast(isFinalRound?'🏁 Session complete after '+MAX_ROUNDS_PER_SESSION+' rounds — click End Session':'Round '+S.current.cycle+'!','success');
-  }finally{_autoAdvancing=false;}
+  }finally{endAdvance();}
 }
 // The coin toss for players still tied on wins, points and point difference: the app draws it. The draw is seeded by
 // this night's start time, the round, the court and the tied players, so every phone shows the same result, nobody can
@@ -2741,6 +2760,7 @@ async function applyRotation(){
 function endSessionEarly(){openModal('End play early',`<p>Only finished rounds count. The unfinished round is discarded and nobody moves for unplayed games.</p><label class="lbl" for="end-early-reason">Reason</label><input class="inp" id="end-early-reason" maxlength="300"><button class="btn btn-warn" onclick="endSession(true,g('end-early-reason'))">End early</button>`);}
 async function endSession(early=false,reason=''){
   if(!S.current)return toast('No active session','warn');
+  if(_autoAdvancing)return toast('The last round is still being saved — end the session when the button turns on.','warn'); // p63
   if(!early&&!S.current.completed&&(S.current.cycle<MAX_ROUNDS_PER_SESSION||!allCourtsDone()))return toast('Finish both rounds before ending the session, or use End early in Tools.','warn');
   if(early&&reason.trim().length<3)return toast('Enter why play ended early','warn');
   if(!confirm(early?'End early? Only finished rounds count. Scores in the unfinished round are discarded; unplayed courts do not rotate.':'End session and save the completed results?'))return;
@@ -2982,7 +3002,8 @@ async function moveCourtPlayer(id,target){
  const res=adjustCourts({nc:NC,lineup,locked,closed:S.current.closedCourts||[],absent:[],returning:[],late:[],partner:true});
  if(!res.ok)return toast(res.problem,'warn');
  const next={...S.current,assignments:res.lineup};
- try{await setKV('current_session',next);await loadAll();renderAll();closeModal();toast('Court assignment saved','success');}
+ try{await setKV('current_session',next);S.current=next;renderAll(); // p63: shown once saved; the reload follows
+ await loadAll();renderAll();closeModal();toast('Court assignment saved','success');}
  catch(e){await loadAll();renderAll();toast('Court assignment not changed: '+e.message,'error');}
 }
 function cascadeFillCourt(){return previewAdjust();}
@@ -3701,7 +3722,7 @@ function renderScoreEntry(){
       <div style="font-size:16px;font-weight:900;text-align:center;color:var(--green2);margin-bottom:6px;">Session Complete</div>
       <div style="font-size:12px;text-align:center;color:var(--text);margin-bottom:14px;">All ${MAX_ROUNDS_PER_SESSION} rounds finished. Score entry is locked to protect the standings.</div>
       <div style="font-size:11px;text-align:center;color:var(--muted);margin-bottom:14px;">Click below to finalize the session and lock in next week's court assignments.</div>
-      <button class="btn btn-primary" style="width:100%;font-size:14px;" onclick="endSession()">🏁 End Session — Finalize Standings</button>
+      <button class="btn btn-primary" style="width:100%;font-size:14px;"${_autoAdvancing?' disabled title="The last round is still being saved. End the session when this button turns on."':''} onclick="endSession()">🏁 End Session — Finalize Standings</button>
       <div style="font-size:10px;text-align:center;color:var(--muted);margin-top:10px;">Need to fix a score? Use Admin → Tools → Undo Last Round to reopen Round ${MAX_ROUNDS_PER_SESSION}.</div>
     </div>`;
     return;
@@ -3755,10 +3776,10 @@ function renderScoreEntry(){
         <div class="tcol"><div class="tnames">${esc(tb)}</div>
           <input type="text" class="sinp ${saved&&saved.w==='B'?'win':saved?'lose':''}" aria-label="Court ${court}, Round ${cy}, Game ${g}: ${esc(tb)} score" id="si_${court}_${g}_b" maxlength="2" value="${saved?saved.sB:''}" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'');liveW(${court},${g})" inputmode="numeric" pattern="[0-9]*" autocomplete="off"></div>
       </div><div id="wr_${court}_${g}" style="text-align:center;min-height:22px;margin-top:6px;"></div>
-      <button class="btn btn-sm btn-primary" style="margin-top:6px;width:100%;" onclick="saveGameScore(${court},${g})">💾 Save Game ${g}</button>
+      <button class="btn btn-sm btn-primary" style="margin-top:6px;width:100%;"${advanceLock()} onclick="saveGameScore(${court},${g})">💾 Save Game ${g}</button>
     </div>`;
   });
-  html+=`<button class="btn btn-success" id="sbtn_${court}" onclick="saveScores(${court})">💾 Save All Court ${court} Scores</button>`;
+  html+=`<button class="btn btn-success" id="sbtn_${court}"${advanceLock()} onclick="saveScores(${court})">💾 Save All Court ${court} Scores</button>`;
   // ── Status after scoring ──
   const courtDone=isCourtDone(court);
   if(courtDone&&allCourtsDone()){
@@ -4796,9 +4817,10 @@ async function startNewSeason(){
  catch(e){toast('Not started: '+e.message,'error');}
 }
 function prepareNextSeason(){
- const c=S.seasonConfig;if(!c)return;
+ const c=S.seasonConfig;if(!c)return toast('The current season settings are not loaded yet — refresh and try again','warn'); // p65
  const fields={'start-time':c.start_time_local,'end-time':c.end_time_local,zone:c.time_zone,capacity:c.regular_capacity,regular:c.fees.regular_season,spare:c.fees.spare_session,refund:c.fees.absence_refund,notice:c.fees.absence_notice_hours,deadline:c.fees.vote_deadline_hours,ask:c.fees.spare_ask_hours};
  for(const [key,value]of Object.entries(fields))document.getElementById('new-season-'+key).value=value;
+ toast('Filled in with the current fees and session time — change what differs for next season','info'); // p65
 }
 function hardReset(){toast('Use a league snapshot to recover data, or Archive season to start a new season. Permanent bulk deletion is not available in this site.','warn');}
 
@@ -5309,6 +5331,10 @@ function improveSemantics(){
   document.querySelectorAll('.page').forEach(e=>{e.setAttribute('role',e.classList.contains('active')?'main':'region');e.setAttribute('aria-label',e.id.replace('page-',''));});
   document.querySelectorAll('.bnav-btn').forEach(e=>e.setAttribute('aria-current',e.classList.contains('active')?'page':'false'));
 }
+// p64: any part of the page drawn again gets the same treatment (once per batch of changes; attributes only, so the
+// observer is not set off again).
+{let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;improveSemantics();});})
+ .observe(document.body,{childList:true,subtree:true});}
 document.addEventListener('keydown',e=>{const t=e.target;if((e.key==='Enter'||e.key===' ')&&t.matches('[role="button"][onclick]:not(button):not(a)')&&!t.hasAttribute('onkeydown')){e.preventDefault();t.click();}});
 let _modalReturn=null,_lastFocus=null;
 document.addEventListener('focusin',e=>{if(e.target instanceof HTMLElement&&!e.target.closest('#modal'))_lastFocus=e.target;});
@@ -5429,7 +5455,8 @@ async function handleAbsentAndReplace(){
  const res=adjustCourts(input);if(!res.ok)return toast(res.problem,'warn');
  const next=JSON.parse(JSON.stringify(S.current));next.assignments=res.lineup;next.attendance={...next.attendance,[id]:'absent'};if(spareId)next.attendance[spareId]='present';
  next.absentFrom={...next.absentFrom,[id]:courtOfPlayer(id)};
- try{await setKV('current_session',next);await loadAll();renderAll();toast('Absence and court adjustment saved','success');}catch(e){await loadAll();renderAll();toast(e.message,'error');}
+ try{await setKV('current_session',next);S.current=next;renderAll(); // p63: shown once saved; the reload follows
+ await loadAll();renderAll();toast('Absence and court adjustment saved','success');}catch(e){await loadAll();renderAll();toast(e.message,'error');}
 }
 async function handleAbsentPlayer(){
   const sel=document.getElementById('absent-player-sel')?.value;
@@ -5893,6 +5920,7 @@ async function markAttForTab(id,status,court){
   else if(status==='absent')toast(`${first} marked absent${tail}. One court down next week.`,'warn');
   else if(status==='late')toast(`${first} marked late${tail}`,'warn');
   else if(status==='present')toast(first+' confirmed present'+tail,'success');
+  renderAttendanceTab(); // p63: the mark shows as soon as it is saved; the reload below follows
   await loadAll();renderAttendanceTab();renderCourts();renderAdminPlayers();
 }
 async function saveAttendanceTab(){

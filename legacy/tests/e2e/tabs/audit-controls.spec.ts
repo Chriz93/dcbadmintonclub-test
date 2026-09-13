@@ -84,6 +84,8 @@ test("Audit controls · next season: 'Use current fees and session time' fills e
     "new-season-spare": c.fees.spare_session, "new-season-refund": c.fees.absence_refund, "new-season-notice": c.fees.absence_notice_hours,
     "new-season-deadline": c.fees.vote_deadline_hours, "new-season-ask": c.fees.spare_ask_hours };
   for (const [field, v] of Object.entries(want)) await expect(page.locator(`#${field}`), field).toHaveValue(String(v));
+  // p65: it says what it did (it used to fill the fields without a word).
+  await expect(page.locator("#_t")).toHaveText("Filled in with the current fees and session time — change what differs for next season");
 });
 
 test("Audit controls · the season calendar file has one event per scheduled date at the league's local time", async () => {

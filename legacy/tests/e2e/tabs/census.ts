@@ -87,8 +87,10 @@ export function pageControls(arg: { scope: string; exclude?: string; markKey?: s
 export function pageSnapshot(scope: string) {
   const vis = (e: Element) => { const r = (e as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const root = document.querySelector(scope), s = root ? root.innerHTML : "";
+  // Field values and ticks are not part of the HTML but are a visible change too ("Use current fees" fills fields).
+  const vals = root ? [...root.querySelectorAll("input, select, textarea")].map((e) => { const f = e as HTMLInputElement; return f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.value; }).join("\u0001") : "";
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  for (const x of [s, vals]) for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) | 0;
   const t = document.getElementById("_t");
   return {
     page: [...document.querySelectorAll(".page")].filter(vis).map((e) => e.id).join(","),

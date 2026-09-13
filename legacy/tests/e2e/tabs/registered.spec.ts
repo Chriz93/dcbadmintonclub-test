@@ -6,6 +6,7 @@ import {courtOf} from "./oracle";
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type Player } from "./gen";
+import { COURT_LOCK } from "./pool";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
@@ -78,8 +79,10 @@ for (let i = 0; i < 100; i++) {
       await expect(toast).toHaveText(`${first.name} promoted from the waitlist`);
       expect(JSON.parse(ctx.state.state["player_approvals"].value)[first.id]).toMatchObject({ approved: true, waitlisted: false, membershipType: "regular" });
     } else if (act === 5 && shown.length) {
-      const p = shown[shown.length - 1], c = (p.current_court % 6) + 1;
-      await sec.locator("div[style*='padding:12px']").filter({ hasText: p.email }).first().locator("select").selectOption(String(c));
+      const p = shown[shown.length - 1], c = (p.current_court % 6) + 1, sel = sec.locator("div[style*='padding:12px']").filter({ hasText: p.email }).first().locator("select");
+      // p62: once both rounds are finished the court list is disabled, with the reason, until End Session.
+      if (L.current?.completed) { await expect(sel).toBeDisabled(); await expect(sel).toHaveAttribute("title", COURT_LOCK); return; }
+      await sel.selectOption(String(c));
       if(L.current){const want=manualMoveExpected(L,p.id,c);if(want.message)await expect(toast).toContainText(want.message);expect(JSON.parse(ctx.state.state.current_session.value).assignments).toEqual(want.lineup);}
       else await expect.poll(()=>ctx.state.players.find(x=>x.id===p.id)!.current_court).toBe(c);
     }

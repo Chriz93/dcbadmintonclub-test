@@ -5,6 +5,7 @@ import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
 import { expectAdjust, changes, sorted } from "./adjust-oracle";
+import { poolAction, rowActions } from "./pool";
 
 const LIVES: LiveState[] = ["none", "r1-partial", "r2-partial", "r1-done"];
 let ctx: Ctx;
@@ -40,7 +41,12 @@ for (let i = 0; i < 100; i++) {
     const pool = P.filter((p) => !p.current_court);
     const poolCard = sec.locator(".card").filter({ has: page.locator(".card-title", { hasText: /^🪑 Spare Pool/ }) });
     await expect(poolCard).toHaveCount(pool.length ? 1 : 0);
-    if (pool.length) expect((await poolCard.locator("div:has(> button[onclick^='callInSpare']) > span").allTextContents()).map(norm)).toEqual(pool.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
+    if (pool.length) {
+      // p61: a spare already coming to the next session shows their status instead of Call In.
+      const rows = poolCard.locator("div:has(> button[onclick^='callInSpare']), div:has(> span.tag[title*=' is coming to the next session'])");
+      expect((await rows.locator("> span:not(.tag)").allTextContents()).map(norm)).toEqual(pool.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
+      expect(await rows.evaluateAll(rowActions), "each pool player's action").toEqual(pool.map((p) => poolAction(ctx, L, p.id)));
+    }
     const excused = P.filter((p) => att[p.id] === "declined");
     await expect(sec.locator("#excused-tonight")).toHaveCount(excused.length ? 1 : 0);
     if (excused.length) await expect(sec.locator("#excused-tonight")).toContainText(`${excused.length} regular${excused.length === 1 ? "" : "s"} declined in time — no court penalty.`);

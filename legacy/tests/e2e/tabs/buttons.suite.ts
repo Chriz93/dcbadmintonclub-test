@@ -2,6 +2,9 @@
 // something — save, open a dialog, change the view, download or share, show a message, or visibly change the page —
 // and must not throw a script error or answer only that it is "not available" while it is offered. The first test of
 // each state fails when the page shows a control the census does not list (rerun census-discover.spec.ts).
+// In keyboard mode (tabs/keys.spec.ts) each control is worked from the keyboard instead (WCAG 2.1.1): it can be reached
+// with Tab, takes the focus, and Enter (Space for a checkbox or option) does what a click does. Lists are native and
+// skipped there.
 import { test, expect, type Browser, type Page, type Download } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
@@ -36,7 +39,8 @@ export function defineDiscover() {
   });
 }
 
-export function defineButtons(project: "tabs" | "tabs-phone") {
+export function defineButtons(project: "tabs" | "tabs-phone", mode: "click" | "keyboard" = "click") {
+  const keys = mode === "keyboard";
   const file = path.join(__dirname, `button-census-${project}.json`);
   if (!fs.existsSync(file)) {
     test(`Buttons · the census for ${project} is recorded`, () => { throw new Error(`${path.basename(file)} is missing: run census-discover.spec.ts with CENSUS_WRITE=1`); });
@@ -44,8 +48,8 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
   }
   const census = JSON.parse(fs.readFileSync(file, "utf8")) as Entry[];
   for (const st of STATES) {
-    const entries = census.filter((e) => e.state === st.id);
-    test.describe(`Buttons · ${st.id}`, () => {
+    const entries = census.filter((e) => e.state === st.id && !(keys && e.tag === "select"));
+    test.describe(`${keys ? "Keys" : "Buttons"} · ${st.id}`, () => {
       let ctx: Ctx | undefined;
       const fresh = async (browser: Browser) => { if (ctx) await closeCtx(ctx).catch(() => {}); ctx = await openAs(browser, st.role === "organizer" ? "admin" : PLAYER_EMAIL); };
       const league = () => genLeague(st.seed, { ...variety(st.seed), ...st.opts, dates: ctx!.dates });
@@ -63,7 +67,7 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
       test.beforeAll(async ({ browser }) => { await fresh(browser); });
       test.afterAll(async () => { if (ctx) await closeCtx(ctx); });
 
-      test(`Buttons · ${st.id} · the census lists every control the page shows`, async ({ browser }) => {
+      if (!keys) test(`Buttons · ${st.id} · the census lists every control the page shows`, async ({ browser }) => {
         const page = await ready(browser), missing: string[] = [];
         for (const v of VIEWS.filter((x) => x.roles.includes(st.role))) {
           await page.evaluate(() => { try { closeModal(); } catch { /* none open */ } });
@@ -76,7 +80,7 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
       });
 
       entries.forEach((e, k) => {
-        test(`Button · ${st.id} · ${e.view} · ${(e.label || e.key).slice(0, 60)} #${k + 1}`, async ({ browser }) => {
+        test(`${keys ? "Key" : "Button"} · ${st.id} · ${e.view} · ${(e.label || e.key).slice(0, 60)} #${k + 1}`, async ({ browser }) => {
           const page: Page = await ready(browser), v = VIEWS.find((x) => x.id === e.view)!;
           const errors: string[] = [], popups: string[] = [], downloads: string[] = [];
           const onErr = (err: Error) => errors.push(err.message), onDl = (d: Download) => downloads.push(d.suggestedFilename());
@@ -93,6 +97,16 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
             }
             expect(shown.map((c) => c.key), `shown in ${e.view}`).toContain(e.key);
             const target = page.locator("[data-census-target]");
+            // Scrolled into view first, so bringing it into view is not mistaken for its effect.
+            await target.scrollIntoViewIfNeeded().catch(() => {});
+            // A choice that is already selected (the open tab, the current view, a ticked option) may do nothing more.
+            const selected = await target.evaluate((el) => el.matches('input[type="radio"]:checked, [aria-pressed="true"], [aria-selected="true"], [aria-current="page"], .active, .active-box'));
+            if (keys) {
+              // Reached with Tab and given the focus before the "before" picture, so the focus itself is not the effect.
+              const reach = await target.evaluate((el) => { (el as HTMLElement).focus(); return { tab: (el as HTMLElement).tabIndex, focused: document.activeElement === el }; });
+              expect(reach.tab, "reachable with Tab").toBeGreaterThanOrEqual(0);
+              expect(reach.focused, "takes the keyboard focus").toBe(true);
+            }
             const before = await page.evaluate(pageSnapshot, v.scope), w0 = writes(ctx!);
             if (e.tag === "select") {
               const values = await target.evaluate((s) => [...(s as HTMLSelectElement).options].map((o) => o.value)), cur = await target.inputValue();
@@ -101,7 +115,8 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
               await target.selectOption(next!);
             } else {
               ctx!.prompts.length = 0; ctx!.prompts.push("Answer from the button check");   // a control that asks for text gets some
-              await target.click({ timeout: 5000 });
+              if (keys) await page.keyboard.press(/^input:(checkbox|radio)$/.test(e.tag) ? "Space" : "Enter");
+              else await target.click({ timeout: 5000 });
             }
             let after = before, effect = "";
             for (let t = 0; t < 40 && !effect; t++) {
@@ -118,7 +133,7 @@ export function defineButtons(project: "tabs" | "tabs-phone") {
             await page.waitForTimeout(150);
             after = await page.evaluate(pageSnapshot, v.scope);
             expect(errors, "no script error").toEqual([]);
-            expect(effect, `"${e.label || e.key}" does something`).not.toBe("");
+            if (!selected) expect(effect, `"${e.label || e.key}" does something`).not.toBe("");
             if (after.toastRaw && after.toastRaw !== before.toastRaw) expect(after.toastRaw, "an offered control is not answered only with 'not available'").not.toMatch(UNAVAILABLE);
           } finally {
             page.off("pageerror", onErr); page.off("download", onDl); page.context().off("page", onPopup);
