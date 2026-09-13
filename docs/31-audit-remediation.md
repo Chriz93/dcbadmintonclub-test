@@ -108,6 +108,18 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   play); they now use the session's start in the league's zone. Under both UTC and Toronto time: unit 1,079, automation
   39, the date-and-time browser suites (Home, vote, Pay, vote changes, Tools, Q&A, Schedule, audit controls: 1,117) and
   Waiver (207) pass. Before these fixes, 252 of 400 Home and vote cases failed under UTC on this Mac, as on GitHub.
+- **p61 — Call In works before a session** (found by the organizer on TEST after the release: Call In did nothing).
+  The remediation had routed Call In through tonight's court engine, which needs a running session. Before a session,
+  a regular with no court now joins the ladder on the bottom court in use, and a spare is answered "coming" for the
+  next session; a spare already coming shows their status instead of a button. `tabs/call-in.spec.ts` (40).
+- **p62 — no court changes offered after both rounds** (found by the new button census): the Move and Court selectors
+  and Call In were offered but only refused once both rounds were finished; they are now shown disabled with the
+  reason. `tabs/complete-locks.spec.ts` (12).
+- **The button census.** Every usable control on every page and tab is recorded in 20 league states (organizer,
+  player and spare views; small to full leagues; before, during, between and after rounds) for desktop and phone, and
+  each becomes a test that clicks it and requires an effect, no script error and no "not available" answer from an
+  offered control. A test per state fails if the page shows a control the census does not list. docs/32 maps every
+  fix in the release to the tests that cover it.
 
 **Coverage gaps closed.** Codex's new controls and database functions had no test naming them (28 items in the
 coverage matrix). `tabs/audit-controls.spec.ts` covers End play early (a reason is required; only finished rounds count),

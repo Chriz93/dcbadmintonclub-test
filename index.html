@@ -2047,7 +2047,42 @@ async function markAbsentFromPlayers(id){
  if(!confirm(`Mark ${p.name} absent? Scored courts retain their lineup until the round ends.`))return;
  return changePlayerAttendance(id,'absent');
 }
-async function callInSpare(id){return changePlayerAttendance(id,'present');}
+// p61: Call In works before a session too. During a session it seats the player through the court engine. Before a
+// session a spare is answered "coming" for the next session, and a regular with no court joins the ladder on the bottom
+// court in use, where they start next session.
+async function callInSpare(id){
+ if(S.current)return changePlayerAttendance(id,'present');
+ const p=S.players.find(x=>x.id===id);if(!p)return;
+ if(!adminUnlocked)return toast('Organizer verification required','warn');
+ if(!p.approved||p.waitlisted)return toast('Approve this player before calling them in','warn');
+ const n=upcomingSessionNumber();
+ if(isSpareMember(p)){
+  try{await rpc('set_rsvp',{p_session:n,p_player:id,p_response:'coming'});}catch(e){return toast('Not called in: '+e.message,'error');}
+  await loadAll();renderAll();
+  const claim=spareSeats().claims.find(x=>x.id===id),court=spareCourtUpcoming(id);
+  return toast(court?`${p.name} is coming to Session ${n} and takes an open seat on Court ${court}`
+   :claim&&claim.reserved?`${p.name} is coming to Session ${n}; the seat is confirmed once the e-transfer is verified`
+   :`${p.name} is coming to Session ${n} and is on standby until a regular declines`,'success');
+ }
+ const used=S.players.filter(x=>x.id!==id&&isRegularMember(x)&&x.currentCourt>0).map(x=>x.currentCourt),court=used.length?Math.max(...used):1;
+ try{await sbU('players',id,{current_court:court,highest_court:p.highestCourt?Math.min(p.highestCourt,court):court});}catch(e){return;}
+ await loadAll();renderAll();
+ const next=S.current?0:(()=>{const a=upcomingLineup().assign;for(let c=1;c<=NC;c++)if((a[c]||[]).includes(id))return c;return 0;})();
+ toast(`${p.name} joins the ladder on Court ${court} (the bottom court)`+(next===court?' and starts there next session':next?`; next session they start on Court ${next}`:''),'success');
+}
+// p61: the court a spare starts on in the upcoming lineup (0 when they have no seat).
+function spareCourtUpcoming(id){if(S.current)return 0;const a=upcomingLineup().assign;for(let c=1;c<=NC;c++)if((a[c]||[]).includes(id))return c;return 0;}
+// p62: once both rounds are finished, controls that would change tonight's courts are shown disabled, with the reason.
+function courtLock(){return S.current&&S.current.completed?' disabled title="Both rounds are finished. End the session to save the final courts, then change courts."':'';}
+// p61: the pool's action for a player: a spare who is already coming for the next session shows their status instead.
+function poolAction(p){
+ if(!S.current&&isSpareMember(p)&&(S.rsvp||{})[p.id]==='coming'){
+  const court=spareCourtUpcoming(p.id);
+  return court?`<span class="tag tg-green" title="${esc(p.name)} is coming to the next session and has a seat">✓ Coming · Court ${court}</span>`
+   :`<span class="tag tg-yellow" title="${esc(p.name)} is coming to the next session, on standby">Coming · standby</span>`;
+ }
+ return `<button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:11px;margin:0;" aria-label="Call in ${esc(p.name)}"${courtLock()} onclick="callInSpare(${p.id})">📲 Call In</button>`;
+}
 async function setPlayerCourt(id,c){
  const court=Number(c);if(S.current)return moveCourtPlayer(id,court);
  if(!Number.isInteger(court)||court<0||court>NC)return toast('Choose a valid court','warn');
@@ -2154,7 +2189,7 @@ function renderAdminPlayers(){
     <button class="notes-btn" onclick="openAdminNote(${p.id})" aria-label="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}" title="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}">${noteIcon}</button>
     <span class="tag ${attStatus==='absent'?'tg-red':attStatus==='present'?'tg-green':'tg-gray'}" style="cursor:pointer;font-size:11px;" onclick="togglePlayerPresence(${p.id})" title="Toggle present/absent">${attStatus==='absent'?'❌':attStatus==='present'?'✅':'—'}</span>
     <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;font-size:11px;" onclick="togglePaid(${p.id})" title="Toggle paid">${p.paid?'💰':'⏳'}</span>
-    <select aria-label="Court for ${esc(p.name)}" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
+    <select aria-label="Court for ${esc(p.name)}"${courtLock()} style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
       <option value="0">Bench</option>
       ${[1,2,3,4,5,6].map(c=>`<option value="${c}" ${p.currentCourt===c?'selected':''}>C${c}</option>`).join('')}
     </select>
@@ -2171,11 +2206,11 @@ function renderAdminPlayers(){
           <div style="font-weight:700;font-size:12px;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}</div>
           <div style="font-size:10px;color:var(--muted);">${esc(p.email)||'—'}</div>
         </div>
-        <select aria-label="Court for ${esc(p.name)}" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
+        <select aria-label="Court for ${esc(p.name)}"${courtLock()} style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
           <option value="0" selected>Bench</option>
           ${[1,2,3,4,5,6].map(c=>`<option value="${c}">C${c}</option>`).join('')}
         </select>
-        <button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:11px;" onclick="callInSpare(${p.id})">📲 Call In</button>
+        ${poolAction(p)}
       </div>`;
     });
   }
@@ -2330,7 +2365,7 @@ function regPlayerCard(p,showApprove){
     <div style="font-size:11px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;">
       <div>📞 ${esc(p.phone)}</div>
       <div>${p.currentCourt>0?'🏸 Court '+p.currentCourt:'🏸 Unassigned'}</div>
-      <select class="inp" aria-label="Court for ${esc(p.name)}" style="font-size:10px;padding:4px 6px;margin:0;" onchange="assignCourtToRegistered(${p.id},this.value)">
+      <select class="inp" aria-label="Court for ${esc(p.name)}"${courtLock()} style="font-size:10px;padding:4px 6px;margin:0;" onchange="assignCourtToRegistered(${p.id},this.value)">
         <option value="0" ${!p.currentCourt||p.currentCourt===0?'selected':''}>Unassigned</option>
         ${[1,2,3,4,5,6].map(c=>`<option value="${c}" ${p.currentCourt===c?'selected':''}>Court ${c}</option>`).join('')}
       </select>
@@ -3130,7 +3165,7 @@ function renderAssignUI(){
   if(unassigned.length){
     html+=`<div class="dnd-court" data-court="0" ondragover="dndOver(event)" ondrop="dndDrop(event,0)" ondragleave="dndLeave(event)">
       <div class="dnd-court-hdr"><span class="dnd-court-title" style="color:var(--yellow2);">UNASSIGNED</span><span class="dnd-court-cnt" style="background:rgba(243,156,18,0.15);color:var(--yellow2);">${unassigned.length}</span></div>
-      <div class="dnd-slots">${unassigned.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}<select class="inp" aria-label="Move ${esc(p.name)}" onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(c=>`<option value="${c}">Court ${c}</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="dnd-slots">${unassigned.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(c=>`<option value="${c}">Court ${c}</option>`).join('')}</select></div>`).join('')}</div>
     </div>`;
   }
   for(let c=1;c<=NC;c++){
@@ -3145,7 +3180,7 @@ function renderAssignUI(){
         <span class="dnd-court-cnt" style="background:${warn?'rgba(192,57,43,0.15)':'rgba(39,174,96,0.15)'};color:${cntColor};">${cnt} players${warn?' — invalid':cnt===0?' — empty':cnt===2?' — singles best of 3':cnt===3?' — singles':cnt===5?' — rotating doubles':' — doubles'}</span>
       </div>
       <div class="dnd-slots">
-        ${players.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}<select class="inp" aria-label="Move ${esc(p.name)}" onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`).join('')}
+        ${players.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`).join('')}
 
       </div>
     </div>`;
@@ -5773,7 +5808,7 @@ function renderAttendanceTab(){
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">
         ${avatar(p.name,'sm')}
         <span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}</span>
-        <button class="btn btn-success btn-sm" style="padding:3px 8px;font-size:10px;margin:0;" onclick="callInSpare(${p.id})">📲 Call In</button>
+        ${poolAction(p)}
       </div>`;
     });
     html+=`</div>`;
@@ -5793,7 +5828,7 @@ function renderAttendanceTab(){
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${seatsTonight.declined} regular${seatsTonight.declined===1?'':'s'} declined · ${seatsTonight.claims.filter(c=>c.confirmed).length} confirmed · ${seatsTonight.claims.filter(c=>!c.reserved).length} standby. Confirmed spares are seated automatically when the night starts.</div>`;
     seatsTonight.claims.forEach(c=>{
       const p=S.players.find(x=>x.id===c.id);if(!p)return;
-      const seated=S.current?Object.values(S.current.assignments).some(a=>(a||[]).includes(p.id)):p.currentCourt>0;
+      const seated=S.current?Object.values(S.current.assignments).some(a=>(a||[]).includes(p.id)):spareCourtUpcoming(p.id)>0;
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">
         ${avatar(p.name,'sm')}
         <span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} ${c.confirmed?'<span class="tag tg-green">confirmed</span>':c.reserved?'<span class="tag tg-yellow">reserved · payment pending</span>':'<span class="tag tg-yellow">standby</span>'}${p.paid?' <span class="tag tg-green">$'+FEES.spareSession+' paid</span>':' <span class="tag tg-gray">$'+FEES.spareSession+' pending</span>'}</span>
