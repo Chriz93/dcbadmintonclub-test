@@ -129,6 +129,8 @@ function api(env) {
 export async function run(env = process.env, deps = {}) {
   const log = deps.log || ((...a) => console.log(...a));
   for (const k of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SITE_URL", "GMAIL_USER"]) if (!env[k]) throw new Error(`${k} is required`);
+  // Automated tests never reach a real database: under `node --test` a real Supabase address is refused outright.
+  if ((env.NODE_TEST_CONTEXT || process.env.NODE_TEST_CONTEXT) && /supabase\.(co|com)/i.test(env.SUPABASE_URL)) throw new Error("Refusing: automated tests must not reach a real Supabase project");
   const db = deps.db || api(env);
   const live = env.DELIVERY_MODE === "live";
   const testMode = env.ALLOW_REAL_RECIPIENTS !== "true";

@@ -294,7 +294,7 @@ Admin-extras and the match-night suites pass. `build-production.py --reuse-key` 
 published production site, so republishing needs no copy and paste. Caches: TEST `dcbc-test-v61`, production
 `dcbc-v41`.
 
-## September 12, 2026 release — 2,115 new tests (patches p35–p52, migrations L18–L21)
+## September 12, 2026 release — 2,127 new tests (patches p35–p53, migrations L18–L21)
 
 **Baseline before this release:**
 
@@ -306,7 +306,7 @@ Every baseline test title still exists. This was checked by listing the committe
 (`playwright test --list`) and comparing titles. Tests changed because a requirement changed are listed in docs/28
 section 5.
 
-**New:** 1,349 browser cases, 518 unit tests and 248 database cases.
+**New:** 1,349 browser cases, 518 unit tests, 248 database cases and 12 automation tests.
 
 | Suite | Cases | What it checks | Expectations from |
 |---|---|---|---|
@@ -331,6 +331,7 @@ section 5.
 | `unit/isolation.test.mjs` | 18 | Settings that name production are refused; network access is refused in unit tests | — |
 | `unit/helpers.test.mjs` | 63 | CSV formula guard, shuttlecocks, seating refusals, games per court, next court in use, waiver fingerprint, league time | rule text, Node's SHA-256 |
 | database sections 13–17 | 248 | Waiver records and marker permissions, registration and acceptance validation, publishing, best of three, callers | L18–L21 |
+| `legacy/automation/backup-waiver.test.mjs` | 12 | The backup includes the waiver tables and the marker; a database without them is still backed up in full; any other missing table or error fails it; restores add missing waiver records only and keep their guards on; both jobs refuse a real database under `node --test` | Supabase's real reply for a missing table (404 `PGRST205`) |
 
 **Database rehearsal additions:**
 
@@ -361,6 +362,10 @@ section 5.
   at the screenshots, not by a test.
 - **p52:** a slow background refresh undid a save that had just been made. It was found because the season
   simulation failed at random sessions under load. The stand-in can now hold one reply (`holdRead`) to reproduce it.
+- **p53:** after the deploy, everyone signed in to TEST saw "Cannot connect to database". Two waiver queries were
+  ordered by `created_at`, which `waiver_versions` does not have. The stand-in did not check column names, so it now
+  refuses unknown columns on the new tables as PostgREST does (`42703`), and every suite fails on such a refusal
+  (`closeCtx`).
 - **L21:** the service role could TRUNCATE the new tables.
 
 Results of the final run are in docs/28 section 5.

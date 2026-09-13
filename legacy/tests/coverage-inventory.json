@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-12T21:21:17.281Z",
+ "generated": "2026-09-13T01:47:38.403Z",
  "summary": [
   {
    "k": "Control handler",
@@ -1551,6 +1551,7 @@
     "e2e/tabs/vote.suite.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/remind.test.mjs",
     "legacy/automation/restore.test.mjs",
     "rules.sql",
@@ -2199,6 +2200,7 @@
    "kind": "Download / export",
    "item": "Backup export (job)",
    "tests": [
+    "legacy/automation/backup-waiver.test.mjs",
     "unit/isolation.test.mjs"
    ]
   },
@@ -2206,6 +2208,7 @@
    "kind": "Download / export",
    "item": "Restore statement (job)",
    "tests": [
+    "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs"
    ]
   },
@@ -2515,6 +2518,7 @@
    "item": "app_admins",
    "tests": [
     "db/gen_cases.py",
+    "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
    ]
@@ -2536,6 +2540,7 @@
     "db/rollback-check.sql",
     "e2e/mock-supabase.ts",
     "e2e/tabs/isolation.spec.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
   },
@@ -2556,6 +2561,7 @@
    "tests": [
     "db/gen_cases.py",
     "e2e/mock-supabase.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
   },
@@ -2567,6 +2573,7 @@
     "e2e/mock-supabase.ts",
     "e2e/tabs/gen.ts",
     "e2e/tabs/pay.spec.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
   },
@@ -2618,6 +2625,7 @@
     "db/gen_cases.py",
     "e2e/mock-supabase.ts",
     "e2e/tabs/gen.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
    ]
@@ -2648,6 +2656,7 @@
     "db/rollback-check.sql",
     "db/run.sh",
     "e2e/mock-supabase.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
   },
@@ -2657,6 +2666,7 @@
    "tests": [
     "db/gen_cases.py",
     "e2e/mock-supabase.ts",
+    "legacy/automation/backup-waiver.test.mjs",
     "rules.sql"
    ]
   },

@@ -46,7 +46,10 @@ export async function pinSession(page: Page) {
 /** Close a suite's page (saving its coverage when COVERAGE_DIR is set). */
 export async function closeCtx(ctx?: Ctx) {
   if (!ctx) return;
-  try { expect(ctx.state.blocked ?? [], "requests that tried to leave the TEST stand-in (production, another project, the live sites)").toEqual([]); }
+  try {
+    expect(ctx.state.blocked ?? [], "requests that tried to leave the TEST stand-in (production, another project, the live sites)").toEqual([]);
+    expect(ctx.state.schemaErrors ?? [], "queries the real database would refuse (a column the table does not have)").toEqual([]);
+  }
   finally { await closePage(ctx); }
 }
 async function closePage(ctx: Ctx) {

@@ -154,7 +154,7 @@ None.
 | Control handler | `togglePlayerPresence` | e2e/tabs/controls.spec.ts |
 | Control handler | `undoLast` | e2e/tabs/adjust-edge.spec.ts, e2e/tabs/adjust.suite.ts, e2e/tabs/interop.ts, e2e/tabs/late.spec.ts, e2e/tabs/sequences.spec.ts, e2e/tabs/tools.spec.ts, e2e/tabs/toss-birds.spec.ts |
 | Control handler | `wvAgeChanged` | e2e/tabs/phone/waiver-phone.spec.ts, e2e/tabs/waiver.spec.ts |
-| Form field | `*` | db/gen_cases.py, db/rollback-check.sql, db/run.sh, e2e/helpers.ts, e2e/isolation.ts, e2e/matchnight.spec.ts, e2e/mock-supabase.ts, e2e/mock-waiver.ts, e2e/opener.spec.ts, e2e/playwright.config.ts, e2e/rules-model.ts, e2e/season.spec.ts, e2e/tabs/a11y.spec.ts, e2e/tabs/adjust-edge.spec.ts, e2e/tabs/adjust-oracle.ts, e2e/tabs/adjust.spec.ts, e2e/tabs/adjust.suite.ts, e2e/tabs/admin-extras.spec.ts, e2e/tabs/admin.spec.ts, e2e/tabs/announce.spec.ts, e2e/tabs/assign.spec.ts, e2e/tabs/attendance.spec.ts, e2e/tabs/best-of-three.spec.ts, e2e/tabs/checks.ts, e2e/tabs/controls.spec.ts, e2e/tabs/court-history.spec.ts, e2e/tabs/courts.spec.ts, e2e/tabs/courts.suite.ts, e2e/tabs/coverage-report.mjs, e2e/tabs/dialog-keyboard.spec.ts, e2e/tabs/gen.ts, e2e/tabs/harness.ts, e2e/tabs/history.spec.ts, e2e/tabs/home.spec.ts, e2e/tabs/home.suite.ts, e2e/tabs/interop-1.spec.ts, e2e/tabs/interop-2.spec.ts, e2e/tabs/interop-3.spec.ts, e2e/tabs/interop-4.spec.ts, e2e/tabs/interop-5.spec.ts, e2e/tabs/interop.ts, e2e/tabs/isolation.spec.ts, e2e/tabs/ladder.ts, e2e/tabs/late-gaps.spec.ts, e2e/tabs/late.spec.ts, e2e/tabs/leaders.spec.ts, e2e/tabs/my-season.spec.ts, e2e/tabs/oracle.ts, e2e/tabs/past-players.spec.ts, e2e/tabs/pay.spec.ts, e2e/tabs/phone/adjust.spec.ts, e2e/tabs/phone/courts.spec.ts, e2e/tabs/phone/home.spec.ts, e2e/tabs/phone/reflow.spec.ts, e2e/tabs/phone/register.spec.ts, e2e/tabs/phone/scores.spec.ts, e2e/tabs/phone/vote.spec.ts, e2e/tabs/phone/waiver-phone.spec.ts, e2e/tabs/players.spec.ts, e2e/tabs/qa.spec.ts, e2e/tabs/rankings.spec.ts, e2e/tabs/register.spec.ts, e2e/tabs/register.suite.ts, e2e/tabs/registered.spec.ts, e2e/tabs/rotation-gaps.spec.ts, e2e/tabs/round-complete.spec.ts, e2e/tabs/schedule.spec.ts, e2e/tabs/scores.spec.ts, e2e/tabs/scores.suite.ts, e2e/tabs/season-rollover.spec.ts, e2e/tabs/seating.spec.ts, e2e/tabs/sequences.spec.ts, e2e/tabs/session.spec.ts, e2e/tabs/sessions.spec.ts, e2e/tabs/signin.spec.ts, e2e/tabs/standings.spec.ts, e2e/tabs/stats.spec.ts, e2e/tabs/sync-race.spec.ts, e2e/tabs/tools.spec.ts, e2e/tabs/toss-birds.spec.ts, e2e/tabs/vote-changes.spec.ts, e2e/tabs/vote.spec.ts, e2e/tabs/vote.suite.ts, e2e/tabs/waiver.spec.ts, e2e/tabs/wording.spec.ts, legacy/automation/remind.test.mjs, legacy/automation/restore.test.mjs, rules.sql, unit/adjust-reference.mjs, unit/adjust.test.mjs, unit/fetch-guard.mjs, unit/helpers.test.mjs, unit/isolation.test.mjs, unit/load-app.mjs |
+| Form field | `*` | db/gen_cases.py, db/rollback-check.sql, db/run.sh, e2e/helpers.ts, e2e/isolation.ts, e2e/matchnight.spec.ts, e2e/mock-supabase.ts, e2e/mock-waiver.ts, e2e/opener.spec.ts, e2e/playwright.config.ts, e2e/rules-model.ts, e2e/season.spec.ts, e2e/tabs/a11y.spec.ts, e2e/tabs/adjust-edge.spec.ts, e2e/tabs/adjust-oracle.ts, e2e/tabs/adjust.spec.ts, e2e/tabs/adjust.suite.ts, e2e/tabs/admin-extras.spec.ts, e2e/tabs/admin.spec.ts, e2e/tabs/announce.spec.ts, e2e/tabs/assign.spec.ts, e2e/tabs/attendance.spec.ts, e2e/tabs/best-of-three.spec.ts, e2e/tabs/checks.ts, e2e/tabs/controls.spec.ts, e2e/tabs/court-history.spec.ts, e2e/tabs/courts.spec.ts, e2e/tabs/courts.suite.ts, e2e/tabs/coverage-report.mjs, e2e/tabs/dialog-keyboard.spec.ts, e2e/tabs/gen.ts, e2e/tabs/harness.ts, e2e/tabs/history.spec.ts, e2e/tabs/home.spec.ts, e2e/tabs/home.suite.ts, e2e/tabs/interop-1.spec.ts, e2e/tabs/interop-2.spec.ts, e2e/tabs/interop-3.spec.ts, e2e/tabs/interop-4.spec.ts, e2e/tabs/interop-5.spec.ts, e2e/tabs/interop.ts, e2e/tabs/isolation.spec.ts, e2e/tabs/ladder.ts, e2e/tabs/late-gaps.spec.ts, e2e/tabs/late.spec.ts, e2e/tabs/leaders.spec.ts, e2e/tabs/my-season.spec.ts, e2e/tabs/oracle.ts, e2e/tabs/past-players.spec.ts, e2e/tabs/pay.spec.ts, e2e/tabs/phone/adjust.spec.ts, e2e/tabs/phone/courts.spec.ts, e2e/tabs/phone/home.spec.ts, e2e/tabs/phone/reflow.spec.ts, e2e/tabs/phone/register.spec.ts, e2e/tabs/phone/scores.spec.ts, e2e/tabs/phone/vote.spec.ts, e2e/tabs/phone/waiver-phone.spec.ts, e2e/tabs/players.spec.ts, e2e/tabs/qa.spec.ts, e2e/tabs/rankings.spec.ts, e2e/tabs/register.spec.ts, e2e/tabs/register.suite.ts, e2e/tabs/registered.spec.ts, e2e/tabs/rotation-gaps.spec.ts, e2e/tabs/round-complete.spec.ts, e2e/tabs/schedule.spec.ts, e2e/tabs/scores.spec.ts, e2e/tabs/scores.suite.ts, e2e/tabs/season-rollover.spec.ts, e2e/tabs/seating.spec.ts, e2e/tabs/sequences.spec.ts, e2e/tabs/session.spec.ts, e2e/tabs/sessions.spec.ts, e2e/tabs/signin.spec.ts, e2e/tabs/standings.spec.ts, e2e/tabs/stats.spec.ts, e2e/tabs/sync-race.spec.ts, e2e/tabs/tools.spec.ts, e2e/tabs/toss-birds.spec.ts, e2e/tabs/vote-changes.spec.ts, e2e/tabs/vote.spec.ts, e2e/tabs/vote.suite.ts, e2e/tabs/waiver.spec.ts, e2e/tabs/wording.spec.ts, legacy/automation/backup-waiver.test.mjs, legacy/automation/remind.test.mjs, legacy/automation/restore.test.mjs, rules.sql, unit/adjust-reference.mjs, unit/adjust.test.mjs, unit/fetch-guard.mjs, unit/helpers.test.mjs, unit/isolation.test.mjs, unit/load-app.mjs |
 | Form field | `absent-player-sel` | e2e/tabs/session.spec.ts |
 | Form field | `adj-closed-*` | e2e/tabs/adjust-edge.spec.ts, e2e/tabs/adjust.suite.ts |
 | Form field | `adj-round` | e2e/tabs/adjust.suite.ts |
@@ -230,8 +230,8 @@ None.
 | Download / export | `Waiver wording` | e2e/tabs/waiver.spec.ts |
 | Download / export | `Season PDF` | e2e/tabs/controls.spec.ts |
 | Download / export | `Player export (now the record)` | e2e/tabs/waiver.spec.ts |
-| Download / export | `Backup export (job)` | unit/isolation.test.mjs |
-| Download / export | `Restore statement (job)` | legacy/automation/restore.test.mjs |
+| Download / export | `Backup export (job)` | legacy/automation/backup-waiver.test.mjs, unit/isolation.test.mjs |
+| Download / export | `Restore statement (job)` | legacy/automation/backup-waiver.test.mjs, legacy/automation/restore.test.mjs |
 | Database function | `accept_waiver` | db/gen_cases.py, e2e/mock-supabase.ts, e2e/tabs/waiver.spec.ts, rules.sql |
 | Database function | `admin_status` | db/gen_cases.py, e2e/mock-supabase.ts |
 | Database function | `assert_test_environment` | db/gen_cases.py, rules.sql, unit/isolation.test.mjs |
@@ -268,22 +268,22 @@ None.
 | Database function | `update_my_profile` | db/gen_cases.py, e2e/mock-supabase.ts |
 | Database function | `waiver_acceptances_guard` | rules.sql |
 | Database function | `waiver_versions_guard` | rules.sql |
-| Database table | `app_admins` | db/gen_cases.py, legacy/automation/restore.test.mjs, rules.sql |
+| Database table | `app_admins` | db/gen_cases.py, legacy/automation/backup-waiver.test.mjs, legacy/automation/restore.test.mjs, rules.sql |
 | Database table | `audit_log` | db/gen_cases.py, legacy/automation/restore.test.mjs, rules.sql |
-| Database table | `environment` | db/gen_cases.py, db/rollback-check.sql, e2e/mock-supabase.ts, e2e/tabs/isolation.spec.ts, rules.sql |
+| Database table | `environment` | db/gen_cases.py, db/rollback-check.sql, e2e/mock-supabase.ts, e2e/tabs/isolation.spec.ts, legacy/automation/backup-waiver.test.mjs, rules.sql |
 | Database table | `invitations` | db/gen_cases.py, db/rollback-check.sql, e2e/mock-supabase.ts, legacy/automation/restore.test.mjs, rules.sql |
-| Database table | `past_players` | db/gen_cases.py, e2e/mock-supabase.ts, rules.sql |
-| Database table | `payments` | db/gen_cases.py, e2e/mock-supabase.ts, e2e/tabs/gen.ts, e2e/tabs/pay.spec.ts, rules.sql |
+| Database table | `past_players` | db/gen_cases.py, e2e/mock-supabase.ts, legacy/automation/backup-waiver.test.mjs, rules.sql |
+| Database table | `payments` | db/gen_cases.py, e2e/mock-supabase.ts, e2e/tabs/gen.ts, e2e/tabs/pay.spec.ts, legacy/automation/backup-waiver.test.mjs, rules.sql |
 | Database table | `payments_archive` | db/gen_cases.py |
 | Database table | `push_subscriptions` | db/gen_cases.py, rules.sql |
 | Database table | `questions` | db/gen_cases.py, e2e/mock-supabase.ts, rules.sql |
 | Database table | `reminder_log` | db/gen_cases.py, rules.sql |
 | Database table | `rsvp_log` | db/gen_cases.py, e2e/mock-supabase.ts, rules.sql |
-| Database table | `rsvps` | db/gen_cases.py, e2e/mock-supabase.ts, e2e/tabs/gen.ts, legacy/automation/restore.test.mjs, rules.sql |
+| Database table | `rsvps` | db/gen_cases.py, e2e/mock-supabase.ts, e2e/tabs/gen.ts, legacy/automation/backup-waiver.test.mjs, legacy/automation/restore.test.mjs, rules.sql |
 | Database table | `season_dates` | db/gen_cases.py, legacy/automation/restore.test.mjs, rules.sql |
 | Database table | `undo_journal` | db/gen_cases.py, e2e/mock-supabase.ts, rules.sql |
-| Database table | `waiver_acceptances` | db/gen_cases.py, db/rollback-check.sql, db/run.sh, e2e/mock-supabase.ts, rules.sql |
-| Database table | `waiver_versions` | db/gen_cases.py, e2e/mock-supabase.ts, rules.sql |
+| Database table | `waiver_acceptances` | db/gen_cases.py, db/rollback-check.sql, db/run.sh, e2e/mock-supabase.ts, legacy/automation/backup-waiver.test.mjs, rules.sql |
+| Database table | `waiver_versions` | db/gen_cases.py, e2e/mock-supabase.ts, legacy/automation/backup-waiver.test.mjs, rules.sql |
 | Production isolation | `Browser runs refuse production settings` | e2e/isolation.ts, e2e/playwright.config.ts, e2e/tabs/isolation.spec.ts, unit/isolation.test.mjs |
 | Production isolation | `Browser requests to production blocked` | e2e/isolation.ts, e2e/tabs/isolation.spec.ts |
 | Production isolation | `Unit tests make no network requests` | unit/fetch-guard.mjs, unit/isolation.test.mjs |

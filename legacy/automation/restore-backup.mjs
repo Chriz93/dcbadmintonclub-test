@@ -11,14 +11,18 @@ if (!rows.length) { console.log(`-- ${table}: no rows in backup`); process.exit(
 const cols = Object.keys(rows[0]);
 const lit = (v) => v === null || v === undefined ? "null" : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "true" : "false") : typeof v === "object" ? `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb` : `'${String(v).replace(/'/g, "''")}'`;
 // Each table's own key (not every table has an id).
-const KEYS = { app_state: ["key"], rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"] };
+const KEYS = { app_state: ["key"], rsvps: ["session_number", "player_id"], invitations: ["email"], app_admins: ["user_id"], season_dates: ["session_number"], waiver_versions: ["version"], environment: ["id"] };
 const key = KEYS[table] || ["id"];
-const updates = cols.filter((c) => !key.includes(c)).map((c) => `${c}=excluded.${c}`).join(",");
-console.log(`-- restore ${table}: ${rows.length} rows from ${file} (exported ${data.exported_at})`);
+// Waiver wording, acceptance records and the environment marker are never rewritten (L18, L20): a restore only adds the
+// rows that are missing, and their guards stay on.
+const addOnly = ["waiver_versions", "waiver_acceptances", "environment"].includes(table);
+const updates = addOnly ? "" : cols.filter((c) => !key.includes(c)).map((c) => `${c}=excluded.${c}`).join(",");
+const numericId = cols.includes("id") && typeof rows[0].id === "number";   // the environment marker's id is true/false
+console.log(`-- restore ${table}: ${rows.length} rows from ${file} (exported ${data.exported_at})${addOnly ? " — missing rows only; existing rows are never changed" : ""}`);
 console.log("begin;");
 // Only the league's own triggers pause (no vote-log entries or asker rewrites for restored rows); foreign keys stay checked.
-console.log(`alter table public.${table} disable trigger user;`);
-for (const r of rows) console.log(`insert into public.${table}(${cols.join(",")}) ${cols.includes("id") ? "overriding system value " : ""}values(${cols.map((c) => lit(r[c])).join(",")}) on conflict(${key.join(",")}) do ${updates ? `update set ${updates}` : "nothing"};`);
-console.log(`alter table public.${table} enable trigger user;`);
-if (cols.includes("id")) console.log(`select setval(pg_get_serial_sequence('public.${table}','id'),(select max(id) from public.${table})) where pg_get_serial_sequence('public.${table}','id') is not null;`);
+if (!addOnly) console.log(`alter table public.${table} disable trigger user;`);
+for (const r of rows) console.log(`insert into public.${table}(${cols.join(",")}) ${numericId ? "overriding system value " : ""}values(${cols.map((c) => lit(r[c])).join(",")}) on conflict(${key.join(",")}) do ${updates ? `update set ${updates}` : "nothing"};`);
+if (!addOnly) console.log(`alter table public.${table} enable trigger user;`);
+if (numericId) console.log(`select setval(pg_get_serial_sequence('public.${table}','id'),(select max(id) from public.${table})) where pg_get_serial_sequence('public.${table}','id') is not null;`);
 console.log("commit;");

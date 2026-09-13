@@ -38,6 +38,7 @@ export interface MockState {
   requests: string[];
   blocked?: string[]; // requests the isolation guard stopped (production, another project, the live sites)
   environment?: { name: string; schema_version: string } | null; // L18 marker; undefined = marked test
+  schemaErrors?: string[]; // queries refused because they name a column the database table does not have
   holdRead?: { key: string; until: Promise<void>; served: () => void }; // a slow refresh: one app_state read's reply is fixed when asked, delivered when released
   waiverVersions?: WaiverVersion[];    // L20
   waiverAcceptances?: Acceptance[];
@@ -132,6 +133,15 @@ function myPlayerId(c: { uid: string; email: string } | null, s: MockState) {
   return p ? p.id : null;
 }
 
+
+/** Columns of the tables added in L18–L20, exactly as the TEST database has them (information_schema, September 12).
+ *  The database refuses a column it does not have (PostgREST error 42703); the stand-in does the same for these tables. */
+const REAL_COLUMNS: Record<string, string[]> = {
+  environment: ["id", "name", "schema_version", "marked_at"],
+  waiver_versions: ["version", "title", "body", "sha256", "published_at", "is_current", "note"],
+  waiver_acceptances: ["id", "player_id", "user_id", "email", "participant_name", "typed_signature", "waiver_version", "waiver_sha256", "accepted_at", "client_timezone", "client_utc_offset_minutes", "action", "age_declaration", "minor_name", "media_consent", "registration_ref", "user_agent"],
+};
+
 export async function installMock(page: Page, s: MockState) {
   s.blocked = s.blocked || [];
   await guardContext(page.context(), s.blocked);
@@ -144,6 +154,14 @@ export async function installMock(page: Page, s: MockState) {
     const json = (status: number, body: unknown) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     const body = () => (req.postData() ? JSON.parse(req.postData()!) : {});
     const c = claims(req, s);
+    // A query naming a column the table does not have is refused, as the database refuses it (a missing created_at took the
+    // TEST site down: p53). Every suite fails on such a refusal (harness closeCtx).
+    const tbl = path.startsWith("/rest/v1/") ? path.slice(9) : "";
+    if (REAL_COLUMNS[tbl] && method === "GET") {
+      const cols = [...(url.searchParams.get("select") || "*").split(","), ...(url.searchParams.get("order") || "").split(",").map((o) => o.split(".")[0])].map((x) => x.trim()).filter((x) => x && x !== "*");
+      const bad = cols.find((x) => !REAL_COLUMNS[tbl].includes(x));
+      if (bad) { (s.schemaErrors ??= []).push(`${method} ${path}${url.search}: no column ${bad}`); return json(400, { code: "42703", message: `column ${tbl}.${bad} does not exist` }); }
+    }
     // L18: signed-in users read the environment marker; the site checks it right after sign-in (anonymous: nothing).
     // L20: signed-in users read the waiver wording (not logged: the site checks the current version on every sync).
     if (path === "/rest/v1/waiver_versions" && method === "GET") { s.requests.pop(); if (!c) return json(401, { message: "permission denied", code: "42501" }); const vs = (s.waiverVersions ??= waiverVersions()); return json(200, ordered(vs.filter((r) => matches(r as unknown as Record<string, unknown>, filters(url))), url)); }
