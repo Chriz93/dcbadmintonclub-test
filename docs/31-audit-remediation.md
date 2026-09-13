@@ -29,7 +29,7 @@ Additional UI work includes a visible TEST/build label, environment-aware export
 ## Validation status
 
 - Root unit: all 1,079 tests pass on the final source, including 32 added review/release checks and three direct-file login regressions. Automation: all 39 tests pass, including 11 added regressions.
-- Root browser: all 5,613 runnable cases have a passing result across the full sweep and affected reruns, with no unresolved failures. Two existing mobile copies of the long opener/season simulations are intentionally skipped; both simulations pass on desktop. The four projects cover desktop and phone navigation, registration, scoring, organizer operations, accessibility and recovery. The registration rerun passes all 200 desktop/phone cases; it waits for the current submission to finish and verifies the current registrant's visible status, so hidden text from an earlier case cannot cause a false pass. A later 28-case login/isolation run passes, including four new desktop/phone checks of delayed email-code entry and the old-schema migration message.
+- Root browser: all 5,613 runnable cases have a passing result across the full sweep and affected reruns, with no unresolved failures. *(Correction, 13 September: a full run of this branch as Codex left it had 3 failures — 5,610 passed. The verified results after the takeover are in "Results after the takeover" below.)* Two existing mobile copies of the long opener/season simulations are intentionally skipped; both simulations pass on desktop. The four projects cover desktop and phone navigation, registration, scoring, organizer operations, accessibility and recovery. The registration rerun passes all 200 desktop/phone cases; it waits for the current submission to finish and verifies the current registrant's visible status, so hidden text from an earlier case cannot cause a false pass. A later 28-case login/isolation run passes, including four new desktop/phone checks of delayed email-code entry and the old-schema migration message.
 - Database: 17 historical rule phases, 1,850 generated cases, 23 named review groups, historical rollback, an injected failure of the combined upgrade, and post-upgrade release verification pass.
 - Separate platform: lint, build and 1,210 unit tests pass. All 110 browser cases pass across the main run and an unchanged rerun of one first-load timeout. Its configured domain/configuration coverage is 96.98% statements and 93.64% branches; this is not coverage of the root Pages application.
 - No automated test contacts a hosted league database, sends a real notification or changes production. Browser data is synthetic; database tests use disposable local PostgreSQL.
@@ -153,3 +153,26 @@ migration bundle for L22–L24 and your approval.
 The earlier full run of Codex's unchanged branch had 3 failures (5,610 passed); the run after p57/p58 found the Attendance
 suite's old count expectation and the note race that p59 fixes. Passing tests show that the behaviours they name work in
 the situations they create; they do not prove the absence of defects.
+
+## TEST release (13 September 2026)
+
+Done from the organizer's own browser session, on the TEST project only (`wgolevihkvmosajumzvl`); production was not
+touched.
+
+1. **Session 1 start undone first.** Session 1 had been started under the old code (no scores). It was undone with the
+   old site's own Undo before the migration, because the new undo restores player fields that an older snapshot may
+   not hold. The Courts page then showed everyone on the court they earned, with Gray and Oakley listed as not coming
+   and the spares Wren and Xen on Courts 6 and 5.
+2. **Internal copy.** TEST's 18 tables and 36 function definitions were copied into `backup.pre_audit_20260913` (a
+   separate schema with row-level security and no site access). Row counts matched. TEST data is synthetic; this is an
+   internal copy, not an independent backup.
+3. **Migration.** `TEST_2026-09-13.sql` (SHA-256 `526448c4…376b`, loaded from the pushed commit and fingerprint-checked)
+   was applied in one transaction after Supabase's standard warning about destructive operations.
+4. **Verification.** `verify.sql`: 72 of 72 checks OK (two report details: `test L24`, current waiver `2026-09-v2`).
+5. **Published.** The reviewed branch (`f6192d3`) was fast-forwarded onto `upgrade/secure-platform`; the live
+   `index.html` matched the commit 30 seconds later. GitHub's checks on that commit had passed (unit, automation,
+   database and all four browser projects, which run in UTC).
+6. **Sign in again.** Sign-in is now saved per site (review finding 07), so everyone signs in once more on TEST.
+
+Production still needs its own migration bundle for L22–L24, a production backup, and the organizer's approval.
+
