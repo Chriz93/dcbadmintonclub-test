@@ -1302,7 +1302,7 @@ async function loadAll(){
     S.rsvpLog=(S_me.organizer&&S_me.verified)?((await sbG('rsvp_log','select=id,session_number,player_id,old_response,new_response,by_admin,changed_at&order=id.desc&limit=100'))||[]):[];
     S.invitations=(S_me.organizer&&S_me.verified)?((await sbG('invitations','select=email,membership_type,note,created_at&order=created_at.desc'))||[]):[];
     S.pastPlayers=(S_me.organizer&&S_me.verified)?((await sbG('past_players','select=*&order=name.asc'))||[]):[];
-    S.waiverCurrent=((await sbG('waiver_versions','is_current=eq.true&select=version,title,published_at'))||[])[0]||null;
+    S.waiverCurrent=((await sbG('waiver_versions','is_current=eq.true&select=version,title,published_at&order=version.asc'))||[])[0]||null;
     S.waiverAcc=(S_me.player_id||S_me.organizer)?((await sbG('waiver_acceptances','select=id,player_id,user_id,email,participant_name,typed_signature,waiver_version,waiver_sha256,accepted_at,client_timezone,client_utc_offset_minutes,action,age_declaration,minor_name,media_consent,registration_ref,user_agent&order=accepted_at.asc,id.asc'))||[]):[];
     if(S.waiver&&S.waiverCurrent&&S.waiver.version!==S.waiverCurrent.version){S.waiver=null;S.waiverVersions=null;}
     S.payments=(await sbG('payments','select=id,player_id,kind,amount,session_number,method,received_on,note&order=received_on.desc,id.desc'))||[];
@@ -5036,7 +5036,7 @@ function waiverHtml(body){
 }
 const waiverOffersMedia=body=>/separate and optional/i.test(body||'');
 async function loadWaiver(){
-  const rows=await sbG('waiver_versions','is_current=eq.true&select=version,title,body,sha256,published_at');
+  const rows=await sbG('waiver_versions','is_current=eq.true&select=version,title,body,sha256,published_at&order=version.asc');
   const w=rows&&rows[0];if(!w){S.waiver=null;throw new Error('No waiver is published yet — registration opens when the organizer publishes one.');}
   let sha='';try{sha=await sha256Hex(w.body);}catch(e){throw new Error('This browser cannot check the waiver text. Open the site over https in an up-to-date browser.');}
   if(w.sha256&&sha!==w.sha256)throw new Error('The waiver text did not arrive intact — reload the page.');
