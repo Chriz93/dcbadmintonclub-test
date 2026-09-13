@@ -59,6 +59,12 @@ else:
     sw = re.sub(r"const CACHE_NAME = 'dcbc-test-v\d+';", f"const CACHE_NAME = '{a.cache}';", sw, count=1)
 sw = sw.replace("/dcbadmintonclub-test/", "/dcbadmintonclub/")
 man = (root / "manifest.json").read_text().replace("/dcbadmintonclub-test/", "/dcbadmintonclub/")
+# The installed app is named for the league, not TEST (the league site's manifest said "DC Badminton Club — TEST").
+import json as _json
+_m = _json.loads(man)
+_m.update({"name": "Maplewood League", "short_name": "Maplewood", "description": "Maplewood Advanced League"})
+man = _json.dumps(_m, ensure_ascii=False, indent=2) + "\n"
+assert "TEST" not in man and "Test" not in man, "manifest still says TEST"
 (out / "index.html").write_text(html); (out / "sw.js").write_text(sw); (out / "manifest.json").write_text(man)
 for extra in [".nojekyll"]:
     if (root / extra).exists(): (out / extra).write_text((root / extra).read_text())
