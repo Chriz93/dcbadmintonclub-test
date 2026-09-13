@@ -22,15 +22,22 @@ test("isolation · the unit-test network guard refuses the TEST project and the 
   await assert.rejects(fetch("https://chriz93.github.io/dcbadmintonclub/"), /Refusing/);
   await assert.rejects(fetch("https://example.com/"), /Refusing/);
 });
-test("isolation · the reminder job, run by a test against production's address, never gets a request out", async () => {
+test("isolation · the reminder job, run by a test against production's address, refuses before making any request", async () => {
+  // Since the September automation change the job itself refuses a real Supabase address under node --test, so not even an
+  // attempt reaches the network guard (which still stops any request: see the first test).
   const { run } = await import("../../automation/remind.mjs");
   const before = blocked.length;
-  await run({ SUPABASE_URL: PROD, SUPABASE_SERVICE_ROLE_KEY: "not-a-key", SITE_URL: "https://s/", GMAIL_USER: "g@example.invalid" }, { log: () => {} }).catch(() => {});
-  const tried = blocked.slice(before);
-  assert.ok(tried.length > 0 && tried.every((u) => u.startsWith(PROD)), `every attempt was stopped: ${tried.join(", ")}`);
+  await assert.rejects(run({ SUPABASE_URL: PROD, SUPABASE_SERVICE_ROLE_KEY: "not-a-key", SITE_URL: "https://s/", GMAIL_USER: "g@example.invalid" }, { log: () => {} }),
+    /Refusing: automated tests must not reach a real Supabase project/);
+  assert.deepEqual(blocked.slice(before), [], "no request was even attempted");
 });
-test("isolation · the backup exporter, started under the test guard with production's address, is stopped before any request", () => {
-  const r = sh(process.execPath, ["--import", GUARD, "legacy/automation/export-backup.mjs"], { SUPABASE_URL: PROD, SUPABASE_SERVICE_ROLE_KEY: "not-a-key" });
+test("isolation · the backup exporter, started by a test with production's address, refuses before any request", () => {
+  const r = sh(process.execPath, ["--import", GUARD, "legacy/automation/export-backup.mjs"], { SUPABASE_URL: PROD, SUPABASE_SERVICE_ROLE_KEY: "not-a-key", NODE_TEST_CONTEXT: "child" });
+  assert.notEqual(r.status, 0); assert.match(r.stderr, /Refusing: automated tests must not reach a real Supabase project/);
+  assert.doesNotMatch(r.stderr, /unit tests make no network requests/, "it stopped before even trying a request");
+});
+test("isolation · the backup exporter, outside a test run but under the network guard, is stopped at its first request", () => {
+  const r = sh(process.execPath, ["--import", GUARD, "legacy/automation/export-backup.mjs"], { SUPABASE_URL: PROD, SUPABASE_SERVICE_ROLE_KEY: "not-a-key", NODE_TEST_CONTEXT: "" });
   assert.notEqual(r.status, 0); assert.match(r.stderr, /Refusing: unit tests make no network requests \(bwepvxelvwgwxrnaglrx\.supabase\.co\)/);
 });
 for (const [v, val] of [["PGHOST", "db.bwepvxelvwgwxrnaglrx.supabase.co"], ["DATABASE_URL", "postgres://x@aws-0-ca-central-1.pooler.supabase.com:6543/postgres"], ["SUPABASE_URL", PROD], ["PGSERVICE", "wgolevihkvmosajumzvl"]])

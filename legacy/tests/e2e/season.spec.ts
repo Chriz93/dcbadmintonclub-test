@@ -43,6 +43,7 @@ test.describe("ten-session season simulation", () => {
         expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));
       }
       const rounds: Round[] = [];
+      let played = 0;   // games the rules require on each court, for the stored-scores check below
       for (let cy = 1; cy <= 2; cy++) {
         const r = fresh();
         await page.click("#bnav-scores");
@@ -55,6 +56,7 @@ test.describe("ten-session season simulation", () => {
             if (n === 2 && scores.length === 2 && (scores[0][0] > scores[0][1]) === (scores[1][0] > scores[1][1])) break;
             scores.push(model.play(r, [g.a1, g.a2].filter((x): x is number => x != null), [g.b1, g.b2].filter((x): x is number => x != null), k, target(n)));
           }
+          played += scores.length;
           await scoreCourt(page, c, scores);
         }
         rounds.push(r);
@@ -86,7 +88,9 @@ test.describe("ten-session season simulation", () => {
         expect([p.season_wins, p.season_losses, p.games_played, p.no_show_count], `stats of ${p.name} after session ${k}`).toEqual([s.w, s.l, s.g, s.noShow]);
       }
       expect(members(sess.finalAssignments)).toEqual(Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), [...finals.entries()].filter(([, c]) => c === i + 1).map(([id]) => id).sort((a, b) => a - b)])));
-      expect(Object.keys(sess.scores)).toHaveLength(40); // 5×3 + 5 per round; a three-player court still plays 3 games
+      // Every game the rules require is stored: 3 on a court of three or four, 5 on a court of five, best of three on two.
+      // (With earned courts kept, a no-show's court of three and the court of five below it both play on: p54.)
+      expect(Object.keys(sess.scores)).toHaveLength(played);
       expect(Object.keys(sess.playerNames)).toHaveLength(25); // the absent player keeps their name in history
       const totalW = [...model.stats.values()].reduce((n, s) => n + s.w, 0), totalL = [...model.stats.values()].reduce((n, s) => n + s.l, 0);
       expect(state.players.reduce((n, p) => n + p.season_wins, 0)).toBe(totalW);
@@ -137,7 +141,7 @@ test.describe("ten-session season simulation", () => {
       }
       await page.click("#page-standings .ptab:has-text('History')");
       expect(await page.locator("#sec-hist .card").count()).toBe(k);
-      await expect(page.locator("#sec-hist .card").first()).toContainText("40 games");
+      await expect(page.locator("#sec-hist .card").first()).toContainText(`${played} games`);
       await page.click("#page-standings .ptab:has-text('Court history')");
       const heat = await page.$$eval("#sec-heat .heatmap-row", (rows) => rows.map((r) => ({ name: r.querySelector(".heatmap-name")?.textContent || "", cells: [...r.querySelectorAll(".hm-cell")].map((c) => c.textContent || "") })));
       expect(heat).toHaveLength(25);

@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-13T01:47:38.403Z",
+ "generated": "2026-09-13T10:17:11.352Z",
  "summary": [
   {
    "k": "Control handler",
@@ -67,6 +67,7 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -92,6 +93,7 @@
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
@@ -257,6 +259,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -502,6 +505,7 @@
     "e2e/tabs/ladder.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -522,7 +526,9 @@
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
     "unit/helpers.test.mjs",
-    "unit/load-app.mjs"
+    "unit/lineup.test.mjs",
+    "unit/load-app.mjs",
+    "unit/starting-reference.mjs"
    ]
   },
   {
@@ -911,6 +917,7 @@
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
@@ -1282,7 +1289,8 @@
    "kind": "Control handler",
    "item": "shareCourtAssignments",
    "tests": [
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/lineup.suite.ts"
    ]
   },
   {
@@ -1314,7 +1322,8 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/checks.ts",
-    "e2e/tabs/courts.suite.ts"
+    "e2e/tabs/courts.suite.ts",
+    "e2e/tabs/lineup.suite.ts"
    ]
   },
   {
@@ -1338,6 +1347,7 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
@@ -1402,6 +1412,7 @@
     "e2e/opener.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/isolation.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/seating.spec.ts"
    ]
   },
@@ -1512,6 +1523,8 @@
     "e2e/tabs/late-gaps.spec.ts",
     "e2e/tabs/late.spec.ts",
     "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/lineup.spec.ts",
+    "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
     "e2e/tabs/past-players.spec.ts",
@@ -1519,6 +1532,7 @@
     "e2e/tabs/phone/adjust.spec.ts",
     "e2e/tabs/phone/courts.spec.ts",
     "e2e/tabs/phone/home.spec.ts",
+    "e2e/tabs/phone/lineup.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/phone/register.spec.ts",
     "e2e/tabs/phone/scores.spec.ts",
@@ -1560,7 +1574,9 @@
     "unit/fetch-guard.mjs",
     "unit/helpers.test.mjs",
     "unit/isolation.test.mjs",
-    "unit/load-app.mjs"
+    "unit/lineup.test.mjs",
+    "unit/load-app.mjs",
+    "unit/starting-reference.mjs"
    ]
   },
   {
@@ -2158,7 +2174,8 @@
    "item": "Refuse 31 players / 1 player at session start",
    "tests": [
     "unit/adjust.test.mjs",
-    "unit/helpers.test.mjs"
+    "unit/helpers.test.mjs",
+    "unit/lineup.test.mjs"
    ]
   },
   {

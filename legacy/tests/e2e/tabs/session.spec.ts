@@ -93,10 +93,11 @@ for (let i = 0; i < 100; i++) {
       expect(cs.movements.length).toBe(cur.movements.length + 1);
       expect(cs.movements.at(-1).cycle).toBe(cur.cycle);
       expect(Object.values(cs.assignments as Record<string, number[]>).flat().sort((x, y) => x - y), "nobody lost or added").toEqual([...assigned].sort((x, y) => x - y));
+      // Each player stays, or lands on the next court in use in the direction they moved (an empty court is skipped).
+      const next = (c: number, d: number) => { for (let x = c + d; x >= 1 && x <= NC; x += d) if ((a[x] || []).length) return x; return c; };
       for (const id of assigned) {
         const from = courtOf(a, id), to = courtOf(cs.assignments, id), mv = cs.movements.at(-1).mv[id];
-        expect(Math.abs(from - to) <= 1, `${name(id)} moves at most one court`).toBe(true);
-        if (mv === "up") expect(to, `${name(id)} up`).toBe(Math.max(1, from - 1));
+        expect(to, `${name(id)} (${mv} from Court ${from}) lands on the next court in use`).toBe(mv === "up" ? next(from, -1) : mv === "down" ? next(from, 1) : from);
       }
       expect(cs.movements.at(-1).mv[a[1]?.[0]] !== "up", "nobody moves up from Court 1").toBe(true);
     } else if (k === "end") {

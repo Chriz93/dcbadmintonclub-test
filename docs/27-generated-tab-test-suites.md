@@ -306,7 +306,7 @@ Every baseline test title still exists. This was checked by listing the committe
 (`playwright test --list`) and comparing titles. Tests changed because a requirement changed are listed in docs/28
 section 5.
 
-**New:** 1,349 browser cases, 518 unit tests, 248 database cases and 12 automation tests.
+**New:** 1,629 browser cases, 1,044 unit tests, 248 database cases and 12 automation tests.
 
 | Suite | Cases | What it checks | Expectations from |
 |---|---|---|---|
@@ -315,7 +315,8 @@ section 5.
 | `tabs/late.spec.ts` | 60 | The late rule from both entry points, every reason a late player stays | reference model, rule text |
 | `tabs/late-gaps.spec.ts` | 186 | The late rule on every ladder shape (57 patterns of courts in use × each court), with and without scores | reference model |
 | `tabs/rotation-gaps.spec.ts` | 114 | Round 1 and round 2 rotation with empty courts in the ladder, End Session's earned courts | rules model `e2e/rules-model.ts` |
-| `tabs/seating.spec.ts` | 33 | Start Session for 0 to 32 players: the lineup shape, the ranking order, the refusals | rules model |
+| `tabs/lineup.spec.ts`, `tabs/phone/lineup.spec.ts` | 200 + 80 | Tonight's starting courts before the session. Every view agrees: the Courts page, the "Tonight's starting courts" card, Admin → Players (each regular still on the earned court), the court details, the WhatsApp message, and what Start Session seats | reference `unit/starting-reference.mjs` |
+| `tabs/seating.spec.ts` | 33 | Start Session for 0 to 32 players with earned courts scattered over the ladder: everyone keeps the earned court unless a court of one or of more than five must be settled; refusals (rewritten for p54) | reference `unit/starting-reference.mjs` |
 | `tabs/sequences.spec.ts` | 100 | 5 to 8 mixed steps (absent, back, late, adjust, undo) per evening, checked after every step | reference model |
 | `tabs/best-of-three.spec.ts` | 60 | No Game 3 after a 2–0, on screen and in the saved round | rule text, L19 |
 | `tabs/waiver.spec.ts` | 194 | Registration wording and records, updated versions, organizer downloads (text and CSV), permissions | wording files, L20 |
@@ -330,6 +331,7 @@ section 5.
 | `unit/adjust.test.mjs` | 437 | The engine against the independent reference model: formats, placement, late, refusals, explanations | reference model |
 | `unit/isolation.test.mjs` | 18 | Settings that name production are refused; network access is refused in unit tests | — |
 | `unit/helpers.test.mjs` | 63 | CSV formula guard, shuttlecocks, seating refusals, games per court, next court in use, waiver fingerprint, league time | rule text, Node's SHA-256 |
+| `unit/lineup.test.mjs` | 525 | The app's own lineup functions against the reference: 25 named situations (the first is your TEST case; five cover a lone player when every other court has five, p55), 200 generated leagues (ladders, scattered courts, gaps, no-shows, declines, advance absences, spares), and 300 "never stuck" leagues (0 to 7 earned on a court): a night is refused exactly when fewer than 2 or more than 30 are coming | reference `unit/starting-reference.mjs` |
 | database sections 13–17 | 248 | Waiver records and marker permissions, registration and acceptance validation, publishing, best of three, callers | L18–L21 |
 | `legacy/automation/backup-waiver.test.mjs` | 12 | The backup includes the waiver tables and the marker; a database without them is still backed up in full; any other missing table or error fails it; restores add missing waiver records only and keep their guards on; both jobs refuse a real database under `node --test` | Supabase's real reply for a missing table (404 `PGRST205`) |
 
@@ -348,6 +350,11 @@ section 5.
   behaviour.
 - The phone waiver tests wait for the newly opened dialog, because a dialog's contents stay in the page after it closes.
 - The zero-player unit scenario now expects the refusal that p45 defined.
+- `tabs/round-complete.spec.ts` and `tabs/session.spec.ts` checked that a rotation moves each player "at most one court
+  number". Since p54, the earned courts can leave an empty court between two in use, and the rotation then sends the
+  winner and the loser to the next court in use (rule "Ladder gaps", p37). Four generated leagues failed on this. The
+  check is now exact rather than looser: each player stays, or lands on the next court in use in the direction the
+  round's movement record gives.
 
 **App defects the new tests found (all fixed):**
 
@@ -362,6 +369,12 @@ section 5.
   at the screenshots, not by a test.
 - **p52:** a slow background refresh undid a save that had just been made. It was found because the season
   simulation failed at random sessions under load. The stand-in can now hold one reply (`holdRead`) to reproduce it.
+- **p54:** before the session, the Courts page re-ranked everyone four to a court, so declines promoted players and the page
+  disagreed with Admin → Players. The WhatsApp share used a third lineup. The tests' reference had encoded the same re-ranking.
+  Now one rule (earned courts kept) is used everywhere, and 500 tests compare every view with an independent reference.
+- **p55:** with earned courts kept, a lone player whose every other court in use had five could not be seated, so Start
+  Session refused a valid night of six (found by the generated interop tests). The nearest court in use now sends one
+  player to join them; 305 more unit tests check that no night of 2 to 30 players is refused.
 - **p53:** after the deploy, everyone signed in to TEST saw "Cannot connect to database". Two waiver queries were
   ordered by `created_at`, which `waiver_versions` does not have. The stand-in did not check column names, so it now
   refuses unknown columns on the new tables as PostgREST does (`42703`), and every suite fails on such a refusal

@@ -2338,13 +2338,16 @@ function upcomingLineup(){
   const preAbsent=new Set(S.players.filter(p=>pre[p.id]==='absent').map(p=>p.id));
   const declined=new Set(S.players.filter(p=>isRegularMember(p)&&votes[p.id]==='notcoming'&&pre[p.id]!=='present'&&!preAbsent.has(p.id)).map(p=>p.id));
   const confirmedSpares=spareSeats().claims.filter(c=>c.confirmed).map(c=>c.id).filter(id=>!preAbsent.has(id));
-  return{votes,pre,declined,preAbsent,confirmedSpares,assign:autoAssign(new Set([...declined,...preAbsent]),confirmedSpares)};
+  const assign=autoAssign(new Set([...declined,...preAbsent]),confirmedSpares),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+  const off=S.players.filter(p=>p.currentCourt>0&&!isSpareMember(p)&&(declined.has(p.id)||preAbsent.has(p.id))).sort((a,b)=>a.currentCourt-b.currentCourt||a.id-b.id)
+    .map(p=>`${nm(p.id)} ${preAbsent.has(p.id)?'is marked absent':'is not coming'} (Court ${p.currentCourt}).`);
+  return{votes,pre,declined,preAbsent,confirmedSpares,assign,notes:[...off,..._lineupNotes],problem:_lineupProblem};
 }
 async function startSession(){
   if(S.current)return toast('Session already active','warn');
   const n=S.sessions.length+1;if(n>DATES.length)return toast('All '+DATES.length+' sessions are done!','warn');
-  const{votes,pre,declined,preAbsent,confirmedSpares,assign:initAssign}=upcomingLineup();
-  {const why=seatingProblem(Object.values(initAssign).flat().length);if(why)return toast(why,'error');}
+  const{votes,pre,declined,preAbsent,confirmedSpares,assign:initAssign,problem}=upcomingLineup();
+  {const why=seatingProblem(Object.values(initAssign).flat().length)||problem;if(why)return toast(why,'error');}
   // Votes become tonight's attendance: coming → present, not coming → excused (no court penalty).
   const attendance={};
   declined.forEach(id=>{attendance[id]='declined';});
@@ -2359,17 +2362,32 @@ async function startSession(){
   if(Object.keys(pre).length){await deleteKV('pre_session_attendance');S.preAttendance={};}
   await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused${preAbsent.size?`, ${preAbsent.size} marked absent`:''}, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
 }
-// Regulars in order of earned court (spares only when confirmed for the night), four per court, the rest on Court 6.
 // More players than six courts seat (five each) is not a valid night: say so instead of overfilling a court.
 function seatingProblem(n){return n>NC*5?`${n} players are coming, but the ${NC} courts seat at most ${NC*5}. Mark someone absent or not coming, then start the session.`:n===1?'Only one player is coming — a game needs at least two. Start the session when another player is coming.':n===0?'Nobody is coming — a game needs at least two players. Start the session when players are coming.':'';}
+// Tonight's starting courts (p54): everyone who is coming keeps the court they earned; nobody moves up for a player who
+// is not coming. Confirmed spares take open seats from the bottom court up (a short court first, then a fifth seat from
+// the bottom). The court-adjustment engine then settles a court left with one player or more than five, as at the gym.
+// _lineupNotes says what differs from the earned courts; _lineupProblem is set when no valid lineup exists.
+let _lineupNotes=[],_lineupProblem='';
 function autoAssign(exclude=new Set(),spares=[]){
-  const a={};for(let c=1;c<=NC;c++)a[c]=[];
-  const regulars=activePlayers().filter(p=>p.membershipType!=='spare'&&!exclude.has(p.id));
-  const extra=spares.map(id=>S.players.find(p=>p.id===id)).filter(p=>p&&!regulars.includes(p));
-  const key=p=>p.currentCourt>0&&p.membershipType!=='spare'?p.currentCourt:NC+1;
-  const sorted=[...regulars,...extra].sort((x,y)=>key(x)-key(y));
-  Object.assign(a,fillCourts(sorted.map(p=>p.id)));
-  return a;
+  const L={};for(let c=1;c<=NC;c++)L[c]=[];
+  const nm=id=>S.players.find(p=>p.id===id)?.name||'Player',notes=[];
+  activePlayers().filter(p=>p.membershipType!=='spare'&&!exclude.has(p.id)).forEach(p=>L[Math.min(NC,Math.max(1,p.currentCourt))].push(p.id));
+  for(const id of spares){
+    if(!S.players.some(p=>p.id===id)||Object.values(L).some(ids=>ids.includes(id)))continue;
+    const used=[...Array(NC).keys()].map(i=>NC-i).filter(c=>L[c].length);
+    const c=used.find(x=>L[x].length<4)||used.find(x=>L[x].length<5)||used[0]||NC;
+    L[c].push(id);notes.push(`${nm(id)} (spare) takes an open seat on Court ${c}.`);
+  }
+  const res=adjustCourts({nc:NC,lineup:L,names:Object.fromEntries(S.players.map(p=>[p.id,p.name])),locked:[],closed:[],absent:[],returning:[],late:[],partner:true});
+  _lineupProblem=res.ok?'':res.problem;
+  if(res.ok)for(const m of res.moves)notes.push(m.reason==='full'?`Court ${m.from} would have more than five players, so ${nm(m.id)} starts on Court ${m.to}.`
+    :m.reason==='alone-up'?`${nm(m.id)} would be the only player on Court ${m.from}, the bottom court in use, so starts on Court ${m.to} above.`
+    :m.reason==='partner-down'||m.reason==='partner-up'?`${nm(m.with)} would be the only player on Court ${m.to} and every other court in use has five, so ${nm(m.id)} moves ${m.reason==='partner-down'?'down':'up'} from Court ${m.from} to play there.`
+    :`${nm(m.id)} would be the only player on Court ${m.from}, so starts on Court ${m.to}.`);
+  _lineupNotes=notes;
+  const A=res.ok?res.lineup:L,out={};for(let c=1;c<=NC;c++)out[c]=[...(A[c]||[])];
+  return out;
 }
 // ── Round Helpers ──
 function getCourtCycle(c){
@@ -3154,8 +3172,16 @@ async function quickAddToCourt(court){
 // GYM VIEW
 // ══════════════════════════════════════════════
 function renderCourts(){
-  // When no session: show next session's lineup from the votes (what Start Session will seat).
-  const assignments=S.current?S.current.assignments:upcomingLineup().assign;
+  // When no session: tonight's starting courts from the votes (exactly what Start Session will seat), and what differs
+  // from the earned courts shown in Admin → Players.
+  const up=S.current?null:upcomingLineup();
+  const assignments=S.current?S.current.assignments:up.assign;
+  {const gvEl=document.getElementById('court-gym-view');let ln=document.getElementById('lineup-notes');
+   if(gvEl&&!ln){ln=document.createElement('div');ln.id='lineup-notes';gvEl.parentNode.insertBefore(ln,gvEl);}
+   if(ln)ln.innerHTML=up&&(up.notes.length||up.problem)?`<div class="card" style="margin-bottom:10px;"><div class="card-title">Tonight's starting courts</div>
+     <p style="font-size:13px;margin:0 0 6px;">Everyone keeps the court they earned. Nobody moves up for a player who is not coming.</p>
+     ${up.problem?`<div class="alert alert-error" role="alert">${esc(up.problem)}</div>`:''}
+     ${up.notes.length?`<ul class="adj-list" id="lineup-notes-list">${up.notes.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:''}</div>`:'';}
   const cy=S.current?S.current.cycle:0;
   const sub=document.getElementById('courts-sub');
   if(sub)sub.textContent=S.current?`Session ${S.current.number} · ${S.current.date} · Round ${cy}`:S.sessions.length?`${S.sessions.length}/${DATES.length} sessions done`:'No active session';
@@ -3292,7 +3318,7 @@ function showCourtDetail(court){
 }
 
 function shareCourtAssignments(){
-  let assignments;if(S.current){assignments=S.current.assignments;}else{assignments={};for(let c=1;c<=NC;c++)assignments[c]=[];activePlayers().forEach(p=>{if(p.currentCourt>=1&&p.currentCourt<=NC)assignments[p.currentCourt].push(p.id);});}
+  const assignments=S.current?S.current.assignments:upcomingLineup().assign;   // the same starting courts as the Courts page
   let msg=`🏸 *DC Badminton Club*\n*Court Assignments — ${S.current?S.current.date:'Tonight'}*\n\n`;
   for(let c=1;c<=NC;c++){
     const players=(assignments[c]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
@@ -5638,6 +5664,11 @@ function adjustCourts(inp){
   for(let c=1;c<=nc;c++){if(!open(c)||L[c].length!==1)continue;const id=L[c][0];let to=0,up=false;
     for(let x=c+1;x<=nc;x++)if(open(x)&&inUse(x)&&L[x].length<MAX){to=x;break;}
     if(!to)for(let x=c-1;x>=1;x--)if(open(x)&&inUse(x)&&L[x].length<MAX){to=x;up=true;break;}
+    // Starting courts only (inp.partner, no scores yet): every other court in use has five, so the nearest court in use
+    // sends one player to play with them — on a tie the court above, whose last player moves down; from below, the first.
+    if(!to&&inp.partner){let da=0,db=0;for(let x=c-1;x>=1&&!da;x--)if(open(x)&&inUse(x))da=x;for(let x=c+1;x<=nc&&!db;x++)if(open(x)&&inUse(x))db=x;
+      const d=da&&(!db||c-da<=db-c)?da:db;
+      if(d){const pid=d<c?L[d][L[d].length-1]:L[d][0];L[d]=L[d].filter(x=>x!==pid);L[c].push(pid);moves.push({id:pid,from:d,to:c,reason:d<c?'partner-down':'partner-up',with:id});continue;}}
     if(!to)return fail(`${nm(id)} would be alone on Court ${c} and no court nearby has room. Nothing was changed — seat them by hand in Session → Assign.`);
     L[c]=[];L[to].push(id);moves.push({id,from:c,to,reason:up?'alone-up':'alone'});}
   // 7. Check the result: every player who should play has exactly one court, every court is a real game.
@@ -8519,10 +8550,9 @@ if(window.location.hash==='#run-tests'){
       // No duplicates
       const aa1Ids=Object.values(aa1).flat();
       new Set(aa1Ids).size===aa1Ids.length?P('AA2:noDupes'):F('AA2:noDupes','dupes');
-      // Max 4 per court
-      Object.values(aa1).every(ids=>ids.length<=4)?P('AA2:max4'):F('AA2:max4','over');
-      // Courts filled in order (court 1 first)
-      Object.values(aa1)[0].length>=Object.values(aa1)[5].length?P('AA2:fillOrder'):F('AA2:fillOrder','wrong');
+      // No court over five, and nobody alone on a court (p54: everyone keeps the court they earned)
+      Object.values(aa1).every(ids=>ids.length<=5)?P('AA2:max5'):F('AA2:max5','over');
+      Object.values(aa1).every(ids=>ids.length!==1)?P('AA2:noLone'):F('AA2:noLone','a court with one player');
       // Sorted by currentCourt
       const aa1First=S.players.find(p=>p.id===aa1[1][0]);
       aa1First&&aa1First.currentCourt<=2?P('AA2:sortedByCourt'):P('AA2:sortOrder(ok)');

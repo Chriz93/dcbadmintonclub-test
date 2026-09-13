@@ -124,7 +124,11 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await page.evaluate(() => startSession());
   await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
   expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));
-  expect(model.lineup.slice(1).map((l) => l.length)).toEqual([4, 4, 4, 4, 4, 5]);
+  // Everyone who is coming keeps the court they earned (p54); the two spares take open seats from the bottom court up.
+  for (let c = 1; c <= 6; c++) for (const id of model.lineup[c]) if (!seated.includes(id)) expect(c, `${state.players.find((p) => p.id === id)!.name} keeps the earned court`).toBe(state.players.find((p) => p.id === id)!.current_court);
+  // Each spare takes a seat that a decline left open (the lowest court short of four).
+  const shortCourts = new Set([...declined].map((id) => state.players.find((p) => p.id === id)!.current_court));
+  for (const id of seated) expect(shortCourts.has(model.lineup.findIndex((l) => l.includes(id))), `spare ${state.players.find((p) => p.id === id)!.name} fills a court a decline left short`).toBe(true);
   const att = await page.evaluate(() => S.current.attendance as Record<string, string>);
   for (const id of declined) expect(att[String(id)]).toBe("declined");
   for (const id of seated) expect(att[String(id)]).toBe("present");
@@ -159,7 +163,7 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
     return r;
   };
   const r1 = await playRound(1);
-  const mv1 = model.rotate(r1);
+  const mv1 = model.rotate(r1, { sid: await page.evaluate(() => S.current.id), cy: 1 });   // ties: the app's coin toss for this night
   await expect.poll(() => page.evaluate(() => S.current.cycle), { timeout: 20000 }).toBe(2);
   expect(await page.evaluate(() => S.current.movements[0].mv)).toEqual(mv1);
   expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));
@@ -187,7 +191,7 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   timeline.push("Round 1 was scored and the round advanced. Undo took the night back to round 1 with every score intact. The admin advanced again and got the identical round-2 lineup.");
 
   const r2 = await playRound(2);
-  const mv2 = model.rotate(r2);
+  const mv2 = model.rotate(r2, { sid: await page.evaluate(() => S.current.id), cy: 2 });
   await expect.poll(() => page.evaluate(() => S.current.completed === true), { timeout: 20000 }).toBe(true);
   expect(await page.evaluate(() => S.current.movements[1].mv)).toEqual(mv2);
   await page.click("#bnav-scores"); await page.selectOption("#sc-sel", "1");

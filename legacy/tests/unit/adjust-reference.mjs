@@ -97,6 +97,21 @@ export function reference(inp) {
     let to = 0;
     for (let x = c + 1; x <= nc && !to; x++) if (isOpen(x) && size(x) > 0 && size(x) < MAX) to = x;
     for (let x = c - 1; x >= 1 && !to; x--) if (isOpen(x) && size(x) > 0 && size(x) < MAX) to = x;
+    // Starting courts only (inp.partner): every other court in use has five, so the nearest court in use sends one
+    // player to join them. On a tie, the court above sends its last player down; a court below sends its first player up.
+    if (!to && inp.partner) {
+      let up = 0, down = 0;
+      for (let x = c - 1; x >= 1 && !up; x--) if (isOpen(x) && size(x) > 0) up = x;
+      for (let x = c + 1; x <= nc && !down; x++) if (isOpen(x) && size(x) > 0) down = x;
+      const from = up && (!down || c - up <= down - c) ? up : down;
+      if (from) {
+        const pid = from < c ? courts[from][courts[from].length - 1] : courts[from][0];
+        courts[from] = courts[from].filter((x) => x !== pid);
+        courts[c].push(pid);
+        moves.push({ id: pid, from, to: c, reason: from < c ? "partner-down" : "partner-up", with: id });
+        continue;
+      }
+    }
     if (!to) return refuse("alone");
     courts[c] = [];
     courts[to].push(id);

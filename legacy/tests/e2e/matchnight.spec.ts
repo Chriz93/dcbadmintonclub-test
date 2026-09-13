@@ -344,7 +344,10 @@ test.describe.serial("2026–27 match night on the test copy (mocked database ru
     const lineup = await page.evaluate(() => S.current.assignments as Record<string, number[]>);
     const seated = Object.values(lineup).flat();
     expect(seated).not.toContain(1); expect(seated).toContain(spareId); expect(seated).toHaveLength(25);
-    expect(lineup["6"]).toContain(spareId);
+    // Everyone else keeps the court they earned (p54); the spare takes the seat the declined regular left on Court 1, the only
+    // court short of four. Nobody from Court 2 moves up to fill it.
+    expect(lineup["1"], "the spare takes the open seat on Court 1").toContain(spareId);
+    for (let c = 1; c <= 6; c++) for (const id of lineup[c] || []) if (id !== spareId) expect(c, `player ${id} keeps the earned court`).toBe(state.players.find((p) => p.id === id)!.current_court);
     const att = await page.evaluate(() => S.current.attendance as Record<string, string>);
     expect(att["1"]).toBe("declined"); expect(att[String(spareId)]).toBe("present");
     await page.evaluate(() => showSec("admin", "a-att"));

@@ -1,6 +1,8 @@
 // The league rules, re-implemented independently of index.html. Simulations drive the real app and assert that it
 // agrees with this model after every round and every session.
 import type { MockState } from "./mock-supabase";
+import { startingCourts } from "../unit/starting-reference.mjs";
+export { startingCourts };
 
 const NC = 6;
 export const cap = (_c: number) => 5;   // any court can take a fifth player
@@ -37,14 +39,11 @@ export class Model {
   absentFrom = new Map<number, number>();
   spareIds = new Set<number>();
   constructor(players: MockState["players"]) { for (const p of players) { this.earned.set(p.id, p.current_court); this.stats.set(p.id, { w: 0, l: 0, g: 0, noShow: 0 }); if (p.membership_type === "spare") this.spareIds.add(p.id); } }
-  // Seating rule: players in order of earned court (then id), four per court, the rest on Court 6.
-  // Regulars who are coming, in order of earned court (then id); confirmed spares after them in answer order.
+  // Seating rule (p54): everyone who is coming keeps the court they earned; confirmed spares fill open seats from the bottom;
+  // a court left with one player or more than five is settled as at the gym (startingCourts).
   seat(exclude: Set<number> = new Set(), spares: number[] = []) {
-    const regs = [...this.earned.keys()].filter((id) => !exclude.has(id) && !this.spareIds.has(id) && (this.earned.get(id) ?? 0) > 0)
-      .sort((a, b) => this.earned.get(a)! - this.earned.get(b)! || a - b);
-    const ids = [...regs, ...spares];
-    this.lineup = Array.from({ length: NC + 1 }, () => []);
-    this.lineup = fillCourts(ids);
+    const earned = [...this.earned.entries()].filter(([id, c]) => !exclude.has(id) && !this.spareIds.has(id) && c > 0).map(([id, court]) => ({ id, court }));
+    this.lineup = startingCourts(earned, spares).lineup;
     this.sessionWins.clear(); this.sessionGames.clear(); this.initialCourt.clear(); this.absentFrom.clear(); this.round2Court.clear();
     for (let c = 1; c <= NC; c++) for (const id of this.lineup[c]) this.initialCourt.set(id, c);
   }

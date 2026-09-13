@@ -61,7 +61,11 @@ for (let i = 0; i < 100; i++) {
     const cs = kvOf(ctx, "current_session");
     expect(cs.movements.at(-1).cycle, "movements recorded for the round").toBe(cy);
     expect(Object.values(cs.assignments as Record<string, number[]>).flat().sort((a, b) => a - b), "nobody lost or added").toEqual(before);
-    for (const id of before) expect(Math.abs(courtOf(L.current!.assignments, id) - courtOf(cs.assignments, id)) <= 1, "moves at most one court").toBe(true);
+    // Each player stays, or lands on the next court in use in the direction they moved (an empty court is skipped: with
+    // everyone keeping the court they earned, a court whose players are all away can sit empty between two in use).
+    const was = L.current!.assignments, mv = cs.movements.at(-1).mv;
+    const next = (c: number, d: number) => { for (let x = c + d; x >= 1 && x <= NC; x += d) if ((was[x] || []).length) return x; return c; };
+    for (const id of before) { const c = courtOf(was, id); expect(courtOf(cs.assignments, id), `player ${id} (${mv[id]} from Court ${c}) lands on the next court in use`).toBe(mv[id] === "up" ? next(c, -1) : mv[id] === "down" ? next(c, 1) : c); }
     await refresh(ctx);
     await page.evaluate(() => nav("scores"));
     await page.locator("#sc-sel").selectOption(String(last));
