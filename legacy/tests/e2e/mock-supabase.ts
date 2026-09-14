@@ -277,7 +277,7 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "register_me") {
         const inv = s.invitations[c.email];
         const existing = s.players.find((x) => x.user_id === c.uid) || s.players.find((x) => !x.user_id && x.email.toLowerCase() === c.email);
-        if ((!existing || existing.archived_at) && !inv && !s.admins.includes(c.email)) return deny("Registration is closed. This link is for players Christy has confirmed; contact the organizer if you were accepted.");
+        // L25: open registration — anyone signed in with a verified email registers as pending; an invitation only sets the type.
         // L20: the registration also records the acceptance of the exact current waiver wording, or is refused.
         const wa = { player_id: null as number | null, user_id: c.uid, email: c.email, name: a.p_name, version: a.p_waiver_version, sha: a.p_waiver_sha, sig: a.p_waiver_sig, tz: a.p_tz, offset: a.p_offset, action: "registration" as const, age: a.p_age, minor: a.p_minor, media: a.p_media, ua: a.p_ua };
         const wp = acceptanceProblem(s.waiverVersions ??= waiverVersions(), wa);

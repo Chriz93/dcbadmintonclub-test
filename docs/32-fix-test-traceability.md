@@ -107,3 +107,7 @@ used the machine's clock, so at 8 p.m. on September 13 (48 hours before Session 
 longer vote. The tab harness repeats a league load once when Chromium drops the reply to that page call ("Resulting
 promise was garbage collected", twice in about 21,000 cases); the load resets everything first, and every check still
 counts.
+
+## L25 — open registration (14 September 2026, TEST and production)
+
+The organizer's decision: whoever gets the site link can register. `register_me` no longer requires an invitation (the check L09 added and L20/L24 kept); a verified sign-in email is still required, and a new sign-up is still saved as pending (`approved=false`) until the organizer approves them, regulars up to capacity. This is the policy docs/17 describes. An invitation now only presets the membership type. Applied on TEST, then production; on both, its two checks said OK. Schema version stays L24 (the site requires L24). Tests: the mock database and matchnight's stranger case follow the new rule (unit 1,115/1,115; matchnight 16/16). The database suite (legacy/tests/db) loads migrations only to L21, so it still tests L20's invitation rule and does not cover L22–L25.

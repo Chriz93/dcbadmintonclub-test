@@ -255,15 +255,16 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await signIn(page, "newbie@example.invalid");
     await registerSelf(page, "Newbie Spare");
     await expect.poll(() => state.players.find((p) => p.email === "newbie@example.invalid")?.membership_type).toBe("spare");
-    // Uninvited stranger: no registration.
+    // Uninvited stranger (L25, open registration): registers, but only as pending until the organizer approves.
     await page.evaluate(() => signOut());
     await signIn(page, "stranger@example.invalid");
     await page.fill("#r-name", "Stranger"); await page.fill("#r-phone", "1"); await page.fill("#r-emergency", "x");
     await page.click("text=Continue →");
     await page.check("#w1"); await page.fill("#r-sig", "Stranger"); await page.click("#reg-btn");
     await page.check("#lf-all"); await page.fill("#r-sig-lf", "Stranger"); await page.click("#reg-btn-lf");
-    await expect(page.locator("#toast-container, body")).toContainText("Registration is closed");
-    expect(state.players.some((p) => p.email === "stranger@example.invalid")).toBe(false);
+    await expect.poll(() => state.players.find((p) => p.email === "stranger@example.invalid")?.name).toBe("Stranger");
+    expect(state.players.find((p) => p.email === "stranger@example.invalid")?.approved).toBe(false);
+    await expect(page.locator("#toast-container, body")).not.toContainText("Registration is closed");
 
     // Stale organizer screen: a newer version exists → refused and reloaded, never overwritten.
     await page.evaluate(() => signOut());
