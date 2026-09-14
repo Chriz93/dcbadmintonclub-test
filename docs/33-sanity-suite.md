@@ -3,7 +3,8 @@
 The full suite is about 10,800 browser tests plus about 1,100 unit tests. It takes about 50 minutes on this Mac and 45
 on GitHub. That is too slow to wait for while building a feature, so there are two levels:
 
-- **Sanity suite** (`bash legacy/tests/sanity.sh`, about 6–8 minutes): run it while building and before pushing.
+- **Sanity suite** (`bash legacy/tests/sanity.sh`, 6 minutes on this Mac on 14 September: 792 browser tests, 1,114
+  unit and 39 automation tests, all passed): run it while building and before pushing.
 - **Full suite** (GitHub, on every push, unattended): a release to TEST waits for it to pass. Nobody has to wait for it
   locally.
 
