@@ -4,7 +4,9 @@
 #  tabs/slow-network.spec.ts holds one reply at the exact moment each went wrong:
 #  - Round advance: once every court's scores were in, the next round's score form appeared while the round was still
 #    being saved; pressing Save only answered "Round is advancing — save again in a moment". Save buttons are now shown
-#    disabled with the reason while the round advances, and turn on (keeping anything typed) when it is saved.
+#    disabled with the reason while the round advances, and turn on (keeping anything typed) when it is saved. They are
+#    turned on in place: the score form is not drawn again while a background refresh is drawing (so a keystroke is not
+#    lost), and on GitHub's checks Save stayed off when the round was saved during such a refresh.
 #  - End Session: once the last round's scores were in, the session showed as complete while that round was still being
 #    saved; End Session then sent the older version and was refused ("Stale state: refresh before ending"). It is now
 #    shown disabled with the reason until the round is saved, and endSession answers with the reason meanwhile.
@@ -81,8 +83,8 @@ sub("let _autoAdvancing=false;\nasync function autoAdvanceCheck(){",
     "let _autoAdvancing=false;\n"
     "// p63: while a round advances, Save is shown disabled with the reason; when it is saved the form is drawn again\n"
     "// (keeping anything typed) with Save on.\n"
-    "function advanceLock(){return _autoAdvancing?' disabled title=\"The round is advancing. Save when this button turns on.\"':'';}\n"
-    "function endAdvance(){_autoAdvancing=false;if(parseInt(document.getElementById('sc-sel')?.value))renderScoreEntry();}\n"
+    "function advanceLock(){return _autoAdvancing?' disabled data-adv title=\"The round is advancing. Save when this button turns on.\"':'';}\n"
+    "function endAdvance(){_autoAdvancing=false;document.querySelectorAll('#score-area [data-adv]').forEach(b=>{b.disabled=false;b.removeAttribute('title');b.removeAttribute('data-adv');});if(parseInt(document.getElementById('sc-sel')?.value))renderScoreEntry();}\n"
     "async function autoAdvanceCheck(){")
 sub("finally{_autoAdvancing=false;}", "finally{endAdvance();}", count=3)
 sub('<button class="btn btn-sm btn-primary" style="margin-top:6px;width:100%;" onclick="saveGameScore(${court},${g})">',
@@ -94,7 +96,7 @@ sub("async function endSession(early=false,reason=''){\n  if(!S.current)return t
     "async function endSession(early=false,reason=''){\n  if(!S.current)return toast('No active session','warn');\n"
     "  if(_autoAdvancing)return toast('The last round is still being saved — end the session when the button turns on.','warn'); // p63")
 sub('<button class="btn btn-primary" style="width:100%;font-size:14px;" onclick="endSession()">',
-    '<button class="btn btn-primary" style="width:100%;font-size:14px;"${_autoAdvancing?\' disabled title="The last round is still being saved. End the session when this button turns on."\':\'\'} onclick="endSession()">')
+    '<button class="btn btn-primary" style="width:100%;font-size:14px;"${_autoAdvancing?\' disabled data-adv title="The last round is still being saved. End the session when this button turns on."\':\'\'} onclick="endSession()">')
 
 f.write_text(s)
 print("p63 applied")

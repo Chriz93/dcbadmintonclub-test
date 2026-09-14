@@ -67,10 +67,10 @@ test('p63 · three overlapped tries at most, then the reload is dropped',async()
 });
 test('p63 · Save is off while a round advances and back on after (advanceLock/endAdvance)',()=>{
  let renders=0;
- const a=app(['advanceLock','endAdvance'],{_autoAdvancing:true,document:{getElementById:()=>({value:'3'})},renderScoreEntry:()=>renders++});
- assert.equal(a.advanceLock(),' disabled title="The round is advancing. Save when this button turns on."');
+ const a=app(['advanceLock','endAdvance'],{_autoAdvancing:true,document:{getElementById:()=>({value:'3'}),querySelectorAll:()=>[]},renderScoreEntry:()=>renders++});
+ assert.equal(a.advanceLock(),' disabled data-adv title="The round is advancing. Save when this button turns on."');
  a.endAdvance();assert.equal(a.get()._autoAdvancing,false);assert.equal(renders,1,'the chosen court is drawn again');assert.equal(a.advanceLock(),'');
- const b=app(['advanceLock','endAdvance'],{_autoAdvancing:true,document:{getElementById:()=>({value:''})},renderScoreEntry:()=>renders++});
+ const b=app(['advanceLock','endAdvance'],{_autoAdvancing:true,document:{getElementById:()=>({value:''}),querySelectorAll:()=>[]},renderScoreEntry:()=>renders++});
  b.endAdvance();assert.equal(b.get()._autoAdvancing,false);assert.equal(renders,1,'no court chosen: nothing to draw');
 });
 test('p63 · the Players tag attendance save counts as waiting until its timer fires (togglePlayerPresence)',async()=>{
@@ -86,4 +86,13 @@ test('p63 · End Session answers with the reason while the last round is being s
  const a=app(['endSession'],{S:{current:{completed:true,cycle:2,scores:{}}},_autoAdvancing:true,toast:m=>said.push(m),confirm:()=>assert.fail('nothing is asked'),MAX_ROUNDS_PER_SESSION:2,allCourtsDone:()=>true});
  await a.endSession();
  assert.deepEqual(said,['The last round is still being saved — end the session when the button turns on.']);
+});
+test('p63 · the buttons turn on in place, even when the redraw keeps the old form (a background refresh is drawing)',()=>{
+ const attrs=()=>{const a={disabled:'','data-adv':'',title:'The round is advancing. Save when this button turns on.'};return a;};
+ const buttons=[0,1,2].map(()=>{const at=attrs();return {disabled:true,at,removeAttribute:k=>{delete at[k];}};});
+ let asked='';
+ const a=app(['endAdvance'],{_autoAdvancing:true,document:{getElementById:()=>({value:'2'}),querySelectorAll:q=>{asked=q;return buttons;}},renderScoreEntry:()=>{}});
+ a.endAdvance();
+ assert.equal(asked,'#score-area [data-adv]');
+ assert.deepEqual(buttons.map(b=>[b.disabled,Object.keys(b.at).sort()]),[[false,['disabled']],[false,['disabled']],[false,['disabled']]]);
 });

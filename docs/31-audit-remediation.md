@@ -117,7 +117,9 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   reason. `tabs/complete-locks.spec.ts` (12).
 - **p63 — saves on a slow connection** (found by GitHub's checks: three tests failed at random on slower machines; a
   slow, uneven test connection, SLOW_NET=40-400, brought them back with 38 of 61 cases failing). Save and End Session
-  are off, with the reason, while a round is being saved (End Session had been refused as "Stale state"); this page's saves of one shared record go one after another (a quick second tap on
+  are off, with the reason, while a round is being saved (End Session had been refused as "Stale state"), and turn on
+  in place once it is saved (GitHub's checks on b6200a0: when a background refresh was drawing at that moment, the
+  score form was not drawn again and Save stayed off); this page's saves of one shared record go one after another (a quick second tap on
   the Players tag was refused as "Someone else saved newer changes"); a reload that overlaps a save is repeated, not
   shown; attendance marks and court changes show as soon as their save is confirmed. `tabs/slow-network.spec.ts` (30),
   `tabs/slow-end-session.spec.ts` (6), `tabs/adjust-slow.spec.ts` (60), `unit/slow-replies.test.mjs` (11).
@@ -140,6 +142,10 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   no free pool player or no declined regular), 1 failed with a Playwright error during a league load ("Resulting promise
   was garbage collected", Keys · first-night #80) that did not recur in two reruns of that whole group (82/82 each).
   Unit 1,094/1,094; coverage matrix without gaps; patch replay c89c894 + p35–p65 exact.
+- **GitHub's checks on b6200a0** passed every job except desktop: the season simulation stalled because Save stayed
+  off after Round 1 was saved while the 20-second refresh was drawing. p63 now turns the buttons on in place;
+  `tabs/slow-network.spec.ts` Round advance 05–08 hold that moment and fail without the correction. Full local run
+  after the correction (UTC): 10,775 passed, 10 skipped by design, none failed; unit 1,095/1,095.
 - **The button census.** Every usable control on every page and tab is recorded in 20 league states (organizer,
   player and spare views; small to full leagues; before, during, between and after rounds) for desktop and phone, and
   each becomes a test that clicks it and requires an effect, no script error and no "not available" answer from an

@@ -2552,8 +2552,8 @@ function allCourtsDone(){
 let _autoAdvancing=false;
 // p63: while a round advances, Save is shown disabled with the reason; when it is saved the form is drawn again
 // (keeping anything typed) with Save on.
-function advanceLock(){return _autoAdvancing?' disabled title="The round is advancing. Save when this button turns on."':'';}
-function endAdvance(){_autoAdvancing=false;if(parseInt(document.getElementById('sc-sel')?.value))renderScoreEntry();}
+function advanceLock(){return _autoAdvancing?' disabled data-adv title="The round is advancing. Save when this button turns on."':'';}
+function endAdvance(){_autoAdvancing=false;document.querySelectorAll('#score-area [data-adv]').forEach(b=>{b.disabled=false;b.removeAttribute('title');b.removeAttribute('data-adv');});if(parseInt(document.getElementById('sc-sel')?.value))renderScoreEntry();}
 async function autoAdvanceCheck(){
   if(!S.current||_autoAdvancing)return;
   if(S.current.completed)return; // session already complete, no further advances
@@ -3722,7 +3722,7 @@ function renderScoreEntry(){
       <div style="font-size:16px;font-weight:900;text-align:center;color:var(--green2);margin-bottom:6px;">Session Complete</div>
       <div style="font-size:12px;text-align:center;color:var(--text);margin-bottom:14px;">All ${MAX_ROUNDS_PER_SESSION} rounds finished. Score entry is locked to protect the standings.</div>
       <div style="font-size:11px;text-align:center;color:var(--muted);margin-bottom:14px;">Click below to finalize the session and lock in next week's court assignments.</div>
-      <button class="btn btn-primary" style="width:100%;font-size:14px;"${_autoAdvancing?' disabled title="The last round is still being saved. End the session when this button turns on."':''} onclick="endSession()">🏁 End Session — Finalize Standings</button>
+      <button class="btn btn-primary" style="width:100%;font-size:14px;"${_autoAdvancing?' disabled data-adv title="The last round is still being saved. End the session when this button turns on."':''} onclick="endSession()">🏁 End Session — Finalize Standings</button>
       <div style="font-size:10px;text-align:center;color:var(--muted);margin-top:10px;">Need to fix a score? Use Admin → Tools → Undo Last Round to reopen Round ${MAX_ROUNDS_PER_SESSION}.</div>
     </div>`;
     return;

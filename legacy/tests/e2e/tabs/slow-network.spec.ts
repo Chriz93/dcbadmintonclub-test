@@ -34,7 +34,9 @@ const tail = (cs: unknown) => (changes(reference(adjustInput(cs as never)) as Pa
 
 // ── Round advance: Save waits until the round is saved ──
 for (let i = 0; i < 8; i++) {
-  test(`Round advance ${nn(i)} · the next round's Save is off, with the reason, until the round is saved`, async () => {
+  // Cases 5–8: a background refresh is drawing when the round is saved (the score form is then not drawn again).
+  const drawing = i >= 4;
+  test(`Round advance ${nn(i)} · the next round's Save is off, with the reason, until the round is saved${drawing ? " (a background refresh is drawing)" : ""}`, async () => {
     const L = genLeague(56100 + i, { ...variety(56100 + i), regulars: 8 + ((i * 5) % 19), spares: 1, pending: 0, live: "r1-partial", sessions: 1 + (i % 4), dates: ctx.dates });
     await load(ctx, L);
     const page = ctx.page;
@@ -65,8 +67,11 @@ for (let i = 0; i < 8; i++) {
     await expect(games.first(), "each game's Save is off too").toBeDisabled();
     const s2 = await scores(c2);
     await page.fill(`#si_${c2}_1_a`, String(s2[0][0]));   // typed while waiting
+    if (drawing) await page.evaluate(() => { _isSyncing = true; });
     await page.evaluate(() => (window as unknown as { __release: () => void }).__release());
     await expect(save, "Save turns on when the round is saved").toBeEnabled();
+    await expect(save, "the reason is gone").not.toHaveAttribute("title", /./);
+    if (drawing) await page.evaluate(() => { _isSyncing = false; });
     await expect(page.locator(`#si_${c2}_1_a`), "what was typed is kept").toHaveValue(String(s2[0][0]));
     await scoreCourt(page, c2, s2);
     await expect.poll(() => kv()?.scores?.[`c${c2}_y2_g1`]?.sA, { message: "Round 2's first game is stored" }).toBe(s2[0][0]);
