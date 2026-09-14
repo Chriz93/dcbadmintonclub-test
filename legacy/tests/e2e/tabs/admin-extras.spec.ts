@@ -80,12 +80,17 @@ for (let i = 0; i < 100; i++) {
       await page.locator(`#court-gym-view .gym-court[onclick="showCourtDetail(${c})"]`).click();
       await page.locator("#modal-body").getByRole("button", { name: "+ Add Player to Court" }).click();
       await expect(page.locator("#modal-title")).toHaveText(`Add Player to Court ${c}`);
-      expect((await page.locator("#modal-player-sel option").allTextContents()).slice(1), "players holding a court").toEqual(ctx.state.players.filter((p) => p.current_court > 0).map((p) => `${p.name} (C${p.current_court})`));
+      const options = (await page.locator("#modal-player-sel option").allTextContents()).slice(1);
+      if (cur) expect(options, "players holding a court").toEqual(ctx.state.players.filter((p) => p.current_court > 0).map((p) => `${p.name} (C${p.current_court})`));
+      else { // p71: before a session, every approved player who is not already starting on that court
+        const here: number[] = await page.evaluate((x) => upcomingLineup().assign[x] || [], c);
+        expect(options, "approved players not on the court").toEqual(ctx.state.players.filter((p) => p.approved && !p.waitlisted && !here.includes(p.id)).map((p) => `${p.name} (${p.membership_type === "spare" ? "spare" : "C" + p.current_court})`));
+        if (here.includes(pick.id)) return;
+      }
       await page.locator("#modal-player-sel").selectOption(String(pick.id));
       await page.getByRole("button", { name: `Add to Court ${c}` }).click();
-      const want=manualMoveExpected(L,pick.id,c);
-      if(want.message)await expect(toast).toContainText(want.message);
-      if(cur){await expect.poll(()=>kvOf(ctx,"current_session").assignments).toEqual(want.lineup);expect(await page.evaluate(()=>S.current.assignments)).toEqual(want.lineup);}
+      if(cur){const want=manualMoveExpected(L,pick.id,c);if(want.message)await expect(toast).toContainText(want.message);await expect.poll(()=>kvOf(ctx,"current_session").assignments).toEqual(want.lineup);expect(await page.evaluate(()=>S.current.assignments)).toEqual(want.lineup);}
+      else await expect.poll(() => db(pick.id).current_court, "before a session, + Add moves the player to that court").toBe(c);
     } else if (act === "sync") {
       const last = L.sessions.at(-1)!, fa = last.finalAssignments!;
       const drift = [1, 2, 3, 4, 5, 6].flatMap((c) => (fa[c] || []).map((id) => ({ id, c }))).filter(({ id, c }) => L.players.find((p) => p.id === id) && L.players.find((p) => p.id === id)!.current_court !== c);

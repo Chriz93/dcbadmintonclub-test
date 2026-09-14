@@ -1,9 +1,9 @@
 {
- "generated": "2026-09-14T14:10:59.051Z",
+ "generated": "2026-09-14T18:54:37.436Z",
  "summary": [
   {
    "k": "Control handler",
-   "n": 113,
+   "n": 114,
    "g": 0
   },
   {
@@ -597,6 +597,7 @@
     "unit/helpers.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
+    "unit/organizer-seats.test.mjs",
     "unit/players-set.test.mjs",
     "unit/review-regressions.test.mjs",
     "unit/slow-replies.test.mjs",
@@ -1246,6 +1247,14 @@
   },
   {
    "kind": "Control handler",
+   "item": "removeFromUpcoming",
+   "tests": [
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/session.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
    "item": "removePlayer",
    "tests": [
     "e2e/tabs/controls.spec.ts"
@@ -1779,6 +1788,7 @@
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
     "unit/local-login.test.mjs",
+    "unit/organizer-seats.test.mjs",
     "unit/players-set.test.mjs",
     "unit/production-build.test.mjs",
     "unit/release-guard.test.mjs",
@@ -2540,7 +2550,8 @@
    "tests": [
     "unit/adjust.test.mjs",
     "unit/helpers.test.mjs",
-    "unit/lineup.test.mjs"
+    "unit/lineup.test.mjs",
+    "unit/organizer-seats.test.mjs"
    ]
   },
   {

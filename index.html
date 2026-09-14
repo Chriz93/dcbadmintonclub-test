@@ -2120,7 +2120,26 @@ async function setPlayerCourt(id,c){
  const court=Number(c);if(S.current)return moveCourtPlayer(id,court);
  if(!Number.isInteger(court)||court<0||court>NC)return toast('Choose a valid court','warn');
  const p=S.players.find(x=>x.id===id);if(!p)return;
- await sbU('players',id,{current_court:court,highest_court:court?Math.min(p.highestCourt||court,court):p.highestCourt});await loadAll();renderAll();
+ await sbU('players',id,{current_court:court,highest_court:court?Math.min(p.highestCourt||court,court):p.highestCourt});
+ if(isSpareMember(p)){ // p71: the organizer seats a spare for the coming session (court 0 unseats them)
+  const pre={...(S.preAttendance||{})};if(court)pre[id]='present';else delete pre[id];
+  try{await setKV('pre_session_attendance',pre);S.preAttendance=pre;}catch(e){await loadAll();renderAll();return toast('Seat not saved: '+e.message,'error');}
+  await loadAll();renderAll();
+  return toast(court?`${p.name} (spare) is seated on Court ${court} for Session ${upcomingSessionNumber()}`:`${p.name} (spare) is no longer seated for Session ${upcomingSessionNumber()}`,'success');
+ }
+ await loadAll();renderAll();
+}
+// p71: Remove on the Courts page before a session: a spare is unseated; a regular is marked "not coming" (no penalty).
+async function removeFromUpcoming(id){
+ if(S.current)return toast('Players are set before the session starts — change tonight’s courts in Attendance.','warn');
+ if(!adminUnlocked)return toast('Organizer verification required','warn');
+ const p=S.players.find(x=>x.id===id);if(!p)return;
+ if(isSpareMember(p)){closeModal();return setPlayerCourt(id,0);}
+ if(!confirm(`${p.name} is not coming to Session ${upcomingSessionNumber()}? No penalty; they keep Court ${p.currentCourt}.`))return;
+ closeModal();
+ if((S.preAttendance||{})[id]==='present'){const pre={...S.preAttendance};delete pre[id]; // a "present" mark would keep them on
+  try{await setKV('pre_session_attendance',pre);S.preAttendance=pre;}catch(e){return toast('Not removed: '+e.message,'error');}}
+ return adminSetVote(id,'notcoming');
 }
 async function toggleMembership(id,type){
   const p=S.players.find(x=>x.id===id);if(!p)return;
@@ -2492,12 +2511,15 @@ function renderAnnouncementsAdmin(){
 // SESSION
 // ══════════════════════════════════════════════
 // Next session's seating from the votes: regulars who are not declining by earned court, then confirmed spares.
+// p71: spares the organizer seated for the coming session: marked present before the night, on the court assigned.
+function organizerSeated(pre){return S.current?[]:S.players.filter(p=>isSpareMember(p)&&!p.waitlisted&&p.currentCourt>0&&(pre||{})[p.id]==='present');}
 function upcomingLineup(){
   const votes=S.rsvp||{},pre=S.current?{}:(S.preAttendance||{});
   const preAbsent=new Set(S.players.filter(p=>pre[p.id]==='absent').map(p=>p.id));
   const declined=new Set(S.players.filter(p=>isRegularMember(p)&&votes[p.id]==='notcoming'&&pre[p.id]!=='present'&&!preAbsent.has(p.id)).map(p=>p.id));
   const confirmedSpares=spareSeats().claims.filter(c=>c.confirmed).map(c=>c.id).filter(id=>!preAbsent.has(id));
-  const assign=autoAssign(new Set([...declined,...preAbsent]),confirmedSpares),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+  const seatedSpares=organizerSeated(pre); // p71
+  const assign=autoAssign(new Set([...declined,...preAbsent]),confirmedSpares,seatedSpares),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
   const off=S.players.filter(p=>p.currentCourt>0&&!isSpareMember(p)&&(declined.has(p.id)||preAbsent.has(p.id))).sort((a,b)=>a.currentCourt-b.currentCourt||a.id-b.id)
     .map(p=>`${nm(p.id)} ${preAbsent.has(p.id)?'is marked absent':'is not coming'} (Court ${p.currentCourt}).`);
   return{votes,pre,declined,preAbsent,confirmedSpares,assign,notes:[...off,..._lineupNotes],problem:_lineupProblem};
@@ -2524,10 +2546,11 @@ function seatingProblem(n){return n>NC*5?`${n} players are coming, but the ${NC}
 // the bottom). The court-adjustment engine then settles a court left with one player or more than five, as at the gym.
 // _lineupNotes says what differs from the earned courts; _lineupProblem is set when no valid lineup exists.
 let _lineupNotes=[],_lineupProblem='';
-function autoAssign(exclude=new Set(),spares=[]){
+function autoAssign(exclude=new Set(),spares=[],seated=[]){
   const L={};for(let c=1;c<=NC;c++)L[c]=[];
   const nm=id=>S.players.find(p=>p.id===id)?.name||'Player',notes=[];
   activePlayers().filter(p=>p.approved&&!p.waitlisted&&p.membershipType!=='spare'&&!exclude.has(p.id)).forEach(p=>L[Math.min(NC,Math.max(1,p.currentCourt))].push(p.id));
+  for(const p of seated){if(exclude.has(p.id)||Object.values(L).some(ids=>ids.includes(p.id)))continue;const c=Math.min(NC,Math.max(1,p.currentCourt));L[c].push(p.id);notes.push(`${nm(p.id)} (spare) is seated by the organizer on Court ${c}.`);} // p71
   for(const id of spares){
     if(!S.players.some(p=>p.id===id)||Object.values(L).some(ids=>ids.includes(id)))continue;
     const used=[...Array(NC).keys()].map(i=>NC-i).filter(c=>L[c].length);
@@ -3236,15 +3259,17 @@ async function saveAssignments(){if(!S.current)return;try{await setKV('current_s
 
 // Quick add from court panel
 function showCourtAddPlayer(court){
+  const here=S.current?[]:(upcomingLineup().assign[court]||[]); // p71: before a session, every approved player not already here
+  const pick=S.current?activePlayers():S.players.filter(p=>p.approved&&!p.waitlisted&&!here.includes(p.id));
   openModal('Add Player to Court '+court,`
     <label class="lbl">Select Player</label>
     <select class="inp" id="modal-player-sel">
       <option value="">— Choose —</option>
-      ${activePlayers().map(p=>`<option value="${p.id}">${esc(p.name)} (C${p.currentCourt})</option>`).join('')}
+      ${pick.map(p=>`<option value="${p.id}">${esc(p.name)} (${!S.current&&isSpareMember(p)?'spare':'C'+p.currentCourt})</option>`).join('')}
     </select>
     <button class="btn btn-primary" onclick="quickAddToCourt(${court})">Add to Court ${court}</button>`);
 }
-async function quickAddToCourt(court){const id=parseInt(document.getElementById('modal-player-sel')?.value);if(!id)return toast('Select a player','warn');await moveCourtPlayer(id,court);}
+async function quickAddToCourt(court){const id=parseInt(document.getElementById('modal-player-sel')?.value);if(!id)return toast('Select a player','warn');if(!S.current){closeModal();return setPlayerCourt(id,court);}await moveCourtPlayer(id,court);} // p71
 
 // ══════════════════════════════════════════════
 // GYM VIEW
@@ -3388,6 +3413,7 @@ function showCourtDetail(court){
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Player ${i+1}</div>
           <div style="font-weight:800;font-size:13px;">${p?esc(p.name):'<span style="color:var(--muted);font-weight:400;font-style:italic;">Empty</span>'}</div>
           ${p?`<div style="font-size:10px;color:var(--muted);margin-top:2px;">${p.seasonWins}W · ${p.seasonLosses}L</div>`:''}
+          ${p&&adminUnlocked&&!S.current?`<button class="btn btn-ghost btn-sm" style="margin:6px 0 0;" aria-label="Remove ${esc(p.name)} from Court ${court}" onclick="removeFromUpcoming(${p.id})">Remove</button>`:''}
         </div>`;}).join('')}
     </div>
     ${S.current?`<div class="alert alert-info">Tap Scores tab to enter results for Court ${court}</div>`:''}

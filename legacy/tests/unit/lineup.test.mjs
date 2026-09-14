@@ -13,7 +13,7 @@ import { rng } from "./adjust-reference.mjs";
 // that deadline (Monday evening before the Tuesday session), so confirmed spares are seated as on the night.
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
 /** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}. */
