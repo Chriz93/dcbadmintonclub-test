@@ -1,8 +1,8 @@
 // Call In (p61), found by the organizer on TEST: before a session the button did nothing. Now, before a session, a
 // regular with no court joins the ladder on the bottom court in use; a spare is answered "coming" for the next session
 // and takes an open seat, waits for the e-transfer, or waits on standby; a spare who is already coming shows their
-// status instead of a button. During a session Call In seats the player through the court engine, and the pool then
-// shows where they play tonight (p66). Expected courts and
+// status instead of a button. During a session nobody is called in (p68): the pool shows where each player seated
+// tonight plays (p66) and that the others are not playing tonight. Expected courts and
 // seats come from the stand-in database and the independent lineup reference (oracle upcoming), not from the page.
 import { test, expect, type Page } from "@playwright/test";
 import { openAs, closeCtx, load, type Ctx } from "./harness";
@@ -22,6 +22,8 @@ const poolTag = (page: Page, name: string) => page.locator(`#sec-a-pl .tag[title
 const openPlayers = (page: Page) => page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
 /** p66: the tag a pool player seated tonight shows instead of Call In, on Admin → Players (a-pl) or Attendance (a-att). */
 const playingTag = (page: Page, sec: "a-pl" | "a-att", name: string) => page.locator(`#sec-${sec} .tag[title^="${name} is playing tonight"]`);
+/** p68: the tag a pool player not seated tonight shows during a session (nobody is called in once it has started). */
+const notPlayingTag = (page: Page, sec: "a-pl" | "a-att", name: string) => page.locator(`#sec-${sec} .tag[title^="${name} is not playing tonight"]`);
 
 for (let i = 0; i < 12; i++) {
   test(`Call in ${String(i + 1).padStart(3, "0")} · before a session · a regular with no court joins the bottom court`, async () => {
@@ -73,68 +75,57 @@ for (let i = 0; i < 16; i++) {
   });
 }
 
+// During a session nobody is called in (p68, the organizer: "all player numbers will be finalized before a session
+// begin"): the pool offers no Call In and says who is not playing tonight; a Call In that reaches the page anyway is
+// refused and tonight's courts do not change.
 for (let i = 0; i < 12; i++) {
-  test(`Call in ${String(i + 29).padStart(3, "0")} · during a session · the court engine seats the player or says why not`, async () => {
-    const opts: GenOpts = { ...variety(i + 440), regulars: 8 + i, spares: 2, pending: 0, live: "r1-partial", sessions: 1 + (i % 3), absentRate: 0 };
-    const L = genLeague(52200 + i, { ...opts, dates: ctx.dates });
-    const seated = new Set(Object.values(L.current!.assignments).flat());
-    // A pool player: not seated tonight and no court on the ladder (a spare who played before keeps a court, see docs/32).
-    const who = L.players.find((p) => p.approved && !p.waitlisted && !seated.has(p.id) && p.current_court === 0);
-    test.skip(!who, "everyone is on a court in this league");
-    await load(ctx, L);
-    const page = ctx.page, cs0 = kvOf(ctx, "current_session");
-    const ref = reference({ ...adjustInput(cs0), absent: [], returning: [{ id: who!.id, court: callInCourt(cs0.assignments, who!.current_court) }], late: [] }) as { ok: boolean };
-    await openPlayers(page);
-    await page.getByRole("button", { name: `Call in ${who!.name}` }).click();
-    if (ref.ok) {
-      await expect.poll(() => courtOf(kvOf(ctx, "current_session").assignments, who!.id), { message: "seated tonight" }).toBeGreaterThan(0);
-      // p66: the pool shows the seat instead of Call In (the organizer saw "nothing happening" when it had worked).
-      const c = courtOf(kvOf(ctx, "current_session").assignments, who!.id);
-      await expect(playingTag(page, "a-pl", who!.name), "the pool shows where they play tonight").toHaveText(`✓ Playing · Court ${c}`);
-      await expect(page.getByRole("button", { name: `Call in ${who!.name}` }), "no second Call In").toHaveCount(0);
+  test(`Call in ${String(i + 29).padStart(3, "0")} · during a session · players are set: no Call In, and a call-in is refused`, async () => {
+    const opts: GenOpts = { ...variety(i + 440), regulars: 8 + i, spares: 2, pending: 0, live: (["r1-partial", "r1-done", "r2-partial"] as const)[i % 3], sessions: 1 + (i % 3), absentRate: 0 };
+    // The first league from this seed on with a spare not playing tonight (the same leagues every run).
+    let L!: League, who: League["players"][number] | undefined;
+    for (let k = 0; k < 40 && !who; k++) {
+      L = genLeague(52200 + i * 40 + k, { ...opts, dates: ctx.dates });
+      const seated = new Set(Object.values(L.current!.assignments).flat());
+      who = L.players.find((p) => p.approved && p.membership_type === "spare" && !seated.has(p.id));
     }
-    else { await expect(page.locator("#_t")).not.toHaveText(""); expect(courtOf(kvOf(ctx, "current_session").assignments, who!.id)).toBe(0); }
+    expect(who, "a spare not playing tonight").toBeTruthy();
+    who!.current_court = 0;
+    await load(ctx, L);
+    const page = ctx.page, before = JSON.stringify(kvOf(ctx, "current_session"));
+    await openPlayers(page);
+    await expect(page.locator("#sec-a-pl button[onclick^='callInSpare']"), "Players: no Call In during a session").toHaveCount(0);
+    await expect(notPlayingTag(page, "a-pl", who!.name)).toHaveText("Not playing tonight");
+    await page.evaluate(() => showSec("admin", "a-att"));
+    await expect(page.locator("#sec-a-att button[onclick^='callInSpare']"), "Attendance: no Call In during a session").toHaveCount(0);
+    await expect(page.locator("#sec-a-att button", { hasText: "Seat anyway" }), "no \"Seat anyway\" for a regular who voted out").toHaveCount(0);
+    await expect(notPlayingTag(page, "a-att", who!.name)).toHaveText("Not playing tonight");
+    await page.evaluate((id) => callInSpare(id), who!.id);
+    await expect(page.locator("#_t")).toHaveText("Players are set before the session starts — Call In is only used before the session.");
+    expect(JSON.stringify(kvOf(ctx, "current_session")), "tonight's courts unchanged").toBe(before);
   });
 }
 
-// The organizer's TEST night (p66): during Round 1 a regular with no ladder court (back from a break) and a spare are
-// called in one after the other. Each call seats the player (or the court engine says why not, per the reference), and
-// both Spare Pool lists, Admin → Players and Admin → Attendance, then show where each plays tonight instead of offering
-// Call In again. Before p66 both stayed in the pool with the same button, so it looked as if nothing had happened.
+// The organizer's TEST night (p66): players seated tonight without a ladder court (a regular back from a break, a spare
+// seated when the session started) show where they play in both pools, and nobody is offered Call In (p68).
 for (let i = 0; i < 8; i++) {
-  test(`Call in ${String(i + 41).padStart(3, "0")} · during a session · two call-ins, and both pools show where each plays tonight`, async () => {
+  test(`Call in ${String(i + 41).padStart(3, "0")} · during a session · players seated tonight without a ladder court show where they play`, async () => {
     const opts: GenOpts = { ...variety(i + 460), regulars: 14 + i, spares: 3, pending: 0, live: "r1-partial", sessions: 1 + (i % 3), absentRate: 0, declineRate: 0.3 };
-    // The first league from this seed on like that night (the same leagues every run): a regular and a spare off tonight's
-    // courts, and a court in use without scores yet, so the court engine can seat the regular (the reference says so).
-    // A court that already has scores keeps its lineup until the round ends; when every court in use has scores the
-    // engine refuses, which the during-session cases above check against the reference.
+    // The first league from this seed on with a spare seated tonight (the same leagues every run).
     let L!: League, reg: League["players"][number] | undefined, sp: League["players"][number] | undefined;
-    const seatable = (x: League, id: number) => (reference({ ...adjustInput(x.current as never), absent: [], returning: [{ id, court: callInCourt(x.current!.assignments, 0) }], late: [] }) as { ok: boolean }).ok;
-    for (let k = 0; k < 80 && !(reg && sp && seatable(L, reg.id)); k++) {
+    for (let k = 0; k < 80 && !(reg && sp); k++) {
       L = genLeague(52300 + i * 80 + k, { ...opts, dates: ctx.dates });
       const seated = new Set(Object.values(L.current!.assignments).flat());
-      reg = L.players.find((p) => isReg(p) && !seated.has(p.id)); sp = L.players.find((p) => p.approved && !p.waitlisted && p.membership_type === "spare" && !seated.has(p.id));
+      reg = L.players.find((p) => isReg(p) && seated.has(p.id)); sp = L.players.find((p) => p.approved && p.membership_type === "spare" && seated.has(p.id));
     }
-    expect(reg && sp && seatable(L, reg.id), "a league like that night: a regular and a spare off tonight's courts, and room to seat the regular").toBeTruthy();
-    reg!.current_court = 0; sp!.current_court = 0;                 // neither has a ladder court: both are in the pool
+    expect(reg && sp, "a league with a regular and a spare seated tonight").toBeTruthy();
+    reg!.current_court = 0; sp!.current_court = 0;                 // neither has a ladder court: both are listed in the pool
     await load(ctx, L);
-    const page = ctx.page;
+    const page = ctx.page, cur = L.current!;
     await openPlayers(page);
-    const called: { name: string; court: number }[] = [];
-    for (const who of [reg!, sp!]) {
-      const cs = kvOf(ctx, "current_session");
-      const ref = reference({ ...adjustInput(cs), absent: [], returning: [{ id: who.id, court: callInCourt(cs.assignments, 0) }], late: [] }) as { ok: boolean };
-      await page.getByRole("button", { name: `Call in ${who.name}` }).click();
-      if (!ref.ok) { await expect(page.locator("#_t")).not.toHaveText(""); expect(courtOf(kvOf(ctx, "current_session").assignments, who.id), "not seated").toBe(0); continue; }
-      await expect.poll(() => courtOf(kvOf(ctx, "current_session").assignments, who.id), { message: `${who.name} seated tonight` }).toBeGreaterThan(0);
-      const c = courtOf(kvOf(ctx, "current_session").assignments, who.id);
-      await expect(page.locator("#_t")).toHaveText(`${who.name} called in → Court ${c}`);
-      await expect(playingTag(page, "a-pl", who.name), "Players: the pool shows where they play tonight").toHaveText(`✓ Playing · Court ${c}`);
-      await expect(page.getByRole("button", { name: `Call in ${who.name}` }), "no second Call In").toHaveCount(0);
-      called.push({ name: who.name, court: c });
-    }
-    expect(called[0]?.name, "the regular is seated, as the reference said").toBe(reg!.name);
+    for (const who of [reg!, sp!]) await expect(playingTag(page, "a-pl", who.name), "Players: where they play tonight").toHaveText(`✓ Playing · Court ${courtOf(cur.assignments, who.id)}`);
+    await expect(page.locator("#sec-a-pl button[onclick^='callInSpare']"), "no Call In during a session").toHaveCount(0);
     await page.evaluate(() => showSec("admin", "a-att"));
-    for (const x of called) await expect(playingTag(page, "a-att", x.name), "Attendance: the pool shows where they play tonight").toHaveText(`✓ Playing · Court ${courtOf(kvOf(ctx, "current_session").assignments, L.players.find((p) => p.name === x.name)!.id)}`);
+    for (const who of [reg!, sp!]) await expect(playingTag(page, "a-att", who.name), "Attendance: where they play tonight").toHaveText(`✓ Playing · Court ${courtOf(cur.assignments, who.id)}`);
+    await expect(page.locator("#sec-a-att button[onclick^='callInSpare']"), "no Call In during a session").toHaveCount(0);
   });
 }

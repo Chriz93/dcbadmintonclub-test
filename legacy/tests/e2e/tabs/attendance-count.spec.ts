@@ -1,6 +1,6 @@
 // Attendance counts (p57): "Present" is the players on a court tonight who are marked present, so the numbers add up to
-// the courts; anyone marked present without a court is listed with Seat (through the court engine) and "Not here"; the
-// Admin → Players tag seats and unseats through the same engine. Found by the organizer on TEST: 24 present with 22 on
+// the courts; anyone marked present without a court is listed with Seat (through the court engine) and "Not here". The
+// Admin → Players tag does not seat a player without a court during a session (p68: players are set before it starts). Found by the organizer on TEST: 24 present with 22 on
 // the courts, because two regulars who had declined were marked present without being seated. 40 generated leagues,
 // each with declined regulars marked present after the start. Whether the court engine can seat someone comes from the
 // independent reference (unit/adjust-reference.mjs): when it cannot, the page refuses with the reason and changes nothing.
@@ -77,20 +77,17 @@ for (let i = 0; i < 40; i++) {
       else await expect(page.locator("#att-not-seated")).not.toContainText(name(second));
     }
 
-    // Admin → Players: the tag on a player without a court seats them through the engine (or is refused with the reason);
-    // it never leaves someone "present" without a court.
+    // Admin → Players: during a session the tag on a player without a court does not seat them (p68: players are set
+    // before the session starts): it answers so, nothing changes, and nobody is left "present" without a court.
     const other = declined.find((id) => !ghosts.includes(id)) ?? ghosts[1];
     if (other) {
-      const before = kvOf(ctx, "current_session") as Cur, tagRef = seatRef(before, other), tagOk = tagRef.ok;
+      const before = kvOf(ctx, "current_session") as Cur;
       await page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
       await page.locator(`#sec-a-pl [onclick="togglePlayerPresence(${other})"]`).first().click();
-      if (tagOk) {
-        await expect.poll(() => { const c = kvOf(ctx, "current_session") as Cur; return c.attendance[other] === "present" ? courtOf(c.assignments, other) : -1; }, { message: `${name(other)} present only with a court` }).toBeGreaterThan(0);
-      } else {
-        await expect(page.locator("#_t"), `refused with the reason (${tagRef.why})`).toHaveText(REFUSAL[tagRef.why!]);
-      }
+      await expect(page.locator("#_t"), "not seated during a session").toHaveText("Players are set before the session starts — only players in tonight’s lineup can be marked.");
       cs = kvOf(ctx, "current_session") as Cur;
-      if (!tagOk) expect(cs.attendance[other], "unchanged after a refusal").toBe(before.attendance[other]);
+      expect(cs.attendance[other], "unchanged").toBe(before.attendance[other]);
+      expect(JSON.stringify(cs.assignments), "tonight's courts unchanged").toBe(JSON.stringify(before.assignments));
       expect(validCourts(cs.assignments)).toBe(true);
       const unseatedPresent = Object.entries(cs.attendance).filter(([id, v]) => v === "present" && !seatedIds(cs.assignments).has(+id)).map(([id]) => +id);
       expect(unseatedPresent, "only a refused Seat stays present without a court (listed for the organizer)").toEqual(seatOk ? [] : [first]);

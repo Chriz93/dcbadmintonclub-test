@@ -121,13 +121,6 @@
  {
   "state": "between-rounds",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Leila Haddad",
-  "tag": "button"
- },
- {
-  "state": "between-rounds",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -193,13 +186,6 @@
   "view": "admin → a-pl",
   "key": "button|addPlayer()",
   "label": "+ Add Player",
-  "tag": "button"
- },
- {
-  "state": "between-rounds",
-  "view": "admin → a-pl",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Leila Haddad",
   "tag": "button"
  },
  {
@@ -1542,13 +1528,6 @@
  {
   "state": "complete",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "🪑 Seat anyway",
-  "tag": "button"
- },
- {
-  "state": "complete",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -2270,13 +2249,6 @@
  {
   "state": "complete-big",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "🪑 Seat anyway",
-  "tag": "button"
- },
- {
-  "state": "complete-big",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -2993,13 +2965,6 @@
   "view": "admin → a-assign",
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
-  "tag": "button"
- },
- {
-  "state": "complete-small",
-  "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "🪑 Seat anyway",
   "tag": "button"
  },
  {
@@ -6288,13 +6253,6 @@
  {
   "state": "round-1",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Hamza Okafor",
-  "tag": "button"
- },
- {
-  "state": "round-1",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -6367,13 +6325,6 @@
   "view": "admin → a-pl",
   "key": "button|addPlayer()",
   "label": "+ Add Player",
-  "tag": "button"
- },
- {
-  "state": "round-1",
-  "view": "admin → a-pl",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Hamza Okafor",
   "tag": "button"
  },
  {
@@ -7086,13 +7037,6 @@
  {
   "state": "round-1-big",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Isabelle Mensah",
-  "tag": "button"
- },
- {
-  "state": "round-1-big",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -7158,13 +7102,6 @@
   "view": "admin → a-pl",
   "key": "button|addPlayer()",
   "label": "+ Add Player",
-  "tag": "button"
- },
- {
-  "state": "round-1-big",
-  "view": "admin → a-pl",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Isabelle Mensah",
   "tag": "button"
  },
  {
@@ -7856,13 +7793,6 @@
  {
   "state": "round-1-small",
   "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Fatima Alvarez",
-  "tag": "button"
- },
- {
-  "state": "round-1-small",
-  "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
   "tag": "button"
@@ -7921,13 +7851,6 @@
   "view": "admin → a-pl",
   "key": "button|addPlayer()",
   "label": "+ Add Player",
-  "tag": "button"
- },
- {
-  "state": "round-1-small",
-  "view": "admin → a-pl",
-  "key": "button|callInSpare(#)",
-  "label": "Call in Fatima Alvarez",
   "tag": "button"
  },
  {
@@ -8608,13 +8531,6 @@
   "key": "select|moveCourtPlayer(#,Number(this.value))",
   "label": "Move Omar Khan",
   "tag": "select"
- },
- {
-  "state": "round-2",
-  "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "🪑 Seat anyway",
-  "tag": "button"
  },
  {
   "state": "round-2",
@@ -9371,13 +9287,6 @@
   "key": "select|moveCourtPlayer(#,Number(this.value))",
   "label": "Move Kwame Wong",
   "tag": "select"
- },
- {
-  "state": "round-2-big",
-  "view": "admin → a-att",
-  "key": "button|callInSpare(#)",
-  "label": "🪑 Seat anyway",
-  "tag": "button"
  },
  {
   "state": "round-2-big",

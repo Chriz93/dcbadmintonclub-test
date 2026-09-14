@@ -1,5 +1,6 @@
 // Once both rounds are finished (before End Session), controls that would change tonight's courts are shown disabled,
-// with the reason (p62): the Assign tab's Move selectors, the Court selectors on Players and Registered, and Call In.
+// with the reason (p62): the Assign tab's Move selectors and the Court selectors on Players and Registered. Call In is
+// not shown at all during a session (p68: players are set before the session starts).
 // Found by the button census: they were offered and only answered "Start an unfinished session first". During play the
 // same controls stay usable.
 import { test, expect } from "@playwright/test";
@@ -11,7 +12,7 @@ test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
 test.afterAll(async () => { await closeCtx(ctx); });
 
 const REASON = "Both rounds are finished. End the session to save the final courts, then change courts.";
-const CONTROLS = [["a-assign", "select[aria-label^='Move ']"], ["a-pl", "select[aria-label^='Court for ']"], ["a-reg", "select[aria-label^='Court for ']"], ["a-pl", "button[aria-label^='Call in ']"]] as const;
+const CONTROLS = [["a-assign", "select[aria-label^='Move ']"], ["a-pl", "select[aria-label^='Court for ']"], ["a-reg", "select[aria-label^='Court for ']"]] as const;
 
 for (let i = 0; i < 6; i++) {
   for (const live of ["complete", "r1-partial"] as const) {
@@ -30,6 +31,8 @@ for (let i = 0; i < 6; i++) {
         }
       }
       expect(seen, "the league shows some of these controls").toBeGreaterThan(0);
+      // p68: during a session (both rounds finished or not) nobody is called in: Call In is not shown at all.
+      await expect(page.locator("#sec-a-pl button[onclick^='callInSpare']"), "no Call In during a session").toHaveCount(0);
     });
   }
 }

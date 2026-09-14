@@ -135,6 +135,19 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   ("would be alone on Court 6") because it aimed at Court 6; a player is now called in to their earned court when it
   is in use tonight, otherwise to the bottom court in use. `tabs/call-in.spec.ts` (8 new cases replaying that night,
   plus the tag after every seat), `unit/call-in-court.test.mjs` (6), `tabs/players.spec.ts`, `tabs/attendance.spec.ts`.
+- **p68 — players are set before the session starts; the organizer's own vote locks too** (the organizer on TEST, 14
+  September: "Spares cannot be called in middle of a session, all player numbers will be finalized before a session
+  begin"; "I am still able to vote no … its past Sun 10.00 pm"). During a session nobody is added: the pool shows
+  "✓ Playing · Court N" or "Not playing tonight" and a Call In that reaches the page is refused; Attendance's "Seat
+  anyway" for a regular who voted out is gone; the Players tag of a player without a court tonight answers that
+  players are set before the session starts; Attendance's "Spares for Session" card shows "seated · Court N" or "not
+  playing tonight" instead of "🪑 Seat" (found by the button census). Absent, late and "here after all" for players in tonight's lineup stay. The 46-hour vote lock
+  now applies to the organizer's own answer on Home; they change any answer in Standings → RSVP.
+  `tabs/call-in.spec.ts` (20 during-session cases), `tabs/organizer-vote.spec.ts` (8), `unit/players-set.test.mjs` (6).
+  Local run with p68 (UTC): 10,717 passed; 41 failed in `tabs/attendance-count.spec.ts` and `tabs/players.spec.ts`,
+  which still expected the Players tag and Call In to seat players during a session; both were brought in line
+  (140/140). Unit 1,107/1,107; the button census lost the 13 Call In controls of the live-night states; patch replay
+  c89c894 + p35–p68 exact. Before p68, 37 of its browser cases and 4 of its unit cases failed.
 - **p67 — "Share as image" says at once that it is working** (the keyboard census on GitHub's checks for 666d29d:
   it drew the image with no word in between, longer than the census waits on a slower machine).
 - **Full local run with p66 and p67 (UTC, 14 September):** 10,783 browser tests passed, 10 skipped by design, none

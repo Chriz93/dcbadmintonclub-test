@@ -1213,7 +1213,8 @@ function updateNavVisibility(){
 // RSVP SYSTEM
 // ══════════════════════════════════════════════
 function voteLocked(p){ // regulars only; spares keep claiming seats until the night
-  if(!p||isSpareMember(p)||adminUnlocked)return false;
+  // p68: the organizer's own answer locks too; the organizer changes any answer (their own included) in Standings → RSVP.
+  if(!p||isSpareMember(p))return false;
   const startAt=FD[upcomingSessionNumber()-1];if(!startAt)return false;
   return Date.now()>startAt.getTime()-FEES.voteDeadlineHours*3600000;
 }
@@ -2023,7 +2024,9 @@ async function togglePlayerPresence(id){
     // p57: during a session the tag follows the Attendance tab's rule: present means on a court. A player without a
     // court is seated through the court engine; a seated player marked present is marked absent the same way.
     const cur=(S.current.attendance||{})[id],seated=!!courtOfPlayer(id);
-    if(!seated||cur==='present')return changePlayerAttendance(id,seated?'absent':'present');
+    // p68: a player without a court tonight is not seated during a session (players are set before it starts).
+    if(!seated)return toast('Players are set before the session starts — only players in tonight’s lineup can be marked.','warn');
+    if(cur==='present')return changePlayerAttendance(id,'absent');
     if(cur==='absent')return changePlayerAttendance(id,'present');
     S.current.attendance={...(S.current.attendance||{}),[id]:'present'};renderAdminPlayers();
     try{await setKV('current_session',S.current);}catch(e){toast(e.message,'error');}
@@ -2070,7 +2073,7 @@ async function markAbsentFromPlayers(id){
 // session a spare is answered "coming" for the next session, and a regular with no court joins the ladder on the bottom
 // court in use, where they start next session.
 async function callInSpare(id){
- if(S.current)return changePlayerAttendance(id,'present');
+ if(S.current)return toast('Players are set before the session starts — Call In is only used before the session.','warn'); // p68
  const p=S.players.find(x=>x.id===id);if(!p)return;
  if(!adminUnlocked)return toast('Organizer verification required','warn');
  if(!p.approved||p.waitlisted)return toast('Approve this player before calling them in','warn');
@@ -2101,7 +2104,8 @@ function poolAction(p){
    :`<span class="tag tg-yellow" title="${esc(p.name)} is coming to the next session, on standby">Coming · standby</span>`;
  }
  // p66: during a session a player Call In has already seated tonight shows their court instead of Call In.
- if(S.current){const tc=courtOfPlayer(p.id);if(tc)return `<span class="tag tg-green" title="${esc(p.name)} is playing tonight on Court ${tc}">✓ Playing · Court ${tc}</span>`;}
+ // p68: players are set before the session starts: during a session nobody is called in; the pool says who plays.
+ if(S.current){const tc=courtOfPlayer(p.id);return tc?`<span class="tag tg-green" title="${esc(p.name)} is playing tonight on Court ${tc}">✓ Playing · Court ${tc}</span>`:`<span class="tag" title="${esc(p.name)} is not playing tonight: players are set before the session starts">Not playing tonight</span>`;}
  return `<button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:11px;margin:0;" aria-label="Call in ${esc(p.name)}"${courtLock()} onclick="callInSpare(${p.id})">📲 Call In</button>`;
 }
 async function setPlayerCourt(id,c){
@@ -5836,7 +5840,7 @@ function renderAttendanceTab(){
   // Spare pool
   if(sparePool.length>0){
     html+=`<div class="card"><div class="card-title">🪑 Spare Pool (${sparePool.length})</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Tap "Call In" to add a spare to an open court slot.</div>`;
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${S.current?'Players are set before the session starts.':'Tap "Call In" to add a spare to an open court slot.'}</div>`;
     sparePool.forEach(p=>{
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">
         ${avatar(p.name,'sm')}
@@ -5850,8 +5854,8 @@ function renderAttendanceTab(){
   const excused=Object.entries(att).filter(([,v])=>v==='declined').map(([id])=>S.players.find(p=>p.id===parseInt(id))).filter(Boolean);
   if(excused.length){
     html+=`<div class="card" id="excused-tonight"><div class="card-title">🙋 Not playing tonight (voted out)</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${excused.length} regular${excused.length===1?'':'s'} declined in time — no court penalty. Seat them only if they turn up.</div>`;
-    excused.forEach(p=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">${avatar(p.name,'sm')}<span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} <span class="tag tg-red">excused</span></span>${S.current?`<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:10px;margin:0;" onclick="callInSpare(${p.id})">🪑 Seat anyway</button>`:''}</div>`;});
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${excused.length} regular${excused.length===1?'':'s'} declined in time — no court penalty. Players are set before the session starts.</div>`;
+    excused.forEach(p=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">${avatar(p.name,'sm')}<span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} <span class="tag tg-red">excused</span></span></div>`;});
     html+=`</div>`;
   }
   // Spares confirmed by the vote (declined regulars open the seats)
@@ -5865,7 +5869,7 @@ function renderAttendanceTab(){
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">
         ${avatar(p.name,'sm')}
         <span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} ${c.confirmed?'<span class="tag tg-green">confirmed</span>':c.reserved?'<span class="tag tg-yellow">reserved · payment pending</span>':'<span class="tag tg-yellow">standby</span>'}${p.paid?' <span class="tag tg-green">$'+FEES.spareSession+' paid</span>':' <span class="tag tg-gray">$'+FEES.spareSession+' pending</span>'}</span>
-        ${seated?'<span class="tag tg-teal">seated</span>':`<button class="btn btn-success btn-sm" style="padding:3px 8px;font-size:10px;margin:0;" onclick="callInSpare(${p.id})">🪑 Seat</button>`}
+        ${S.current?(courtOfPlayer(p.id)?`<span class="tag tg-teal">seated · Court ${courtOfPlayer(p.id)}</span>`:'<span class="tag">not playing tonight</span>'):seated?'<span class="tag tg-teal">seated</span>':`<button class="btn btn-success btn-sm" style="padding:3px 8px;font-size:10px;margin:0;" onclick="callInSpare(${p.id})">🪑 Seat</button>`}
       </div>`;
     });
     html+=`</div>`;

@@ -8,7 +8,6 @@ import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
 import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
 import { adjustInput } from "./adjust-oracle";
-import { callInCourt } from "./pool";
 import { reference } from "../../unit/adjust-reference.mjs";
 
 type Act = "note" | "edit" | "court-add" | "sync" | "withdraw" | "presence";
@@ -118,18 +117,22 @@ for (let i = 0; i < 100; i++) {
       await adminTab(/^👥 Players$/);
       await expect(tag).toHaveText(show(st));
       for (let n = 0; n < 1 + (i % 3); n++) {
+        let refused = false;
         if (cur) {
           // p57: during a session "present" means on a court. A seated, unmarked player becomes present; a present player
-          // is marked absent through the court engine; a player without a court (or absent) is seated through it and is
-          // present. When the engine refuses (reference model), nothing changes.
+          // is marked absent through the court engine, an absent one present again. When the engine refuses (reference
+          // model), nothing changes. p68: a player without a court tonight is not seated during a session (players are
+          // set before it starts): the tag answers so and nothing changes.
           const cs = kvOf(ctx, "current_session"), seatedNow = courtOf(cs.assignments, p.id) > 0, was = cs.attendance?.[p.id];
-          const want = seatedNow && was === "present" ? "absent" : "present";
-          const viaEngine = !seatedNow || was === "present" || was === "absent";
-          const from = courtOf(cs.assignments, p.id) || callInCourt(cs.assignments, p.current_court), base = adjustInput(cs);
-          const ok = !viaEngine || (reference({ ...base, absent: want === "absent" ? [p.id] : [], returning: want === "present" ? [{ id: p.id, court: from }] : [], late: [] }) as { ok: boolean }).ok;
-          if (ok) st = want;
+          if (!seatedNow) refused = true;
+          else {
+            const want = was === "present" ? "absent" : "present", viaEngine = was === "present" || was === "absent", base = adjustInput(cs);
+            const ok = !viaEngine || (reference({ ...base, absent: want === "absent" ? [p.id] : [], returning: want === "present" ? [{ id: p.id, court: courtOf(cs.assignments, p.id) }] : [], late: [] }) as { ok: boolean }).ok;
+            if (ok) st = want;
+          }
         } else st = !st || st === "unmarked" ? "present" : st === "present" ? "absent" : undefined;
         await tag.click();
+        if (refused) await expect(toast, "a player without a court tonight is not seated during a session").toHaveText("Players are set before the session starts — only players in tonight’s lineup can be marked.");
         await expect(tag, cur ? "during a session the tag follows the courts: — → ✅ → ❌ → ✅" : "before the session the tag cycles — / ✅ / ❌").toHaveText(show(st));
       }
       await expect.poll(() => (cur ? kvOf(ctx, "current_session")?.attendance?.[p.id] : kvOf(ctx, "pre_session_attendance")?.[p.id]), { message: "saved after the short pause", timeout: 8000 }).toBe(st);

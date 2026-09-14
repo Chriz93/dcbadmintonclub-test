@@ -42,12 +42,13 @@ for (let i = 0; i < 100; i++) {
       expect(norm((await info.nth(1).textContent()) || "")).toBe(`${p.email || "—"} · C${p.current_court} · ${p.season_wins}W ${p.season_losses}L · Absent:${p.no_show_count}`);
       await expect(rows.nth(k).locator("select")).toHaveValue(String(p.current_court));
     }
-    // p61: a spare already coming to the next session shows their status instead of Call In; p62: Call In is disabled,
-    // with the reason, once both rounds are finished.
+    // p61: a spare already coming to the next session shows their status instead of Call In; p68: during a session the
+    // pool shows who plays tonight ("✓ Playing · Court N") or "Not playing tonight".
     const benchRows = list.locator(POOL_ROW.split(", ").map((x) => `.card > ${x}`).join(", "));
     expect((await benchRows.locator("> div:first-child > div:first-child").allTextContents()).map(norm), "spare pool / unassigned").toEqual(bench.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
     expect(await benchRows.evaluateAll(rowActions), "each pool player's action").toEqual(bench.map((p) => poolAction(ctx, L, p.id)));
-    if (cur?.completed) for (let j = 0; j < bench.length; j++) { const b = benchRows.nth(j).locator("> button[onclick^='callInSpare']"); await expect(b).toBeDisabled(); await expect(b).toHaveAttribute("title", COURT_LOCK); }
+    // p68: during a session (both rounds finished or not) nobody is called in: the pool shows tags, never Call In.
+    if (cur) await expect(list.locator("button[onclick^='callInSpare']"), "no Call In during a session").toHaveCount(0);
 
     const act = i % 7, k = Math.floor(r() * Math.max(1, active.length)), p = active[k];
     if ((act === 0 || act === 1) && p) {
