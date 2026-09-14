@@ -96,7 +96,10 @@ export async function load(ctx: Ctx, L: League) {
   }) as Acceptance));
   await pinSession(ctx.page);
   await ctx.page.clock.setFixedTime(new Date(L.nowMs));
-  const ok = await ctx.page.evaluate(async () => {
+  // Chromium occasionally drops the reply to this long page call ("Resulting promise was garbage collected": twice in
+  // about 21,000 cases, on a loaded machine, never with an assertion involved). The load starts by resetting everything,
+  // so it is repeated once for that error only; any other error, and every check, fails as before.
+  const inPage = async () => {
     // A load the previous case left in flight (a save's own reload) must finish first: finishing after the reset below, it
     // would write the previous database's state versions back and the new league's load would be refused as out of date.
     for (let k = 0; k < 500 && _activeLoads > 0; k++) await new Promise((r) => setTimeout(r, 20));
@@ -113,7 +116,10 @@ export async function load(ctx: Ctx, L: League) {
     console.error = (...a: unknown[]) => { errs.push(a.map((x) => (x instanceof Error ? x.stack || x.message : String(x))).join(" ")); orig(...a); };
     try { const loaded = await loadAll(); renderAll(); closeModal(); return loaded ? "" : errs.join(" | ") || "loadAll returned false"; }
     catch (e) { return String((e as Error).stack || e); } finally { console.error = orig; }
-  });
+  };
+  let ok: string;
+  try { ok = await ctx.page.evaluate(inPage); }
+  catch (e) { if (!/Resulting promise was garbage collected/.test(String(e))) throw e; ok = await ctx.page.evaluate(inPage); }
   expect(ok, "the league loaded into the app").toBe("");
   s.latency = latency;
 }

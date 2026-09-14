@@ -33,6 +33,7 @@ Browser tests went from 5,668 (desktop 12, phone-size 12, tabs 4,929, phone tabs
 |---|---|---|
 | p54 — starting courts keep the earned courts | Before a session the Courts page re-ranked everyone four to a court: declines moved players up, spares landed on Court 6, and Admin → Players disagreed | `unit/lineup.test.mjs` (named cases, the organizer's TEST situation first, and 200 generated leagues); `tabs/lineup.spec.ts` (200) and `tabs/phone/lineup.spec.ts` (80): the Courts page, the explanation card, Admin → Players, court details, the WhatsApp message and Start Session all agree with the independent reference `unit/starting-reference.mjs`; `tabs/seating.spec.ts` (33) |
 | p55 — a night of 2 to 30 players is never refused | A lone player next to full courts made Start Session refuse a valid night | `unit/lineup.test.mjs`: five named cases and 300 "never stuck" leagues (refused exactly when fewer than 2 or more than 30 are coming) |
+| p66 — the Spare Pool shows who Call In has seated tonight | "I tried calling in 2 players, nothing happening" (during Round 1): both Call Ins had seated the players, but the pools list players by their earned ladder court, so both kept the Call In button. Found by its tests: on a smaller night Call In for a player without a court aimed at the empty Court 6 and was refused; it now uses the earned court when in use tonight, otherwise the bottom court in use | `unit/call-in-court.test.mjs` (6: the court chosen); | `tabs/call-in.spec.ts` (8 cases replaying that night: two call-ins, then both pools show "✓ Playing · Court N"; the tag after every seat); `tabs/players.spec.ts` and `tabs/attendance.spec.ts` (each pool row's action, from `tabs/pool.ts`) |
 | p57 — "Present" means on a court | Attendance showed 24 present with 22 on the courts | `tabs/attendance-count.spec.ts` (40, refusals checked against the reference's reason); `tabs/attendance.spec.ts` (the count tags); `tabs/admin-extras.spec.ts` (the Players tag during a session) |
 | p61 — Call In works before a session | Call In did nothing before a session; confirmed spares were listed as unassigned | `tabs/call-in.spec.ts` (40: regulars join the bottom court, spares answered coming with seat, e-transfer or standby, during a session through the court engine); `tabs/players.spec.ts` and `tabs/attendance.spec.ts` (each Spare Pool row's action, from `tabs/pool.ts`; Call In before a session); the button census (every Call In, Seat and pool control in every state, desktop and phone) |
 
@@ -46,6 +47,7 @@ Browser tests went from 5,668 (desktop 12, phone-size 12, tabs 4,929, phone tabs
 | p63 — saves on a slow connection | On slower machines (GitHub's checks) three tests failed at random: Round 2's Save answered "Round is advancing" (and, found on the slow connection, End Session right after the last round was refused as "Stale state"); a quick second tap on the Players tag went out with an older version and was refused as "Someone else saved newer changes"; marks and court changes showed only after the whole reload that follows a save. A slow test connection (SLOW_NET=40-400) failed 38 of 61 cases without p63 | `tabs/slow-network.spec.ts` (30: each holds one reply at the moment that went wrong; the round-advance and quick-tap cases fail without p63, and Round advance 05–08, with a background refresh drawing when the round is saved, fail without the in-place correction found by GitHub's checks); `tabs/slow-end-session.spec.ts` (6: End Session held during the last round's save); `tabs/adjust-slow.spec.ts` (the Adjust suite's first 60 leagues on the slow connection); `unit/slow-replies.test.mjs` (10: the save counters, one record's saves in order, the repeated reload, Save during a round advance) |
 | p64 — the keyboard reaches every clickable part after a redraw | Clickable tags and rows drawn again by their own list or section (the Players tag after a tap, history rows, past attendance) had no Tab stop until the next full redraw (found by the keyboard tests) | `tabs/keyboard-redraw.spec.ts` (12, fail without p64); `tabs/keys.spec.ts` (every census control from the keyboard, lists excepted) |
 | p65 — "Use current fees and session time" says what it did | The button filled the next-season fields silently and did nothing when the season settings were not loaded (found by the keyboard census) | `unit/button-feedback.test.mjs` (2); the button and keyboard census (each control must show an effect) |
+| p67 — "Share as image" says at once that it is working | It drew a 1080 × 1080 image before anything happened, with no word in between (the keyboard census on GitHub's checks saw nothing within four seconds); without a player record it did nothing | The button and keyboard census (a message is an effect); `tabs/buttons.spec.ts` Home cases for players and spares |
 | Production jobs pinned | The audit remediation had pointed production's only backup and reminder jobs at TEST | `unit/isolation.test.mjs`: TEST jobs use only TEST; production's jobs are pinned to the code they ran before this release |
 | Production build | A production build of the new page would have kept TEST's cache names, security policy and banner; the installed app was named TEST | `unit/production-build.test.mjs`: builds from a clean checkout into a temporary folder and checks that only the settings lines differ |
 | Untested new controls and functions | 28 items of the audit remediation were not named by any test | `tabs/audit-controls.spec.ts` (End play early, Cancel Session, next-season fields, the calendar file, moving a player on Assign); `db/internal-functions.sql` (permissions and behaviour of every internal database function); `unit/coverage-gate.test.mjs` keeps the matrix without gaps |
@@ -65,6 +67,16 @@ use a spare who has not played yet, which is what the pool is for. One option is
 before a session and leave spares out of the court lists and counts; that changes what Admin → Players shows, so it is
 the organizer's decision.
 
+## Open design question: Call In while every court in use has scores
+
+During a round, a court that already has scores keeps its lineup until the round ends (the court engine's rule). When
+every court in use has scores, Call In cannot seat anyone this round and answers "… would be alone on Court N and no
+court nearby has room"; the message is accurate for the engine but does not say why. On the organizer's TEST night
+Court 6 had no scores yet, so both Call Ins worked. One option is to offer "joins from the next round" (as Late does)
+in that case; that changes a league rule, so it is the organizer's decision. Tests: the twelve during-session Call In
+cases in `tabs/call-in.spec.ts` check either the seat or the reference's refusal.
+
+
 ## Observed on a slow connection (not changed in this release)
 
 Every save is followed by a reload of the whole page, which asks the database about twenty questions one after another.
@@ -78,4 +90,8 @@ independent parts together would shorten the wait; it is offered as a separate t
 Each still checks its behaviour exactly: the season score helper waits for the current match's form; the keyboard case
 tabs from the top of the page; the rotation checks follow the next court in use; the harness waits for a previous
 case's load and cancels its pending save; league times are computed in the league's zone; the waiver offset is
-normalised (-0 in UTC).
+normalised (-0 in UTC). The match-night suite now runs at a fixed moment before Session 1, like the tab suites: it
+used the machine's clock, so at 8 p.m. on September 13 (48 hours before Session 1) its registration case could no
+longer vote. The tab harness repeats a league load once when Chromium drops the reply to that page call ("Resulting
+promise was garbage collected", twice in about 21,000 cases); the load resets everything first, and every check still
+counts.

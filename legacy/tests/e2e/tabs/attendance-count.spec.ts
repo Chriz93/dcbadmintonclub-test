@@ -11,6 +11,7 @@ import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
 import { adjustInput, REFUSAL } from "./adjust-oracle";
 import { reference } from "../../unit/adjust-reference.mjs";
+import { callInCourt } from "./pool";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
@@ -31,9 +32,8 @@ for (let i = 0; i < 40; i++) {
     for (const id of ghosts) cur.attendance[id] = "present";
     await load(ctx, L);
     const page = ctx.page, name = (id: number) => L.players.find((p) => p.id === id)!.name;
-    const earned = (id: number) => L.players.find((p) => p.id === id)!.current_court || 6;
     /** The court engine's answer for seating this player back (their own court, or the nearest with room), from the reference. */
-    const seatRef = (cs: Cur, id: number) => reference({ ...adjustInput(cs), absent: [], returning: [{ id, court: courtOf(cs.assignments, id) || earned(id) }], late: [] }) as { ok: boolean; why?: string };
+    const seatRef = (cs: Cur, id: number) => reference({ ...adjustInput(cs), absent: [], returning: [{ id, court: courtOf(cs.assignments, id) || callInCourt(cs.assignments, L.players.find((p) => p.id === id)!.current_court) }], late: [] }) as { ok: boolean; why?: string };
     await page.evaluate(() => { nav("admin"); showSec("admin", "a-att"); });
     const seated = seatedIds(cur.assignments);
     const present = [...seated].filter((id) => cur.attendance[id] === "present").length;

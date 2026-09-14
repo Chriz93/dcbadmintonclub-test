@@ -8,7 +8,7 @@ import { courtOf } from "./oracle";
 import { fillCourts } from "../rules-model";
 import {manualMoveExpected} from './manual-move-oracle';
 import {expectAdjust, REFUSAL} from './adjust-oracle';
-import { poolAction, rowActions, COURT_LOCK } from "./pool";
+import { poolAction, rowActions, COURT_LOCK, POOL_ROW, callInCourt } from "./pool";
 
 let ctx: Ctx;
 test.beforeAll(async ({ browser }) => { ctx = await openAs(browser); });
@@ -44,7 +44,7 @@ for (let i = 0; i < 100; i++) {
     }
     // p61: a spare already coming to the next session shows their status instead of Call In; p62: Call In is disabled,
     // with the reason, once both rounds are finished.
-    const benchRows = list.locator(".card > div:has(> button[onclick^='callInSpare']), .card > div:has(> span.tag[title*=' is coming to the next session'])");
+    const benchRows = list.locator(POOL_ROW.split(", ").map((x) => `.card > ${x}`).join(", "));
     expect((await benchRows.locator("> div:first-child > div:first-child").allTextContents()).map(norm), "spare pool / unassigned").toEqual(bench.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
     expect(await benchRows.evaluateAll(rowActions), "each pool player's action").toEqual(bench.map((p) => poolAction(ctx, L, p.id)));
     if (cur?.completed) for (let j = 0; j < bench.length; j++) { const b = benchRows.nth(j).locator("> button[onclick^='callInSpare']"); await expect(b).toBeDisabled(); await expect(b).toHaveAttribute("title", COURT_LOCK); }
@@ -92,9 +92,12 @@ for (let i = 0; i < 100; i++) {
         return;
       }
       if(!u.approved||u.waitlisted){await expect(toast).toHaveText('Choose an approved, non-waitlisted player');return;}
-      const from=courtOf(cur.assignments,u.id)||u.current_court||NC,ref=expectAdjust(cur,{absent:[],returning:[{id:u.id,court:from}],late:[]});
+      const from=courtOf(cur.assignments,u.id)||callInCourt(cur.assignments,u.current_court),ref=expectAdjust(cur,{absent:[],returning:[{id:u.id,court:from}],late:[]});
       if(!ref.ok){await expect(toast).toHaveText(REFUSAL[ref.why!]);expect(kv('current_session')).toEqual(cur);return;}
       await expect(toast).toHaveText(`${u.name} called in → Court ${courtOf(ref.lineup,u.id)}`);
+      // p66: the pool shows the seat (the organizer's Call Ins had worked while the pool kept showing Call In).
+      await expect(benchRows.nth(j).locator("> span.tag"), "the pool shows where they play tonight").toHaveText(`✓ Playing · Court ${courtOf(ref.lineup,u.id)}`);
+      await expect(benchRows.nth(j).locator("> button[onclick^='callInSpare']"), "no Call In for a seated player").toHaveCount(0);
       expect(kv('current_session').assignments).toEqual(ref.lineup);expect(kv('current_session').attendance[u.id]).toBe('present');expect(db(u.id)!.current_court).toBe(u.current_court);
     } else if (act === 5) {
       const kind = i % 20 === 5 ? "regular" : r() < 0.5 ? "regular" : "spare", c = Math.floor(r() * 7);

@@ -5,7 +5,7 @@ import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
 import { expectAdjust, changes, sorted } from "./adjust-oracle";
-import { poolAction, rowActions } from "./pool";
+import { poolAction, rowActions, POOL_ROW } from "./pool";
 
 const LIVES: LiveState[] = ["none", "r1-partial", "r2-partial", "r1-done"];
 let ctx: Ctx;
@@ -43,7 +43,7 @@ for (let i = 0; i < 100; i++) {
     await expect(poolCard).toHaveCount(pool.length ? 1 : 0);
     if (pool.length) {
       // p61: a spare already coming to the next session shows their status instead of Call In.
-      const rows = poolCard.locator("div:has(> button[onclick^='callInSpare']), div:has(> span.tag[title*=' is coming to the next session'])");
+      const rows = poolCard.locator(POOL_ROW);
       expect((await rows.locator("> span:not(.tag)").allTextContents()).map(norm)).toEqual(pool.map((p) => p.name + (p.membership_type === "spare" ? "SPARE" : "")));
       expect(await rows.evaluateAll(rowActions), "each pool player's action").toEqual(pool.map((p) => poolAction(ctx, L, p.id)));
     }

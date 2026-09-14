@@ -8,6 +8,7 @@ import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
 import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
 import { adjustInput } from "./adjust-oracle";
+import { callInCourt } from "./pool";
 import { reference } from "../../unit/adjust-reference.mjs";
 
 type Act = "note" | "edit" | "court-add" | "sync" | "withdraw" | "presence";
@@ -124,7 +125,7 @@ for (let i = 0; i < 100; i++) {
           const cs = kvOf(ctx, "current_session"), seatedNow = courtOf(cs.assignments, p.id) > 0, was = cs.attendance?.[p.id];
           const want = seatedNow && was === "present" ? "absent" : "present";
           const viaEngine = !seatedNow || was === "present" || was === "absent";
-          const from = courtOf(cs.assignments, p.id) || p.current_court || 6, base = adjustInput(cs);
+          const from = courtOf(cs.assignments, p.id) || callInCourt(cs.assignments, p.current_court), base = adjustInput(cs);
           const ok = !viaEngine || (reference({ ...base, absent: want === "absent" ? [p.id] : [], returning: want === "present" ? [{ id: p.id, court: from }] : [], late: [] }) as { ok: boolean }).ok;
           if (ok) st = want;
         } else st = !st || st === "unmarked" ? "present" : st === "present" ? "absent" : undefined;

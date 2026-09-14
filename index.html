@@ -1625,7 +1625,8 @@ function renderMySeason(){
   </div>`;
 }
 async function shareMySeason(){
-  const me=myPlayer();if(!me)return;const d=mySeasonData(me);
+  const me=myPlayer();if(!me)return toast('Sign in as a player to share your season','info');const d=mySeasonData(me);
+  toast('Preparing your season image…','info'); // p67: drawing the image takes a moment; say so at once
   const cv=document.createElement('canvas');cv.width=1080;cv.height=1080;const x=cv.getContext('2d');
   const grad=x.createLinearGradient(0,0,0,1080);grad.addColorStop(0,'#166534');grad.addColorStop(1,'#14532d');x.fillStyle=grad;x.fillRect(0,0,1080,1080);
   x.fillStyle='#bbf7d0';x.font='bold 64px Inter, system-ui, sans-serif';x.textAlign='center';x.fillText('Maplewood League',540,150);
@@ -2043,10 +2044,13 @@ async function togglePlayerPresence(id){
     else{await setKV('pre_session_attendance',S.preAttendance);}
   },1000);
 }
+// p66: the court a player without a seat tonight is called in to: their earned court when it is in use tonight (or
+// above the bottom court in use), otherwise the bottom court in use tonight.
+function callInCourt(c){const a=S.current?.assignments||{},used=[];for(let x=1;x<=NC;x++)if((a[x]||[]).length)used.push(x);if(!used.length)return c||NC;const b=Math.max(...used);return c&&(used.includes(c)||c<b)?c:b;}
 async function changePlayerAttendance(id,status){
  const p=S.players.find(x=>x.id===id);if(!p||!S.current)return toast('Start a session before changing tonight’s lineup','warn');
  if(!p.approved||p.waitlisted)return toast('Choose an approved, non-waitlisted player','warn');
- const from=courtOfPlayer(id)||p.currentCourt||NC;
+ const from=courtOfPlayer(id)||callInCourt(p.currentCourt);
  const res=adjustCourts({...adjInput(),absent:status==='absent'?[id]:[],returning:status==='present'?[{id,court:from}]:[],late:[]});
  if(!res.ok)return toast(res.problem,'warn');
  const next=JSON.parse(JSON.stringify(S.current));next.assignments=res.lineup;next.attendance={...next.attendance,[id]:status};
@@ -2096,6 +2100,8 @@ function poolAction(p){
   return court?`<span class="tag tg-green" title="${esc(p.name)} is coming to the next session and has a seat">✓ Coming · Court ${court}</span>`
    :`<span class="tag tg-yellow" title="${esc(p.name)} is coming to the next session, on standby">Coming · standby</span>`;
  }
+ // p66: during a session a player Call In has already seated tonight shows their court instead of Call In.
+ if(S.current){const tc=courtOfPlayer(p.id);if(tc)return `<span class="tag tg-green" title="${esc(p.name)} is playing tonight on Court ${tc}">✓ Playing · Court ${tc}</span>`;}
  return `<button class="btn btn-success btn-sm" style="padding:3px 6px;font-size:11px;margin:0;" aria-label="Call in ${esc(p.name)}"${courtLock()} onclick="callInSpare(${p.id})">📲 Call In</button>`;
 }
 async function setPlayerCourt(id,c){

@@ -127,6 +127,18 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   section drawn again on its own left its clickable tags and rows out of the Tab order until the next full redraw.
   `tabs/keyboard-redraw.spec.ts` (12, fail without p64); the keyboard census `tabs/keys.spec.ts` works every control in
   the button census from the keyboard (lists excepted).
+- **p66 — the Spare Pool shows who Call In has seated tonight** (the organizer's TEST report, confirmed on the live
+  page after the p61–p65 release): during Round 1 the organizer's two Call Ins had worked (both players marked present
+  and seated on Court 6), but both Spare Pool lists are built from the earned ladder court, so both stayed in the pool
+  with the same Call In button and nothing changed on screen. A pool player seated tonight now shows
+  "✓ Playing · Court N". Its tests also found that on a smaller night Call In for a player without a court was refused
+  ("would be alone on Court 6") because it aimed at Court 6; a player is now called in to their earned court when it
+  is in use tonight, otherwise to the bottom court in use. `tabs/call-in.spec.ts` (8 new cases replaying that night,
+  plus the tag after every seat), `unit/call-in-court.test.mjs` (6), `tabs/players.spec.ts`, `tabs/attendance.spec.ts`.
+- **p67 — "Share as image" says at once that it is working** (the keyboard census on GitHub's checks for 666d29d:
+  it drew the image with no word in between, longer than the census waits on a slower machine).
+- **Full local run with p66 and p67 (UTC, 14 September):** 10,783 browser tests passed, 10 skipped by design, none
+  failed; unit 1,101/1,101; coverage matrix without gaps; patch replay c89c894 + p35–p67 exact.
 - **p65 — "Use current fees and session time" says what it did** (found by the keyboard census): it filled the
   next-season fields without a word, and did nothing at all when the settings were not loaded.
   `unit/button-feedback.test.mjs` (2); the button and keyboard census.

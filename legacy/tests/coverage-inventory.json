@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-13T23:39:01.317Z",
+ "generated": "2026-09-14T02:29:04.705Z",
  "summary": [
   {
    "k": "Control handler",
@@ -243,6 +243,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
+    "e2e/tabs/call-in.spec.ts",
     "e2e/tabs/census.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -590,6 +591,7 @@
     "rules.sql",
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
+    "unit/call-in-court.test.mjs",
     "unit/helpers.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
@@ -647,7 +649,6 @@
    "kind": "Control handler",
    "item": "callInSpare",
    "tests": [
-    "e2e/tabs/attendance.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/pool.ts"
    ]
@@ -1764,6 +1765,7 @@
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
     "unit/button-feedback.test.mjs",
+    "unit/call-in-court.test.mjs",
     "unit/coverage-gate.test.mjs",
     "unit/fetch-guard.mjs",
     "unit/helpers.test.mjs",

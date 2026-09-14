@@ -14,6 +14,12 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
   let state: MockState;
   test.beforeEach(async ({ page }) => {
     state = freshState();
+    // A fixed moment before Session 1 (as the tab suites use), for the page and the database clock alike. The suite used
+    // the machine's clock, so Session 1's vote closed for it at 8 p.m. on September 13 (48 hours before play) and the
+    // registration case could no longer vote. The voting-deadline case below sets its own moment.
+    const t0 = Date.parse("2026-09-10T12:00:00-04:00");
+    state.nowMs = t0;
+    await page.clock.setFixedTime(new Date(t0));
     await installMock(page, state);
     page.on("dialog", (d) => d.accept());
     await page.goto("/");
