@@ -148,6 +148,16 @@ corrected in separate commits. Nothing was pushed until the checks below passed.
   which still expected the Players tag and Call In to seat players during a session; both were brought in line
   (140/140). Unit 1,107/1,107; the button census lost the 13 Call In controls of the live-night states; patch replay
   c89c894 + p35–p68 exact. Before p68, 37 of its browser cases and 4 of its unit cases failed.
+- **Full local run with p69 and p70 (UTC, 14 September):** 10,755 browser tests passed; 3 failed, all in tests still written for the old spare rule (matchnight's spare-seat case, desktop and phone size, and the season opener's totals). They were brought in line and their specs rerun (17/17); nothing else changed. Unit 1,114/1,114; patch replay c89c894 + p35–p70 exact. Before p69 and p70, 71 of their browser checks and 146 unit checks failed on the page.
+- **p70 — no Seat during a session** (the organizer: "remove Seat too"): Attendance's "Marked present but not on a
+  court" offers only "Not here", which clears the mark; players are set before the session starts.
+  `tabs/attendance-count.spec.ts` (40).
+- **p69 — spares fill the courts up to 24 players, decided when the regulars' vote closes** (the organizer on TEST,
+  14 September: "we have 27 regular players, if say 4 of them voted no, we will take in one spare"; "spares wont get
+  priority for voting"). Spare seats are 24 minus the regulars coming, decided when the regulars' vote closes; available
+  spares take them in the order they replied, confirmed once paid. Before: one seat per declined regular, reserved from
+  the moment a spare answered. The database and the reminder emails still count one seat per decline (docs/32).
+  `unit/spare-seats.test.mjs` (7), `tabs/vote.suite.ts`, `tabs/call-in.spec.ts` (16), `opener.spec.ts`, the reference.
 - **p67 — "Share as image" says at once that it is working** (the keyboard census on GitHub's checks for 666d29d:
   it drew the image with no word in between, longer than the census waits on a slower machine).
 - **Full local run with p66 and p67 (UTC, 14 September):** 10,783 browser tests passed, 10 skipped by design, none

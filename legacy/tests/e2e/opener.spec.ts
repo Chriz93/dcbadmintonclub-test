@@ -101,11 +101,16 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
     await expect.poll(() => state.rsvps.find((r) => r.player_id === p.id && r.session_number === 1)?.response).toBe(coming ? "coming" : "notcoming");
     if (n === REGULARS[1]) await shot("07-home-vote", `${n} votes on Home: one tap, with the Sunday deadline and the refund cutoff shown`);
     if (n === "Hannah Kim") await shot("08-decline", `${n} declines on Friday, before the Saturday 8 PM cutoff, so she is owed $14`);
-    if (n === "Emma Clarke") { await expect(page.locator("#home-vote .spare-status")).toContainText("Seat reserved"); await shot("09-spare-reserved", `${n} (spare) has a reserved seat awaiting payment verification`); }
-    if (n === "Leah Cohen") { await expect(page.locator("#home-vote .spare-status")).toContainText("Standby"); await shot("10-spare-standby", `${n} (spare) is on standby: both open seats are already taken`); }
+    // p69: spare seats are decided when the regulars' vote closes (Sunday 10 PM); on Friday spares say they are available.
+    if (n === "Emma Clarke") { await expect(page.locator("#home-vote .spare-status")).toContainText("Available — spare seats are decided when the regulars' vote closes"); await shot("09-spare-available", `${n} (spare) says she is available; seats are decided when the regulars' vote closes`); }
+    if (n === "Leah Cohen") { await expect(page.locator("#home-vote .spare-status")).toContainText("You are #3 among the spares who replied"); await shot("10-spare-third", `${n} (spare) is third among the spares who replied`); }
     await page.evaluate(() => signOut());
   }
-  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares Emma and Diego reserved the two open seats, Leah went on standby, Tomás was not available.`);
+  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares Emma, Diego and Leah said they were available, in that order; Tomás was not.`);
+  // The regulars' vote closes on Sunday at 10 PM (46 hours before play); the night is prepared on Monday.
+  state.nowMs = new Date("2026-09-14T18:00:00-04:00").getTime();
+  await page.clock.setFixedTime(new Date(state.nowMs));
+  timeline.push("The regulars' vote closed on Sunday at 10 PM with 23 regulars coming, so one spare seat opened (24 players): it went to Emma, the first spare who replied; Diego and Leah are on standby.");
 
   // ── 5. Match night ────────────────────────────────────────────────────────────────────────────────
   await signIn(page, ORGANIZER); await unlockOrganizer(page);
@@ -115,22 +120,22 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await expect(page.locator("#vote-changes")).toContainText("Ryan Gill: — → not coming · S1");
   await shot("11-admin-home", "Admin Home: every vote as it came in");
   // A reservation becomes confirmed only after the organizer verifies this session's payment.
-  for (const name of ["Emma Clarke", "Diego Alvarez"]) await page.evaluate(id => rpc('record_payment', {
+  for (const name of ["Emma Clarke"]) await page.evaluate(id => rpc('record_payment', {
     p_player:id,p_kind:'spare',p_amount:20,p_session:1,p_received_on:'2026-09-11',p_note:'Verified opener fixture',p_request:crypto.randomUUID(),
   }), byName(name).id);
   await page.evaluate(async()=>{await loadAll();renderAll();});
-  timeline.push("The organizer verified Emma's and Diego's $20 payments for Session 1; both reserved seats became confirmed.");
+  timeline.push("The organizer verified Emma's $20 payment for Session 1; her reserved seat became confirmed.");
   await page.evaluate(() => { nav("admin"); showSec("admin", "a-att"); });
-  await expect(page.locator("#confirmed-spares")).toContainText("2 regulars declined · 2 confirmed · 1 standby");
-  await shot("12-attendance", "Attendance before the night: two regulars excused, two spares confirmed");
+  await expect(page.locator("#confirmed-spares")).toContainText("23 regulars coming · 1 spare seat · 1 confirmed · 2 standby");
+  await shot("12-attendance", "Attendance before the night: two regulars excused, one spare confirmed (24 players)");
   const model = new Model(state.players);
   const declined = new Set(DECLINE.map((n) => byName(n).id));
-  const seated = ["Emma Clarke", "Diego Alvarez"].map((n) => byName(n).id);
+  const seated = ["Emma Clarke"].map((n) => byName(n).id);
   model.seat(declined, seated);
   await page.evaluate(() => startSession());
   await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
   expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));
-  // Everyone who is coming keeps the court they earned (p54); the two spares take open seats from the bottom court up.
+  // Everyone who is coming keeps the court they earned (p54); the spare takes an open seat from the bottom court up.
   for (let c = 1; c <= 6; c++) for (const id of model.lineup[c]) if (!seated.includes(id)) expect(c, `${state.players.find((p) => p.id === id)!.name} keeps the earned court`).toBe(state.players.find((p) => p.id === id)!.current_court);
   // Each spare takes a seat that a decline left open (the lowest court short of four).
   const shortCourts = new Set([...declined].map((id) => state.players.find((p) => p.id === id)!.current_court));
@@ -140,8 +145,8 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   for (const id of seated) expect(att[String(id)]).toBe("present");
   const lineupR1 = model.lineup.map((l) => [...l]);
   await page.click("#bnav-courts");
-  await shot("13-courts-r1", "Round 1: 23 regulars and 2 spares; the two gaps are filled from the court below");
-  timeline.push("Start Session seated the 23 coming regulars and both confirmed spares, excused Hannah and Ryan without a court penalty, and marked everyone who voted present.");
+  await shot("13-courts-r1", "Round 1: 23 regulars and 1 spare, 24 players on six courts");
+  timeline.push("Start Session seated the 23 coming regulars and the confirmed spare, excused Hannah and Ryan without a court penalty, and marked everyone who voted present.");
 
   const sheet: GameRow[] = [];
   const playRound = async (cy: number) => {
@@ -181,11 +186,13 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await shot("16-undo-offer", "The Undo control, bottom centre, offers to reverse “Advance to round 2”");
   await page.locator("#undo-pill button").click();
   await expect.poll(() => page.evaluate(() => S.current.cycle)).toBe(1);
-  expect(await page.evaluate(() => Object.keys(S.current.scores).length)).toBe(20);
+  // Round 1's games: three on a court of four, five on a court of five (p69: 24 players on six courts of four).
+  const r1Games = lineupR1.slice(1).reduce((n, ids) => n + (ids.length === 5 ? 5 : ids.length >= 2 ? 3 : 0), 0);
+  expect(await page.evaluate(() => Object.keys(S.current.scores).length)).toBe(r1Games);
   expect(await page.evaluate(() => S.current.movements.length)).toBe(0);
   expect(members(await page.evaluate(() => S.current.assignments))).toEqual(Object.fromEntries(lineupR1.slice(1).map((ids, i) => [String(i + 1), [...ids].sort((a, b) => a - b)])));
   await page.click("#bnav-courts");
-  await shot("17-after-undo", "After Undo: back in round 1, all 20 scores intact, nobody has moved");
+  await shot("17-after-undo", `After Undo: back in round 1, all ${r1Games} scores intact, nobody has moved`);
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => S.current.cycle)).toBe(1);
   await page.click("#bnav-scores");
@@ -221,15 +228,18 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   }
   for (const id of declined) { expect(byName(nameOf(id)).current_court).toBe(seed[id]); expect(byName(nameOf(id)).no_show_count).toBe(0); }
   expect(members(sess.finalAssignments)).toEqual(Object.fromEntries(Array.from({ length: 6 }, (_, i) => [String(i + 1), [...finals.entries()].filter(([, c]) => c === i + 1).map(([id]) => id).sort((a, b) => a - b)])));
-  expect(Object.keys(sess.scores)).toHaveLength(40);
-  expect(Object.keys(sess.playerNames)).toHaveLength(27);
+  // Both rounds are played on the same court sizes; the names are everyone who played plus the regulars excused (p69: 24).
+  expect(Object.keys(sess.scores)).toHaveLength(2 * r1Games);
+  expect(Object.keys(sess.playerNames)).toHaveLength(lineupR1.slice(1).flat().length + declined.size);
 
   // ── 7. Every tab ──────────────────────────────────────────────────────────────────────────────────
   const lb = state.players.filter((p) => p.current_court > 0 || p.games_played > 0 || p.season_wins > 0);
-  expect(lb).toHaveLength(27);
+  // The leaderboard lists every regular (all have a court) and every spare who played (p69: one spare seat, so 26).
+  const lbCount = regIds.length + seated.length;
+  expect(lb).toHaveLength(lbCount);
   await page.click("#bnav-standings"); await tab("Leaders").click();
   const lbRows = await page.$$eval("#sec-lb .lbrow", (rows) => rows.map((r) => ({ name: (r.querySelector(".lbname")?.textContent || "").trim(), sub: r.querySelector(".lbsub")?.textContent || "" })));
-  expect(lbRows).toHaveLength(27);
+  expect(lbRows).toHaveLength(lbCount);
   for (const row of lbRows) {
     const p = state.players.find((x) => row.name.startsWith(x.name))!; const s = model.stats.get(p.id)!;
     expect(row.sub, `Leaders row of ${p.name}`).toContain(`${s.w}W ${s.l}L`);
@@ -269,13 +279,13 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await shot("24-sessions", "Sessions: final placements with the up and down arrows");
   await tab("History").click();
   expect(await page.locator("#sec-hist .card").count()).toBe(1);
-  await expect(page.locator("#sec-hist .card").first()).toContainText("40 games");
+  await expect(page.locator("#sec-hist .card").first()).toContainText(`${2 * r1Games} games`);
   await page.locator("#sec-hist .card").first().click();
   await expect(page.locator("#sec-hist")).toContainText("Round 2");
   await shot("25-history", "History: every game of the night, round by round");
   await tab("Court history").click();
   const heat = await page.$$eval("#sec-heat .heatmap-row", (rows) => rows.map((r) => ({ name: r.querySelector(".heatmap-name")?.textContent || "", cells: [...r.querySelectorAll(".hm-cell")].map((c) => c.textContent || "") })));
-  expect(heat).toHaveLength(27);
+  expect(heat).toHaveLength(lbCount);
   for (const row of heat) { const p = state.players.find((x) => x.name.startsWith(row.name))!; expect(row.cells, `court history of ${p.name}`).toEqual([String(finals.get(p.id) ?? "—")]); }
   await shot("26-court-history", "Court history: where everyone finished Session 1");
   await page.click("#bnav-home");
@@ -295,7 +305,7 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await expect.poll(() => state.payments.filter((x) => x.kind === "refund").length).toBe(1);
   await expect(page.locator("#refunds-owed")).toContainText("1 refund to send · $14");
   timeline.push("After the night: every tab matched the rules model. The admin marked Hannah's $14 refund as sent; Ryan's is still listed.");
-  expect(wl(latestText).reduce((n, x) => n + x.w, 0)).toBe(80);
+  expect(wl(latestText).reduce((n, x) => n + x.w, 0), "every game's winners").toBe(sheet.reduce((n, g) => n + (g.sA > g.sB ? g.A.length : g.B.length), 0));
 
   // ── 8. Write the run ──────────────────────────────────────────────────────────────────────────────
   const fc = firstCourts(done);

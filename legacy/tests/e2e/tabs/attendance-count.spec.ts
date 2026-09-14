@@ -1,5 +1,5 @@
 // Attendance counts (p57): "Present" is the players on a court tonight who are marked present, so the numbers add up to
-// the courts; anyone marked present without a court is listed with Seat (through the court engine) and "Not here". The
+// the courts; anyone marked present without a court is listed with "Not here" (p70: no Seat during a session). The
 // Admin → Players tag does not seat a player without a court during a session (p68: players are set before it starts). Found by the organizer on TEST: 24 present with 22 on
 // the courts, because two regulars who had declined were marked present without being seated. 40 generated leagues,
 // each with declined regulars marked present after the start. Whether the court engine can seat someone comes from the
@@ -32,8 +32,6 @@ for (let i = 0; i < 40; i++) {
     for (const id of ghosts) cur.attendance[id] = "present";
     await load(ctx, L);
     const page = ctx.page, name = (id: number) => L.players.find((p) => p.id === id)!.name;
-    /** The court engine's answer for seating this player back (their own court, or the nearest with room), from the reference. */
-    const seatRef = (cs: Cur, id: number) => reference({ ...adjustInput(cs), absent: [], returning: [{ id, court: courtOf(cs.assignments, id) || callInCourt(cs.assignments, L.players.find((p) => p.id === id)!.current_court) }], late: [] }) as { ok: boolean; why?: string };
     await page.evaluate(() => { nav("admin"); showSec("admin", "a-att"); });
     const seated = seatedIds(cur.assignments);
     const present = [...seated].filter((id) => cur.attendance[id] === "present").length;
@@ -43,39 +41,23 @@ for (let i = 0; i < 40; i++) {
     await expect(box).toContainText(`Marked present but not on a court (${ghosts.length})`);
     for (const id of ghosts) await expect(box).toContainText(name(id));
 
-    // Seat the first through the court engine, or see the refusal with its reason.
-    const first = ghosts[0], firstRef = seatRef(kvOf(ctx, "current_session") as Cur, first), seatOk = firstRef.ok;
-    const seatBtn = box.getByRole("button", { name: `Seat ${name(first)} on a court` });
-    await expect(seatBtn, "Seat goes through the court engine").toHaveAttribute("onclick", `changePlayerAttendance(${first},'present')`);
-    await seatBtn.click();
-    let cs: Cur, onCourts = seated.size;
-    if (seatOk) {
-      await expect.poll(() => courtOf(kvOf(ctx, "current_session").assignments, first), { message: `${name(first)} seated` }).toBeGreaterThan(0);
+    // p70: players are set before the session starts, so the box offers no Seat; "Not here" clears each mark: back to
+    // excused (they voted not coming), no court, no absence penalty.
+    await expect(box.getByRole("button", { name: /^Seat .* on a court$/ }), "no Seat during a session").toHaveCount(0);
+    await expect(box).toContainText("Players are set before the session starts, so nobody is seated now");
+    const onCourts = seated.size;
+    let cs = kvOf(ctx, "current_session") as Cur;
+    for (const [k, id] of ghosts.entries()) {
+      await page.locator("#att-not-seated").getByRole("button", { name: `${name(id)} is not here` }).click();
+      await expect.poll(() => (kvOf(ctx, "current_session") as Cur).attendance[id], { message: `${name(id)} back to excused` }).toBe("declined");
       cs = kvOf(ctx, "current_session") as Cur;
-      expect(cs.attendance[first]).toBe("present");
-      expect(validCourts(cs.assignments), "every court is still a real game").toBe(true);
-      expect(seatedIds(cs.assignments).size, "nobody else lost a court").toBe(seated.size + 1);
-      onCourts = seated.size + 1;
-    } else {
-      await expect(page.locator("#_t"), `refused with the reason (${firstRef.why})`).toHaveText(REFUSAL[firstRef.why!]);
-      cs = kvOf(ctx, "current_session") as Cur;
-      expect(courtOf(cs.assignments, first), "not seated").toBe(0);
-      expect(cs.attendance[first], "still marked present").toBe("present");
-      await expect(page.locator("#att-not-seated")).toContainText(name(first));
+      expect(courtOf(cs.assignments, id)).toBe(0);
+      expect(cs.absentFrom?.[id], "no absence penalty").toBeUndefined();
+      if (k < ghosts.length - 1) await expect(page.locator("#att-not-seated")).not.toContainText(name(id));
     }
+    await expect(page.locator("#att-not-seated"), "nobody left present without a court").toHaveCount(0);
     await expect(page.locator("#att-on-courts")).toHaveText(`🏸 ${onCourts} on courts`);
-
-    // "Not here" for the second: back to excused (they voted not coming), no court, no penalty.
-    if (ghosts[1]) {
-      const second = ghosts[1];
-      await page.locator("#att-not-seated").getByRole("button", { name: `${name(second)} is not here` }).click();
-      await expect.poll(() => (kvOf(ctx, "current_session") as Cur).attendance[second], { message: "back to excused" }).toBe("declined");
-      cs = kvOf(ctx, "current_session") as Cur;
-      expect(courtOf(cs.assignments, second)).toBe(0);
-      expect(cs.absentFrom?.[second], "no absence penalty").toBeUndefined();
-      if (seatOk) await expect(page.locator("#att-not-seated")).toHaveCount(0);
-      else await expect(page.locator("#att-not-seated")).not.toContainText(name(second));
-    }
+    expect(JSON.stringify(cs.assignments), "tonight's courts unchanged").toBe(JSON.stringify(cur.assignments));
 
     // Admin → Players: during a session the tag on a player without a court does not seat them (p68: players are set
     // before the session starts): it answers so, nothing changes, and nobody is left "present" without a court.
@@ -90,7 +72,7 @@ for (let i = 0; i < 40; i++) {
       expect(JSON.stringify(cs.assignments), "tonight's courts unchanged").toBe(JSON.stringify(before.assignments));
       expect(validCourts(cs.assignments)).toBe(true);
       const unseatedPresent = Object.entries(cs.attendance).filter(([id, v]) => v === "present" && !seatedIds(cs.assignments).has(+id)).map(([id]) => +id);
-      expect(unseatedPresent, "only a refused Seat stays present without a court (listed for the organizer)").toEqual(seatOk ? [] : [first]);
+      expect(unseatedPresent, "nobody stays present without a court").toEqual([]);
     }
   });
 }

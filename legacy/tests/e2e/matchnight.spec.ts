@@ -298,7 +298,7 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await expect(page.locator("#reg-already")).toContainText("Welcome back");
     await expect(page.locator("#r-name")).toHaveValue("TEST Player 01");
   });
-  test("spare seats fill themselves from declined regulars; one-tap vote links; reminder opt-out", async ({ page }) => {
+  test("spare seats fill the courts up to 24 once the regulars' vote closes; one-tap vote links; reminder opt-out", async ({ page }) => {
     // A spare registers and is approved.
     await signIn(page, "christygeorge993+spare@gmail.com");
     await registerSelf(page, "Spare Tester");
@@ -311,18 +311,19 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await expect.poll(() => state.players.find((p) => p.id === spareId)!.approved).toBe(true);
     await page.evaluate(() => signOut());
 
-    // No regular has declined: the spare sees no open seat and goes on standby after saying "available".
+    // p69: spare seats fill the courts up to 24 players and are decided when the regulars' vote closes (46 hours before
+    // play: Sunday 10 PM). With all 25 regulars coming there is no seat; before the deadline the spare is told when.
     await signIn(page, "christygeorge993+spare@gmail.com");
     await expect(page.locator("#page-home")).toHaveClass(/active/);
     await expect(page.locator("#home-vote")).toContainText("Spare: are you available for Session 1");
-    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("Spare seats: 0 if the vote closed now (25 regulars coming)");
     await page.locator("#home-vote button", { hasText: "I'm available" }).click();
-    await expect(page.locator("#home-vote .spare-status")).toContainText("Standby — you are #1 in line");
-    // A regular declines (their own answer, recorded earlier): a seat opens and the spare is confirmed automatically.
-    state.rsvps.push({ session_number: 1, player_id: 1, response: "notcoming", note: "", updated_at: new Date().toISOString() });
+    await expect(page.locator("#home-vote .spare-status")).toContainText("Available — spare seats are decided when the regulars' vote closes");
+    // Two regulars decline (their own answers, recorded earlier): player 1 from Court 1 and player 25, one of the five on
+    // Court 6. With 23 coming, one seat will open when the vote closes.
+    for (const id of [1, 25]) state.rsvps.push({ session_number: 1, player_id: id, response: "notcoming", note: "", updated_at: "2026-09-10T15:00:00Z" });
     await page.evaluate(async () => { await loadAll(); renderAll(); });
-    await expect(page.locator("#home-vote .spare-status")).toContainText("Seat reserved (seat 1)");
-    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open · 0 confirmed · 0 standby");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("Spare seats: 1 if the vote closed now (23 regulars coming)");
     // Reminder opt-out is the player's own switch.
     await page.uncheck("#home-vote .email-reminders-toggle");
     await expect.poll(() => state.players.find((p) => p.id === spareId)!.email_reminders).toBe(false);
@@ -335,6 +336,17 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await page.goto("/?vote=coming&s=5");
     await expect(page.locator("body")).toContainText("That link was for Session 5");
     expect(state.rsvps.find((r) => r.player_id === spareId && r.session_number === 5)).toBeUndefined();
+    // Back to "available" for the night (the one-tap link above said not available).
+    state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)!.response = "coming";
+    await page.evaluate(async () => { await loadAll(); renderAll(); });
+    // The regulars' vote has closed (Monday evening): the seat goes to the spare, the only one who replied.
+    // The sign-in lasts an hour of page time: keep it valid across the jump, as the tab suites do (harness pinSession).
+    await page.evaluate(async () => { if (_refreshing) await _refreshing; if (_session) _session.expires_at = 4102444800; });
+    const monday = new Date("2026-09-14T18:00:00-04:00");
+    state.nowMs = monday.getTime(); await page.clock.setFixedTime(monday);
+    await page.evaluate(async () => { await loadAll(); renderAll(); });
+    await expect(page.locator("#home-vote .spare-status")).toContainText("Seat reserved (seat 1)");
+    await expect(page.locator("#home-vote .spare-seats-line")).toContainText("0 open · 0 confirmed · 0 standby");
 
     // Organizer sees the spare list in Attendance with the seat control.
     state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)!.response = "coming";
@@ -342,24 +354,24 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
     await page.evaluate(() => showSec("admin", "a-att"));
-    await expect(page.locator("#confirmed-spares")).toContainText("1 regular declined · 0 confirmed · 0 standby");
+    await expect(page.locator("#confirmed-spares")).toContainText("23 regulars coming · 1 spare seat · 0 confirmed · 0 standby");
     await expect(page.locator("#confirmed-spares")).toContainText("Spare Tester");
     await expect(page.locator("#confirmed-spares button", { hasText: "Seat" })).toBeVisible();
     // Reservation becomes confirmed only when the organizer records the full session payment.
     await page.evaluate(id=>recordPaymentUI(id),spareId);await page.getByRole('button',{name:'Save payment'}).click();
-    await expect(page.locator('#confirmed-spares')).toContainText('1 regular declined · 1 confirmed · 0 standby');
+    await expect(page.locator('#confirmed-spares')).toContainText('23 regulars coming · 1 spare seat · 1 confirmed · 0 standby');
     // Starting the night: the declined regular is excused (no court penalty), the confirmed spare is seated, votes pre-fill attendance.
     await page.evaluate(() => startSession());
     await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
     const lineup = await page.evaluate(() => S.current.assignments as Record<string, number[]>);
     const seated = Object.values(lineup).flat();
-    expect(seated).not.toContain(1); expect(seated).toContain(spareId); expect(seated).toHaveLength(25);
+    expect(seated).not.toContain(1); expect(seated).not.toContain(25); expect(seated).toContain(spareId); expect(seated).toHaveLength(24);
     // Everyone else keeps the court they earned (p54); the spare takes the seat the declined regular left on Court 1, the only
     // court short of four. Nobody from Court 2 moves up to fill it.
     expect(lineup["1"], "the spare takes the open seat on Court 1").toContain(spareId);
     for (let c = 1; c <= 6; c++) for (const id of lineup[c] || []) if (id !== spareId) expect(c, `player ${id} keeps the earned court`).toBe(state.players.find((p) => p.id === id)!.current_court);
     const att = await page.evaluate(() => S.current.attendance as Record<string, string>);
-    expect(att["1"]).toBe("declined"); expect(att[String(spareId)]).toBe("present");
+    expect(att["1"]).toBe("declined"); expect(att["25"]).toBe("declined"); expect(att[String(spareId)]).toBe("present");
     await page.evaluate(() => showSec("admin", "a-att"));
     await expect(page.locator("#excused-tonight")).toContainText("TEST Player 01");
     await expect(page.locator("#excused-tonight")).toContainText("excused");

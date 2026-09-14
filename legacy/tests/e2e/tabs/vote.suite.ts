@@ -4,6 +4,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, type League, type Player } from "./gen";
+import { spareSeatCount } from "./oracle";
 
 /** The suite's cases; the desktop and phone spec files both call this. */
 export function define() {
@@ -22,14 +23,21 @@ export function define() {
     const vote: Record<number, string> = {}; rows.forEach((r) => (vote[r.player_id] = r.response));
     const regs = L.players.filter(isReg), spares = L.players.filter(isSpare);
     const declined = rows.filter((r) => r.response === "notcoming" && isReg(byId(r.player_id))).length;
-    const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id).map((r, k) => ({ id: r.player_id, rank: k + 1, reserved:k<declined, confirmed: k < declined && L.payments.filter(x=>x.player_id===r.player_id&&x.kind==="spare"&&x.session_number===U).reduce((n,x)=>n+Number(x.amount),0)>=20 }));
-    return { vote, regs, spares, declined, claims, counts: [regs.filter((p) => vote[p.id] === "coming").length, regs.filter((p) => vote[p.id] === "notcoming").length, regs.filter((p) => !vote[p.id]).length].map(String),
-      seats: `Spare seats: ${Math.max(declined - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.reserved).length} standby` };
+    // p69: seats for fewer than 24 regulars coming, decided when the regulars' vote closes (the reference's count).
+    const sc = spareSeatCount(L), hold = (k: number) => sc.decided && k < sc.seats;
+    const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id).map((r, k) => ({ id: r.player_id, rank: k + 1, reserved: hold(k), confirmed: hold(k) && L.payments.filter(x=>x.player_id===r.player_id&&x.kind==="spare"&&x.session_number===U).reduce((n,x)=>n+Number(x.amount),0)>=20 }));
+    return { vote, regs, spares, declined, claims, sc, counts: [regs.filter((p) => vote[p.id] === "coming").length, regs.filter((p) => vote[p.id] === "notcoming").length, regs.filter((p) => !vote[p.id]).length].map(String),
+      seats: sc.decided ? `Spare seats: ${Math.max(sc.seats - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.reserved).length} standby` : null };
+  }
+  /** The spare-seats line: before the deadline it gives the seats if the vote closed now and when they are decided. */
+  async function seatsLine(page: Page, t: ReturnType<typeof tally>) {
+    return t.seats ?? `Spare seats: ${t.sc.seats} if the vote closed now (${t.sc.coming} regulars coming) · decided ${(await fmtAll(page, [t.sc.deadline]))[0]}`;
   }
   const fmtAll = (page: Page, ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
-  async function timing(page: Page, start: number, now: number, spare: boolean) {
+  async function timing(page: Page, start: number, now: number, spare: boolean, seats = 0) {
     const [deadline, cutoff] = await fmtAll(page, [start - 46 * H, start - 72 * H]);
-    if (spare) return now < start - 72 * H ? `Spares are asked from ${cutoff} (72 hours before play) whenever a regular declines. You can already say if you are available.` : "Seats open as regulars decline; answer early — seats go in the order spares reply.";
+    // p69: spare seats are decided when the regulars' vote closes; then the seats this session, or none.
+    if (spare) return now <= start - 46 * H ? `Spare seats are decided when the regulars' vote closes (${deadline}): with fewer than 24 regulars coming, available spares fill the seats in the order they replied, confirmed once paid. You can already say if you are available.` : seats ? `${seats} spare seat${seats === 1 ? "" : "s"} this session, taken in the order spares replied and confirmed once paid.` : "24 or more regulars are coming — no spare seats this session.";
     return (now <= start - 46 * H ? `Vote by ${deadline} (46 hours before play) — after that your answer is final. ` : `Voting closed ${deadline}. To change your answer, message the admin in the group — only the admin can update it now. `)
       + (now <= start - 72 * H ? `$14 refund if you decline by ${cutoff}.` : `The 72-hour refund window closed ${cutoff}.`);
   }
@@ -37,8 +45,8 @@ export function define() {
     const t = tally(L, U);
     await expect(card.locator(".card-title").first()).toHaveText(`🗳️ ${spare ? "Spare" : "Vote"}: are you ${spare ? "available for" : "playing"} Session ${U} (${ctx.dates[U - 1]})?`);
     expect(await card.locator("div[style*='1fr 1fr 1fr'] > div > div:first-child").allTextContents(), "coming / not coming / no reply among regulars").toEqual(t.counts);
-    expect(norm((await card.locator(".spare-seats-line").textContent()) || "")).toBe(t.seats);
-    expect(norm((await card.locator(".vote-timing").textContent()) || "")).toBe(norm(await timing(ctx.page, ctx.fd[U - 1], L.nowMs, spare)));
+    expect(norm((await card.locator(".spare-seats-line").textContent()) || "")).toBe(await seatsLine(ctx.page, t));
+    expect(norm((await card.locator(".vote-timing").textContent()) || "")).toBe(norm(await timing(ctx.page, ctx.fd[U - 1], L.nowMs, spare, t.sc.seats)));
     return t;
   }
 
@@ -65,7 +73,7 @@ export function define() {
         const rows = sec.locator(".card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)");
         const list = [...t.regs, ...t.spares];
         await expect(rows).toHaveCount(list.length);
-        const tag = (p: Player, v: string | undefined) => p.membership_type === "spare" ? (v === "coming" ? (t.claims.find((c) => c.id === p.id)?.confirmed ? "✅ Seat confirmed" : t.claims.find(c=>c.id===p.id)?.reserved?"Seat reserved — payment pending":"⏳ Standby") : v === "notcoming" ? "❌ Not available" : /^⏳/) : v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not Coming" : "⏳ Not Responded";
+        const tag = (p: Player, v: string | undefined) => p.membership_type === "spare" ? (v === "coming" ? (t.claims.find((c) => c.id === p.id)?.confirmed ? "✅ Seat confirmed" : t.claims.find(c=>c.id===p.id)?.reserved?"Seat reserved — payment pending":t.sc.decided?"⏳ Standby":"⏳ Available") : v === "notcoming" ? "❌ Not available" : /^⏳/) : v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not Coming" : "⏳ Not Responded";
         for (let k = 0; k < list.length; k++) {
           const row = rows.nth(k), p = list[k];
           expect(norm(await row.locator("> div").first().innerText())).toBe(`${p.name}${p.membership_type === "spare" ? "SPARE" : ""}`);
@@ -93,9 +101,10 @@ export function define() {
       const locked = !spare && L.nowMs > ctx.fd[U - 1] - 46 * H, mine = t.vote[me.id];
       const yes = card.getByRole("button", { name: spare ? "✅ I'm available" : "✅ I'm Coming" }), no = card.getByRole("button", { name: spare ? "❌ Not available" : "❌ Not Coming" });
       await expect(card.locator(".email-reminders-toggle")).toBeChecked();
-      const status = (v: string | undefined, claims = t.claims, declined = t.declined) => {
+      const [deadlineText] = await fmtAll(page, [t.sc.deadline]);
+      const status = (v: string | undefined, claims = t.claims, sc = t.sc) => {
         const c = claims.find((x) => x.id === me.id);
-        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed and paid (seat ${c.rank}).` : c.reserved ? `Seat reserved (seat ${c.rank}). E-transfer $20 to christygeorge993@gmail.com. Confirmation follows payment verification.` : `⏳ Standby — you are #${c.rank - declined} in line. A reservation update will be sent on the next scheduled reminder run when a seat opens (if email reminders are on).`;
+        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed and paid (seat ${c.rank}).` : c.reserved ? `Seat reserved (seat ${c.rank}). E-transfer $20 to christygeorge993@gmail.com. Confirmation follows payment verification.` : !sc.decided ? `⏳ Available — spare seats are decided when the regulars' vote closes (${deadlineText}). You are #${c.rank} among the spares who replied.` : `⏳ Standby — you are #${c.rank - sc.seats} in line: ${sc.seats ? "every spare seat is taken" : "24 or more regulars are coming"}. The organizer contacts you if a seat opens.`;
         return v ? `${v === "coming" ? "✅ You confirmed - See you there!" : "❌ Noted - Sit this one out"}${locked ? "" : " · You can change your answer above."}` : null;
       };
       const alerts = async () => (await card.locator(".alert").allInnerTexts()).map(norm);
@@ -117,8 +126,8 @@ export function define() {
       // Seat order comes from the database clock: my new answer is the latest.
       const after = { ...L, rsvps: [...L.rsvps.filter((x) => !(x.session_number === U && x.player_id === me.id)), { session_number: U, player_id: me.id, response: resp, note: "", updated_at: new Date(L.nowMs).toISOString() }] };
       const t2 = tally(after, U);
-      await expect.poll(async () => (await alerts()).includes(status(resp, t2.claims, t2.declined)!), { message: "confirmation after answering" }).toBe(true);
-      expect(norm((await card.locator(".spare-seats-line").textContent()) || "")).toBe(t2.seats);
+      await expect.poll(async () => (await alerts()).includes(status(resp, t2.claims, t2.sc)!), { message: "confirmation after answering" }).toBe(true);
+      expect(norm((await card.locator(".spare-seats-line").textContent()) || "")).toBe(await seatsLine(page, t2));
       if (i % 3 === 0) {
         await card.locator(".email-reminders-toggle").uncheck();
         await expect.poll(() => ctx.state.players.find((p) => p.id === me.id)!.email_reminders, { message: "reminder emails switched off" }).toBe(false);

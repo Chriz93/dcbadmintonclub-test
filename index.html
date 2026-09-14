@@ -1246,13 +1246,19 @@ function renderRSVP(){
 // Seats: each declined regular opens one seat; spares who answered "available" take seats in answer order.
 function isRegularMember(p){return !!p&&p.approved&&!p.waitlisted&&p.membershipType!=='spare';}
 function isSpareMember(p){return !!p&&p.approved&&p.membershipType==='spare';}
+// p69: spares play only when fewer than 24 regulars are coming. The seats (24 minus the regulars coming, counted as the
+// starting courts seat them) are decided when the regulars' vote closes; available spares then take them in the order
+// they replied, and a seat is confirmed once paid. Before the deadline no seat is reserved.
 function spareSeats(){
- const rows=S.rsvpRows||[],byId=id=>S.players.find(p=>p.id===id);
- const declined=rows.filter(r=>r.response==='notcoming'&&isRegularMember(byId(r.player_id))).length;
- const n=upcomingSessionNumber();
+ const SPARE_TARGET=24;
+ const rows=S.rsvpRows||[],byId=id=>S.players.find(p=>p.id===id),vote={};rows.forEach(r=>{vote[r.player_id]=r.response;});
+ const pre=S.current?{}:(S.preAttendance||{}),regulars=S.players.filter(p=>isRegularMember(p)&&p.currentCourt>0);
+ const declined=regulars.filter(p=>vote[p.id]==='notcoming').length,coming=regulars.filter(p=>pre[p.id]!=='absent'&&(vote[p.id]!=='notcoming'||pre[p.id]==='present')).length;
+ const seats=Math.max(0,SPARE_TARGET-coming),n=upcomingSessionNumber(),startAt=FD[n-1];
+ const deadline=startAt?new Date(startAt.getTime()-FEES.voteDeadlineHours*3600000):null,decided=!!S.current||!deadline||Date.now()>deadline.getTime();
  const claims=rows.filter(r=>r.response==='coming'&&isSpareMember(byId(r.player_id))).sort((a,b)=>String(a.updated_at).localeCompare(String(b.updated_at))||a.player_id-b.player_id)
-  .map((r,i)=>{const paid=(S_me.organizer||r.player_id===S_me.player_id)?paidForSession(r.player_id,n)>=FEES.spareSession:!!byId(r.player_id)?.paid;return{id:r.player_id,rank:i+1,reserved:i<declined,paid,confirmed:i<declined&&paid};});
- return{declined,claims,open:Math.max(declined-claims.length,0)};
+  .map((r,i)=>{const paid=(S_me.organizer||r.player_id===S_me.player_id)?paidForSession(r.player_id,n)>=FEES.spareSession:!!byId(r.player_id)?.paid,reserved=decided&&i<seats;return{id:r.player_id,rank:i+1,reserved,paid,confirmed:reserved&&paid};});
+ return{declined,coming,seats,decided,deadline,claims,open:Math.max(seats-claims.length,0)};
 }
 async function setEmailReminders(on){
   try{await rpc('set_email_reminders',{p_on:!!on});const me=myPlayer();if(me)me.emailReminders=!!on;toast(on?'Reminders on':'Reminders off','success');}
@@ -1327,7 +1333,7 @@ function renderRSVPInto(el,compact){
       <div><div style="font-size:20px;font-weight:800;color:var(--red2);">${notComing}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Not Coming</div></div>
       <div><div style="font-size:20px;font-weight:800;color:var(--muted);">${notResponded}</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">No Reply</div></div>
     </div>
-    <div class="spare-seats-line" style="font-size:12px;color:var(--muted);margin-bottom:8px;">Spare seats: <strong style="color:var(--text);">${seats.open} open</strong> · ${seats.claims.filter(c=>c.confirmed).length} confirmed · ${seats.claims.filter(c=>!c.reserved).length} standby</div>`;
+    <div class="spare-seats-line" style="font-size:12px;color:var(--muted);margin-bottom:8px;">${seats.decided?`Spare seats: <strong style="color:var(--text);">${seats.open} open</strong> · ${seats.claims.filter(c=>c.confirmed).length} confirmed · ${seats.claims.filter(c=>!c.reserved).length} standby`:`Spare seats: <strong style="color:var(--text);">${seats.seats}</strong> if the vote closed now (${seats.coming} regulars coming) · decided ${fmt(seats.deadline)}`}</div>`;
   const startAt=FD[sessNo-1];
   if(startAt){
     const cutoff=new Date(startAt.getTime()-FEES.absenceNoticeHours*3600000);
@@ -1335,7 +1341,7 @@ function renderRSVPInto(el,compact){
     const spareAsk=new Date(startAt.getTime()-FEES.spareAskHours*3600000);
     const now=Date.now();
     if(meSpare){
-      html += `<div class="vote-timing" style="font-size:11px;color:var(--muted);margin-bottom:8px;">${now<spareAsk.getTime()?`Spares are asked from ${fmt(spareAsk)} (${FEES.spareAskHours} hours before play) whenever a regular declines. You can already say if you are available.`:`Seats open as regulars decline; answer early — seats go in the order spares reply.`}</div>`;
+      html += `<div class="vote-timing" style="font-size:11px;color:var(--muted);margin-bottom:8px;">${now<=deadline.getTime()?`Spare seats are decided when the regulars' vote closes (${fmt(deadline)}): with fewer than 24 regulars coming, available spares fill the seats in the order they replied, confirmed once paid. You can already say if you are available.`:seats.seats?`${seats.seats} spare seat${seats.seats===1?'':'s'} this session, taken in the order spares replied and confirmed once paid.`:`24 or more regulars are coming — no spare seats this session.`}</div>`;
     }else{
       const beforeDeadline=now<=deadline.getTime(),beforeCutoff=now<=cutoff.getTime();
       html += `<div class="vote-timing" style="font-size:11px;color:${beforeDeadline?'var(--muted)':'var(--yellow2)'};margin-bottom:8px;">${beforeDeadline?`Vote by <strong>${fmt(deadline)}</strong> (${FEES.voteDeadlineHours} hours before play) — after that your answer is final. `:`Voting closed ${fmt(deadline)}. To change your answer, message the admin in the group — only the admin can update it now. `}${beforeCutoff?`$${FEES.absenceRefund} refund if you decline by ${fmt(cutoff)}.`:`The ${FEES.absenceNoticeHours}-hour refund window closed ${fmt(cutoff)}.`}</div>`;
@@ -1351,7 +1357,8 @@ function renderRSVPInto(el,compact){
     if(meSpare&&myRsvp==='coming'&&myClaim){
       html += myClaim.reserved&&!myClaim.paid?`<div class="alert alert-info spare-status">Seat reserved (seat ${myClaim.rank}). E-transfer $${FEES.spareSession} to ${ORGANIZER_ETRANSFER}. Confirmation follows payment verification.</div>`:myClaim.confirmed
         ? `<div class="alert alert-success spare-status" style="text-align:center;margin-top:10px;">🎉 Seat confirmed and paid (seat ${myClaim.rank}).</div>`
-        : `<div class="alert alert-warn spare-status" style="text-align:center;margin-top:10px;">⏳ Standby — you are #${myClaim.rank-seats.declined} in line. A reservation update will be sent on the next scheduled reminder run when a seat opens (if email reminders are on).</div>`;
+        : !seats.decided?`<div class="alert alert-info spare-status" style="text-align:center;margin-top:10px;">⏳ Available — spare seats are decided when the regulars' vote closes (${fmt(seats.deadline)}). You are #${myClaim.rank} among the spares who replied.</div>`
+        : `<div class="alert alert-warn spare-status" style="text-align:center;margin-top:10px;">⏳ Standby — you are #${myClaim.rank-seats.seats} in line: ${seats.seats?'every spare seat is taken':'24 or more regulars are coming'}. The organizer contacts you if a seat opens.</div>`;
     }else if(myRsvp){
       html += `<div class="alert alert-success" style="text-align:center;margin-top:10px;">${myRsvp === 'coming' ? '✅ You confirmed - See you there!' : '❌ Noted - Sit this one out'}${locked?'':' · You can change your answer above.'}</div>`;
     }
@@ -1363,7 +1370,7 @@ function renderRSVPInto(el,compact){
   html += `</div>`;
 
   if(adminUnlocked&&!compact){
-    const tagFor=(p)=>{const st=rsvpData[p.id];if(isSpareMember(p)){const c=seats.claims.find(x=>x.id===p.id);return st==='coming'?(c&&c.confirmed?'<span class="tag tg-green">✅ Seat confirmed</span>':c?.reserved?'<span class="tag tg-yellow">Seat reserved — payment pending</span>':'<span class="tag tg-yellow">⏳ Standby</span>'):st==='notcoming'?'<span class="tag tg-red">❌ Not available</span>':'<span class="tag tg-gray">⏳ No answer</span>';}
+    const tagFor=(p)=>{const st=rsvpData[p.id];if(isSpareMember(p)){const c=seats.claims.find(x=>x.id===p.id);return st==='coming'?(c&&c.confirmed?'<span class="tag tg-green">✅ Seat confirmed</span>':c?.reserved?'<span class="tag tg-yellow">Seat reserved — payment pending</span>':seats.decided?'<span class="tag tg-yellow">⏳ Standby</span>':'<span class="tag tg-yellow">⏳ Available</span>'):st==='notcoming'?'<span class="tag tg-red">❌ Not available</span>':'<span class="tag tg-gray">⏳ No answer</span>';}
       return `<span class="tag ${st === 'coming' ? 'tg-green' : st === 'notcoming' ? 'tg-red' : 'tg-gray'}">${st === 'coming' ? '✅ Coming' : st === 'notcoming' ? '❌ Not Coming' : '⏳ Not Responded'}</span>`;};
     html += `<div class="card"><div class="card-title">📋 RSVP Status</div>`;
     [...S.players.filter(isRegularMember),...S.players.filter(isSpareMember)].forEach(p => {
@@ -2081,10 +2088,11 @@ async function callInSpare(id){
  if(isSpareMember(p)){
   try{await rpc('set_rsvp',{p_session:n,p_player:id,p_response:'coming'});}catch(e){return toast('Not called in: '+e.message,'error');}
   await loadAll();renderAll();
-  const claim=spareSeats().claims.find(x=>x.id===id),court=spareCourtUpcoming(id);
+  const seats=spareSeats(),claim=seats.claims.find(x=>x.id===id),court=spareCourtUpcoming(id);
   return toast(court?`${p.name} is coming to Session ${n} and takes an open seat on Court ${court}`
    :claim&&claim.reserved?`${p.name} is coming to Session ${n}; the seat is confirmed once the e-transfer is verified`
-   :`${p.name} is coming to Session ${n} and is on standby until a regular declines`,'success');
+   :!seats.decided?`${p.name} is coming to Session ${n}; spare seats are decided when the regulars' vote closes`
+   :`${p.name} is coming to Session ${n} and is on standby: ${seats.seats?'every spare seat is taken':'24 or more regulars are coming'}`,'success');
  }
  const used=S.players.filter(x=>x.id!==id&&isRegularMember(x)&&x.currentCourt>0).map(x=>x.currentCourt),court=used.length?Math.max(...used):1;
  try{await sbU('players',id,{current_court:court,highest_court:p.highestCourt?Math.min(p.highestCourt,court):court});}catch(e){return;}
@@ -5374,7 +5382,7 @@ function renderFeeLines(){
   put('season-nav-label',`Advanced League · ${label}`);put('season-hero-label',`Maplewood Advanced League · ${label} · ${DATES.length} sessions`);
   put('season-rules-title',`📜 Season rules ${label}`);put('rules-schedule',`${DATES.length} sessions, ${SESSION_TIME_LABEL}, Maplewood SS gyms 127C & 127D. Six courts.`);
   put('rules-voting',`Vote on Home every week by ${FEES.voteDeadlineHours} hours before play. After the deadline, ask the organizer to change your answer. Decline at least ${FEES.absenceNoticeHours} hours before play for the $${FEES.absenceRefund} refund; later notice or a no-show earns no refund.`);
-  put('rules-spares',`Spares are asked from ${FEES.spareAskHours} hours before play whenever a regular declines; seats are reserved in answer order and confirmed when payment is verified.`);
+  put('rules-spares',`Spares play only when fewer than 24 regulars are coming. The spare seats (24 minus the regulars coming) are decided when the regulars' vote closes, ${FEES.voteDeadlineHours} hours before play; available spares take them in the order they replied, and a seat is confirmed when payment is verified. The organizer invites spares personally.`);
   put('rules-cancellation',`See Schedule for cancelled dates. If the school cancels an approved date, regulars receive two shuttlecocks and paid spares receive the amount paid back. The organizer records fulfillment in Payments.`);
   put('standings-season-label',`Season ${label} · ${range}`);put('schedule-season-label',`${DATES.length} sessions · ${range} · ${LEAGUE_TZ}`);
   put('hero-time-place',`Maplewood SS · ${SESSION_TIME_LABEL} · Gym 127C & 127D`);
@@ -5801,8 +5809,8 @@ function renderAttendanceTab(){
   </div>`;
   if(notSeated.length)html+=`<div class="alert alert-warn" id="att-not-seated" role="status" style="margin-bottom:10px;font-size:12px;">
     <strong>Marked present but not on a court (${notSeated.length})</strong>
-    <div style="margin:4px 0 6px;">They are not counted as present until they have a court. Seat puts them on their own court, or the nearest court with room.</div>
-    ${notSeated.map(p=>`<div class="att-line" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:3px 0;"><span style="flex:1 1 120px;font-weight:700;">${esc(p.name)}</span><button class="btn btn-success btn-sm" style="margin:0;" aria-label="Seat ${esc(p.name)} on a court" onclick="changePlayerAttendance(${p.id},'present')">🪑 Seat</button><button class="btn btn-ghost btn-sm" style="margin:0;" aria-label="${esc(p.name)} is not here" onclick="clearNotSeated(${p.id})">Not here</button></div>`).join('')}
+    <div style="margin:4px 0 6px;">They are not counted as present. Players are set before the session starts, so nobody is seated now: “Not here” clears the mark.</div>
+    ${notSeated.map(p=>`<div class="att-line" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:3px 0;"><span style="flex:1 1 120px;font-weight:700;">${esc(p.name)}</span><button class="btn btn-ghost btn-sm" style="margin:0;" aria-label="${esc(p.name)} is not here" onclick="clearNotSeated(${p.id})">Not here</button></div>`).join('')}
   </div>`;
   // Show by court
   for(let c=1;c<=NC;c++){
@@ -5858,11 +5866,11 @@ function renderAttendanceTab(){
     excused.forEach(p=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">${avatar(p.name,'sm')}<span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} <span class="tag tg-red">excused</span></span></div>`;});
     html+=`</div>`;
   }
-  // Spares confirmed by the vote (declined regulars open the seats)
+  // Spares for the session: seats for fewer than 24 regulars coming, decided when the regulars' vote closes (p69)
   const seatsTonight=spareSeats();
   if(seatsTonight.claims.length){
     html+=`<div class="card" id="confirmed-spares"><div class="card-title">🎟️ Spares for Session ${sessionNum}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${seatsTonight.declined} regular${seatsTonight.declined===1?'':'s'} declined · ${seatsTonight.claims.filter(c=>c.confirmed).length} confirmed · ${seatsTonight.claims.filter(c=>!c.reserved).length} standby. Confirmed spares are seated automatically when the night starts.</div>`;
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${seatsTonight.coming} regular${seatsTonight.coming===1?'':'s'} coming · ${seatsTonight.seats} spare seat${seatsTonight.seats===1?'':'s'}${seatsTonight.decided?'':' if the vote closed now'} · ${seatsTonight.claims.filter(c=>c.confirmed).length} confirmed · ${seatsTonight.claims.filter(c=>!c.reserved).length} standby. Confirmed spares are seated automatically when the night starts.</div>`;
     seatsTonight.claims.forEach(c=>{
       const p=S.players.find(x=>x.id===c.id);if(!p)return;
       const seated=S.current?Object.values(S.current.assignments).some(a=>(a||[]).includes(p.id)):spareCourtUpcoming(p.id)>0;

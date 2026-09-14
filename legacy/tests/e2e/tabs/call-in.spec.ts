@@ -7,7 +7,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { openAs, closeCtx, load, type Ctx } from "./harness";
 import { genLeague, variety, type GenOpts, type League } from "./gen";
-import { upcoming, courtOf } from "./oracle";
+import { upcoming, courtOf, spareSeatCount } from "./oracle";
 import { fromDb, kvOf } from "./checks";
 import { adjustInput } from "./adjust-oracle";
 import { reference } from "../../unit/adjust-reference.mjs";
@@ -45,10 +45,12 @@ for (let i = 0; i < 12; i++) {
   });
 }
 
+// p69: spare seats fill the courts up to 24 players and are decided when the regulars' vote closes; the only spare
+// claim takes a seat once it has closed and fewer than 24 regulars are coming, confirmed when paid.
 for (let i = 0; i < 16; i++) {
-  const declines = i % 4, paid = i % 3 === 0;
-  test(`Call in ${String(i + 13).padStart(3, "0")} · before a session · a spare is answered coming (${declines} declines, ${paid ? "paid" : "not paid"})`, async () => {
-    const opts: GenOpts = { ...variety(i + 420), regulars: 10 + (i % 9), spares: 3, pending: 0, live: "none", sessions: 1 + (i % 3) };
+  const declines = i % 4, paid = i % 3 === 0, closed = i % 2 === 1, regulars = i % 8 >= 6 ? 26 : 10 + (i % 9);
+  test(`Call in ${String(i + 13).padStart(3, "0")} · before a session · a spare is answered coming (${regulars} regulars, ${declines} declines, ${closed ? "after" : "before"} the regulars' deadline, ${paid ? "paid" : "not paid"})`, async () => {
+    const opts: GenOpts = { ...variety(i + 420), regulars, spares: 3, pending: 0, live: "none", sessions: 1 + (i % 3), hoursBefore: closed ? 30 : 60 };
     const L = genLeague(52100 + i, { ...opts, dates: ctx.dates }), U = L.upcoming;
     const spares = L.players.filter((p) => p.approved && p.membership_type === "spare"), sp = spares[i % spares.length];
     sp.current_court = 0;   // a spare who has not played yet is in the pool (one who played keeps that court, see docs/32)
@@ -62,13 +64,15 @@ for (let i = 0; i < 16; i++) {
     await openPlayers(page);
     await page.getByRole("button", { name: `Call in ${sp.name}` }).click();
     await expect.poll(() => ctx.state.rsvps.find((v) => v.session_number === U && v.player_id === sp.id)?.response, { message: "answered coming for the next session" }).toBe("coming");
-    const L2 = fromDb(ctx, L), up = upcoming(L2), court = courtOf(up.assign, sp.id);
-    const reserved = declines > 0;                                   // the only spare claim, so it gets a seat when a regular declined
+    const L2 = fromDb(ctx, L), up = upcoming(L2), court = courtOf(up.assign, sp.id), sc = spareSeatCount(L2);
+    expect(sc.decided, "the case is on the side of the deadline its title says").toBe(closed);
+    const reserved = sc.decided && sc.seats > 0;                    // the only spare claim: a seat once decided, if any
     const want = court ? `${sp.name} is coming to Session ${U} and takes an open seat on Court ${court}`
       : reserved ? `${sp.name} is coming to Session ${U}; the seat is confirmed once the e-transfer is verified`
-      : `${sp.name} is coming to Session ${U} and is on standby until a regular declines`;
+      : !sc.decided ? `${sp.name} is coming to Session ${U}; spare seats are decided when the regulars' vote closes`
+      : `${sp.name} is coming to Session ${U} and is on standby: ${sc.seats ? "every spare seat is taken" : "24 or more regulars are coming"}`;
     await expect(page.locator("#_t")).toHaveText(want);
-    expect(!!court, "seated only with an open seat and a verified payment").toBe(reserved && paid);
+    expect(!!court, "seated only with a decided seat and a verified payment").toBe(reserved && paid);
     // The pool now shows the spare's status instead of a button.
     await expect(page.getByRole("button", { name: `Call in ${sp.name}` })).toHaveCount(0);
     await expect(poolTag(page, sp.name)).toHaveText(court ? `✓ Coming · Court ${court}` : "Coming · standby");

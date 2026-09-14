@@ -1,6 +1,7 @@
 // Independent expectations for every tab, computed from the generated league (never from the app's own code).
 import type { League, SessionRec, Score, Player } from "./gen";
-import { NC } from "./gen";
+import { NC, sessionStartMs } from "./gen";
+import season from "../../../automation/season.json";
 import { eloReference } from "../helpers";
 import { fillCourts, startingCourts } from "../rules-model";
 
@@ -178,6 +179,20 @@ export function pos(L: League) {
 }
 
 /** Next session's seating from the votes, as the rules describe it. */
+/** p69: spare seats for the upcoming session: 24 minus the regulars coming, counted as the starting courts seat them
+ *  (regulars with a ladder court who have not voted "not coming", without those marked absent before the night, with
+ *  those marked present despite a "not coming" vote). Decided when the regulars' vote closes (46 hours before play);
+ *  before that no seat is reserved. */
+export function spareSeatCount(L: League) {
+  const rows = L.rsvps.filter((r) => r.session_number === L.upcoming).sort((a, b) => a.updated_at.localeCompare(b.updated_at));
+  const vote: Record<number, string> = {}; rows.forEach((r) => (vote[r.player_id] = r.response));
+  const pre: Record<number, string> = L.current ? {} : (L.pre || {});
+  const regs = L.players.filter((p) => p.approved && !p.waitlisted && p.membership_type !== "spare" && p.current_court > 0);
+  const coming = regs.filter((p) => pre[p.id] !== "absent" && (vote[p.id] !== "notcoming" || pre[p.id] === "present")).length;
+  const deadline = sessionStartMs((season.approved_dates as string[])[L.upcoming - 1]) - 46 * 3600e3;
+  return { coming, seats: Math.max(0, 24 - coming), decided: !!L.current || L.nowMs > deadline, deadline };
+}
+
 export function upcoming(L: League) {
   const byId = (id: number) => L.players.find((p) => p.id === id)!;
   const isReg = (p: Player) => !!p && p.approved && !p.waitlisted && p.membership_type !== "spare";
@@ -189,7 +204,7 @@ export function upcoming(L: League) {
   const declined = new Set(L.players.filter((p) => isReg(p) && vote[p.id] === "notcoming" && pre[p.id] !== "present" && !preAbsent.has(p.id)).map((p) => p.id));
   const declinedRows = rows.filter((r) => r.response === "notcoming" && isReg(byId(r.player_id))).length;
   const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id);
-  const spares = claims.slice(0, declinedRows).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
+  const spares = (spareSeatCount(L).decided ? claims.slice(0, spareSeatCount(L).seats) : []).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
   // Everyone coming keeps the court they earned; spares fill open seats from the bottom; lone or over-five courts are settled (p54).
   const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
   const start = startingCourts(earned, spares);
@@ -216,7 +231,7 @@ export function spareBalance(L:League,id:number,pays=L.payments){
  if(L.current&&Object.values(L.current.assignments).some(ids=>ids.includes(id)))charged.add(L.current.number);
  const votes=L.rsvps.filter(r=>r.session_number===L.upcoming),declines=votes.filter(r=>r.response==='notcoming'&&L.players.some(p=>p.id===r.player_id&&p.approved&&!p.waitlisted&&p.membership_type!=='spare')).length;
  const claims=votes.filter(r=>r.response==='coming'&&L.players.some(p=>p.id===r.player_id&&p.approved&&p.membership_type==='spare')).sort((a,b)=>a.updated_at.localeCompare(b.updated_at)||a.player_id-b.player_id);
- if(claims.slice(0,declines).some(r=>r.player_id===id))charged.add(L.upcoming);
+ {const sc=spareSeatCount(L);if(sc.decided&&claims.slice(0,sc.seats).some(r=>r.player_id===id))charged.add(L.upcoming);}
  const credits=[...charged].map(n=>Math.min(20,pays.filter(x=>x.player_id===id&&x.kind==='spare'&&x.session_number===n).reduce((t,x)=>t+Number(x.amount),0))),paid=credits.reduce((t,n)=>t+n,0);
  return{owed:charged.size*20,paid,due:charged.size*20-paid,settled:credits.filter(n=>n===20).length,outstanding:credits.filter(n=>n<20).length};
 }

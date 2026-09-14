@@ -9,7 +9,11 @@ import { load } from "./load-app.mjs";
 import { startingCourts, offLine, spareLine, moveLine } from "./starting-reference.mjs";
 import { rng } from "./adjust-reference.mjs";
 
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20},upcomingSessionNumber:()=>1 });
+// p69: spare seats are decided when the regulars' vote closes (46 hours before play). The page's clock is fixed after
+// that deadline (Monday evening before the Tuesday session), so confirmed spares are seated as on the night.
+const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
+const FIXED_DATE = class extends Date { static now() { return NOW; } };
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
 /** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}. */
@@ -22,15 +26,16 @@ function run(players, votes = {}, pre = {}) {
   api.setS(S);
   return api.upcomingLineup();
 }
-/** What the rules say, worked out here: who is off, which spares are confirmed (answer order, up to the declines), then the reference. */
+/** What the rules say, worked out here: who is off, which spares are confirmed (answer order, up to 24 players; p69), then the reference. */
 function expected(players, votes = {}, pre = {}) {
   const byId = (id) => players.find((p) => p.id === id), name = (id) => byId(id)?.name ?? `P${id}`;
   const isReg = (p) => p && (p.approved ?? true) && !p.waitlisted && !p.spare, isSpare = (p) => p && (p.approved ?? true) && p.spare;
   const absent = new Set(players.filter((p) => pre[p.id] === "absent").map((p) => p.id));
   const declined = new Set(players.filter((p) => isReg(p) && votes[p.id] === "notcoming" && pre[p.id] !== "present" && !absent.has(p.id)).map((p) => p.id));
-  const declines = Object.entries(votes).filter(([id, r]) => r === "notcoming" && isReg(byId(+id))).length;
-  const spares = Object.entries(votes).filter(([id, r]) => r === "coming" && isSpare(byId(+id))).map(([id]) => +id).slice(0, declines).filter((id) => !absent.has(id));
+  // p69: spare seats fill the courts up to 24 players: 24 minus the regulars coming (those the starting courts seat).
   const earned = players.filter((p) => p.court > 0 && isReg(p) && !declined.has(p.id) && !absent.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
+  const seats = Math.max(0, 24 - earned.length);
+  const spares = Object.entries(votes).filter(([id, r]) => r === "coming" && isSpare(byId(+id))).map(([id]) => +id).slice(0, seats).filter((id) => !absent.has(id));
   const ref = startingCourts(earned, spares);
   const off = players.filter((p) => p.court > 0 && !isSpare(p) && (declined.has(p.id) || absent.has(p.id))).sort((a, b) => a.court - b.court || a.id - b.id).map((p) => offLine(name(p.id), p.court, absent.has(p.id)));
   const notes = ref.ok ? [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id])), ...ref.moves.map((m) => moveLine(name(m.id), m, name))] : [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id]))];
