@@ -3780,6 +3780,8 @@ function renderScoreEntry(){
   const _unsaved={};
   const _prevCy=parseInt(el.dataset.cy||0);
   const _prevCourt=parseInt(el.dataset.court||0);
+  // p72: the score box under the cursor, to give it back after a redraw of the same court and round.
+  const _focus=(()=>{const a=document.activeElement;return a&&a.classList&&a.classList.contains('sinp')&&el.contains(a)&&_prevCy===cy&&_prevCourt===court?{id:a.id,start:a.selectionStart,end:a.selectionEnd}:null;})();
   // Keep the actual input nodes during an unrelated background refresh. Replacing
   // a focused node can lose a keystroke that arrives between focus and input.
   if(_isSyncing&&_prevCy===cy&&_prevCourt===court&&el.dataset.match===scoreMatchId(court)&&el.dataset.base===scoreBase(court)&&el.querySelector('input.sinp'))return;
@@ -3861,6 +3863,7 @@ function renderScoreEntry(){
       if(bEl&&_unsaved[`${g}_b`])bEl.value=_unsaved[`${g}_b`];
     }
   }
+  if(_focus){const f=document.getElementById(_focus.id);if(f&&f!==document.activeElement){f.focus({preventScroll:true});try{f.setSelectionRange(_focus.start,_focus.end);}catch(e){}}} // p72
   combos.forEach(({g})=>liveW(court,g));
   // Stamp cycle+court on the score-area so the next render can detect a
   // cross-cycle transition and refuse to preserve cross-cycle DOM values.

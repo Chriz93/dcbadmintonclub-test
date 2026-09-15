@@ -49,8 +49,11 @@ export async function scoreCourt(page: Page, court: number, scores: [number, num
   // button to be on (it is off while the round is still being saved, p63).
   await expect.poll(() => page.evaluate((c) => { const el = document.getElementById("score-area"); return !!S.current && !S.current.completed && el?.dataset.match === scoreMatchId(c) && !!el.querySelector(`#si_${c}_1_a`) && !(document.getElementById(`sbtn_${c}`) as HTMLButtonElement | null)?.disabled; }, court), { message: `the current match's form on Court ${court}, Save on`, timeout: 15000 }).toBe(true);
   for (const [i, [a, b]] of scores.entries()) {
+    // Each score must land in its box before Save (p72: a redraw while typing once dropped a keystroke silently).
     await page.fill(`#si_${court}_${i + 1}_a`, String(a));
+    await expect(page.locator(`#si_${court}_${i + 1}_a`)).toHaveValue(String(a));
     await page.fill(`#si_${court}_${i + 1}_b`, String(b));
+    await expect(page.locator(`#si_${court}_${i + 1}_b`)).toHaveValue(String(b));
   }
   const saved = await page.evaluate(() => S.current ? Object.keys(S.current.scores).length : 0);
   await page.click(`#sbtn_${court}`);

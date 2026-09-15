@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-14T18:54:37.436Z",
+ "generated": "2026-09-15T02:07:01.174Z",
  "summary": [
   {
    "k": "Control handler",
@@ -102,6 +102,7 @@
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/lineup.suite.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -519,6 +520,7 @@
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/players.spec.ts"
    ]
   },
@@ -572,6 +574,7 @@
     "e2e/tabs/manual-move-oracle.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/pool.ts",
@@ -724,6 +727,7 @@
     "e2e/tabs/harness.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/leaders.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/pay.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/session.spec.ts",
@@ -1015,6 +1019,7 @@
     "e2e/helpers.ts",
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/adjust-edge.spec.ts",
@@ -1044,6 +1049,7 @@
     "e2e/tabs/leaders.spec.ts",
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/my-season.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/organizer-vote.spec.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
@@ -1168,7 +1174,8 @@
    "kind": "Control handler",
    "item": "quickAddToCourt",
    "tests": [
-    "e2e/tabs/admin-extras.spec.ts"
+    "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts"
    ]
   },
   {
@@ -1249,7 +1256,9 @@
    "kind": "Control handler",
    "item": "removeFromUpcoming",
    "tests": [
+    "e2e/tabs/admin.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
   },
@@ -1478,7 +1487,8 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/courts.suite.ts",
-    "e2e/tabs/lineup.suite.ts"
+    "e2e/tabs/lineup.suite.ts",
+    "e2e/tabs/organizer-seats.spec.ts"
    ]
   },
   {
@@ -1577,6 +1587,7 @@
    "tests": [
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/isolation.spec.ts",
     "e2e/tabs/lineup.suite.ts",
@@ -1674,6 +1685,7 @@
     "e2e/opener.spec.ts",
     "e2e/playwright.config.ts",
     "e2e/rules-model.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/season.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/adjust-edge.spec.ts",
@@ -1725,6 +1737,7 @@
     "e2e/tabs/manual-move-oracle.ts",
     "e2e/tabs/my-season.spec.ts",
     "e2e/tabs/oracle.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/organizer-vote.spec.ts",
     "e2e/tabs/past-players.spec.ts",
     "e2e/tabs/pay.spec.ts",
@@ -1978,7 +1991,8 @@
    "item": "modal-player-sel",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/organizer-seats.spec.ts"
    ]
   },
   {
@@ -2283,6 +2297,7 @@
     "e2e/helpers.ts",
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/census.ts",
@@ -2306,6 +2321,7 @@
     "e2e/helpers.ts",
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
@@ -2322,6 +2338,7 @@
     "e2e/helpers.ts",
     "e2e/matchnight.spec.ts",
     "e2e/opener.spec.ts",
+    "e2e/score-focus.spec.ts",
     "e2e/tabs/best-of-three.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
