@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-15T02:07:01.174Z",
+ "generated": "2026-09-16T14:46:50.323Z",
  "summary": [
   {
    "k": "Control handler",
@@ -1684,6 +1684,7 @@
     "e2e/mock-waiver.ts",
     "e2e/opener.spec.ts",
     "e2e/playwright.config.ts",
+    "e2e/request-timeout.spec.ts",
     "e2e/rules-model.ts",
     "e2e/score-focus.spec.ts",
     "e2e/season.spec.ts",
@@ -2936,6 +2937,7 @@
     "db/run.sh",
     "db/season-recovery.sql",
     "e2e/mock-supabase.ts",
+    "e2e/request-timeout.spec.ts",
     "rules.sql"
    ]
   },

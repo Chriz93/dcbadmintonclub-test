@@ -45,6 +45,7 @@ export interface MockState {
   // so replies can arrive in a different order than they were asked for, as on a busy phone or a slow machine.
   latency?: { min: number; max: number; seed: number };
   holdRpc?: { fn: string; until: Promise<void>; served: () => void }; // a save's reply held after the database applied it (p63 tests)
+  holdRest?: { path: string; until: Promise<void> };   // p73: a reply that never arrives, to test the page's time limit
   waiverVersions?: WaiverVersion[];    // L20
   waiverAcceptances?: Acceptance[];
 }
@@ -186,6 +187,7 @@ export async function installMock(page: Page, s: MockState) {
       const text = JSON.stringify(body), l = s.latency;   // the reply as it is now, whenever it arrives
       if (l) { l.seed = (l.seed * 1103515245 + 12345) % 2147483648; await new Promise((r) => setTimeout(r, l.min + (l.seed / 2147483648) * (l.max - l.min))); }
       const hr = s.holdRpc; if (hr && path === `/rest/v1/rpc/${hr.fn}`) { s.holdRpc = undefined; hr.served(); await hr.until; }
+      const hs = s.holdRest; if (hs && path === hs.path) { s.holdRest = undefined; await hs.until; }   // p73
       return route.fulfill({ status, contentType: "application/json", body: text });
     };
     const body = () => (req.postData() ? JSON.parse(req.postData()!) : {});

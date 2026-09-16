@@ -989,7 +989,21 @@ async function mfaFactors(){const r=await fetch(SB+'/auth/v1/user',{headers:auth
 async function mfaEnroll(){const r=await fetch(SB+'/auth/v1/factors',{method:'POST',headers:authHeaders(),body:JSON.stringify({factor_type:'totp',friendly_name:'Organizer '+new Date().toISOString().slice(0,10)})});const j=await r.json();if(!r.ok)throw new Error(j.msg||j.error||'Cannot set up authenticator');return j;}
 async function mfaVerify(factorId,code){const c=await fetch(SB+'/auth/v1/factors/'+factorId+'/challenge',{method:'POST',headers:authHeaders()});const cj=await c.json();if(!c.ok)throw new Error(cj.msg||'Challenge failed');const v=await fetch(SB+'/auth/v1/factors/'+factorId+'/verify',{method:'POST',headers:authHeaders(),body:JSON.stringify({challenge_id:cj.id,code})});const vj=await v.json();if(!v.ok||!vj.access_token)throw new Error(vj.msg||vj.error_description||'Wrong code');saveSession(sessionFrom(vj));return _session;}
 // ── REST helpers: every request carries the signed-in token; the database rules decide what is allowed. ──
-async function sbFetch(path,opts={}){const epoch=_accountEpoch,hadSession=!!_session;await ensureSession();if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(hadSession&&!_session)throw new Error('Signed out — please sign in again');const r=await fetch(SB+path,{...opts,headers:{...authHeaders(),...(opts.headers||{})}});if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(r.status===401&&_session){await signOut(false);throw new Error('Signed out — please sign in again');}return r;}
+// p73: a request the server never answers is given up on, so a save can never spin for ever (15 September: a wedged
+// score save left the Save button turning and every later request waiting behind it). A read is given less time than a
+// write, and a write that timed out is reported as "not saved" — the organizer reviews the court and saves again.
+let REQUEST_LIMIT_MS=25000,READ_LIMIT_MS=12000;   // (let, so a test can shorten them)
+async function _fetchWithLimit(url,opts={}){
+ const method=(opts.method||'GET').toUpperCase(),limit=method==='GET'?READ_LIMIT_MS:REQUEST_LIMIT_MS;
+ const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),limit);
+ try{return await fetch(url,{...opts,signal:ac.signal});}
+ catch(e){
+  if(e&&e.name==='AbortError'){const t=new Error(method==='GET'?'The league database did not answer in time — check the connection and try again.':'The league database did not answer in time — nothing was saved. Check the court and save again.');t.status=504;t.timedOut=true;throw t;}
+  throw e;
+ }
+ finally{clearTimeout(timer);}
+}
+async function sbFetch(path,opts={}){const epoch=_accountEpoch,hadSession=!!_session;await ensureSession();if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(hadSession&&!_session)throw new Error('Signed out — please sign in again');const r=await _fetchWithLimit(SB+path,{...opts,headers:{...authHeaders(),...(opts.headers||{})}});if(epoch!==_accountEpoch)throw new Error('Account changed — refresh before continuing');if(r.status===401&&_session){await signOut(false);throw new Error('Signed out — please sign in again');}return r;}
 async function sbG(t,f=''){const q=f.includes('order=')?f:`${f}&order=created_at.asc`;const r=await sbFetch(`/rest/v1/${t}?${q}`);if(!r.ok)throw new Error(`Load ${t} failed (${r.status})`);return r.json();}
 // p58: successful saves this page has made. A page load that started before the latest one discards its result.
 let _writeSeq=0;const READ_RPCS=new Set(['admin_status','list_league_snapshots']);
