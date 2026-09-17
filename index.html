@@ -3496,6 +3496,36 @@ function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
   if(botG.length>1){const l=botT&&botG.includes(botT.loserId)&&botT.loserId!==sorted[0]?botT.loserId:tossOrder(botG,cy,c).filter(id=>id!==sorted[0]).slice(-1)[0];sorted.splice(sorted.indexOf(l),1);sorted.push(l);}
   return sorted;
 }
+// p74: who actually played court `c` in round `cy` — taken from that round's own scores, because once the last
+// round's rotation is applied S.current.assignments already hold the next session's courts. Falls back to the courts
+// while a round is still being played (a five-player court rests one player per game, so only a finished round's
+// scores name everyone).
+function roundCourtPlayers(c,cy){
+  const ids=[];
+  for(let g=1;g<=MAXG;g++){
+    const sc=S.current?.scores?.[`c${c}_y${cy}_g${g}`];if(!sc)continue;
+    [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&!ids.includes(id))ids.push(id);});
+  }
+  return ids.length?ids:[...(S.current?.assignments?.[c]||[])];
+}
+// p74: the court a player played on in round `cy` (0 when they did not play it).
+function courtInRound(id,cy){for(let c=1;c<=NC;c++)if(roundCourtPlayers(c,cy).includes(id))return c;return 0;}
+// p74: the top and bottom of a court in a finished round, by the same ranking the movements used.
+function roundStatusFor(cy,c){
+  if(!c||!S.current)return{top:null,bottom:null};
+  const pids=roundCourtPlayers(c,cy);if(pids.length<2)return{top:null,bottom:null};
+  const wins={},pts={},ptFor={},ptAgainst={};
+  pids.forEach(id=>{wins[id]=0;pts[id]=0;ptFor[id]=0;ptAgainst[id]=0;});
+  for(let g=1;g<=MAXG;g++){
+    const sc=S.current.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
+    const A=[sc.a1,sc.a2].filter(x=>x!=null),B=[sc.b1,sc.b2].filter(x=>x!=null);
+    if(sc.w==='A')A.forEach(id=>{wins[id]=(wins[id]||0)+1;});else if(sc.w==='B')B.forEach(id=>{wins[id]=(wins[id]||0)+1;});
+    A.forEach(id=>{pts[id]=(pts[id]||0)+sc.sA;ptFor[id]=(ptFor[id]||0)+sc.sA;ptAgainst[id]=(ptAgainst[id]||0)+sc.sB;});
+    B.forEach(id=>{pts[id]=(pts[id]||0)+sc.sB;ptFor[id]=(ptFor[id]||0)+sc.sB;ptAgainst[id]=(ptAgainst[id]||0)+sc.sA;});
+  }
+  const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
+  return{top:sorted[0],bottom:sorted[sorted.length-1]};
+}
 function computeRoundStatus(){
   if(!S.current)return{courts:{},projectedMv:{},projectedAssignments:null,allScored:false,totalScored:0,totalCourts:0,wins:{},pts:{},ptFor:{},ptAgainst:{}};
   const a=S.current.assignments;
@@ -3505,7 +3535,7 @@ function computeRoundStatus(){
   let totalScored=0,totalCourts=0;
   const cy=S.current.cycle;
   for(let c=1;c<=NC;c++){
-    const pids=(a[c]||[]).filter(id=>S.players.find(p=>p.id===id));
+    const pids=(S.current.completed?roundCourtPlayers(c,cy):(a[c]||[])).filter(id=>S.players.find(p=>p.id===id)); // p74
     if(pids.length<2){courts[c]={scored:false,players:0,skip:true,courtCycle:cy};continue;}
     totalCourts++;
     const numGames=gamesNeeded(c,cy);
@@ -3548,7 +3578,7 @@ function computeRoundStatus(){
   }
   // Build projected next round assignments
   let projectedAssignments=null;
-  if(totalScored===totalCourts&&totalCourts>0){
+  if(!S.current.completed&&cy<MAX_ROUNDS_PER_SESSION&&totalScored===totalCourts&&totalCourts>0){ // p74: nothing beyond the last round
     const na={};for(let c=1;c<=NC;c++)na[c]=[...(a[c]||[])];
     // Apply movements
     const moves=[];
@@ -3642,7 +3672,7 @@ function renderRoundTracker(){
 
   // ── Current Round Court Assignments (Starting Lineup) ──
   html+=`<div class="card" style="margin-bottom:12px;">
-    <div class="card-title">🏸 Round ${cy} Courts</div>
+    <div class="card-title">${S.current.completed?`🏸 After Round ${cy} — next session's courts`:`🏸 Round ${cy} Courts`}</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;">`;
   for(let c=1;c<=NC;c++){
     const pids=(S.current.assignments[c]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
@@ -3650,11 +3680,13 @@ function renderRoundTracker(){
     html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px;">
       <div style="font-size:10px;font-weight:800;color:${cls};text-align:center;margin-bottom:4px;">Court ${c}</div>
       ${pids.map(p=>{
-        // Show movement arrow from previous round if available
+        // p74: where they came from and where they went — "C2 → C1" with the round's top 👑 and bottom 🔻.
         const lastMv=S.current.movements.length>0?S.current.movements[S.current.movements.length-1]:null;
-        const mv=lastMv?.mv?.[p.id];
-        const arrow=mv==='up'?'<span style="color:var(--green2);"> ↑</span>':mv==='down'?'<span style="color:var(--red2);"> ↓</span>':'';
-        return `<div style="font-size:10px;padding:1px 0;">${esc(p.name.split(' ')[0])}${arrow}</div>`;
+        const mv=lastMv?.mv?.[p.id],from=lastMv?courtInRound(p.id,lastMv.cycle):0;
+        const mark=lastMv&&roundStatusFor(lastMv.cycle,from).top===p.id?' 👑':lastMv&&roundStatusFor(lastMv.cycle,from).bottom===p.id?' 🔻':'';
+        const move=mv==='up'&&from?`<span style="color:var(--green2);font-weight:700;"> C${from} → C${c} ↑</span>`
+          :mv==='down'&&from?`<span style="color:var(--red2);font-weight:700;"> C${from} → C${c} ↓</span>`:'';
+        return `<div style="font-size:10px;padding:1px 0;">${esc(p.name.split(' ')[0])}${mark}${move}</div>`;
       }).join('')}
       ${pids.length===0?'<div style="font-size:11px;color:var(--muted);font-style:italic;">Empty</div>':''}
     </div>`;
@@ -3663,7 +3695,7 @@ function renderRoundTracker(){
 
   // ── Current Round Progress ──
   html+=`<div class="card" style="margin-bottom:12px;">
-    <div class="card-title">📊 Round ${cy} Progress</div>
+    <div class="card-title">${S.current.completed?`📊 Round ${cy} result`:`📊 Round ${cy} Progress`}</div>
     <div style="display:flex;gap:4px;margin-bottom:10px;">`;
   for(let r=1;r<=MAX_ROUNDS_PER_SESSION;r++){
     const isDone=r<cy;const isActive=r===cy;
@@ -3687,8 +3719,8 @@ function renderRoundTracker(){
     html+=`<div style="background:${bg};border:${border};border-radius:8px;padding:8px;text-align:center;">
       <div style="font-size:11px;font-weight:800;color:${done?'var(--green2)':'var(--muted)'};">C${c} ${done?'✅':'⏳'}</div>
       <div style="font-size:11px;color:var(--muted);">${cs.gamesScored||0}/${cs.numGames} games</div>
-      ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;">${c>1?`<span style="color:var(--green2);">↑${esc(winnerP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">👑${esc(winnerP.name.split(' ')[0])}</span>`}</div>`:''}
-      ${done&&loserP?`<div style="font-size:11px;">${hasPlayersBelow(c)?`<span style="color:var(--red2);">↓${esc(loserP.name.split(' ')[0])}</span>`:`<span style="color:var(--muted);">⬇️Stay</span>`}</div>`:''}
+      ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;"><span style="color:${c>1?'var(--green2)':'var(--muted)'};">👑${esc(winnerP.name.split(' ')[0])}${c>1?` C${c} → C${c-1} ↑`:' stays on the top court'}</span></div>`:''}
+      ${done&&loserP?`<div style="font-size:11px;"><span style="color:${hasPlayersBelow(c)?'var(--red2)':'var(--muted)'};">🔻${esc(loserP.name.split(' ')[0])}${hasPlayersBelow(c)?` C${c} → C${c+1} ↓`:' stays on the bottom court'}</span></div>`:''}
     </div>`;
   }
   html+=`</div>`;

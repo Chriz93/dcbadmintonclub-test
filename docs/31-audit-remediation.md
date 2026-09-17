@@ -269,3 +269,5 @@ Production still needs its own migration bundle for L22–L24, a production back
 **p73 — the page stops waiting.** Every request now has a limit (25 s for a write, 12 s for a read). A write that times out is reported as "nothing was saved. Check the court and save again" — never as success — and the page is not left with a save in flight. Test: legacy/tests/e2e/request-timeout.spec.ts (a held save and a held read, desktop and phone); the stand-in database gained `holdRest` so a read can be held too.
 
 **Still open:** the same single lock serialises every write in the league; a per-court or per-key lock would remove the shared queue altogether. Worth doing before a night with two sessions running.
+
+- **p74 — after the last round the cards say what happened, and there is no Round 3** (the organizer, 16 September, 

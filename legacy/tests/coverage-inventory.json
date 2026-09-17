@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-16T14:46:50.323Z",
+ "generated": "2026-09-17T01:52:59.165Z",
  "summary": [
   {
    "k": "Control handler",
@@ -98,6 +98,7 @@
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -105,6 +106,7 @@
     "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -558,6 +560,7 @@
     "e2e/tabs/call-in.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/complete-locks.spec.ts",
+    "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
     "e2e/tabs/courts.spec.ts",
@@ -591,6 +594,7 @@
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/stats.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/wording.spec.ts",
     "rules.sql",
@@ -1036,6 +1040,7 @@
     "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/complete-locks.spec.ts",
+    "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -1072,6 +1077,7 @@
     "e2e/tabs/standings.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
@@ -1709,6 +1715,7 @@
     "e2e/tabs/census.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/complete-locks.spec.ts",
+    "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
     "e2e/tabs/courts.spec.ts",
@@ -1778,6 +1785,7 @@
     "e2e/tabs/stats.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/sync-race.spec.ts",
+    "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
