@@ -3656,11 +3656,13 @@ function renderRoundTracker(){
             if([sc.a1,sc.a2,sc.b1,sc.b2].filter(x=>x!=null).includes(pid)){playedOnCourt=true;break;}
           }
           if(!playedOnCourt)return;
-          const w=mWins[pid]||0;
-          const mvIcon=dir==='up'&&c>1?'<span style="color:var(--green2);font-weight:800;"> ↑</span>':dir==='down'&&c<NC?'<span style="color:var(--red2);font-weight:800;"> ↓</span>':'';
-          html+=`<div style="font-size:11px;padding:1px 0;display:flex;justify-content:space-between;align-items:center;">
-            <span>${esc(p.name.split(' ')[0])}${mvIcon}</span>
-            <span style="color:var(--teal2);font-weight:700;">${w}W</span>
+          const w=mWins[pid]||0,ptsWon=mPts[pid]||0;
+          const ends=roundStatusFor(mCy,c); // p75: the crown is Court 1's, the solid marker Court 6's
+          const badge=c===1&&ends.top===pid?'👑 ':c===NC&&ends.bottom===pid?'🔻 ':'';
+          const mvIcon=dir==='up'&&c>1?`<span style="color:var(--green2);font-weight:800;"> C${c} → C${c-1} ↑</span>`:dir==='down'&&c<NC?`<span style="color:var(--red2);font-weight:800;"> C${c} → C${c+1} ↓</span>`:'';
+          html+=`<div style="font-size:11px;padding:1px 0;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+            <span>${badge}${esc(p.name.split(' ')[0])}${mvIcon}</span>
+            <span style="color:var(--teal2);font-weight:700;white-space:nowrap;">${w}W · ${ptsWon} pts</span>
           </div>`;
         });
         html+=`</div>`;
@@ -3683,7 +3685,8 @@ function renderRoundTracker(){
         // p74: where they came from and where they went — "C2 → C1" with the round's top 👑 and bottom 🔻.
         const lastMv=S.current.movements.length>0?S.current.movements[S.current.movements.length-1]:null;
         const mv=lastMv?.mv?.[p.id],from=lastMv?courtInRound(p.id,lastMv.cycle):0;
-        const mark=lastMv&&roundStatusFor(lastMv.cycle,from).top===p.id?' 👑':lastMv&&roundStatusFor(lastMv.cycle,from).bottom===p.id?' 🔻':'';
+        const ends=lastMv?roundStatusFor(lastMv.cycle,from):{top:null,bottom:null}; // p75
+        const mark=from===1&&ends.top===p.id?' 👑':from===NC&&ends.bottom===p.id?' 🔻':'';
         const move=mv==='up'&&from?`<span style="color:var(--green2);font-weight:700;"> C${from} → C${c} ↑</span>`
           :mv==='down'&&from?`<span style="color:var(--red2);font-weight:700;"> C${from} → C${c} ↓</span>`:'';
         return `<div style="font-size:10px;padding:1px 0;">${esc(p.name.split(' ')[0])}${mark}${move}</div>`;
@@ -3719,8 +3722,8 @@ function renderRoundTracker(){
     html+=`<div style="background:${bg};border:${border};border-radius:8px;padding:8px;text-align:center;">
       <div style="font-size:11px;font-weight:800;color:${done?'var(--green2)':'var(--muted)'};">C${c} ${done?'✅':'⏳'}</div>
       <div style="font-size:11px;color:var(--muted);">${cs.gamesScored||0}/${cs.numGames} games</div>
-      ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;"><span style="color:${c>1?'var(--green2)':'var(--muted)'};">👑${esc(winnerP.name.split(' ')[0])}${c>1?` C${c} → C${c-1} ↑`:' stays on the top court'}</span></div>`:''}
-      ${done&&loserP?`<div style="font-size:11px;"><span style="color:${hasPlayersBelow(c)?'var(--red2)':'var(--muted)'};">🔻${esc(loserP.name.split(' ')[0])}${hasPlayersBelow(c)?` C${c} → C${c+1} ↓`:' stays on the bottom court'}</span></div>`:''}
+      ${done&&winnerP?`<div style="font-size:11px;margin-top:3px;"><span style="color:${c>1?'var(--green2)':'var(--muted)'};">${c===1?'👑':'↑'}${esc(winnerP.name.split(' ')[0])} ${status.wins[winnerP.id]||0}W · ${status.pts[winnerP.id]||0} pts${c>1?` · C${c} → C${c-1}`:' · tops the ladder'}</span></div>`:''}
+      ${done&&loserP?`<div style="font-size:11px;"><span style="color:${hasPlayersBelow(c)?'var(--red2)':'var(--muted)'};">${hasPlayersBelow(c)?'↓':'🔻'}${esc(loserP.name.split(' ')[0])} ${status.wins[loserP.id]||0}W · ${status.pts[loserP.id]||0} pts${hasPlayersBelow(c)?` · C${c} → C${c+1}`:' · bottom of the ladder'}</span></div>`:''}
     </div>`;
   }
   html+=`</div>`;

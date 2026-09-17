@@ -39,7 +39,22 @@ test("the night of 16 September: the cards match the movements the app applied, 
   await expect(tracker, "the courts card names what it holds").toContainText(`After Round ${lastRound} — next session's courts`);
   await expect(tracker, "no Round 3").not.toContainText("Round 3");
   await expect(page.locator("#court-gym-view"), "no projected Round 3 in the gym view").not.toContainText("Projected Round 3");
-  await expect(tracker, "the court's top is marked").toContainText("👑");
-  await expect(tracker, "the court's bottom is marked").toContainText("🔻");
+  // p75: the crown belongs to Court 1's best and the solid marker to Court 6's last; every other court just moves.
+  const marks = await page.evaluate(() => {
+    const out: { court: string; crown: boolean; solid: boolean }[] = [];
+    document.querySelectorAll("#round-tracker div").forEach((d) => {
+      const head = d.firstElementChild?.textContent?.trim() ?? "";
+      if (!/^C[1-6]$/.test(head)) return;
+      const t = d.textContent || "";
+      out.push({ court: head, crown: t.includes("👑"), solid: t.includes("🔻") });
+    });
+    return out;
+  });
+  expect(marks.length, "the completed rounds show every court").toBeGreaterThan(0);
+  expect(marks.filter((m) => m.crown).map((m) => m.court), "only Court 1 is crowned").toEqual(marks.filter((m) => m.crown).map(() => "C1"));
+  expect(marks.filter((m) => m.solid).map((m) => m.court), "only Court 6 carries the solid marker").toEqual(marks.filter((m) => m.solid).map(() => "C6"));
+  expect(marks.some((m) => m.court === "C1" && m.crown), "Court 1's best is crowned").toBe(true);
+  expect(marks.some((m) => m.court === "C6" && m.solid), "Court 6's last is marked").toBe(true);
   await expect(tracker, "moves read from court to court").toContainText(/C\d → C\d/);
+  await expect(tracker, "the points won are shown beside the wins").toContainText(/\dW · \d+ pts/);
 });

@@ -271,3 +271,5 @@ Production still needs its own migration bundle for L22–L24, a production back
 **Still open:** the same single lock serialises every write in the league; a per-court or per-key lock would remove the shared queue altogether. Worth doing before a night with two sessions running.
 
 - **p74 — after the last round the cards say what happened, and there is no Round 3** (the organizer, 16 September, 
+
+- **p75 — the crown is the top court's, the solid marker the bottom court's, and every result shows points with wins** 
