@@ -307,7 +307,6 @@ for k in range(110):
     call = (f"public.register_me('{name}','{phone}','{emer}','{med}','sig','{mem}','{pay}',(select version from public.waiver_versions where is_current),"
             f"(select sha256 from public.waiver_versions where is_current),'Signed {k + 1}','America/Toronto',-240)")
     if who == "UNC": want = "Verified sign-in email required"
-    elif who == "STR": want = "Registration is closed"
     elif not (name_ok and len(phone) <= 40 and len(emer) <= 200 and len(med) <= 500): want = "Invalid registration details"
     else: want = None
     if want: body = err(f"perform {call}", want)
@@ -614,7 +613,7 @@ for label, who, stmt, pat, setup in [
     case(f"accept waiver refused: {label}", who, err(stmt, pat) + (rows(f"select 1 from public.waiver_acceptances where player_id={ID('P2')} and waiver_version='2026-09-v1'", 0) if who == "P2" else ""), setup)
 
 def reg16(name, phone="'613'", mem="'regular'", pay="'will_pay'"): return f"public.register_me('{name}',{phone},'EC','','sig',{mem},{pay},{WV},{WH},'{name}')"
-case("register refused: a signed-in person who was not invited", "STR", err(f"perform {reg16('Stran Ger')}", "Registration is closed") + rows("select 1 from public.waiver_acceptances where participant_name='Stran Ger'", 0))
+case("register as pending (L25, open registration): a signed-in person who was not invited", "STR", f" select {reg16('Stran Ger')} into vn; if (select approved from public.players where id=vn) then raise exception 'an uninvited sign-up was approved'; end if;" + rows("select 1 from public.waiver_acceptances where participant_name='Stran Ger'", 1))
 case("register refused: an unconfirmed email", "UNC", err(f"perform {reg16('Un Confirmed')}", "Verified sign-in email required"))
 case("register refused: an anonymous visitor", "anon", err(f"perform {reg16('Ann Onymous')}", "permission denied"))
 case("register refused: the service role", "SVC", err(f"perform {reg16('Serv Ice')}", "permission denied"))

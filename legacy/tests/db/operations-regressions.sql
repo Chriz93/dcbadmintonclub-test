@@ -61,16 +61,13 @@ begin
  select * into w from public.waiver_versions where is_current;
  perform set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-000000000002',true);
  perform set_config('request.jwt.claims','{"aal":"aal1","email":"db.p1@example.invalid"}',true);
- begin perform public.register_me('Dee Bee One','613-555-0100','Kin','','Dee Bee One','regular','will_pay',w.version,w.sha256,'Dee Bee One','America/Toronto',-240,'adult','',false,'regression');raise exception 'FAIL archived user registered without invitation';exception when insufficient_privilege then null;end;
- perform set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-000000000001',true);
- perform set_config('request.jwt.claims','{"aal":"aal2","email":"db.organizer@example.invalid"}',true);
- insert into public.invitations(email,membership_type) values('db.p1@example.invalid','regular');
- perform set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-000000000002',true);
- perform set_config('request.jwt.claims','{"aal":"aal1","email":"db.p1@example.invalid"}',true);
+ -- L25 (open registration, the organizer's decision of 14 September): an archived member no longer needs an
+ -- invitation to come back. What must still hold: they return on their ORIGINAL identity, they come back PENDING
+ -- (never silently approved), and they sign the current waiver again.
  select count(*) into n from public.waiver_acceptances where player_id=p;
  ret=public.register_me('Dee Bee One','613-555-0100','Kin','','Dee Bee One','regular','will_pay',w.version,w.sha256,'Dee Bee One','America/Toronto',-240,'adult','',false,'regression');
  if ret<>p or not exists(select 1 from public.players where id=p and archived_at is null and not approved) then raise exception 'FAIL returning identity or approval';end if;
  if (select count(*) from public.waiver_acceptances where player_id=p)<>n+1 then raise exception 'FAIL returning waiver evidence';end if;
- raise notice 'PASS review: archived members require invitation and sign their own new acceptance on the original identity';
+ raise notice 'PASS review: an archived member returns uninvited on the original identity, pending approval, signing a new acceptance (L25)';
 end $$;
 rollback;

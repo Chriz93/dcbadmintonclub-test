@@ -43,7 +43,7 @@ if $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$LOG/failed-upgrade.sql" > "$LOG/failed-
 if ! grep -q 'division by zero' "$LOG/failed-upgrade.out"; then tail -15 "$LOG/failed-upgrade.out";exit 1;fi
 $PG -d $DB -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null or exists(select 1 from information_schema.columns where table_schema='public' and table_name='players' and column_name='archived_at') then raise exception 'Failed upgrade did not roll back';end if;end \$\$;"
 echo "atomic upgrade rollback: OK"
-for migration in legacy/migrations/TEST_2026-09-13.sql; do
+for migration in legacy/migrations/TEST_2026-09-13.sql legacy/migrations/L25_open_registration.sql legacy/migrations/L26_lock_and_statement_timeouts.sql; do
   if ! $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$migration" >> "$LOG/latest.out" 2>&1; then tail -30 "$LOG/latest.out";exit 1;fi
 done
 $PG -d $DB -At -v ON_ERROR_STOP=1 -f legacy/migrations/verify.sql > "$LOG/verify.out"
