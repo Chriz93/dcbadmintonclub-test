@@ -28,7 +28,12 @@ for (let i = 0; i < 100; i++) {
       expect(norm(r.sub), `${where}: summary`).toBe(me.sub);
       expect(r.name.includes("SPARE"), `${where}: spare badge`).toBe(me.spare);
       expect(r.name.includes("(absent)"), `${where}: absent tag`).toBe(me.absent);
-      if (me.trend) expect(r.name.includes(me.trend), `${where}: trend ${me.trend}`).toBe(true);
+      // p76: the arrow is the real change over this session, shown beside the rating — never inside the name.
+      expect(/[▲▼]/.test(r.name), `${where}: the name carries no arrow`).toBe(false);
+      const m = r.text.match(/([▲▼])\s*([+-]?\d+)/);
+      if (me.change > 0) expect(m && m[1] === "▲" && parseInt(m[2]) === me.change, `${where}: expected ▲ +${me.change}, got "${m?.[0] ?? "none"}"`).toBe(true);
+      else if (me.change < 0) expect(m && m[1] === "▼" && parseInt(m[2]) === me.change, `${where}: expected ▼ ${me.change}, got "${m?.[0] ?? "none"}"`).toBe(true);
+      else expect(m, `${where}: no arrow when the rating did not move`).toBe(null);
     });
     await expect(page.locator("#sec-rank")).toContainText("Everyone starts from the court they first played on this season");
   });

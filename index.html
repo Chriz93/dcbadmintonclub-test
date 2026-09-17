@@ -180,7 +180,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 .gc-add-btn{display:none;position:absolute;bottom:4px;right:4px;background:var(--teal);color:var(--ink);border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;align-items:center;justify-content:center;font-weight:800;}
 .admin-mode .gc-add-btn{display:flex;}
 .gc-divider{height:1px;background:var(--border);margin:0 8px 4px;position:relative;}
-.gc-divider::after{content:'NET';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:11px;background:var(--s1);padding:0 4px;color:var(--muted);letter-spacing:1px;}
+.gc-divider::after{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:11px;background:var(--s1);padding:0 4px;color:var(--muted);letter-spacing:1px;}
 
 /* Drag-and-drop court assignment */
 .dnd-court{background:var(--s1);border:2px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;transition:border-color 0.2s,background 0.2s;}
@@ -3316,7 +3316,10 @@ function renderCourts(){
         ${[1,2,3,4,5,6].map(c=>`<button class="btn btn-ghost btn-sm" style="width:100%;margin:0;" onclick="showCourtAddPlayer(${c})">+ Court ${c}</button>`).join('')}
       </div></div>`;
   }
-  const prevMv=S.current?.movements?.find(m=>m.cycle===cy-1)?.mv||{};
+  // p76: the moves that produced the courts now on screen — the last round's once the night is finished, the
+  // previous round's while one is being played (it drew the previous round's moves in both cases before).
+  const prevMv=S.current?.movements?.find(m=>m.cycle===(S.current.completed?cy:cy-1))?.mv||{};
+  const prevMvCycle=S.current?.completed?cy:cy-1;
   const roundStatus=S.current?computeRoundStatus():{projectedMv:{},projectedAssignments:null,allScored:false};
   // GYM VIEW
   const gv=document.getElementById('court-gym-view');
@@ -3360,11 +3363,9 @@ function renderCourts(){
       :`<div class="alert alert-success" style="margin-bottom:10px;font-size:12px;">✅ All courts full (4/4)</div>`;
     gv.innerHTML=statusBar+`
       <div class="gym-wrap">
-        <div class="gym-wall">← Entrance Side →</div>
         <div class="gym-row">${[1,2,3].map(makeCourtCard).join('')}</div>
         <div style="height:10px;background:linear-gradient(90deg,transparent,rgba(22,163,74,0.08),transparent);border-radius:4px;margin:4px 0;"></div>
         <div class="gym-row">${[6,5,4].map(makeCourtCard).join('')}</div>
-        <div class="gym-wall">← Back Wall →</div>
       </div>
       <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;">Tap any court to see full details</div>`;
     // Show projected next round if all courts scored
@@ -3526,6 +3527,9 @@ function roundStatusFor(cy,c){
   const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
   return{top:sorted[0],bottom:sorted[sorted.length-1]};
 }
+// p76: courts are shown in the gym's order everywhere — 1 2 3 across the top, 6 5 4 below, so Court 6 is always
+// bottom left and a court keeps its place on every page.
+const COURT_VIEW_ORDER=[1,2,3,6,5,4];
 function computeRoundStatus(){
   if(!S.current)return{courts:{},projectedMv:{},projectedAssignments:null,allScored:false,totalScored:0,totalCourts:0,wins:{},pts:{},ptFor:{},ptAgainst:{}};
   const a=S.current.assignments;
@@ -3626,7 +3630,7 @@ function renderRoundTracker(){
           <span class="tag tg-green" style="font-size:11px;">Completed</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">`;
-      for(let c=1;c<=NC;c++){
+      for(const c of COURT_VIEW_ORDER){ // p76
         // Find which players were on this court before rotation
         // We need to look at the assignments BEFORE this cycle's rotation was applied
         // The assignments at cycle start can be reconstructed: for cycle 1, it's the original assignments
@@ -3676,7 +3680,7 @@ function renderRoundTracker(){
   html+=`<div class="card" style="margin-bottom:12px;">
     <div class="card-title">${S.current.completed?`🏸 After Round ${cy} — next session's courts`:`🏸 Round ${cy} Courts`}</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;">`;
-  for(let c=1;c<=NC;c++){
+  for(const c of COURT_VIEW_ORDER){ // p76
     const pids=(S.current.assignments[c]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
     const cls=c===1?'var(--gold)':c===2?'var(--silver)':c===3?'var(--bronze)':'var(--teal2)';
     html+=`<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px;">
@@ -3706,7 +3710,7 @@ function renderRoundTracker(){
   }
   html+=`</div>`;
   html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">`;
-  for(let c=1;c<=NC;c++){
+  for(const c of COURT_VIEW_ORDER){ // p76
     const cs=status.courts[c];
     if(!cs||cs.skip){
       html+=`<div style="background:var(--s2);border:1px dashed var(--border);border-radius:8px;padding:8px;text-align:center;">
@@ -4180,12 +4184,12 @@ function renderLeaderboard(){
       </div></div>`;
   }).join('');
 }
-function computeEloRatings(){
+function computeEloRatings(sessList){
   // Start from the court each player first played on this season: 1500 on Court 1 down to 1000 on Court 6.
   // Players who have not played yet start from their current court. (Seeding from the peak court instead would hand
   // every climber a retroactive +100 on top of the rating they earned by winning.)
   const elo={};
-  const seasonSess=[...(S.sessions||[])].filter(Boolean);if(S.current)seasonSess.push(S.current);
+  const seasonSess=(sessList?[...sessList]:[...(S.sessions||[]),...(S.current?[S.current]:[])]).filter(Boolean); // p76
   const firstCourt={};
   seasonSess.forEach(sess=>{
     Object.keys(sess.scores||{}).map(k=>{const m=k.match(/^c(\d+)_y(\d+)_g/);return m?{k,c:+m[1],y:+m[2]}:null;}).filter(Boolean)
@@ -4197,8 +4201,7 @@ function computeEloRatings(){
   });
   const rating=id=>elo[id]??1000;
   // Every completed session, then the live one, round by round in order. Ratings are frozen within a round.
-  const allSess=[...(S.sessions||[])].filter(Boolean);
-  if(S.current)allSess.push(S.current);
+  const allSess=seasonSess; // p76
   allSess.forEach(sess=>{
     const cycles=new Set();
     Object.keys(sess.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)cycles.add(parseInt(m[1]));});
@@ -4219,11 +4222,19 @@ function computeEloRatings(){
   Object.keys(elo).forEach(id=>{elo[id]=Math.round(elo[id]);});
   return elo;
 }
+// p76: how much each player's Elo moved over the session being played, or the last one played (0 before any).
+function eloChangeThisSession(){
+  const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
+  if(!sess.length)return{};
+  const now=computeEloRatings(sess),before=computeEloRatings(sess.slice(0,-1));
+  const out={};Object.keys(now).forEach(id=>{out[id]=Math.round(now[id]-(before[id]??now[id]));});
+  return out;
+}
 function renderRankings(){
   const el=document.getElementById('sec-rank');if(!el)return;
   const lbPlayers=leaderboardPlayers();
   if(!lbPlayers.length){el.innerHTML='<div class="empty-state"><div class="ei">🎯</div><div class="em">No active players yet</div></div>';return;}
-  const elo=computeEloRatings();
+  const elo=computeEloRatings(),eloMoved=eloChangeThisSession(); // p76
   const getCourtPos2=(p)=>{if(S.current){for(let c=1;c<=NC;c++){if((S.current.assignments[c]||[]).includes(p.id))return c;}}return p.currentCourt;};
   const ranked=[...lbPlayers].map(p=>{
     const courtPos=getCourtPos2(p)||p.currentCourt;
@@ -4239,18 +4250,22 @@ function renderRankings(){
   ranked.forEach((p,i)=>{
     const ratingColor=p.rating>=1500?'var(--gold)':p.rating>=1300?'var(--green2)':p.rating>=1100?'var(--teal2)':'var(--muted)';
     const courtCls=p.courtPos===1?'var(--gold)':p.courtPos===2?'var(--silver)':p.courtPos===3?'var(--bronze)':'var(--teal2)';
-    const trend=p.rating>=1500-(p.courtPos-1)*100+50?'📈':p.rating<=1500-(p.courtPos-1)*100-50?'📉':'';
+    // p76: the arrow says what the Elo did this session and by how much, instead of guessing from the court.
+    const moved=eloMoved[p.id]||0;
+    const trend=moved>0?`<span style="color:var(--green2);font-weight:800;">▲ +${moved}</span>`
+      :moved<0?`<span style="color:var(--red2);font-weight:800;">▼ ${moved}</span>`:'';
     const absentTag=!p.isActive?'<span style="color:var(--muted);font-size:11px;margin-left:4px;">(absent)</span>':'';
     html+=`<div class="lbrow" style="cursor:pointer;${!p.isActive?'background:var(--s2);':''}" onclick="renderGameHistory(${p.id})">
       <div style="font-size:14px;font-weight:900;width:28px;text-align:center;flex-shrink:0;color:${i<3?'var(--gold)':'var(--muted)'};">${i+1}</div>
       ${avatar(p.name)}
       <div class="lbinfo">
-        <div class="lbname">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${absentTag}${trend?' <span style="font-size:12px;">'+trend+'</span>':''}</div>
+        <div class="lbname">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge">SPARE</span>':''}${absentTag}</div>
         <div class="lbsub">${p.isActive?'Court '+p.courtPos:'Absent'} · ${p.totalW}W ${p.totalL}L · ${p.wr}%</div>
       </div>
       <div style="text-align:center;">
         <div style="font-size:18px;font-weight:900;color:${ratingColor};">${p.rating}</div>
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">ELO</div>
+        ${trend?`<div style="font-size:11px;font-weight:800;white-space:nowrap;">${trend}</div>`:''}
       </div>
     </div>`;
   });
