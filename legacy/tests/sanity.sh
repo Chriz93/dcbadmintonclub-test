@@ -20,7 +20,9 @@ node --test legacy/automation/*.test.mjs > /tmp/sanity-automation.log 2>&1 || fa
 grep -E "^ℹ (pass|fail) |^# (pass|fail) " /tmp/sanity-automation.log
 
 cd platform || exit 1
-step "match night, ten-session season and season opener (desktop and phone size)"
+step "match night, ten-session season, season opener, and the two outage guards (desktop and phone size)"
+# request-timeout: a request the database never answers is given up on (the 15 September outage, p73).
+# score-focus: a redraw never steals the score being typed (p72).
 pnpm exec playwright test -c $C --project=desktop --project=mobile --reporter=line || fail=1
 
 step "focused checks for every defect fixed in this release"

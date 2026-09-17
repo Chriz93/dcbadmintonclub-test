@@ -57,4 +57,9 @@ select 'payment request uniqueness',case when exists(select 1 from pg_index wher
 union all
 select 'season configuration',case when exists(select 1 from public.app_state where key='season_config' and jsonb_array_length(value::jsonb->'approved_dates')=(select count(*) from public.season_dates)) then 'OK' else 'FAIL: missing calendar/configuration' end
 union all
+select 'every lock-taking function is bounded (L26)',case when count(*)=0 then 'OK' else 'FAIL: '||string_agg(proname,', ') end
+from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace
+where ns.nspname='public' and p.prosrc like '%pg_advisory_xact_lock(7262026)%'
+  and not (coalesce(array_to_string(p.proconfig,','),'') like '%lock_timeout%' and coalesce(array_to_string(p.proconfig,','),'') like '%statement_timeout%')
+union all
 select 'retired unsafe API signatures',case when to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null and to_regprocedure('public.start_new_season(text)') is null and to_regprocedure('public.record_payment(bigint,text,numeric,int,date,text)') is null then 'OK' else 'FAIL: old API still callable' end;

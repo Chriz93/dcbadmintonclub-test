@@ -15,6 +15,7 @@ on GitHub. That is too slow to wait for while building a feature, so there are t
 | Unit tests (all) | about 1,110 | Every rule (court engine, starting courts, spare seats, scoring, fees, times), the reference models, the production build and the coverage matrix. Under a minute. |
 | Automation tests (all) | 39 | Reminders and backups: who is emailed, and when. Seconds. |
 | Match night, ten-session season, season opener (desktop and phone size) | 24 | The end-to-end journeys: register, vote, start a night, score two rounds, rotate, end, undo, standings. |
+| The two outage guards: a request the database never answers (p73), and a redraw during score entry (p72) | 4 | The 15 September outage: a wedged save spun for ever and every phone lost its tabs. These fail if either guard is removed. |
 | Focused checks for the defects fixed in this release | about 340 | Call In, the vote lock, players set before the session, slow-connection saves, End Session, the keyboard after a redraw, court locks, sync races, sign-in, production isolation, seating, attendance counts, dialogs and accessibility. Each one fails if its defect comes back. |
 | The first three leagues of every generated suite (desktop and phone) | about 150 | Every tab and flow (Players, Registered, Attendance, Assign, Adjust, Scores, Standings, Vote, Pay, Tools, Q&A, History…) on three different leagues: small, full, and mid-season. |
 | Button census: every control on every page listed, in 20 states, desktop and phone | 40 | Fails if a new button appears without a test, or an old one disappears. |
