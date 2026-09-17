@@ -32,5 +32,6 @@ test.describe("a request that is never answered", () => {
       try { await sbG("players"); return "no error"; } catch (e: any) { return `${e.message} | timedOut=${e.timedOut === true}`; }
     });
     expect(read, "the read asks to try again").toBe("The league database did not answer in time — check the connection and try again. | timedOut=true");
+    state.holdRest = undefined;   // release it, so the page can load normally again
   });
 });
