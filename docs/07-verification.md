@@ -70,3 +70,18 @@ The TEST dashboard lists daily physical database backups; the latest observed wa
 ### Renewed administrator browser verification
 
 The user completed TOTP successfully. The real connected app displayed “Second factor verified,” then loaded club records, attendance/accounts (“Operations refreshed”), and club setup (“Settings loaded”) from TEST. These were read-only verification actions; no season, payment, agreement or announcement was changed.
+
+## Running the database suite on this Mac (17 September)
+
+The rehearsal server would not start under macOS without an explicit locale — `postmaster became multithreaded during
+startup`. With Homebrew's postgresql@17:
+
+```sh
+export LC_ALL=C LANG=C
+initdb -D <scratch>/pgdata -U rehearsal -A trust
+pg_ctl -D <scratch>/pgdata -o "-k $HOME/.maplewood/pgsock -p 55433 -c listen_addresses=''" -l <scratch>/pg.log -w start
+sh legacy/tests/db/run.sh          # about two minutes: schema, migrations, verification, 1,850 cases
+```
+
+Run it whenever a migration or a database rule changes. It is what catches a rule that the rehearsal schema does not
+satisfy — on 17 September it caught L26's new check before GitHub did on the second attempt.
