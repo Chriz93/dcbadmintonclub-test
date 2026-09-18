@@ -217,7 +217,8 @@ export function upcoming(L: League) {
 export function courts(L: League) {
   const assign: Record<string, number[]> = L.current ? L.current.assignments : upcoming(L).assign;
   const cy = L.current ? L.current.cycle : 0;
-  const prev = L.current?.movements.find((m) => m.cycle === cy - 1)?.mv || {};
+  // p76: the gym shows the moves that produced the courts on screen — the last round's once the night is finished.
+  const prev = L.current?.movements.find((m) => m.cycle === (L.current!.completed ? cy : cy - 1))?.mv || {};
   const known = (id: number) => L.players.find((p) => p.id === id);
   const out = Array.from({ length: NC }, (_, i) => {
     const c = i + 1, ps = (assign[c] || []).map(known).filter((p): p is Player => !!p);

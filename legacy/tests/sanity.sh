@@ -31,8 +31,8 @@ pnpm exec playwright test -c $C --project=tabs --reporter=line \
   tabs/audit-controls tabs/sync-race tabs/review-regressions tabs/controls tabs/dialog-keyboard tabs/signin \
   tabs/isolation tabs/seating tabs/attendance-count tabs/a11y tabs/organizer-seats tabs/completed-round-cards tabs/tonight-2026-09-16 tabs/courts-layout-and-elo || fail=1
 
-step "the first three leagues of every generated suite (desktop and phone)"
-pnpm exec playwright test -c $C --project=tabs --project=tabs-phone --grep " 00[1-3] ·" --reporter=line || fail=1
+step "the first five leagues of every generated suite (desktop and phone; 005 is a finished night)"
+pnpm exec playwright test -c $C --project=tabs --project=tabs-phone --grep " 00[1-5] ·" --reporter=line || fail=1
 
 step "the button census: every control on every page is listed (20 states), and every control of Round 1 is clicked"
 pnpm exec playwright test -c $C --project=tabs --project=tabs-phone tabs/buttons.spec tabs/phone/buttons.spec \

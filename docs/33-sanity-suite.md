@@ -17,7 +17,7 @@ on GitHub. That is too slow to wait for while building a feature, so there are t
 | Match night, ten-session season, season opener (desktop and phone size) | 24 | The end-to-end journeys: register, vote, start a night, score two rounds, rotate, end, undo, standings. |
 | The two outage guards: a request the database never answers (p73), and a redraw during score entry (p72) | 4 | The 15 September outage: a wedged save spun for ever and every phone lost its tabs. These fail if either guard is removed. |
 | Focused checks for the defects fixed in this release | about 340 | Call In, the vote lock, players set before the session, slow-connection saves, End Session, the keyboard after a redraw, court locks, sync races, sign-in, production isolation, seating, attendance counts, dialogs and accessibility. Each one fails if its defect comes back. |
-| The first three leagues of every generated suite (desktop and phone) | about 150 | Every tab and flow (Players, Registered, Attendance, Assign, Adjust, Scores, Standings, Vote, Pay, Tools, Q&A, History…) on three different leagues: small, full, and mid-season. |
+| The first five leagues of every generated suite (desktop and phone) | about 275 | Every tab and flow (Players, Registered, Attendance, Assign, Adjust, Scores, Standings, Vote, Pay, Tools, Q&A, History…) on three different leagues: small, full, and mid-season. |
 | Button census: every control on every page listed, in 20 states, desktop and phone | 40 | Fails if a new button appears without a test, or an old one disappears. |
 | Button census: every control of a Round 1 night clicked | about 90 | Every button, list and tag in a live night does something and never answers only "not available". |
 
@@ -51,3 +51,5 @@ on GitHub. That is too slow to wait for while building a feature, so there are t
 
 Together 1–3 would take the full suite from about 10,800 to about 7,500 browser tests and from 211 to about 145
 test-minutes: about 32 minutes on GitHub instead of 45. Each check that would be removed is covered elsewhere, as noted.
+
+On 17 September the generated Courts suite failed on GitHub while the sanity suite passed: the first three leagues of each suite are never a finished night, and the arrows a finished night shows were exactly what had changed (p76). The suite now runs five leagues of each, which includes one finished night.
