@@ -2096,8 +2096,16 @@ async function togglePlayerPresence(id){
   // Debounce the save — batch multiple clicks into one network request
   clearTimeout(_attSaveTimer);
   _attSaveTimer=setTimeout(async()=>{_attSaveTimer=null;
-    if(S.current){await setKV('current_session',S.current);}
-    else{await setKV('pre_session_attendance',S.preAttendance);}
+    const save=async()=>{if(S.current){await setKV('current_session',S.current);}else{await setKV('pre_session_attendance',S.preAttendance);}};
+    const mark=S.current?(S.current.attendance||{})[id]:(S.preAttendance||{})[id];
+    try{await save();}
+    catch(e){ // p81: behind the database? the reload has refreshed the state — put the mark back on it and save.
+      if(e&&(e.code==='40001'||/Stale state/.test(e.message||''))){
+        if(S.current){S.current.attendance={...(S.current.attendance||{})};if(mark===undefined)delete S.current.attendance[id];else S.current.attendance[id]=mark;}
+        else{S.preAttendance={...(S.preAttendance||{})};if(mark===undefined)delete S.preAttendance[id];else S.preAttendance[id]=mark;}
+        try{await save();}catch(e2){toast('Not marked: '+(e2.message||'try again'),'error');await loadAll();renderAdminPlayers();}
+      }else{toast('Not marked: '+(e.message||'try again'),'error');await loadAll();renderAdminPlayers();}
+    }
   },1000);
 }
 // p66: the court a player without a seat tonight is called in to: their earned court when it is in use tonight (or
@@ -6052,6 +6060,8 @@ function renderAttendanceTab(){
 // A toggle records attendance only; Adjust courts moves players. Late counts as present (a late player played).
 async function markAttForTab(id,status,court){
   const first=S.players.find(p=>p.id===id)?.name.split(' ')[0]||'Player';
+  // p81: applying the mark is its own step, so it can be applied again to the state a reload brings back.
+  const applyMark=()=>{
   if(S.current){
     const cur=S.current,cy=cur.cycle;
     if(!cur.attendance)cur.attendance={};
@@ -6070,9 +6080,20 @@ async function markAttForTab(id,status,court){
     if(!S.preAttendance)S.preAttendance={};
     S.preAttendance[id]=status;
   }
-  // Save immediately (no debounce — attendance is critical), then confirm
-  if(S.current)await setKV('current_session',S.current);
-  else await setKV('pre_session_attendance',S.preAttendance||{});
+  };
+  applyMark();
+  // Save immediately (no debounce — attendance is critical), then confirm.
+  const saveMark=async()=>{if(S.current)await setKV('current_session',S.current);else await setKV('pre_session_attendance',S.preAttendance||{});};
+  try{await saveMark();}
+  catch(e){
+    // p81: the page was behind — another device (or this one, earlier) had saved. setKV has already reloaded, so put
+    // the mark on the state that came back and save that. A mark must never disappear without saying so.
+    if(e&&(e.code==='40001'||/Stale state/.test(e.message||''))){
+      applyMark();
+      try{await saveMark();}
+      catch(e2){toast(`${first} not marked: `+(e2.message||'try again'),'error');await loadAll();renderAttendanceTab();renderAdminPlayers();renderCourts();return;}
+    }else{toast(`${first} not marked: `+(e.message||'try again'),'error');await loadAll();renderAttendanceTab();renderAdminPlayers();return;}
+  }
   const res=S.current?adjustPreview():null,tail=res&&adjCount(res)?' — press Adjust courts to update the courts':'';
   if(status==='absent'&&court&&!S.current)toast(first+' marked absent — off Court '+court+' tonight, one court down next week','warn');
   else if(status==='absent')toast(`${first} marked absent${tail}. One court down next week.`,'warn');

@@ -281,3 +281,5 @@ Production still needs its own migration bundle for L22–L24, a production back
 - **p79 — Player of the Session: a stable tie-break, and the courts actually played** (the organizer, 18 September: 
 
 - **p80 — a tied Player of the Session is decided by the night, not by the order** (the organizer: "break the tie by 
+
+- **p81 — an attendance mark is not lost when the page is behind** (the organizer, 18 September: "the attendance 
