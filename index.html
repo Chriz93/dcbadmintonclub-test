@@ -1691,15 +1691,47 @@ function renderPOS(elId){
     // Weighted score combines win count, court difficulty, and win rate
     weighted[id]=w*bonus+winRate*0.5;
   });
-  const best=Object.entries(weighted).sort((a,b)=>b[1]-a[1])[0];
+  // p79/p80: level on the weighted score? the better win rate takes it, then the higher court; and if they are level
+  // on all three, the night decides — head to head first, then the points they scored, then the lower id.
+  const rate=id=>(playerWins[id]||0)/(playerGames[id]||1);
+  const tieKey=id=>`${weighted[id].toFixed(6)}|${rate(id).toFixed(6)}|${playerCourt[id]||NC}`;
+  const ordered=Object.keys(weighted).map(Number)
+    .sort((a,b)=>weighted[b]-weighted[a]||rate(b)-rate(a)||(playerCourt[a]||NC)-(playerCourt[b]||NC)||a-b);
+  const topKey=ordered.length?tieKey(ordered[0]):'';
+  const tied=ordered.filter(id=>tieKey(id)===topKey);
+  let bestId=ordered[0];
+  if(tied.length>1){
+    const group=new Set(tied);
+    // Head to head: games the tied players played against each other, and the points each scored all night.
+    const h2h={},points={};
+    tied.forEach(id=>{h2h[id]=0;points[id]=0;});
+    Object.values(sess.scores||{}).forEach(sc=>{
+      const A=[sc.a1,sc.a2].filter(x=>x!=null),B=[sc.b1,sc.b2].filter(x=>x!=null);
+      A.forEach(id=>{if(group.has(id))points[id]+=sc.sA;});
+      B.forEach(id=>{if(group.has(id))points[id]+=sc.sB;});
+      const ga=A.filter(id=>group.has(id)),gb=B.filter(id=>group.has(id));
+      if(!ga.length||!gb.length)return;                       // only when tied players faced each other
+      (sc.w==='A'?ga:gb).forEach(id=>{h2h[id]++;});
+      (sc.w==='A'?gb:ga).forEach(id=>{h2h[id]--;});
+    });
+    bestId=[...tied].sort((a,b)=>h2h[b]-h2h[a]||points[b]-points[a]||a-b)[0];
+  }
+  const best=[String(bestId),weighted[bestId]];
   if(!best)return el.innerHTML='';
   const pid=parseInt(best[0]);
   const p=S.players.find(x=>x.id===pid);
   if(!p)return el.innerHTML='';
   const wins=playerWins[pid]||0;
   const games=playerGames[pid]||0;
+  // p79: the courts they actually played that night, in round order — "Courts 5 → 4" when they moved.
+  const played=[];
+  for(let cy=1;cy<=MAX_ROUNDS_PER_SESSION;cy++)for(let c=1;c<=NC;c++){
+    const on=Object.entries(sess.scores||{}).some(([k,sc])=>k.startsWith(`c${c}_y${cy}_`)&&[sc.a1,sc.a2,sc.b1,sc.b2].includes(pid));
+    if(on&&played[played.length-1]!==c)played.push(c);
+  }
   const court=playerCourt[pid]||'?';
-  el.innerHTML=`<div class="pos-banner"><div class="pos-crown">👑</div><div class="pos-title">Player of Session ${sess.number}</div><div class="pos-name">${esc(p.name)}</div><div class="pos-stat">${wins}W ${games-wins}L on Court ${court} · Session ${sess.number} — ${sess.date}</div></div>`;
+  const courtLine=played.length>1?`Courts ${played.join(' → ')}`:`Court ${played[0]||court}`;
+  el.innerHTML=`<div class="pos-banner"><div class="pos-crown">👑</div><div class="pos-title">Player of Session ${sess.number}</div><div class="pos-name">${esc(p.name)}</div><div class="pos-stat">${wins}W ${games-wins}L on ${courtLine} · Session ${sess.number} — ${sess.date}</div></div>`;
 }
 
 // ══════════════════════════════════════════════

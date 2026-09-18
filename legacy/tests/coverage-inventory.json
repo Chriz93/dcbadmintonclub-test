@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-18T03:28:36.644Z",
+ "generated": "2026-09-18T12:35:01.863Z",
  "summary": [
   {
    "k": "Control handler",
@@ -128,6 +128,7 @@
     "e2e/tabs/organizer-vote.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/player-of-session.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
@@ -587,6 +588,7 @@
     "e2e/tabs/oracle.ts",
     "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/player-of-session.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/pool.ts",
     "e2e/tabs/registered.spec.ts",
@@ -1070,6 +1072,7 @@
     "e2e/tabs/pay.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/player-of-session.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/qa.spec.ts",
     "e2e/tabs/register.suite.ts",
@@ -1774,6 +1777,7 @@
     "e2e/tabs/phone/scores.spec.ts",
     "e2e/tabs/phone/vote.spec.ts",
     "e2e/tabs/phone/waiver-phone.spec.ts",
+    "e2e/tabs/player-of-session.spec.ts",
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/pool.ts",
     "e2e/tabs/qa.spec.ts",

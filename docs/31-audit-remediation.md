@@ -277,3 +277,7 @@ Production still needs its own migration bundle for L22–L24, a production back
 - **p76 — the Courts tab's arrows, one court order, no wall labels, and a real Elo change** (the organizer on the live 
 
 - **p77 — a player on a court tonight is never shown as absent** (the organizer, 18 September: "Sam MacDonald SPARE 
+
+- **p79 — Player of the Session: a stable tie-break, and the courts actually played** (the organizer, 18 September: 
+
+- **p80 — a tied Player of the Session is decided by the night, not by the order** (the organizer: "break the tie by 

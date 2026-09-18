@@ -174,10 +174,39 @@ export function pos(L: League) {
   for (let c = 1; c <= NC; c++) for (const id of ia[c] || []) if (!court[id]) court[id] = c;
   for (const sc of Object.values(s.scores)) for (const id of [sc.a1, sc.a2, sc.b1, sc.b2]) if (id != null) games[id] = (games[id] || 0) + 1;
   const scored = Object.entries(wins).map(([id, w]) => { const c = court[id] || NC, bonus = c <= 3 ? 1 + (4 - c) * 0.17 : 1, gm = games[id] || 1; return { id: +id, w, v: w * bonus + (gm > 0 ? w / gm : 0) * 0.5 }; });
-  const best = [...scored].sort((a, b) => b.v - a.v)[0]; if (!best) return null;
+  // p79/p80: level scores fall to the better win rate, then the higher court; if all three are level the night decides
+  // — head to head among the tied players, then the points they scored, then the lower id.
+  const rate = (id: number) => (wins[id] || 0) / (games[id] || 1);
+  const ordered = [...scored].sort((a, b) => b.v - a.v || rate(b.id) - rate(a.id) || (court[a.id] || NC) - (court[b.id] || NC) || a.id - b.id);
+  if (!ordered.length) return null;
+  const key = (x: { id: number; v: number }) => `${x.v.toFixed(6)}|${rate(x.id).toFixed(6)}|${court[x.id] || NC}`;
+  const tied = ordered.filter((x) => key(x) === key(ordered[0])).map((x) => x.id);
+  let bestId = ordered[0].id;
+  if (tied.length > 1) {
+    const group = new Set(tied), h2h: Record<number, number> = {}, points: Record<number, number> = {};
+    for (const id of tied) { h2h[id] = 0; points[id] = 0; }
+    for (const sc of Object.values(s.scores)) {
+      const A = [sc.a1, sc.a2].filter((x): x is number => x != null), B = [sc.b1, sc.b2].filter((x): x is number => x != null);
+      for (const id of A) if (group.has(id)) points[id] += sc.sA;
+      for (const id of B) if (group.has(id)) points[id] += sc.sB;
+      const ga = A.filter((id) => group.has(id)), gb = B.filter((id) => group.has(id));
+      if (!ga.length || !gb.length) continue;
+      for (const id of sc.w === "A" ? ga : gb) h2h[id]++;
+      for (const id of sc.w === "A" ? gb : ga) h2h[id]--;
+    }
+    bestId = [...tied].sort((a, b) => h2h[b] - h2h[a] || points[b] - points[a] || a - b)[0];
+  }
+  const best = ordered.find((x) => x.id === bestId)!;
   const p = L.players.find((x) => x.id === best.id); if (!p) return null;
   const g = games[best.id] || 0;
-  return { number: s.number, name: p.name, stat: `${best.w}W ${g - best.w}L on Court ${court[best.id] || "?"} · Session ${s.number} — ${s.date}` };
+  // p79: every court they played that night, in round order — "Courts 5 → 4" when they moved.
+  const played: number[] = [];
+  for (let cy = 1; cy <= 2; cy++) for (let c = 1; c <= NC; c++) {
+    const on = Object.entries(s.scores).some(([k, sc]) => k.startsWith(`c${c}_y${cy}_`) && [sc.a1, sc.a2, sc.b1, sc.b2].includes(best.id));
+    if (on && played[played.length - 1] !== c) played.push(c);
+  }
+  const courtLine = played.length > 1 ? `Courts ${played.join(" → ")}` : `Court ${played[0] ?? court[best.id] ?? "?"}`;
+  return { number: s.number, name: p.name, stat: `${best.w}W ${g - best.w}L on ${courtLine} · Session ${s.number} — ${s.date}` };
 }
 
 /** Next session's seating from the votes, as the rules describe it. */
