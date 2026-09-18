@@ -16,12 +16,15 @@ def sub(old, new, count=1):
     assert n == count, (n, old[:110])
     s = s.replace(old, new)
 
+sub("""      if(cur.latePlayers.some(l=>l.playerId===id&&(l.pending||l.round===cy)))return toast(`${first} is already marked late this round`,'info');""",
+    """      if(cur.latePlayers.some(l=>l.playerId===id&&(l.pending||l.round===cy))){toast(`${first} is already marked late this round`,'info');return false;} // p81: the guard still stops the action""")
 sub("""async function markAttForTab(id,status,court){
   const first=S.players.find(p=>p.id===id)?.name.split(' ')[0]||'Player';
   if(S.current){""",
     """async function markAttForTab(id,status,court){
   const first=S.players.find(p=>p.id===id)?.name.split(' ')[0]||'Player';
-  // p81: applying the mark is its own step, so it can be applied again to the state a reload brings back.
+  // p81: applying the mark is its own step, so it can be applied again to the state a reload brings back. It returns
+  // false when a guard inside it refuses the mark (marking someone late twice in a round), and the caller stops there.
   const applyMark=()=>{
   if(S.current){""")
 sub("""  }else{
@@ -37,8 +40,9 @@ sub("""  }else{
     if(!S.preAttendance)S.preAttendance={};
     S.preAttendance[id]=status;
   }
+  return true;
   };
-  applyMark();
+  if(!applyMark())return;
   // Save immediately (no debounce — attendance is critical), then confirm.
   const saveMark=async()=>{if(S.current)await setKV('current_session',S.current);else await setKV('pre_session_attendance',S.preAttendance||{});};
   try{await saveMark();}

@@ -53,3 +53,5 @@ Together 1–3 would take the full suite from about 10,800 to about 7,500 browse
 test-minutes: about 32 minutes on GitHub instead of 45. Each check that would be removed is covered elsewhere, as noted.
 
 On 17 September the generated Courts suite failed on GitHub while the sanity suite passed: the first three leagues of each suite are never a finished night, and the arrows a finished night shows were exactly what had changed (p76). The suite now runs five leagues of each, which includes one finished night.
+
+On 18 September GitHub caught a regression the sanity suite had missed: p81's first version moved a guard inside a helper, so marking a player late twice stopped being refused. The case lives at adjust-edge 043 — beyond the five leagues sanity samples — so adjust-edge now runs in full among the focused checks.

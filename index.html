@@ -6060,14 +6060,15 @@ function renderAttendanceTab(){
 // A toggle records attendance only; Adjust courts moves players. Late counts as present (a late player played).
 async function markAttForTab(id,status,court){
   const first=S.players.find(p=>p.id===id)?.name.split(' ')[0]||'Player';
-  // p81: applying the mark is its own step, so it can be applied again to the state a reload brings back.
+  // p81: applying the mark is its own step, so it can be applied again to the state a reload brings back. It returns
+  // false when a guard inside it refuses the mark (marking someone late twice in a round), and the caller stops there.
   const applyMark=()=>{
   if(S.current){
     const cur=S.current,cy=cur.cycle;
     if(!cur.attendance)cur.attendance={};
     if(!cur.latePlayers)cur.latePlayers=[];
     if(status==='late'){
-      if(cur.latePlayers.some(l=>l.playerId===id&&(l.pending||l.round===cy)))return toast(`${first} is already marked late this round`,'info');
+      if(cur.latePlayers.some(l=>l.playerId===id&&(l.pending||l.round===cy))){toast(`${first} is already marked late this round`,'info');return false;} // p81: the guard still stops the action
       cur.attendance[id]='present';
       cur.latePlayers.push({playerId:id,originalCourt:courtOfPlayer(id)||court||0,round:cy,pending:true});
     }else{
@@ -6080,8 +6081,9 @@ async function markAttForTab(id,status,court){
     if(!S.preAttendance)S.preAttendance={};
     S.preAttendance[id]=status;
   }
+  return true;
   };
-  applyMark();
+  if(!applyMark())return;
   // Save immediately (no debounce — attendance is critical), then confirm.
   const saveMark=async()=>{if(S.current)await setKV('current_session',S.current);else await setKV('pre_session_attendance',S.preAttendance||{});};
   try{await saveMark();}
