@@ -113,7 +113,9 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     expect(lb.reduce((n, x) => n + x.w, 0)).toBe(80); expect(lb.reduce((n, x) => n + x.l, 0)).toBe(80);
     // Rankings: Elo values match the independent reference, sorted high to low, first-round winners above first-round losers.
     await page.click("#page-standings .ptab:has-text('Rankings')");
-    await expect(page.locator("#sec-rank")).toContainText("Elo rating");
+    // p78: the tab explains the rating in the organizer's own terms, so check what it must always tell a player.
+    await expect(page.locator("#sec-rank")).toContainText("Everyone starts from the court they first played on this season");
+    await expect(page.locator("#sec-rank")).toContainText("Your rating moves once a round, not once a game");
     const appElo = await page.evaluate(() => computeEloRatings() as Record<number, number>);
     const refElo = eloReference(state.players, done);
     expect(appElo).toEqual(refElo);

@@ -275,3 +275,5 @@ Production still needs its own migration bundle for L22–L24, a production back
 - **p75 — the crown is the top court's, the solid marker the bottom court's, and every result shows points with wins** 
 
 - **p76 — the Courts tab's arrows, one court order, no wall labels, and a real Elo change** (the organizer on the live 
+
+- **p77 — a player on a court tonight is never shown as absent** (the organizer, 18 September: "Sam MacDonald SPARE 
