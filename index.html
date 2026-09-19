@@ -1560,7 +1560,19 @@ function renderHome(){
   const now=new Date();
   const ni=upcomingSessionNumber()-1;
   const card=document.getElementById('home-tonight'),member=myPlayer(),court=member&&S.current?courtOfPlayer(member.id):0;
-  if(card)card.innerHTML=member?.approved&&court?`<div class="card"><div class="card-title">Your court tonight: ${court} · Round ${S.current.cycle}</div><div style="font-size:12px;margin-bottom:8px;">Earned ladder court: ${member.currentCourt||'Unassigned'}. Enter results for the players listed on tonight’s court.</div><button class="btn btn-primary" onclick="document.getElementById('sc-sel').value='${court}';nav('scores')">Enter Court ${court} scores</button></div>`:'';
+  // p82: say what is true — the night may be finished, or this court's games may already be in.
+  if(card){
+    if(!(member?.approved&&court))card.innerHTML='';
+    else{
+      const done=S.current.completed,scored=!done&&isCourtDone(court);
+      const title=done?`Session ${S.current.number} complete · Court ${court}`:`Your court tonight: ${court} · Round ${S.current.cycle}`;
+      const line=done?`All ${MAX_ROUNDS_PER_SESSION} rounds are played. The organizer ends the session to save the standings and next week's courts.`
+        :scored?`Court ${court}'s Round ${S.current.cycle} games are in. Waiting for the other courts.`
+        :`Earned ladder court: ${member.currentCourt||'Unassigned'}. Enter results for the players listed on tonight’s court.`;
+      const btn=done?'':`<button class="btn ${scored?'btn-ghost':'btn-primary'}" onclick="document.getElementById('sc-sel').value='${court}';nav('scores')">${scored?`Review Court ${court} scores`:`Enter Court ${court} scores`}</button>`;
+      card.innerHTML=`<div class="card"><div class="card-title">${title}</div><div style="font-size:12px;margin-bottom:8px;">${line}</div>${btn}</div>`;
+    }
+  }
   const nd=document.getElementById('next-date');
   if(nd)nd.textContent=seasonComplete()?'Season Complete! 🎉':`Session ${ni+1} — ${DATES[ni]}${S.current?(sessionHasStarted()?' · in progress':' · courts prepared'):''}`;
   

@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-18T17:16:56.492Z",
+ "generated": "2026-09-19T03:23:27.099Z",
  "summary": [
   {
    "k": "Control handler",
@@ -122,6 +122,7 @@
     "e2e/tabs/checks.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/home-court-card.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/isolation.spec.ts",
@@ -578,6 +579,7 @@
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/gen.ts",
+    "e2e/tabs/home-court-card.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/isolation.spec.ts",
@@ -1062,6 +1064,7 @@
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/history.spec.ts",
+    "e2e/tabs/home-court-card.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/keyboard-redraw.spec.ts",
@@ -1748,6 +1751,7 @@
     "e2e/tabs/gen.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/history.spec.ts",
+    "e2e/tabs/home-court-card.spec.ts",
     "e2e/tabs/home.spec.ts",
     "e2e/tabs/home.suite.ts",
     "e2e/tabs/interop-1.spec.ts",

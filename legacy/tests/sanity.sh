@@ -29,7 +29,7 @@ step "focused checks for every defect fixed in this release"
 pnpm exec playwright test -c $C --project=tabs --reporter=line \
   tabs/call-in tabs/organizer-vote tabs/complete-locks tabs/slow-network tabs/slow-end-session tabs/keyboard-redraw \
   tabs/audit-controls tabs/sync-race tabs/review-regressions tabs/controls tabs/dialog-keyboard tabs/signin \
-  tabs/isolation tabs/seating tabs/attendance-count tabs/a11y tabs/organizer-seats tabs/completed-round-cards tabs/tonight-2026-09-16 tabs/courts-layout-and-elo tabs/called-in-spare tabs/player-of-session tabs/attendance-stale tabs/adjust-edge || fail=1
+  tabs/isolation tabs/seating tabs/attendance-count tabs/a11y tabs/organizer-seats tabs/completed-round-cards tabs/tonight-2026-09-16 tabs/courts-layout-and-elo tabs/called-in-spare tabs/player-of-session tabs/attendance-stale tabs/adjust-edge tabs/home-court-card || fail=1
 
 step "the first five leagues of every generated suite (desktop and phone; 005 is a finished night)"
 pnpm exec playwright test -c $C --project=tabs --project=tabs-phone --grep " 00[1-5] ·" --reporter=line || fail=1
