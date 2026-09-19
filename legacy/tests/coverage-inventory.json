@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-19T03:23:27.099Z",
+ "generated": "2026-09-19T11:05:43.792Z",
  "summary": [
   {
    "k": "Control handler",
@@ -599,6 +599,7 @@
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/round-summary.spec.ts",
     "e2e/tabs/scores.suite.ts",
     "e2e/tabs/seating.spec.ts",
     "e2e/tabs/sequences.spec.ts",
@@ -1487,7 +1488,8 @@
    "kind": "Control handler",
    "item": "shareMessenger",
    "tests": [
-    "e2e/tabs/controls.spec.ts"
+    "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/round-summary.spec.ts"
    ]
   },
   {
@@ -1798,6 +1800,7 @@
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/rotation-gaps.spec.ts",
     "e2e/tabs/round-complete.spec.ts",
+    "e2e/tabs/round-summary.spec.ts",
     "e2e/tabs/schedule.spec.ts",
     "e2e/tabs/scores.spec.ts",
     "e2e/tabs/scores.suite.ts",

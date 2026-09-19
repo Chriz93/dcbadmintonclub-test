@@ -5124,39 +5124,32 @@ function avatar(name,size=''){
 // ══════════════════════════════════════════════
 function buildRoundSummary(){
   if(!S.current)return'No active session';
-  const cy=S.current.cycle;const status=computeRoundStatus();
-  let text=`🏸 DC Badminton Club\nSession ${S.current.number} — ${S.current.date}\n${S.current.movements.length+1} Rounds Played\n\n`;
-  // Current court assignments with standings
-  text+=`📊 FINAL COURT STANDINGS:\n`;
+  const cy=S.current.cycle,mv=S.current.movements||[];
+  // p83: the rounds actually played, and the wins of those rounds — never the season total plus a round again.
+  const rotated=mv.some(m=>m.cycle===cy);
+  const status=computeRoundStatus();
+  const nightWins={},nightGames={};
+  mv.forEach(m=>{Object.entries(m.wins||{}).forEach(([id,w])=>{nightWins[id]=(nightWins[id]||0)+w;});});
+  if(!rotated)Object.entries(status.wins||{}).forEach(([id,w])=>{if(w)nightWins[id]=(nightWins[id]||0)+w;});
+  Object.entries(S.current.scores||{}).forEach(([k,sc])=>{[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)nightGames[id]=(nightGames[id]||0)+1;});});
+  const played=rotated?mv.length:mv.length+(status.totalScored>0?1:0);
+  const rec=id=>`${nightWins[id]||0}W ${(nightGames[id]||0)-(nightWins[id]||0)}L`;
+  let text=`🏸 DC Badminton Club\nSession ${S.current.number} — ${S.current.date}\n${played} ${played===1?'round':'rounds'} played${S.current.completed?' · session complete':rotated?'':` · round ${cy} under way`}\n\n`;
+  // The courts as they were played in the last round — after the final rotation the session's courts are next week's.
+  text+=`📊 COURTS AS PLAYED (Round ${cy}):\n`;
   for(let c=1;c<=NC;c++){
-    const pids=(S.current.assignments[c]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+    const pids=roundCourtPlayers(c,cy).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
     if(!pids.length)continue;
     const medal=c===1?'🥇':c===2?'🥈':c===3?'🥉':'';
     text+=`\n${medal}Court ${c}:\n`;
-    // Sort by session performance
-    const sorted=[...pids].sort((a,b)=>{
-      const wa=a.seasonWins+(status.wins[a.id]||0),wb=b.seasonWins+(status.wins[b.id]||0);
-      return wb-wa;
-    });
-    sorted.forEach((p,i)=>{
-      const w=p.seasonWins+(status.wins[p.id]||0);
-      const l=p.seasonLosses+((status.wins[p.id]!==undefined?1:0)-(status.wins[p.id]||0));
-      text+=`  ${i+1}. ${p.name} — ${w}W\n`;
-    });
+    [...pids].sort((a,b)=>(nightWins[b.id]||0)-(nightWins[a.id]||0)||a.name.localeCompare(b.name))
+      .forEach((p,i)=>{text+=`  ${i+1}. ${p.name} — ${rec(p.id)}\n`;});
   }
-  // Overall rankings
-  text+=`\n🏆 SEASON RANKINGS:\n`;
-  const activePlayers=S.players.filter(p=>p.currentCourt>0);
-  const ranked=[...activePlayers].sort((a,b)=>{
-    if(a.currentCourt!==b.currentCourt)return a.currentCourt-b.currentCourt;
-    const wa=a.seasonWins+(status.wins[a.id]||0),wb=b.seasonWins+(status.wins[b.id]||0);
-    return wb-wa;
-  });
-  ranked.forEach((p,i)=>{
-    const w=p.seasonWins+(status.wins[p.id]||0);
-    text+=`${i+1}. ${p.name} (C${p.currentCourt}) — ${w}W\n`;
-  });
-  // Next week preview
+  // The season so far, by record — not by the court they will play next week.
+  text+=`\n🏆 SEASON SO FAR:\n`;
+  [...S.players].filter(p=>p.currentCourt>0||p.gamesPlayed>0)
+    .sort((a,b)=>b.seasonWins-a.seasonWins||a.seasonLosses-b.seasonLosses||a.name.localeCompare(b.name))
+    .forEach((p,i)=>{text+=`${i+1}. ${p.name} — ${p.seasonWins}W ${p.seasonLosses}L${p.currentCourt?` (next: C${p.currentCourt})`:''}\n`;});
   text+=`\n📋 NEXT WEEK COURTS:\n`;
   for(let c=1;c<=NC;c++){
     const pids=(S.current.assignments[c]||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
@@ -5343,6 +5336,9 @@ function shareMessenger(){
   if(navigator.share){
     navigator.share({title:'DC Badminton Club',text}).catch(()=>{});
   }else{
+    // p83: the Messenger dialog carries a link and nothing else, so put the summary on the clipboard and say so —
+    // otherwise the dialog opens with the night's results silently dropped.
+    try{navigator.clipboard?.writeText(text).then(()=>toast('Summary copied — paste it into the Messenger chat','success')).catch(()=>{});}catch(e){}
     window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub/')}&redirect_uri=${encodeURIComponent('https://chriz93.github.io/dcbadmintonclub/')}&app_id=0`,'_blank');
   }
 }

@@ -285,3 +285,5 @@ Production still needs its own migration bundle for L22–L24, a production back
 - **p81 — an attendance mark is not lost when the page is behind** (the organizer, 18 September: "the attendance 
 
 - **p82 — Home stops asking for scores that are already in** (the organizer, 18 September: "already entered court 2 
+
+- **p83 — the shared summary reports the night that was played** (the organizer, 19 September, pasting Copy Summary's 
