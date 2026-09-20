@@ -4236,7 +4236,7 @@ function renderLeaderboard(){
       </div></div>`;
   }).join('');
 }
-function computeEloRatings(sessList){
+function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the rounds played, never the seeding
   // Start from the court each player first played on this season: 1500 on Court 1 down to 1000 on Court 6.
   // Players who have not played yet start from their current court. (Seeding from the peak court instead would hand
   // every climber a retroactive +100 on top of the rating they earned by winning.)
@@ -4251,9 +4251,14 @@ function computeEloRatings(sessList){
     const startCourt=firstCourt[p.id]||(p.currentCourt>0&&p.currentCourt<=NC?p.currentCourt:NC);
     elo[p.id]=1500-((startCourt-1)*100);
   });
+  // p84: the scores are the last word on who played. A spare called in tonight has no ladder court yet; seed them
+  // from the court they were called onto, so their arrow measures their night like everyone else's.
+  Object.keys(firstCourt).forEach(id=>{if(elo[id]===undefined)elo[id]=1500-((firstCourt[id]-1)*100);});
   const rating=id=>elo[id]??1000;
   // Every completed session, then the live one, round by round in order. Ratings are frozen within a round.
-  const allSess=seasonSess; // p76
+  // p84: applyCount plays out only the first N sessions. The seeding above still reads the whole season, so a rating
+  // taken "before the last session" stands on the same starting line as the rating taken after it.
+  const allSess=applyCount===undefined?seasonSess:seasonSess.slice(0,Math.max(0,applyCount)); // p76, p84
   allSess.forEach(sess=>{
     const cycles=new Set();
     Object.keys(sess.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)cycles.add(parseInt(m[1]));});
@@ -4278,7 +4283,7 @@ function computeEloRatings(sessList){
 function eloChangeThisSession(){
   const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
   if(!sess.length)return{};
-  const now=computeEloRatings(sess),before=computeEloRatings(sess.slice(0,-1));
+  const now=computeEloRatings(sess),before=computeEloRatings(sess,sess.length-1); // p84: one baseline, one night
   const out={};Object.keys(now).forEach(id=>{out[id]=Math.round(now[id]-(before[id]??now[id]));});
   return out;
 }

@@ -73,16 +73,20 @@ export function firstCourts(sessions: Sess[]): Record<number, number> {
   return first;
 }
 // Independent Elo reference (team-average expectation, K = 32, mean change per round, ratings frozen within a round).
-export function eloReference(players: MockState["players"], sessions: Sess[]): Record<number, number> {
+// p84: `applyUpTo` limits how many sessions are PLAYED OUT; the seeding always reads the whole list, so a rating
+// measured before the last session stands on the same starting line as the rating measured after it.
+export function eloReference(players: MockState["players"], sessions: Sess[], applyUpTo?: number): Record<number, number> {
   const elo: Record<number, number> = {};
   const first = firstCourts(sessions);
   for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
     const seed = first[p.id] ?? (p.current_court > 0 && p.current_court <= 6 ? p.current_court : 6);
     elo[p.id] = 1500 - (seed - 1) * 100;
   }
+  // p84: seed everyone the season's scores name, including a spare called in before End Session writes their court.
+  for (const [id, c] of Object.entries(first)) if (elo[+id] === undefined) elo[+id] = 1500 - (c - 1) * 100;
   const r = (id: number) => elo[id] ?? 1000;
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-  for (const sess of sessions) {
+  for (const sess of (applyUpTo === undefined ? sessions : sessions.slice(0, Math.max(0, applyUpTo)))) {
     const cycles = [...new Set(Object.keys(sess.scores).map((k) => parseInt(k.match(/_y(\d+)_/)![1])))].sort((a, b) => a - b);
     for (const cy of cycles) {
       const sum: Record<number, number> = {}, cnt: Record<number, number> = {};

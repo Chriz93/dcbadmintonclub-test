@@ -62,7 +62,7 @@ export function rankings(L: League) {
   const elo = eloReference(L.players as never, allSessions(L) as never);
   // p76: what the Elo did over the session being played (or the last one played) — the arrow the rankings show.
   const all = allSessions(L) as never[];
-  const before = eloReference(L.players as never, all.slice(0, -1) as never);
+  const before = eloReference(L.players as never, all as never, all.length - 1); // p84: one seeding, one session fewer played
   const rows = lbPlayers(L).map((p) => {
     const cp = seatOf(L, p) || p.current_court, W = p.season_wins, Lo = p.season_losses, GP = p.games_played, rating = elo[p.id] || 1000, active = p.current_court > 0;
     return { id: p.id, name: p.name, rating, spare: p.membership_type === "spare", absent: !active, sub: `${active ? "Court " + cp : "Absent"} · ${W}W ${Lo}L · ${GP > 0 ? Math.round((W / GP) * 100) : 0}%`,
