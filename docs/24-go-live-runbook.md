@@ -45,8 +45,23 @@ daily backups (Database → Backups, restorable from there), and this copy stays
    the command history):
 
    ```bash
-   cd /Users/christygeorge/dcbadmintonclub-test && python3 legacy/scripts/build-production.py --out ../dcbadmintonclub
+   cd /Users/christygeorge/dcbadmintonclub-test && python3 legacy/scripts/build-production.py --out ../dcbadmintonclub --expect $(git rev-parse HEAD)
    ```
+
+   **Always pass `--expect <the commit the full suite approved>`.** The build takes the working tree's committed
+   `index.html`, not the commit a release pinned, so if the branch moves while the release waits for its GitHub run,
+   the build publishes code no suite has seen. That happened on 20 September 2026: a release pinned to `860503f`
+   (p84) was waiting in the CI queue when p85–p87 were committed, and the build picked them up — production ran
+   three unvetted patches until it was rolled back to the approved build (cache `dcbc-v54`). With `--expect`, a
+   moved HEAD stops the release instead. To publish an approved commit after the branch has moved on, build from a
+   worktree at that commit: `git worktree add <dir> <sha>`.
+
+   A rollback needs a **new** cache name (`--cache dcbc-vNN+1`), or browsers holding the cache being rolled back
+   keep serving the page being withdrawn.
+
+   When checking that the live page matches the build, compare files, not shell captures:
+   `curl -s <url> -o /tmp/live.html && diff -q /tmp/live.html index.html`. Command substitution strips the trailing
+   newline, so `$(curl …) | shasum` never matches the file's hash and reports a difference that is not there.
 
 2. Production SQL editor: paste the whole of `legacy/migrations/PROD_2026-27.sql` and run it. It never deletes
    players or results. It removes anonymous access, which is what stops the old site.

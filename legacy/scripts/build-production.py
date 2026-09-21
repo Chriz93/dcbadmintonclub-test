@@ -9,12 +9,21 @@ import argparse, getpass, hashlib, pathlib, re, subprocess, sys
 PROD_URL = "https://bwepvxelvwgwxrnaglrx.supabase.co"
 ap = argparse.ArgumentParser(); ap.add_argument("--key"); ap.add_argument("--out", required=True); ap.add_argument("--cache", default="dcbc-v40")
 ap.add_argument("--reuse-key", action="store_true", help="take the publishable key from the production site already in --out")
+ap.add_argument("--expect", help="the commit the full suite approved; the build is refused if HEAD has moved off it")
 a = ap.parse_args()
 # Production gets exactly the tested artifact: only a committed index.html/sw.js/manifest.json is ever built.
 _root = pathlib.Path(__file__).resolve().parents[2]
 _dirty = subprocess.run(["git", "-C", str(_root), "status", "--porcelain", "--", "index.html", "sw.js", "manifest.json"], capture_output=True, text=True).stdout.strip()
 if _dirty: sys.exit("Not built: index.html, sw.js or manifest.json has uncommitted changes. Build only from the committed, tested version.")
 _commit = subprocess.run(["git", "-C", str(_root), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+# A release pins the commit the full GitHub suite ran on, then waits for that run. If the branch moves while it waits,
+# the working tree is no longer what was approved — and a build from it publishes code no suite has seen. That happened
+# on 20 September 2026 (p85-p87 reached production on p84's gate), so the commit must now be named and must match.
+if a.expect:
+    _full = subprocess.run(["git", "-C", str(_root), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    if not (_full == a.expect or _full.startswith(a.expect) or a.expect.startswith(_commit)):
+        sys.exit(f"Not built: the release approved {a.expect}, but HEAD is {_commit}. The branch moved while the release was waiting; "
+                 f"build from the approved commit (git worktree add <dir> {a.expect}) or re-gate the newer commit. Nothing was changed.")
 # Without --key the script asks for it (hidden), the same in zsh and bash, and keeps it out of the shell history.
 # --reuse-key takes it from the production build already published (the publishable key is public by design).
 if a.key is None and a.reuse_key:
