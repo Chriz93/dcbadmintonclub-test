@@ -116,8 +116,14 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
   await signIn(page, ORGANIZER); await unlockOrganizer(page);
   await page.click("#bnav-home");
   // The card shows the latest 20 changes; the last three voters are the spares after the regulars.
-  await expect(page.locator("#vote-changes")).toContainText("Tomás Silva: — → not coming · S1");
-  await expect(page.locator("#vote-changes")).toContainText("Ryan Gill: — → not coming · S1");
+  // p88: grouped by the answer given; both of these said no, having said nothing before.
+  for (const who of ["Tomás Silva", "Ryan Gill"]) {
+    const row = page.locator(`#vote-changes tr.vc-row:has(td:text-is("${who}"))`);
+    await expect(row.locator("td").nth(1), `${who} had not answered before`).toHaveText("no answer");
+    await expect(row.locator("td").nth(2)).toHaveText("S1");
+    const group = await row.evaluate((tr) => { let el = tr.previousElementSibling; while (el && !el.classList.contains("vg")) el = el.previousElementSibling; return (el?.textContent || "").replace(/\s*\(\d+\)\s*$/, "").trim(); });
+    expect(group, `${who} is grouped under what they answered`).toBe("❌ Now not coming");
+  }
   await shot("11-admin-home", "Admin Home: every vote as it came in");
   // A reservation becomes confirmed only after the organizer verifies this session's payment.
   for (const name of ["Emma Clarke"]) await page.evaluate(id => rpc('record_payment', {

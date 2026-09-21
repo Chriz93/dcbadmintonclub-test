@@ -26,7 +26,10 @@ export function define() {
     // p69: seats for fewer than 24 regulars coming, decided when the regulars' vote closes (the reference's count).
     const sc = spareSeatCount(L), hold = (k: number) => sc.decided && k < sc.seats;
     const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id).map((r, k) => ({ id: r.player_id, rank: k + 1, reserved: hold(k), confirmed: hold(k) && L.payments.filter(x=>x.player_id===r.player_id&&x.kind==="spare"&&x.session_number===U).reduce((n,x)=>n+Number(x.amount),0)>=20 }));
-    return { vote, regs, spares, declined, claims, sc, counts: [regs.filter((p) => vote[p.id] === "coming").length, regs.filter((p) => vote[p.id] === "notcoming").length, regs.filter((p) => !vote[p.id]).length].map(String),
+    // p88: the headline counts everyone who was asked; the split table underneath keeps regulars and spares apart.
+    const count = (list: Player[]) => [list.filter((p) => vote[p.id] === "coming").length, list.filter((p) => vote[p.id] === "notcoming").length, list.filter((p) => !vote[p.id]).length];
+    const cReg = count(regs), cSpare = count(spares), cAll = cReg.map((n, k) => n + cSpare[k]);
+    return { vote, regs, spares, declined, claims, sc, counts: cAll.map(String), split: { regular: cReg.map(String), spare: cSpare.map(String), total: cAll.map(String) },
       seats: sc.decided ? `Spare seats: ${Math.max(sc.seats - claims.length, 0)} open · ${claims.filter((c) => c.confirmed).length} confirmed · ${claims.filter((c) => !c.reserved).length} standby` : null };
   }
   /** The spare-seats line: before the deadline it gives the seats if the vote closed now and when they are decided. */
@@ -44,7 +47,13 @@ export function define() {
   async function header(ctx: Ctx, card: ReturnType<Page["locator"]>, L: League, U: number, spare: boolean) {
     const t = tally(L, U);
     await expect(card.locator(".card-title").first()).toHaveText(`🗳️ ${spare ? "Spare" : "Vote"}: are you ${spare ? "available for" : "playing"} Session ${U} (${ctx.dates[U - 1]})?`);
-    expect(await card.locator("div[style*='1fr 1fr 1fr'] > div > div:first-child").allTextContents(), "coming / not coming / no reply among regulars").toEqual(t.counts);
+    expect(await card.locator("div[style*='1fr 1fr 1fr'] > div > div:first-child").allTextContents(), "coming / not coming / no reply, spares included").toEqual(t.counts);
+    // The split table appears whenever there are spares to split out, and its total row is the headline again.
+    const split = card.locator("table.vote-split");
+    if (t.spares.length) {
+      for (const g of ["regular", "spare", "total"] as const)
+        expect(await split.locator(`tr[data-g="${g}"] td:not(:first-child)`).allTextContents(), `the ${g} row`).toEqual(t.split[g]);
+    } else await expect(split, "nothing to split when the league has no spares").toHaveCount(0);
     expect(norm((await card.locator(".spare-seats-line").textContent()) || "")).toBe(await seatsLine(ctx.page, t));
     expect(norm((await card.locator(".vote-timing").textContent()) || "")).toBe(norm(await timing(ctx.page, ctx.fd[U - 1], L.nowMs, spare, t.sc.seats)));
     return t;

@@ -1311,6 +1311,13 @@
  {
   "state": "big-before",
   "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "home",
   "key": "summary|label:Season rules and fees",
   "label": "Season rules and fees",
   "tag": "summary"
@@ -4230,6 +4237,13 @@
  {
   "state": "first-night",
   "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "home",
   "key": "summary|label:Season rules and fees",
   "label": "Season rules and fees",
   "tag": "summary"
@@ -4862,6 +4876,13 @@
   "view": "home",
   "key": "button|nav('standings')",
   "label": "🏆 Standings",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
   "tag": "button"
  },
  {
@@ -6227,6 +6248,13 @@
   "view": "home",
   "key": "button|nav('standings')",
   "label": "🏆 Standings",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
   "tag": "button"
  },
  {
@@ -10845,6 +10873,13 @@
  {
   "state": "small-before",
   "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "home",
   "key": "summary|label:Season rules and fees",
   "label": "Season rules and fees",
   "tag": "summary"
@@ -12030,6 +12065,13 @@
   "view": "home",
   "key": "button|nav('standings')",
   "label": "🏆 Standings",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "home",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
   "tag": "button"
  },
  {

@@ -465,8 +465,12 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await expect.poll(() => state.rsvps.find((r) => r.player_id === 1)!.response).toBe("notcoming");
     // The admin's Home lists the change (by admin), and the spare's late claim is not flagged.
     await page.click("#bnav-home");
-    await expect(page.locator("#vote-changes")).toContainText("TEST Player 01: coming → not coming · S1");
-    await expect(page.locator("#vote-changes")).toContainText("by admin");
+    // p88: the changes are grouped by the answer they became; the newest sits at the top of its group.
+    const changed = page.locator('#vote-changes tr.vg:has-text("❌ Now not coming") + tr.vc-row');
+    await expect(changed.locator("td").first()).toContainText("TEST Player 01");
+    await expect(changed.locator("td").first(), "an organizer override is marked").toContainText("by admin");
+    await expect(changed.locator("td").nth(1), "what the answer was before").toHaveText("coming");
+    await expect(changed.locator("td").nth(2)).toHaveText("S1");
     // Refunds: player 2 declined on Saturday morning (before the Saturday 8 PM cutoff) → owed $14; player 1's admin change came too late.
     await page.evaluate(() => { nav("admin"); showSec("admin", "a-pay"); });
     await expect(page.locator("#refunds-owed")).toContainText("1 refund to send · $14");
