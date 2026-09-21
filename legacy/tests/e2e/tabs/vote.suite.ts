@@ -70,18 +70,40 @@ export function define() {
         await expect(sec.locator(".alert").first()).toHaveText(`📋 RSVP for Session ${U}${L.current ? " (tonight)" : ""}`);
         const t = await header(ctx, sec.locator(".card").first(), L, U, false);
         await expect(sec).toContainText("Your registration must be approved before you can RSVP.");
-        const rows = sec.locator(".card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)");
+        // p85: the RSVP list is a table for one session, grouped by the answer, regulars before spares.
+        const table = sec.locator("#vote-table");
+        const rows = table.locator("tr.vote-row");
         const list = [...t.regs, ...t.spares];
         await expect(rows).toHaveCount(list.length);
-        const tag = (p: Player, v: string | undefined) => p.membership_type === "spare" ? (v === "coming" ? (t.claims.find((c) => c.id === p.id)?.confirmed ? "✅ Seat confirmed" : t.claims.find(c=>c.id===p.id)?.reserved?"Seat reserved — payment pending":t.sc.decided?"⏳ Standby":"⏳ Available") : v === "notcoming" ? "❌ Not available" : /^⏳/) : v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not Coming" : "⏳ Not Responded";
-        for (let k = 0; k < list.length; k++) {
-          const row = rows.nth(k), p = list[k];
-          expect(norm(await row.locator("> div").first().innerText())).toBe(`${p.name}${p.membership_type === "spare" ? "SPARE" : ""}`);
-          await expect(row.locator(".tag")).toHaveText(tag(p, t.vote[p.id]));
-        }
+        // Every player appears exactly once, under the group that matches the answer on record.
+        const grouped = await table.evaluate((el) => {
+          const out: Record<string, number[]> = {}; let head = "";
+          for (const tr of el.querySelectorAll("tr")) {
+            if (tr.classList.contains("vg")) { head = (tr.textContent || "").replace(/\s*\(\d+\)\s*$/, "").trim(); out[head] = out[head] || []; }
+            else if (tr.classList.contains("vote-row")) (out[head] = out[head] || []).push(Number(tr.getAttribute("data-pid")));
+          }
+          return out;
+        });
+        const groupOf = (v: string | undefined) => v === "coming" ? "✅ Coming" : v === "notcoming" ? "❌ Not coming" : "⏳ No answer";
+        const misplaced = list.filter((p) => !(grouped[groupOf(t.vote[p.id])] || []).includes(p.id))
+          .map((p) => `${p.name}: answered ${t.vote[p.id] ?? "nothing"}`);
+        expect(misplaced, "each player sits under the answer they gave").toEqual([]);
+        expect(Object.values(grouped).flat().sort((a, b) => a - b), "listed once each").toEqual(list.map((p) => p.id).sort((a, b) => a - b));
+        // The counts in the heading and the three chips agree with the rows underneath.
+        for (const [head, ids] of Object.entries(grouped)) await expect(table.locator("tr.vg", { hasText: head })).toContainText(`(${ids.length})`);
+        // A spare who is coming shows what their seat is doing, which their answer alone does not say.
+        const seatTag = (p: Player) => t.claims.find((c) => c.id === p.id)?.confirmed ? "Seat confirmed"
+          : t.claims.find((c) => c.id === p.id)?.reserved ? "Seat reserved — unpaid" : t.sc.decided ? "Standby" : "Available";
+        for (const p of t.spares.filter((x) => t.vote[x.id] === "coming" && t.claims.some((c) => c.id === x.id)))
+          await expect(table.locator(`tr.vote-row[data-pid="${p.id}"] .tag`), `${p.name}'s seat`).toHaveText(seatTag(p));
+        for (const p of list) expect(norm(await table.locator(`tr.vote-row[data-pid="${p.id}"] .vname`).innerText())).toBe(p.name);
+        // Only the players who have said nothing are offered a reminder.
+        const silent = list.filter((p) => !t.vote[p.id]).map((p) => p.id).sort((a, b) => a - b);
+        const offered = (await table.locator("tr.vote-row:has(button.vote-remind)").evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))))).sort((a, b) => a - b);
+        expect(offered, "the reminder button belongs to the players who have not answered").toEqual(silent);
         if (!list.length) return;
         const k = Math.floor(r() * list.length), p = list[k], resp = r() < 0.5 ? "coming" : "notcoming";
-        await rows.nth(k).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click();
+        await table.locator(`tr.vote-row[data-pid="${p.id}"]`).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click();
         await expect(toast).toHaveText(`Answer updated for ${p.name}`);
         expect(dbVote(p.id), "organizer override saved, even after the deadline").toBe(resp);
         if (t.vote[p.id] !== resp) expect(ctx.state.rsvpLog.at(-1), "change logged as the organizer's").toMatchObject({ session_number: U, player_id: p.id, new_response: resp, by_admin: true });

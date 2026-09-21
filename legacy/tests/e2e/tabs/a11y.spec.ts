@@ -24,7 +24,7 @@ const VIEWS: [string, string, (p: Page) => Promise<unknown>][] = [
   ["Scores (a court picked)", "#page-scores", async (p) => { await p.evaluate(() => nav("scores")); const c = await p.evaluate(() => [1, 2, 3, 4, 5, 6].find((x) => (S.current?.assignments?.[x] || []).length >= 2) || 1); await p.locator("#sc-sel").selectOption(String(c)); }],
   ...["lb", "rank", "pstats", "heat", "sessstand", "hist", "vote", "qa"].map((s) => [`Standings → ${s}`, "#page-standings", (p: Page) => p.evaluate((x) => { nav("standings"); showSec("standings", x); }, s)] as [string, string, (p: Page) => Promise<unknown>]),
 ];
-const ADMIN = ["a-pl", "a-reg", "a-past", "a-wv", "a-sess", "a-att", "a-assign", "a-pay", "a-ann", "a-tools"];
+const ADMIN = ["a-pl", "a-reg", "a-past", "a-wv", "a-sess", "a-att", "a-assign", "a-edit", "a-pay", "a-ann", "a-tools"];
 
 test.describe("a11y · organizer", () => {
   let ctx: Ctx;

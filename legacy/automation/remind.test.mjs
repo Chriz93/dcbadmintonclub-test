@@ -114,6 +114,33 @@ test("a requested reminder run ignores the timing bands, sends once per player, 
   const again = await run(env, { db: mk(new Set(["1:manual-77", "2:manual-77"])), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
   assert.equal(again.planned, 0); assert.deepEqual(sent, []); assert.match(again.note, /Nobody needed a reminder/);
 });
+// p85: the organizer's per-player 🔔 asks for one person, not everyone who is silent.
+test("a reminder asked for one player goes to that player alone", async () => {
+  const targets = [
+    { player_id: 1, name: "A B", email: "a@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+    { player_id: 2, name: "C D", email: "c@x", membership_type: "regular", kind: "vote", open_seats: 0 },
+    { player_id: 9, name: "S P", email: "s@x", membership_type: "spare", kind: "spare", open_seats: 1 },
+  ];
+  const env = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x", DELIVERY_MODE: "live", ALLOW_REAL_RECIPIENTS: "true" };
+  const now = sessionStart(SEASON.approved_dates[0]).getTime() - 300 * 3600000;
+  const mk = (players) => ({ state: async (k) => (k === "reminder_request" ? { kind: "vote", id: "88", session: 1, players } : null), targets: async () => targets, logged: async () => new Set(), claim: async () => true, unclaim: async () => {}, setState: async () => {} });
+
+  const sent = [];
+  const one = await run(env, { db: mk([2]), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.equal(one.planned, 1); assert.equal(one.sent, 1);
+  assert.deepEqual(sent, ["c@x"], "only the player the organizer picked is written to");
+
+  // Asking for someone who is not due a reminder sends nothing and says why, rather than reporting a silent zero.
+  const none = await run(env, { db: mk([404]), now, log: () => {}, transport: { sendMail: async () => { throw new Error("must not send"); } } });
+  assert.equal(none.sent, 0);
+  assert.match(none.note, /404 was not due a reminder/);
+
+  // Without a player list the request still reaches everyone who is silent.
+  sent.length = 0;
+  const all = await run(env, { db: mk(undefined), now, log: () => {}, transport: { sendMail: async (m) => sent.push(m.to) } });
+  assert.deepEqual(sent.sort(), ["a@x", "c@x", "s@x"]);
+  assert.equal(all.planned, 3);
+});
 test("the test email names the players who have not voted and previews what one of them gets", async () => {
   const db = { state: async (k) => (k === "completed_sessions" ? [] : null),
     targets: async () => [

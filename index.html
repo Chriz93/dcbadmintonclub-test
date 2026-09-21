@@ -494,6 +494,16 @@ body{font-size:15px;line-height:1.5;background:radial-gradient(900px 480px at 50
 }
 .env-banner{padding:6px 14px;text-align:center;background:#fff3cd;color:#604900;font-size:12px;font-weight:700;}
 #_t:empty{display:none;}
+.vote-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.vote-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:800;padding:4px 8px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+.vote-tbl td{padding:7px 8px 7px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.vote-tbl td:last-child,.vote-tbl th:last-child{padding-right:0;text-align:right;white-space:nowrap;}
+.vote-tbl .vg td{padding:10px 0 4px;border-bottom:none;font-size:11px;font-weight:800;letter-spacing:0.3px;}
+.vote-tbl .vname{font-weight:700;}
+.vote-tbl .vwhen{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.vote-counts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px;}
+.vote-counts .v{font-size:20px;font-weight:800;}
+.vote-counts .l{font-size:11px;color:var(--muted);text-transform:uppercase;}
 [role="button"]:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #146c2e;outline-offset:3px;}
 </style>
 
@@ -810,6 +820,7 @@ body{font-size:15px;line-height:1.5;background:radial-gradient(900px 480px at 50
       <button class="ptab" onclick="showSec('admin','a-sess',this)">📅 Session</button>
       <button class="ptab" onclick="showSec('admin','a-att',this)">📋 Attendance</button>
       <button class="ptab" onclick="showSec('admin','a-assign',this)">🏟️ Assign</button>
+      <button class="ptab" onclick="showSec('admin','a-edit',this)">✏️ Edit scores</button>
       </div><div class="admin-task-group" role="group" aria-label="Money"><div class="admin-task-label">Money</div>
       <button class="ptab" onclick="showSec('admin','a-pay',this)">💰 Pay</button>
       </div><div class="admin-task-group" role="group" aria-label="Communications"><div class="admin-task-label">Communications</div>
@@ -818,6 +829,7 @@ body{font-size:15px;line-height:1.5;background:radial-gradient(900px 480px at 50
       <button class="ptab" onclick="showSec('admin','a-tools',this)">🛠 Tools</button>
       </div>
     </div>
+    <div id="sec-a-edit" class="section"></div>
     <div id="sec-a-reg" class="section"></div>
     <div id="sec-a-past" class="section"></div>
     <div id="sec-a-wv" class="section"></div>
@@ -1232,6 +1244,16 @@ function voteLocked(p){ // regulars only; spares keep claiming seats until the n
   const startAt=FD[upcomingSessionNumber()-1];if(!startAt)return false;
   return Date.now()>startAt.getTime()-FEES.voteDeadlineHours*3600000;
 }
+let _voteSess=null; // p85: which session's answers the RSVP table is showing (null = the upcoming one)
+function voteTableSession(){const up=upcomingSessionNumber();return _voteSess&&_voteSess>=1&&_voteSess<=up?_voteSess:up;}
+function setVoteSession(v){const n=parseInt(v);_voteSess=isNaN(n)?null:n;renderRSVP();}
+// Every answer on record for one session: the latest row wins, because rsvpAll arrives oldest first.
+function voteAnswersFor(n){
+  const out={};
+  (S.rsvpAll||[]).filter(r=>r.session_number===n).forEach(r=>{out[r.player_id]={response:r.response,at:r.updated_at};});
+  if(n===upcomingSessionNumber())(S.rsvpRows||[]).forEach(r=>{out[r.player_id]={response:r.response,at:r.updated_at};});
+  return out;
+}
 async function adminSetVote(playerId,response){
   if(!adminUnlocked)return toast('Organizer verification required','warn');
   try{await rpc('set_rsvp',{p_session:upcomingSessionNumber(),p_player:playerId,p_response:response});await loadAll();renderAll();toast('Answer updated for '+(S.players.find(p=>p.id===playerId)?.name||'player'),'success');}
@@ -1383,20 +1405,172 @@ function renderRSVPInto(el,compact){
   }
   html += `</div>`;
 
-  if(adminUnlocked&&!compact){
-    const tagFor=(p)=>{const st=rsvpData[p.id];if(isSpareMember(p)){const c=seats.claims.find(x=>x.id===p.id);return st==='coming'?(c&&c.confirmed?'<span class="tag tg-green">✅ Seat confirmed</span>':c?.reserved?'<span class="tag tg-yellow">Seat reserved — payment pending</span>':seats.decided?'<span class="tag tg-yellow">⏳ Standby</span>':'<span class="tag tg-yellow">⏳ Available</span>'):st==='notcoming'?'<span class="tag tg-red">❌ Not available</span>':'<span class="tag tg-gray">⏳ No answer</span>';}
-      return `<span class="tag ${st === 'coming' ? 'tg-green' : st === 'notcoming' ? 'tg-red' : 'tg-gray'}">${st === 'coming' ? '✅ Coming' : st === 'notcoming' ? '❌ Not Coming' : '⏳ Not Responded'}</span>`;};
-    html += `<div class="card"><div class="card-title">📋 RSVP Status</div>`;
-    [...S.players.filter(isRegularMember),...S.players.filter(isSpareMember)].forEach(p => {
-      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <div style="font-size:13px;font-weight:700;">${esc(p.name)}${isSpareMember(p)?'<span class="spare-badge">SPARE</span>':''}</div><div style="display:flex;gap:4px;align-items:center;">${tagFor(p)}<button class="btn btn-ghost btn-sm admin-vote" style="padding:2px 6px;font-size:10px;margin:0;" title="Set coming" onclick="adminSetVote(${p.id},'coming')">✅</button><button class="btn btn-ghost btn-sm admin-vote" style="padding:2px 6px;font-size:10px;margin:0;" title="Set not coming" onclick="adminSetVote(${p.id},'notcoming')">❌</button></div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
+  if(adminUnlocked&&!compact)html+=renderVoteTable(seats);
   el.innerHTML = html;
 }
 
+// p85: the organizer's view of who has answered — one session at a time, grouped by the answer, regulars then spares.
+function renderVoteTable(seats){
+  const up=upcomingSessionNumber(),n=voteTableSession(),live=n===up;
+  const ans=voteAnswersFor(n);
+  const people=[...S.players.filter(isRegularMember),...S.players.filter(isSpareMember)];
+  const respOf=p=>(ans[p.id]||{}).response||'';
+  const groups=[{k:'coming',t:'✅ Coming',c:'var(--green2)'},{k:'notcoming',t:'❌ Not coming',c:'var(--red2)'},{k:'',t:'⏳ No answer',c:'var(--muted)'}]
+    .map(g=>({...g,rows:people.filter(p=>respOf(p)===g.k)}));
+  const when=x=>{if(!x)return '—';const d=new Date(x);return isNaN(d)?'—':d.toLocaleString('en-CA',{timeZone:LEAGUE_TZ,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
+  // A spare's answer means "available", and their seat says more than the answer does.
+  const seatTag=p=>{const c=(seats&&seats.claims||[]).find(x=>x.id===p.id);if(!c)return '';
+    return c.confirmed?'<span class="tag tg-green">Seat confirmed</span>':c.reserved?'<span class="tag tg-yellow">Seat reserved — unpaid</span>':seats.decided?'<span class="tag tg-yellow">Standby</span>':'<span class="tag tg-yellow">Available</span>';};
+  let html=`<div class="card" id="vote-table"><div class="card-title">📋 RSVP Status</div>
+    <label class="lbl" for="vote-sess">Session</label>
+    <select class="inp" id="vote-sess" onchange="setVoteSession(this.value)" style="margin-bottom:10px;">`;
+  for(let i=up;i>=1;i--)html+=`<option value="${i}"${i===n?' selected':''}>Session ${i}${DATES[i-1]?' — '+DATES[i-1]:''}${i===up?' (upcoming)':''}</option>`;
+  html+=`</select>
+    <div class="vote-counts">${groups.map(g=>`<div><div class="v" style="color:${g.c};">${g.rows.length}</div><div class="l">${g.t.slice(2)}</div></div>`).join('')}</div>`;
+  if(!live)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Session ${n} has been played — these answers are the record and cannot be changed.</div>`;
+  html+=`<div style="overflow-x:auto;"><table class="vote-tbl"><thead><tr><th>Player</th><th>Type</th><th>Answered</th><th></th></tr></thead><tbody>`;
+  groups.forEach(g=>{
+    html+=`<tr class="vg"><td colspan="4" style="color:${g.c};">${g.t} (${g.rows.length})</td></tr>`;
+    if(!g.rows.length){html+=`<tr class="vote-empty"><td colspan="4" style="color:var(--muted);">Nobody.</td></tr>`;return;}
+    g.rows.forEach(p=>{
+      const sp=isSpareMember(p);
+      html+=`<tr class="vote-row" data-pid="${p.id}">
+        <td class="vname">${esc(p.name)}</td>
+        <td>${sp?'<span class="spare-badge">SPARE</span>':'<span style="color:var(--muted);">Regular</span>'}${sp&&live&&g.k==='coming'?' '+seatTag(p):''}</td>
+        <td class="vwhen">${when((ans[p.id]||{}).at)}</td>
+        <td>${live?`${g.k===''?`<button class="btn btn-ghost btn-sm vote-remind" style="padding:2px 6px;font-size:10px;margin:0;" title="Remind ${esc(p.name)} to answer" onclick="remindOnePlayer(${p.id})">🔔</button>`:''}<button class="btn btn-ghost btn-sm admin-vote" style="padding:2px 6px;font-size:10px;margin:0;" title="Set coming" onclick="adminSetVote(${p.id},'coming')">✅</button><button class="btn btn-ghost btn-sm admin-vote" style="padding:2px 6px;font-size:10px;margin:0;" title="Set not coming" onclick="adminSetVote(${p.id},'notcoming')">❌</button>`:''}</td>
+      </tr>`;
+    });
+  });
+  return html+`</tbody></table></div></div>`;
+}
+// p87: which session, round and court the score editor is showing.
+let _edSess=null,_edRound=null,_edCourt=null;
+// Only the night that is being played, or — when none is — the one that finished last. See the patch header.
+function editableSession(){
+  if(S.current)return{sess:S.current,live:true};
+  const done=[...(S.sessions||[])].filter(Boolean);
+  if(!done.length)return null;
+  const last=done.reduce((a,b)=>((b.number||0)>=(a.number||0)?b:a));
+  return{sess:last,live:false};
+}
+function sessRounds(sess){const out=new Set();Object.keys(sess&&sess.scores||{}).forEach(k=>{const m=k.match(/_y(\d+)_/);if(m)out.add(+m[1]);});return[...out].sort((a,b)=>a-b);}
+function sessCourtsIn(sess,cy){const out=new Set();Object.keys(sess&&sess.scores||{}).forEach(k=>{const m=k.match(/^c(\d+)_y(\d+)_g/);if(m&&+m[2]===cy)out.add(+m[1]);});return[...out].sort((a,b)=>a-b);}
+function sessGamesIn(sess,cy,c){const out=[];for(let g=1;g<=MAXG;g++){const sc=(sess.scores||{})[`c${c}_y${cy}_g${g}`];if(sc)out.push({g,sc});}return out;}
+// The players that round's scores name on that court — the target (21, or 15 on a five-player court) follows it.
+function sessCourtSize(sess,cy,c){const ids=new Set();sessGamesIn(sess,cy,c).forEach(({sc})=>[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null)ids.add(id);}));return ids.size;}
+function setEdSess(v){_edSess=v;_edRound=null;_edCourt=null;renderScoreEdit();}
+function setEdRound(v){_edRound=parseInt(v)||null;_edCourt=null;renderScoreEdit();}
+function setEdCourt(v){_edCourt=parseInt(v)||null;renderScoreEdit();}
+function renderScoreEdit(){
+  const el=document.getElementById('sec-a-edit');if(!el)return;
+  const t=editableSession();
+  if(!t){el.innerHTML='<div class="card"><div class="card-title">✏️ Edit scores</div><div style="font-size:12px;color:var(--muted);">No session has been played yet.</div></div>';return;}
+  const sess=t.sess,rounds=sessRounds(sess);
+  const cy=rounds.includes(_edRound)?_edRound:rounds[rounds.length-1];
+  const courts=cy?sessCourtsIn(sess,cy):[];
+  const c=courts.includes(_edCourt)?_edCourt:courts[0];
+  const games=c?sessGamesIn(sess,cy,c):[];
+  const size=c?sessCourtSize(sess,cy,c):4,target=courtTarget(size);
+  const rotated=(sess.movements||[]).some(m=>m.cycle===cy);
+  let html=`<div class="card" id="score-edit"><div class="card-title">✏️ Edit scores — Session ${sess.number}${t.live?' (tonight)':''}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+      ${t.live?'Tonight’s session is the one that can be corrected. A night that is already finished is left alone once the next one has started.'
+              :`Session ${sess.number} finished last, so it is the one that can be corrected. Older nights are left alone: changing one would move the courts every night since then started from.`}
+      ${rotated?'<br><strong>Round '+cy+' has already been worked out.</strong> Saving a correction runs that round again from the new score, so the movements, the courts and the ratings follow the real result.':''}
+    </div>`;
+  if(!rounds.length){el.innerHTML=html+'<div style="font-size:12px;color:var(--muted);">No scores have been entered for this session.</div></div>';return;}
+  html+=`<label class="lbl" for="ed-round">Round</label><select class="inp" id="ed-round" onchange="setEdRound(this.value)">`
+    +rounds.map(r=>`<option value="${r}"${r===cy?' selected':''}>Round ${r}</option>`).join('')+`</select>
+    <label class="lbl" for="ed-court">Court</label><select class="inp" id="ed-court" onchange="setEdCourt(this.value)">`
+    +courts.map(x=>`<option value="${x}"${x===c?' selected':''}>Court ${x}</option>`).join('')+`</select>`;
+  if(!games.length){el.innerHTML=html+'<div style="font-size:12px;color:var(--muted);margin-top:10px;">No games recorded on this court.</div></div>';return;}
+  html+=`<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">Games go to ${target}${size===5?' (five players on this court)':''}. The pairings are the ones that were played and cannot be changed here.</div>`;
+  games.forEach(({g,sc})=>{
+    const nm=id=>id==null?'':esc(sessPlayerName(sess,id).split(' ')[0]);
+    const A=[sc.a1,sc.a2].filter(x=>x!=null).map(nm).join(' & '),B=[sc.b1,sc.b2].filter(x=>x!=null).map(nm).join(' & ');
+    html+=`<div class="ed-game" data-g="${g}" style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:12px;font-weight:700;text-align:right;">${A}</span>
+      <input class="sinp" id="ed_${g}_a" inputmode="numeric" maxlength="2" value="${sc.sA==null?'':sc.sA}" aria-label="Game ${g}, ${A}">
+      <span style="color:var(--muted);">–</span>
+      <input class="sinp" id="ed_${g}_b" inputmode="numeric" maxlength="2" value="${sc.sB==null?'':sc.sB}" aria-label="Game ${g}, ${B}">
+      <span style="font-size:12px;font-weight:700;">${B}</span>
+    </div>`;
+  });
+  html+=`<button class="btn btn-primary" id="ed-save" onclick="saveScoreEdits()" style="margin-top:12px;">Save corrections for Court ${c}, Round ${cy}</button>
+    <div id="ed-note" style="font-size:11px;color:var(--muted);margin-top:8px;">Season totals, ratings and standings are worked out again from the saved scores.</div></div>`;
+  el.innerHTML=html;
+}
+// The courts a round was actually played on, taken from that round's own scores. This is the only honest source:
+// the line-up a session STARTS with is not the line-up it plays, because a player can drop out and a spare be called
+// in once the night is under way (Sam for Ivanka, 16 September).
+function roundLineup(sess,cy){
+  const a={};for(let c=1;c<=NC;c++)a[c]=[];
+  Object.keys(sess.scores||{}).forEach(k=>{
+    const m=k.match(/^c(\d+)_y(\d+)_g/);if(!m||+m[2]!==cy)return;
+    const c=+m[1],sc=sess.scores[k];
+    [sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&!a[c].includes(id))a[c].push(id);});
+  });
+  return a;
+}
+// Replay the night: each round is ranked on the courts it was played on, and rotated, in order. As many rounds are
+// replayed as were rotated before, so a correction never invents a round or drops one.
+function replaySessionRotations(sess){
+  const rounds=(sess.movements||[]).length;
+  if(!rounds)return true;
+  const lineups=[];
+  for(let cy=1;cy<=rounds;cy++){
+    const a=roundLineup(sess,cy);
+    if(!Object.keys(a).some(c=>a[c].length))return false; // a rotated round with no scores cannot be ranked again
+    lineups.push(a);
+  }
+  sess.movements=[];
+  for(let cy=1;cy<=rounds;cy++){sess.assignments=lineups[cy-1];rotateSession(sess,cy);}
+  return true;
+}
+async function saveScoreEdits(){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const t=editableSession();if(!t)return toast('Nothing to edit','warn');
+  const sess=t.sess,rounds=sessRounds(sess);
+  const cy=rounds.includes(_edRound)?_edRound:rounds[rounds.length-1];
+  const courts=sessCourtsIn(sess,cy),c=courts.includes(_edCourt)?_edCourt:courts[0];
+  if(!cy||!c)return toast('Choose a round and a court','warn');
+  const target=courtTarget(sessCourtSize(sess,cy,c));
+  const edits={};let changed=0;
+  for(const{g,sc}of sessGamesIn(sess,cy,c)){
+    const sa=parseInt((document.getElementById(`ed_${g}_a`)||{}).value),sb=parseInt((document.getElementById(`ed_${g}_b`)||{}).value);
+    const v=validScore(sa,sb,target);
+    if(v.error)return toast(`Game ${g}: ${v.error}`,'warn');
+    if(sa!==sc.sA||sb!==sc.sB)changed++;
+    edits[`c${c}_y${cy}_g${g}`]={...sc,sA:sa,sB:sb,w:sa>sb?'A':'B'};
+  }
+  if(!changed)return toast('Nothing changed','info');
+  const copy=JSON.parse(JSON.stringify(sess));
+  Object.assign(copy.scores,edits);
+  if(!replaySessionRotations(copy))return toast('A round that was worked out has no scores left to rank, so this session cannot be worked out again. Use Undo Last Round instead.','error');
+  const btn=document.getElementById('ed-save');if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    if(t.live){
+      await setKV('current_session',copy);
+    }else{
+      copy.finalAssignments=JSON.parse(JSON.stringify(copy.assignments)); // the courts the next session starts from
+      const list=(S.sessions||[]).map(x=>x&&x.id===copy.id?copy:x);
+      await setKV('completed_sessions',list);
+      // No session is live, so the ladder follows the corrected result.
+      for(let court=1;court<=NC;court++)for(const id of (copy.finalAssignments[court]||[])){
+        const p=S.players.find(x=>x.id===id);
+        if(p&&p.currentCourt!==court)await sbU('players',id,{current_court:court,highest_court:Math.min(p.highestCourt||court,court)});
+      }
+    }
+    await rebuildStats();await loadAll();renderAll();
+    toast(`Court ${c}, Round ${cy} corrected — the session was worked out again`,'success');
+  }catch(e){
+    const m=e&&e.message||'';
+    if(/already has scores/.test(m))toast('The round being played already has scores on a court this would move. Undo Last Round first, then correct the score.','error');
+    else if(e&&(e.code==='40001'||/Stale state/.test(m))){toast('The page was behind — reloading; try the correction again.','warn');await loadAll();renderAll();}
+    else toast('Not saved: '+(m||'try again'),'error');
+  }finally{const b=document.getElementById('ed-save');if(b){b.disabled=false;}renderScoreEdit();}
+}
 let _activeLoads=0;
 // p59: a load that one of this page's saves overtook is repeated (at most three times) instead of dropped, so the load
 // that applies always started after the latest save, even when that save does not reload by itself.
@@ -1984,18 +2158,27 @@ async function undoLast(){
   }catch(e){toast('Not undone: '+e.message,'error');}
   finally{_undoing=false;}
 }
+// p85: remind one player who has not answered. Same email, same job — only the recipient list is narrowed.
+async function remindOnePlayer(id){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const p=S.players.find(x=>x.id===id);if(!p)return toast('Player not found','warn');
+  const n=upcomingSessionNumber();
+  if(!confirm(`Send ${p.name} a reminder to answer for Session ${n}?\n\nWhile the league is in test mode it goes to the league inbox, not to the player.`))return;
+  return requestReminderRun('vote',[id]);
+}
 // Email is sent by the scheduled job, never by the browser: these buttons only queue the request.
-async function requestReminderRun(kind){
+async function requestReminderRun(kind,players){
   if(!adminUnlocked)return toast('Organizer verification required','warn');
   const n=upcomingSessionNumber();
-  if(kind==='vote'&&!confirm(`Send vote reminders for Session ${n} to everyone who has not answered?\n\nWhile the league is in test mode these go to the league inbox, not to players.`))return;
+  const one=Array.isArray(players)&&players.length===1?S.players.find(x=>x.id===players[0]):null;
+  if(kind==='vote'&&!players&&!confirm(`Send vote reminders for Session ${n} to everyone who has not answered?\n\nWhile the league is in test mode these go to the league inbox, not to players.`))return;
   try{
-    await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail(),to:myEmail()});
+    await setKV('reminder_request',{kind,id:String(Date.now()),at:new Date().toISOString(),session:n,by:myEmail(),to:myEmail(),...(Array.isArray(players)&&players.length?{players}:{})}); // p85
     const before=S.reminderLastRun&&S.reminderLastRun.at;
     let d=null;try{d=await rpc('dispatch_reminder_job',{p_reason:kind});}catch(e){d={dispatched:false,reason:e.message};}
     await loadAll();renderAll();
     if(!d||!d.dispatched){toast(`Queued — ${d&&d.reason?d.reason:'instant sending is not set up'}. It goes out on the next scheduled check.`,'warn');return;}
-    toast(kind==='smoke'?`Sending the test email to ${myEmail()} now…`:`Sending reminders for Session ${n} now…`,'success');
+    toast(kind==='smoke'?`Sending the test email to ${myEmail()} now…`:one?`Reminding ${one.name} about Session ${n} now…`:`Sending reminders for Session ${n} now…`,'success');
     // The job reports back through reminder_last_run; watch for it for up to two minutes.
     for(let i=0;i<24;i++){
       await new Promise(r=>setTimeout(r,5000));
@@ -2813,18 +2996,26 @@ async function nextCycle(){
 // The coin toss for players still tied on wins, points and point difference: the app draws it. The draw is seeded by
 // this night's start time, the round, the court and the tied players, so every phone shows the same result, nobody can
 // know it before the night starts, and Undo cannot redraw it. Returns the tied players in toss order (first wins).
-function tossOrder(ids,cy,c){
+function tossOrder(ids,cy,c,sessId){ // p86: sessId keeps a replayed toss identical to the one first drawn
   const g=[...ids].sort((x,y)=>x-y);let h=2166136261;
-  for(const ch of `${S.current?.id||0}|${cy}|${c}|${g.join(',')}`){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
+  for(const ch of `${sessId??S.current?.id??0}|${cy}|${c}|${g.join(',')}`){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
   let a=h|0;const rnd=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
   for(let i=g.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[g[i],g[j]]=[g[j],g[i]];}
   return g;
 }
-async function applyRotation(){
-  const cy=S.current.cycle,a=S.current.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
-  activePlayers().forEach(p=>{wins[p.id]=0;pts[p.id]=0;ptFor[p.id]=0;ptAgainst[p.id]=0;gamesPlayedCycle[p.id]=0;});
+// p86: the live round's rotation is this same rotation, applied to the session that is live.
+async function applyRotation(){return rotateSession(S.current,S.current.cycle);}
+// Rank every court of one round of one session, move the top and bottom players, and record what was decided.
+// Mutates sess.assignments and appends to sess.movements — exactly what the live rotation has always done.
+function rotateSession(sess,cy){
+  const a=sess.assignments,wins={},pts={},ptFor={},ptAgainst={},gamesPlayedCycle={};
+  // Start everyone who could appear in this round's record at zero, so a player who won nothing reads 0 and not
+  // "nothing" — the round summary and the cards read these maps directly.
+  const zero=id=>{wins[id]=wins[id]||0;pts[id]=pts[id]||0;ptFor[id]=ptFor[id]||0;ptAgainst[id]=ptAgainst[id]||0;gamesPlayedCycle[id]=gamesPlayedCycle[id]||0;};
+  activePlayers().forEach(p=>zero(p.id));
+  for(let c=1;c<=NC;c++)(a[c]||[]).forEach(zero); // a replayed session's players need not be on today's roster
   for(let c=1;c<=NC;c++)for(let g=1;g<=MAXG;g++){
-    const sc=S.current.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
+    const sc=sess.scores[`c${c}_y${cy}_g${g}`];if(!sc)continue;
     // Handle both doubles (a2/b2 present) and singles (a2/b2 null)
     const side_a=[sc.a1,sc.a2].filter(x=>x!=null);
     const side_b=[sc.b1,sc.b2].filter(x=>x!=null);
@@ -2840,7 +3031,7 @@ async function applyRotation(){
   const mv={},na={};for(let c=1;c<=NC;c++)na[c]=[];
   for(let c=1;c<=NC;c++){
     const pids=a[c]||[];if(pids.length<2){pids.forEach(id=>mv[id]='stay');continue;}
-    const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,S.current.preTosses);
+    const sorted=sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,sess.preTosses,sess.id);
     const up=courtAbove(c,a)?sorted[0]:null,down=courtBelow(c,a)?sorted[sorted.length-1]:null;
     const topG=pids.filter(id=>key(id)===key(sorted[0])).sort((x,y)=>x-y),botG=pids.filter(id=>key(id)===key(sorted[sorted.length-1])).sort((x,y)=>x-y);
     if(up!=null&&topG.length>1){tossChoices['top_'+c]={group:topG,direction:'up',winnerId:up,by:'app'};tossResults['top_'+c]=up;}
@@ -2855,11 +3046,12 @@ async function applyRotation(){
     na[to].push(pid);
   });
   for(let c=1;c<=NC;c++)while(na[c].length>courtCap(c)){const ov=na[c].pop();const t=c<NC?c+1:c-1;na[t].unshift(ov);}
-  S.current.assignments=na;
-  S.current.movements.push({cycle:cy,mv,wins:{...wins},pts:{...pts},tosses:tossResults,tossChoices});
+  sess.assignments=na;
+  sess.movements=sess.movements||[];
+  sess.movements.push({cycle:cy,mv,wins:{...wins},pts:{...pts},tosses:tossResults,tossChoices});
   // Clear consumed pre-toss records — next round starts fresh
-  if(S.current.preTosses){
-    Object.keys(S.current.preTosses).forEach(k=>{if(k.startsWith(`${cy}_`))delete S.current.preTosses[k];});
+  if(sess.preTosses){
+    Object.keys(sess.preTosses).forEach(k=>{if(k.startsWith(`${cy}_`))delete sess.preTosses[k];});
   }
   // Statistics are rebuilt from stored scores once the session state is saved (see rebuildStats).
   void gamesPlayedCycle;
@@ -3536,7 +3728,7 @@ function buildCombos(players){
   }
   return[];
 }
-function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
+function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses,sessId){ // p86: sessId seeds the toss
   const key=id=>[wins[id]||0,pts[id]||0,(ptFor[id]||0)-(ptAgainst[id]||0)];
   const same=(x,y)=>{const p=key(x),q=key(y);return p[0]===q[0]&&p[1]===q[1]&&p[2]===q[2];};
   const sorted=[...pids].sort((x,y)=>{const p=key(x),q=key(y);return q[0]-p[0]||q[1]-p[1]||q[2]-p[2]||x-y;});
@@ -3545,8 +3737,8 @@ function sortCourtRanking(pids,wins,pts,ptFor,ptAgainst,cy,c,preTosses){
   // A toss recorded by hand in an older session (preTosses) is kept.
   const pT=preTosses||{},topT=pT[`${cy}_c${c}_top`],botT=pT[`${cy}_c${c}_bot`];
   const topG=sorted.filter(id=>same(id,sorted[0])),botG=sorted.filter(id=>same(id,sorted[sorted.length-1]));
-  if(topG.length>1){const w=topT&&topG.includes(topT.winnerId)?topT.winnerId:tossOrder(topG,cy,c)[0];sorted.splice(sorted.indexOf(w),1);sorted.unshift(w);}
-  if(botG.length>1){const l=botT&&botG.includes(botT.loserId)&&botT.loserId!==sorted[0]?botT.loserId:tossOrder(botG,cy,c).filter(id=>id!==sorted[0]).slice(-1)[0];sorted.splice(sorted.indexOf(l),1);sorted.push(l);}
+  if(topG.length>1){const w=topT&&topG.includes(topT.winnerId)?topT.winnerId:tossOrder(topG,cy,c,sessId)[0];sorted.splice(sorted.indexOf(w),1);sorted.unshift(w);}
+  if(botG.length>1){const l=botT&&botG.includes(botT.loserId)&&botT.loserId!==sorted[0]?botT.loserId:tossOrder(botG,cy,c,sessId).filter(id=>id!==sorted[0]).slice(-1)[0];sorted.splice(sorted.indexOf(l),1);sorted.push(l);}
   return sorted;
 }
 // p74: who actually played court `c` in round `cy` — taken from that round's own scores, because once the last
@@ -5575,7 +5767,7 @@ function renderAll(){
   renderLeaderboard();renderRankings();renderPlayerStats();renderHeatmap();renderSessionStandings();renderHistory();renderRSVP();renderQA();
   renderPOS('pos-standings');
   renderUndo();renderAdvanceBanner();
-  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderPastPlayers();renderWaiverAdmin();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();}
+  if(adminUnlocked){renderAdminPlayers();renderRegPlayers();renderPastPlayers();renderWaiverAdmin();renderSessionAdmin();renderAttendanceTab();renderAssignUI();renderPayments();renderAnnouncementsAdmin();renderSnapshots();renderReminderTools();renderScoreEdit();} // p87
   // Preserve score drafts only while session, lineup and saved court scores still match.
   {const sel=document.getElementById('sc-sel');if(sel&&sel.value)renderScoreEntry();}
   restoreFormDrafts(drafts);improveSemantics();

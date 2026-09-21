@@ -44,7 +44,7 @@ for (let i = 0; i < 100; i++) {
     const prev = L.rsvps.find((x) => x.session_number === U && x.player_id === who.id)?.response ?? null, resp = prev === "coming" ? "notcoming" : "coming";
     await page.evaluate(() => nav("standings"));
     await page.locator("#page-standings .ptab").filter({ hasText: /RSVP$/ }).click();
-    await page.locator("#sec-vote .card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)").nth(list.indexOf(who)).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click();
+    await page.locator(`#vote-table tr.vote-row[data-pid="${who.id}"]`).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click(); // p85
     await expect(page.locator("#_t")).toHaveText(`Answer updated for ${who.name}`);
     await page.evaluate(() => nav("home"));
     await expect(card.locator("div:has(> span + span)").first().locator("span").first()).toHaveText(`${who.name}: ${word(prev)} → ${word(resp)} · S${U} by admin`);

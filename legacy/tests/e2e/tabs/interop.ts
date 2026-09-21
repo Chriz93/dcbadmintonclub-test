@@ -36,9 +36,7 @@ export function defineInterop(from: number, to: number) {
       const standingsTab = async (p: typeof page, label: RegExp) => { await p.evaluate(() => nav("standings")); await p.locator("#page-standings .ptab").filter({ hasText: label }).click(); };
       const setVote = async (who: Player, resp: "coming" | "notcoming") => {
         await standingsTab(page, /RSVP$/);
-        const list = [...L.players.filter(isReg), ...L.players.filter(isSpare)];
-        const rows = page.locator("#sec-vote .card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)");
-        await rows.nth(list.findIndex((p) => p.id === who.id)).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click();
+        await page.locator(`#vote-table tr.vote-row[data-pid="${who.id}"]`).locator(`button[title="${resp === "coming" ? "Set coming" : "Set not coming"}"]`).click(); // p85
         await expect(toast).toHaveText(`Answer updated for ${who.name}`);
       };
 
@@ -182,9 +180,13 @@ export function defineInterop(from: number, to: number) {
         await expect(player.page.locator("#_t")).toHaveText(resp === "coming" ? "You are coming! 🎉" : "Noted - see you next time!");
         await refresh(admin);
         await standingsTab(page, /RSVP$/);
-        const list = [...L.players.filter(isReg), ...L.players.filter(isSpare)];
-        const row = page.locator("#sec-vote .card").filter({ hasText: "📋 RSVP Status" }).locator("div:has(> div > button.admin-vote)").nth(list.findIndex((p) => p.id === me.id));
-        await expect(row.locator(".tag"), "the organizer sees the new answer").toHaveText(resp === "coming" ? "✅ Coming" : "❌ Not Coming");
+        // p85: the answer shows as the group the player's row now sits under.
+        const group = await page.locator(`#vote-table tr.vote-row[data-pid="${me.id}"]`).evaluate((tr) => {
+          let el = tr.previousElementSibling;
+          while (el && !el.classList.contains("vg")) el = el.previousElementSibling;
+          return (el?.textContent || "").replace(/\s*\(\d+\)\s*$/, "").trim();
+        });
+        expect(group, "the organizer sees the new answer").toBe(resp === "coming" ? "✅ Coming" : "❌ Not coming");
         const L2 = fromDb(admin, L);
         expect(ctx0(L2, me.id, U), "logged as the player's own change").toBe(resp);
         await checkCourts(page, L2);

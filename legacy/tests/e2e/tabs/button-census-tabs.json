@@ -30,6 +30,13 @@
  {
   "state": "between-rounds",
   "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin",
   "key": "button|showSec('admin','a-past',this)",
   "label": "📇 Past Players",
   "tag": "button"
@@ -159,6 +166,20 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #",
+  "tag": "select"
  },
  {
   "state": "between-rounds",
@@ -777,6 +798,13 @@
   "tag": "button"
  },
  {
+  "state": "between-rounds",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Sep #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "big-before",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -802,6 +830,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -922,6 +957,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Oct #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "big-before",
@@ -1414,6 +1470,20 @@
   "tag": "button"
  },
  {
+  "state": "big-before",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Oct #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "complete",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -1439,6 +1509,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -1552,6 +1629,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Oct #, # ✅ #❌ #",
   "tag": "div"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "complete",
@@ -2117,7 +2215,7 @@
   "state": "complete",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# ML Mei LeblancSPARE 📈 Court # ·",
+  "label": "# ML Mei LeblancSPARE Court # · #",
   "tag": "div"
  },
  {
@@ -2133,6 +2231,13 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Oct #, #Session # —",
+  "tag": "select"
  },
  {
   "state": "complete-big",
@@ -2160,6 +2265,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -2273,6 +2385,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Nov #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "complete-big",
@@ -2838,7 +2971,7 @@
   "state": "complete-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# ZN Zoë Nair 📈 Court # · #W #L",
+  "label": "# ZN Zoë Nair Court # · #W #L ·",
   "tag": "div"
  },
  {
@@ -2854,6 +2987,13 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Nov #, # (upcoming)Session # — Nov #, #Session #",
+  "tag": "select"
  },
  {
   "state": "complete-small",
@@ -2881,6 +3021,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -2994,6 +3141,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "complete-small",
@@ -3577,6 +3745,13 @@
   "tag": "button"
  },
  {
+  "state": "complete-small",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Sep #, # (upcoming)Session # — Sep #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "first-night",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -3602,6 +3777,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -4200,6 +4382,13 @@
   "tag": "button"
  },
  {
+  "state": "first-night",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
   "state": "late-season",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -4225,6 +4414,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -4338,6 +4534,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Mar #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "late-season",
@@ -4791,7 +5008,7 @@
   "state": "late-season",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# JB Jonas Boateng 📈 Court # · #",
+  "label": "# JB Jonas Boateng Court # · #W #",
   "tag": "div"
  },
  {
@@ -4807,6 +5024,20 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Mar #, # (upcoming)Session # — Mar #, #Session #",
+  "tag": "select"
  },
  {
   "state": "player-before",
@@ -5253,7 +5484,7 @@
   "state": "player-live",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# AR Arjun Rossi 📈 Court # · #W",
+  "label": "# AR Arjun Rossi Court # · #W #L",
   "tag": "div"
  },
  {
@@ -5532,6 +5763,13 @@
  {
   "state": "pre-session",
   "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin",
   "key": "button|showSec('admin','a-past',this)",
   "label": "📇 Past Players",
   "tag": "button"
@@ -5640,6 +5878,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "pre-session",
@@ -6132,6 +6391,20 @@
   "tag": "button"
  },
  {
+  "state": "pre-session",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Sep #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "round-1",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -6157,6 +6430,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -6298,6 +6578,20 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #❌ #",
   "tag": "div"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #",
+  "tag": "select"
  },
  {
   "state": "round-1",
@@ -6916,6 +7210,13 @@
   "tag": "button"
  },
  {
+  "state": "round-1",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Sep #, # (upcoming)Session # — Sep #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "round-1-big",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -6941,6 +7242,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -7075,6 +7383,20 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Oct #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #Court #",
+  "tag": "select"
  },
  {
   "state": "round-1-big",
@@ -7679,6 +8001,13 @@
   "tag": "button"
  },
  {
+  "state": "round-1-big",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Oct #, #Session # —",
+  "tag": "select"
+ },
+ {
   "state": "round-1-small",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -7704,6 +8033,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -7831,6 +8167,20 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #",
+  "tag": "select"
  },
  {
   "state": "round-1-small",
@@ -8421,6 +8771,13 @@
   "tag": "button"
  },
  {
+  "state": "round-1-small",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Sep #, # (upcoming)Session # — Sep #, #",
+  "tag": "select"
+ },
+ {
   "state": "round-2",
   "view": "admin",
   "key": "button|lockAdmin()",
@@ -8446,6 +8803,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -8580,6 +8944,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Oct #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "round-2",
@@ -9152,7 +9537,7 @@
   "state": "round-2",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# TR Theo Rossi 📈 Court # · #W #",
+  "label": "# TR Theo Rossi Court # · #W #L ·",
   "tag": "div"
  },
  {
@@ -9168,6 +9553,13 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Oct #, # (upcoming)Session # — Oct #, #Session # —",
+  "tag": "select"
  },
  {
   "state": "round-2-big",
@@ -9195,6 +9587,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -9336,6 +9735,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Oct #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "round-2-big",
@@ -9922,7 +10342,7 @@
   "state": "round-2-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# CS Chloe Singh 📈 Court # · #W",
+  "label": "# CS Chloe Singh Court # · #W #L",
   "tag": "div"
  },
  {
@@ -9938,6 +10358,13 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Nov #, # (upcoming)Session # — Oct #, #Session # —",
+  "tag": "select"
  },
  {
   "state": "small-before",
@@ -9965,6 +10392,13 @@
   "view": "admin",
   "key": "button|showSec('admin','a-att',this)",
   "label": "📋 Attendance",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
   "tag": "button"
  },
  {
@@ -10078,6 +10512,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "small-before",
@@ -10547,6 +11002,20 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Sep #, # (upcoming)Session # — Sep #, #",
+  "tag": "select"
  },
  {
   "state": "spare-before",
@@ -11090,6 +11559,13 @@
  {
   "state": "spares-before",
   "view": "admin",
+  "key": "button|showSec('admin','a-edit',this)",
+  "label": "✏️ Edit scores",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin",
   "key": "button|showSec('admin','a-past',this)",
   "label": "📇 Past Players",
   "tag": "button"
@@ -11205,6 +11681,27 @@
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
   "label": "Session # — Sep #, # ✅ #",
   "tag": "div"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-edit",
+  "key": "button|saveScoreEdits()",
+  "label": "Save corrections for Court #, Round #",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdCourt(this.value)",
+  "label": "Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-edit",
+  "key": "select|setEdRound(this.value)",
+  "label": "Round #Round #",
+  "tag": "select"
  },
  {
   "state": "spares-before",
@@ -11695,5 +12192,19 @@
   "key": "button|adminSetVote(#,'notcoming')",
   "label": "❌",
   "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "standings → vote",
+  "key": "button|remindOnePlayer(#)",
+  "label": "🔔",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "standings → vote",
+  "key": "select|setVoteSession(this.value)",
+  "label": "Session # — Sep #, # (upcoming)Session # — Sep #, #Session # —",
+  "tag": "select"
  }
 ]

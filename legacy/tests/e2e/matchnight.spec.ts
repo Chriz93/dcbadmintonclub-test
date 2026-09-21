@@ -461,7 +461,7 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
     await page.evaluate(() => { nav("standings"); showSec("standings", "vote"); });
-    await page.locator("#sec-vote .admin-vote[title='Set not coming']").first().click();
+    await page.locator("#vote-table tr.vote-row .admin-vote[title='Set not coming']").first().click(); // p85
     await expect.poll(() => state.rsvps.find((r) => r.player_id === 1)!.response).toBe("notcoming");
     // The admin's Home lists the change (by admin), and the spare's late claim is not flagged.
     await page.click("#bnav-home");

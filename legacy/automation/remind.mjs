@@ -193,10 +193,16 @@ export async function run(env = process.env, deps = {}) {
   log(`Session ${up.number}: reminders ${canRemind?'eligible':'closed'}; vote digest checked independently.`);
   const targets=canRemind?[...(await db.targets(up.number)),...(db.reservations?await db.reservations(up.number):[])]:[];
   const logged=canRemind?await db.logged(up.number):new Set();
+  // p85: the admin can ask for one player instead of everyone who is silent; the email and the job are the same.
+  const only = forced && Array.isArray(request.players) && request.players.length ? request.players.map(Number) : null;
   const plan = forced
-    ? targets.filter(t=>t.kind==='vote'||t.kind==='spare'&&t.open_seats>0).map(t=>({...t,stage:`manual-${request.id||'0'}`,label:'requested by the admin'})).filter(t=>!logged.has(`${t.player_id}:${t.stage}`))
+    ? targets.filter(t=>t.kind==='vote'||t.kind==='spare'&&t.open_seats>0).filter(t=>!only||only.includes(Number(t.player_id))).map(t=>({...t,stage:`manual-${request.id||'0'}`,label:'requested by the admin'})).filter(t=>!logged.has(`${t.player_id}:${t.stage}`))
     : planReminders(targets,hoursUntil,logged,season);
+  // Asked for someone the reminder rules do not cover (they have answered, or turned reminders off): say so rather
+  // than reporting a silent "0 sent".
+  const missed = only ? only.filter(id => !plan.some(t => Number(t.player_id) === id)) : [];
   log(`${targets.length} target(s) from the database, ${plan.length} to send now (stage ${forced ? "requested" : voteStage(hoursUntil)?.kind || "none"}, spare window ${spareWindow(hoursUntil, season)}).`);
+  if (missed.length) log(`Requested player(s) ${missed.join(", ")} are not due a reminder (already answered, or reminders turned off).`);
   const cap = testMode ? 3 : Infinity;
   let sent = 0;
   const transport = live ? (deps.transport || (await gmail(env))) : null;
@@ -237,10 +243,11 @@ export async function run(env = process.env, deps = {}) {
       }
     }
   }
-  const note = !live ? `Delivery mode is dry-run: ${plan.length} reminder(s) planned, nothing sent. Set LEGACY_DELIVERY_MODE=live to send.`
+  const missedNote = missed.length ? ` Player ${missed.join(", ")} was not due a reminder (already answered, or reminders turned off).` : ""; // p85
+  const note = (!live ? `Delivery mode is dry-run: ${plan.length} reminder(s) planned, nothing sent. Set LEGACY_DELIVERY_MODE=live to send.`
     : plan.length === 0 ? "Nobody needed a reminder."
     : testMode ? `Sent to the league inbox instead of players (at most ${cap} per run).`
-    : `Sent to ${sent} player(s).`;
+    : `Sent to ${sent} player(s).`) + missedNote;
   return finish({ sent, pushed, planned: plan.length, digest, note });
 }
 async function webPush(env) {

@@ -48,7 +48,7 @@ export const VIEWS: View[] = [
   pageView("standings", both, "[id^='sec-']"),
   ...["lb", "rank", "pstats", "heat", "sessstand", "hist", "vote", "qa"].map((s) => secView("standings", s, both)),
   pageView("admin", ["organizer"], "[id^='sec-']"),
-  ...["a-pl", "a-reg", "a-past", "a-wv", "a-sess", "a-att", "a-assign", "a-pay", "a-ann", "a-tools"].map((s) => secView("admin", s, ["organizer"])),
+  ...["a-pl", "a-reg", "a-past", "a-wv", "a-sess", "a-att", "a-assign", "a-edit", "a-pay", "a-ann", "a-tools"].map((s) => secView("admin", s, ["organizer"])),
 ];
 
 export type Control = { key: string; label: string; tag: string };
