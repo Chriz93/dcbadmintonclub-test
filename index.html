@@ -1653,6 +1653,7 @@ async function _loadAllOnce(){
     draft.payments=(await sbG('payments','select=id,player_id,kind,amount,session_number,method,received_on,note&order=received_on.desc,id.desc'))||[];
     draft.qaQuestions=((await sbG('questions','select=id,player_id,asker,question,answer,answered_at,created_at&order=created_at.asc'))||[]).map(q=>({id:q.id,playerId:q.player_id,playerName:q.asker,question:q.question,answer:q.answer,ts:q.created_at,answeredAt:q.answered_at}));
     draft.preAttendance=await loadKV('pre_session_attendance')||{};
+    draft.adminCourtMoves=await loadKV('admin_court_moves')||{}; // p92: courts the organizer moved by hand, not won
     const roundSnapshots=await loadKV('round_snapshots')||[];
     draft.seasonConfig=await loadKV('season_config');draft.seasonDates=await sbG('season_dates','order=session_number.asc');
     for(const [key,rd]of Object.entries(reads))if((_stateVersion[key]||0)>(rd.known||0))return false; // a save completed while this load was in flight
@@ -2421,6 +2422,34 @@ async function callInSpare(id){
 // p61: the court a spare starts on in the upcoming lineup (0 when they have no seat).
 function spareCourtUpcoming(id){if(S.current)return 0;const a=upcomingLineup().assign;for(let c=1;c<=NC;c++)if((a[c]||[]).includes(id))return c;return 0;}
 // p62: once both rounds are finished, controls that would change tonight's courts are shown disabled, with the reason.
+// p93: every player's season so far, taken from the games played: wins, losses and the points they scored. The
+// organizer picks who moves down on wins, then points — never on rating — so those are the numbers the board shows.
+let _seasonRecCache=null,_seasonRecKey='';
+function seasonRecord(){
+  const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
+  const key=sess.map(x=>`${x.id}:${Object.keys(x.scores||{}).length}`).join('|');
+  if(_seasonRecCache&&_seasonRecKey===key)return _seasonRecCache;
+  const rec={};
+  const bump=id=>{if(!rec[id])rec[id]={w:0,l:0,gp:0,pts:0};return rec[id];};
+  sess.forEach(x=>Object.values(x.scores||{}).forEach(sc=>{
+    if(!sc||(sc.w!=='A'&&sc.w!=='B'))return;
+    const A=[sc.a1,sc.a2].filter(v=>v!=null),B=[sc.b1,sc.b2].filter(v=>v!=null);
+    A.forEach(id=>{const r=bump(id);r.gp++;r.pts+=sc.sA||0;if(sc.w==='A')r.w++;else r.l++;});
+    B.forEach(id=>{const r=bump(id);r.gp++;r.pts+=sc.sB||0;if(sc.w==='B')r.w++;else r.l++;});
+  }));
+  _seasonRecCache=rec;_seasonRecKey=key;return rec;
+}
+// The organizer's own order: most wins first, then most points scored. The player at the bottom is the one to move.
+function byWinsThenPoints(ids,rec){
+  return [...ids].sort((x,y)=>{const a=rec[x]||{w:0,pts:0},b=rec[y]||{w:0,pts:0};
+    return (b.w||0)-(a.w||0)||(b.pts||0)-(a.pts||0)||x-y;});
+}
+// One move, whichever screen it came from: during a session it changes tonight's courts, before one it sets the court.
+async function assignMove(id,court){
+  if(S.current)return moveCourtPlayer(id,court);
+  if(!court)return removeFromUpcoming(id); // taking a player out before a session means they are not coming
+  return setPlayerCourt(id,court);
+}
 function courtLock(){return S.current&&S.current.completed?' disabled title="Both rounds are finished. End the session to save the final courts, then change courts."':'';}
 // p61: the pool's action for a player: a spare who is already coming for the next session shows their status instead.
 function poolAction(p){
@@ -2454,6 +2483,15 @@ async function setPlayerCourt(id,c){
  if(!Number.isInteger(court)||court<0||court>NC)return toast('Choose a valid court','warn');
  const p=S.players.find(x=>x.id===id);if(!p)return;
  const seatsBefore=upcomingSeats(); // p89
+ // p92: the organizer's own move is not something the player did on court. Remember it so the court-climb figure can
+ // leave it out. Seating someone who had no court, or taking their court away, is not a move between courts.
+ const wasCourt=p.currentCourt;
+ if(court>0&&wasCourt>0&&court!==wasCourt){
+  const moves={...(S.adminCourtMoves||{})};
+  moves[id]=(moves[id]||0)+(court-wasCourt);
+  try{await setKV('admin_court_moves',moves);S.adminCourtMoves=moves;}
+  catch(e){await loadAll();renderAll();return toast('Court not changed: '+e.message,'error');}
+ }
  await sbU('players',id,{current_court:court,highest_court:court?Math.min(p.highestCourt||court,court):p.highestCourt});
  if(isSpareMember(p)){ // p71: the organizer seats a spare for the coming session (court 0 unseats them)
   const pre={...(S.preAttendance||{})};if(court)pre[id]='present';else delete pre[id];
@@ -3573,8 +3611,9 @@ function renderAssignUI(){
     if(S.current){rbEl.innerHTML=`<button class="btn btn-warn" style="margin-bottom:10px;" onclick="rebalanceCourts()">🔄 Re-sort &amp; Rebalance All Courts</button>`;}
     else{rbEl.innerHTML=`<button class="btn btn-warn" style="margin-bottom:10px;" onclick="rebalancePlayerCourts()">🔄 Re-sort &amp; Rebalance All Courts</button>`;}
   }
-  if(!S.current){el.innerHTML='<div class="alert alert-warn">Start a session first to drag-and-drop players between courts.</div>';return;}
-  const a=S.current.assignments;let html='';
+  // p93: before a session the board arranges tonight's starting courts; during one it arranges the live courts.
+  const a=S.current?S.current.assignments:upcomingLineup().assign;let html='';
+  if(!S.current)html+=`<div class="alert alert-info" style="margin-bottom:10px;">Tonight's starting courts. Drag a player to another court, or out to <strong>Not playing</strong>. Each court lists its players by wins, then points scored — the player at the bottom is the one to move down. Moving somebody is your decision and is not counted as a court drop in their stats.</div>`;
   // Count courts with <4 players
   const underFull=[];
   for(let c=1;c<=NC;c++){if((a[c]||[]).length===1||(a[c]||[]).length>5)underFull.push(c);}
@@ -3584,15 +3623,24 @@ function renderAssignUI(){
   // Unassigned players
   const assignedSet=new Set();
   for(let c=1;c<=NC;c++)(a[c]||[]).forEach(id=>assignedSet.add(id));
-  const unassigned=S.players.filter(p=>!assignedSet.has(p.id));
+  // p93: before a session, the pool is everyone approved who is not in tonight's line-up.
+  const unassigned=S.current?S.players.filter(p=>!assignedSet.has(p.id))
+    :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id));
+  const _rec=seasonRecord(); // p93
+  const _chip=(p,c)=>{const r=_rec[p.id]||{w:0,l:0,pts:0};
+    return `<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}`
+      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${r.w}W · ${r.pts} pts</span>`
+      +`<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="assignMove(${p.id},Number(this.value))"><option value="0">${S.current?'Unassigned':'Not playing'}</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`;};
   if(unassigned.length){
     html+=`<div class="dnd-court" data-court="0" ondragover="dndOver(event)" ondrop="dndDrop(event,0)" ondragleave="dndLeave(event)">
-      <div class="dnd-court-hdr"><span class="dnd-court-title" style="color:var(--yellow2);">UNASSIGNED</span><span class="dnd-court-cnt" style="background:rgba(243,156,18,0.15);color:var(--yellow2);">${unassigned.length}</span></div>
-      <div class="dnd-slots">${unassigned.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(c=>`<option value="${c}">Court ${c}</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="dnd-court-hdr"><span class="dnd-court-title" style="color:var(--yellow2);">${S.current?'UNASSIGNED':'NOT PLAYING'}</span><span class="dnd-court-cnt" style="background:rgba(243,156,18,0.15);color:var(--yellow2);">${unassigned.length}</span></div>
+      <div class="dnd-slots">${unassigned.map(p=>_chip(p,0)).join('')}</div>
     </div>`;
   }
   for(let c=1;c<=NC;c++){
-    const pids=(a[c]||[]);
+    // p93: before a session the court is listed in the order the organizer decides on — most wins, then most points,
+    // so the player to move down is last. During a session the court keeps the order the night put it in.
+    const pids=S.current?(a[c]||[]):byWinsThenPoints(a[c]||[],_rec);
     const players=pids.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
     const cnt=players.length;
     const warn=cnt===1||cnt>5;
@@ -3603,7 +3651,7 @@ function renderAssignUI(){
         <span class="dnd-court-cnt" style="background:${warn?'rgba(192,57,43,0.15)':'rgba(39,174,96,0.15)'};color:${cntColor};">${cnt} players${warn?' — invalid':cnt===0?' — empty':cnt===2?' — singles best of 3':cnt===3?' — singles':cnt===5?' — rotating doubles':' — doubles'}</span>
       </div>
       <div class="dnd-slots">
-        ${players.map(p=>`<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="moveCourtPlayer(${p.id},Number(this.value))"><option value="0">Unassigned</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`).join('')}
+        ${players.map(p=>_chip(p,c)).join('')}
 
       </div>
     </div>`;
@@ -3615,7 +3663,7 @@ let dragPid=null;
 function dndStart(e,pid){dragPid=pid;e.dataTransfer.effectAllowed='move';e.target.classList.add('dragging');setTimeout(()=>{e.target.classList.add('dragging');},0);}
 function dndOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('drag-over');}
 function dndLeave(e){e.currentTarget.classList.remove('drag-over');}
-async function dndDrop(e,targetCourt){e.preventDefault();e.currentTarget.classList.remove('drag-over');const id=dragPid;dragPid=null;if(id)await moveCourtPlayer(id,targetCourt);}
+async function dndDrop(e,targetCourt){e.preventDefault();e.currentTarget.classList.remove('drag-over');const id=dragPid;dragPid=null;if(id)await assignMove(id,targetCourt);} // p93
 async function saveAssignments(){if(!S.current)return;try{await setKV('current_session',S.current);toast('Assignments saved','success');}catch(e){await loadAll();toast('Assignments not saved: '+e.message,'error');}renderAll();}
 
 // Quick add from court panel
@@ -4681,7 +4729,9 @@ function computePlayerStreakAndImprovement(){
     if(S.current){
       for(let c=1;c<=NC;c++){if((S.current.assignments[c]||[]).includes(p.id)){currentPos=c;break;}}
     }
-    const courtClimb=allSessions.length>0?startCourt-currentPos:0;
+    // p92: add back every court the organizer moved them by hand, so the figure is what they did on court.
+    const adminMoved=(S.adminCourtMoves||{})[p.id]||0;
+    const courtClimb=allSessions.length>0?startCourt-currentPos+adminMoved:0;
     result[p.id]={streak:cur,maxStreak:max,courtClimb,improvement:Math.max(0,courtClimb)};
   });
   return result;

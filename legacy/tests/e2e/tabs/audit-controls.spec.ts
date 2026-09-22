@@ -119,7 +119,10 @@ for (let i = 0; i < 4; i++) {
     const want = manualMoveExpected(L, id, target), name = L.players.find((p) => p.id === id)!.name;
     await page.evaluate(() => { nav("admin"); showSec("admin", "a-assign"); });
     const sel = page.getByLabel(`Move ${name}`).first();
-    await expect(sel, "the selector moves through the court engine").toHaveAttribute("onchange", `moveCourtPlayer(${id},Number(this.value))`);
+    // p93: the board is shared with the pre-session line-up, so the selector calls assignMove — which, while a session
+    // is running, is the court engine. The oracle below is what proves the engine's rules actually decided the move.
+    await expect(sel, "the selector moves through the court engine").toHaveAttribute("onchange", `assignMove(${id},Number(this.value))`);
+    expect(await page.evaluate(() => !!S.current && String(assignMove).includes("moveCourtPlayer")), "during a session assignMove is the court engine").toBe(true);
     await sel.selectOption(String(target));
     // The oracle gives the message and the resulting lineup for both outcomes (a refusal keeps the lineup as it was).
     await expect(page.locator("#_t")).toHaveText(want.message!);

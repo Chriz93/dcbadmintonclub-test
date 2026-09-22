@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-21T21:16:36.808Z",
+ "generated": "2026-09-22T12:26:35.934Z",
  "summary": [
   {
    "k": "Control handler",
@@ -59,6 +59,7 @@
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance-stale.spec.ts",
@@ -103,6 +104,7 @@
     "e2e/tabs/checks.ts",
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -110,6 +112,8 @@
     "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
@@ -237,6 +241,7 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/census.ts",
     "e2e/tabs/complete-locks.spec.ts",
@@ -575,7 +580,9 @@
     "e2e/tabs/adjust-oracle.ts",
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin-move-not-a-drop.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance.spec.ts",
@@ -589,6 +596,7 @@
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.spec.ts",
     "e2e/tabs/courts.suite.ts",
@@ -617,6 +625,8 @@
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/round-summary.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "e2e/tabs/seating.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
@@ -648,7 +658,8 @@
    "item": "adminSetVote",
    "tests": [
     "e2e/tabs/controls.spec.ts",
-    "e2e/tabs/organizer-vote.spec.ts"
+    "e2e/tabs/organizer-vote.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts"
    ]
   },
   {
@@ -687,6 +698,14 @@
    "item": "assignCourtToRegistered",
    "tests": [
     "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "assignMove",
+   "tests": [
+    "e2e/tabs/assign-before-session.spec.ts",
+    "e2e/tabs/audit-controls.spec.ts"
    ]
   },
   {
@@ -758,6 +777,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/buttons.suite.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/harness.ts",
     "e2e/tabs/interop.ts",
@@ -1043,13 +1063,6 @@
   },
   {
    "kind": "Control handler",
-   "item": "moveCourtPlayer",
-   "tests": [
-    "e2e/tabs/audit-controls.spec.ts"
-   ]
-  },
-  {
-   "kind": "Control handler",
    "item": "nav",
    "tests": [
     "e2e/helpers.ts",
@@ -1063,6 +1076,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance-stale.spec.ts",
@@ -1076,6 +1090,7 @@
     "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
@@ -1110,6 +1125,8 @@
     "e2e/tabs/schedule.spec.ts",
     "e2e/tabs/scores.suite.ts",
     "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
     "e2e/tabs/slow-end-session.spec.ts",
@@ -1506,7 +1523,10 @@
    "kind": "Control handler",
    "item": "setPlayerCourt",
    "tests": [
-    "e2e/opener.spec.ts"
+    "e2e/opener.spec.ts",
+    "e2e/tabs/admin-move-not-a-drop.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts"
    ]
   },
   {
@@ -1569,6 +1589,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/organizer-seats.spec.ts"
@@ -1587,6 +1608,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance-stale.spec.ts",
@@ -1782,8 +1804,10 @@
     "e2e/tabs/adjust.spec.ts",
     "e2e/tabs/adjust.suite.ts",
     "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/admin-move-not-a-drop.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/announce.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/assign.spec.ts",
     "e2e/tabs/attendance-count.spec.ts",
     "e2e/tabs/attendance-stale.spec.ts",
@@ -1801,6 +1825,7 @@
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.spec.ts",
     "e2e/tabs/courts.suite.ts",
@@ -1864,6 +1889,8 @@
     "e2e/tabs/scores.spec.ts",
     "e2e/tabs/scores.suite.ts",
     "e2e/tabs/season-rollover.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "e2e/tabs/seating.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
@@ -2693,6 +2720,8 @@
    "kind": "Rule / wording",
    "item": "Nobody plays alone",
    "tests": [
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "unit/adjust.test.mjs"
    ]
   },
@@ -3355,7 +3384,11 @@
     "db/gen_cases.py",
     "db/review.sql",
     "e2e/mock-supabase.ts",
+    "e2e/tabs/admin-move-not-a-drop.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/gen.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/seat-knock-on.spec.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs",
     "rules.sql",

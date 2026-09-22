@@ -20,7 +20,26 @@ for (let i = 0; i < 100; i++) {
     await page.evaluate(() => nav("admin"));
     await page.getByRole("button", { name: "🏟️ Assign" }).click();
     await expect(page.locator("#assign-rebalance-btn button")).toHaveText("🔄 Re-sort & Rebalance All Courts");
-    if (!cur) { await expect(ui).toHaveText("Start a session first to drag-and-drop players between courts."); return; }
+    if (!cur) {
+      // p93: with no session the board arranges TONIGHT'S starting courts instead of refusing.
+      await expect(ui).toContainText("Tonight's starting courts.");
+      const lineup = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
+      const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; pts: number }>);
+      for (let c = 1; c <= NC; c++) {
+        const ids = await ui.locator(`.dnd-court[data-court='${c}'] .dnd-player`).evaluateAll((es) => es.map((e) => Number(e.getAttribute("data-pid"))));
+        expect([...ids].sort((x, y) => x - y), `Court ${c} holds tonight's players`).toEqual([...(lineup[c] || [])].sort((x, y) => x - y));
+        // Most wins first, then most points scored: the player to move down is the one at the bottom.
+        expect(ids, `Court ${c} is ordered by wins then points`).toEqual([...ids].sort((x, y) => (rec[y]?.w ?? 0) - (rec[x]?.w ?? 0) || (rec[y]?.pts ?? 0) - (rec[x]?.pts ?? 0) || x - y));
+        for (const id of ids) await expect(ui.locator(`.dnd-court[data-court='${c}'] .dnd-player[data-pid='${id}'] .dnd-rec`))
+          .toHaveText(`${rec[id]?.w ?? 0}W · ${rec[id]?.pts ?? 0} pts`);
+      }
+      // Everyone approved and not in tonight's line-up sits in the pool, ready to be dragged on.
+      const seatedNow = new Set(Object.values(lineup).flat());
+      const pool = L.players.filter((p) => p.approved && !p.waitlisted && !seatedNow.has(p.id)).map((p) => p.id);
+      const shownPool = await ui.locator(".dnd-court[data-court='0'] .dnd-player").evaluateAll((es) => es.map((e) => Number(e.getAttribute("data-pid"))));
+      expect([...shownPool].sort((x, y) => x - y), "not playing tonight").toEqual([...pool].sort((x, y) => x - y));
+      return;
+    }
     const a = cur.assignments, name = (id: number) => L.players.find((p) => p.id === id)!;
     const under = [1, 2, 3, 4, 5, 6].filter((c) => (a[c] || []).length===1||(a[c]||[]).length>5);
     if (under.length) await expect(ui.locator(".alert-error")).toHaveText(`⚠️ Court${under.length > 1 ? "s" : ""} ${under.map((c) => "C" + c).join(", ")} ${under.length > 1 ? "are" : "is"} invalid — a court needs zero or 2–5 players. Use Adjust courts to review the changes.`);

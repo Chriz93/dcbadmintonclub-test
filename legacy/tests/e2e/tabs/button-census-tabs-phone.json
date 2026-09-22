@@ -121,7 +121,7 @@
  {
   "state": "between-rounds",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Mateo Silva",
   "tag": "select"
  },
@@ -922,6 +922,13 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Kenji Dubé",
+  "tag": "select"
  },
  {
   "state": "big-before",
@@ -3879,6 +3886,13 @@
  },
  {
   "state": "first-night",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Oscar Cohen",
+  "tag": "select"
+ },
+ {
+  "state": "first-night",
   "view": "admin → a-att",
   "key": "button|callInSpare(#)",
   "label": "Call in Fatima Rossi",
@@ -4513,6 +4527,13 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Fatima Silva",
+  "tag": "select"
  },
  {
   "state": "late-season",
@@ -5867,6 +5888,13 @@
  },
  {
   "state": "pre-session",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Ryan Boateng",
+  "tag": "select"
+ },
+ {
+  "state": "pre-session",
   "view": "admin → a-att",
   "key": "button|callInSpare(#)",
   "label": "Call in Ryan Boateng",
@@ -6554,7 +6582,7 @@
  {
   "state": "round-1",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Oscar Ahmed",
   "tag": "select"
  },
@@ -7366,7 +7394,7 @@
  {
   "state": "round-1-big",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Ananya Silva",
   "tag": "select"
  },
@@ -8150,7 +8178,7 @@
  {
   "state": "round-1-small",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Fatima Alvarez",
   "tag": "select"
  },
@@ -8920,7 +8948,7 @@
  {
   "state": "round-2",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Omar Khan",
   "tag": "select"
  },
@@ -9711,7 +9739,7 @@
  {
   "state": "round-2-big",
   "view": "admin → a-assign",
-  "key": "select|moveCourtPlayer(#,Number(this.value))",
+  "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Kwame Wong",
   "tag": "select"
  },
@@ -10505,6 +10533,13 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Sana Cohen",
+  "tag": "select"
  },
  {
   "state": "small-before",
@@ -11681,6 +11716,13 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-assign",
+  "key": "select|assignMove(#,Number(this.value))",
+  "label": "Move Felix Haddad",
+  "tag": "select"
  },
  {
   "state": "spares-before",
