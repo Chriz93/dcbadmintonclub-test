@@ -11,6 +11,9 @@ const root = resolve(__dirname, "../../..");
 export default defineConfig({
   testDir: __dirname,
   timeout: 90000,
+  // A slow-connection run (SLOW_NET) adds up to a second and a half to every request, so the default five-second wait
+  // for an assertion is the test's patience running out, not the app failing. Give the assertions room on those runs.
+  expect: { timeout: process.env.SLOW_NET ? 30000 : 5000 },
   retries: 0,
   use: {
     actionTimeout: 15000, baseURL: "http://127.0.0.1:8790/", headless: true, screenshot: "only-on-failure", launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : existsSync(shell) ? { executablePath: shell } : {} },

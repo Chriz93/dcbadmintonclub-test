@@ -29,7 +29,7 @@ step "focused checks for every defect fixed in this release"
 pnpm exec playwright test -c $C --project=tabs --reporter=line \
   tabs/call-in tabs/organizer-vote tabs/complete-locks tabs/slow-network tabs/slow-end-session tabs/keyboard-redraw \
   tabs/audit-controls tabs/sync-race tabs/review-regressions tabs/controls tabs/dialog-keyboard tabs/signin \
-  tabs/isolation tabs/seating tabs/attendance-count tabs/a11y tabs/organizer-seats tabs/completed-round-cards tabs/tonight-2026-09-16 tabs/courts-layout-and-elo tabs/called-in-spare tabs/player-of-session tabs/attendance-stale tabs/adjust-edge tabs/home-court-card tabs/round-summary tabs/elo-change-baseline tabs/edit-session-scores tabs/vote-reminder-one tabs/home-not-answered tabs/seat-knock-on tabs/seat-brings-back tabs/court-panel-title tabs/admin-move-not-a-drop tabs/assign-before-session || fail=1
+  tabs/isolation tabs/seating tabs/attendance-count tabs/a11y tabs/organizer-seats tabs/completed-round-cards tabs/tonight-2026-09-16 tabs/courts-layout-and-elo tabs/called-in-spare tabs/player-of-session tabs/attendance-stale tabs/adjust-edge tabs/home-court-card tabs/round-summary tabs/elo-change-baseline tabs/edit-session-scores tabs/vote-reminder-one tabs/home-not-answered tabs/seat-knock-on tabs/seat-brings-back tabs/court-panel-title tabs/admin-move-not-a-drop tabs/assign-before-session tabs/court-panel-stays || fail=1
 
 step "nothing runs off a 320-pixel phone (the narrowest screen the league uses)"
 # p94: a layout regression on the court board passed sanity and was caught only by the full suite. Twelve seconds here.

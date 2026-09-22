@@ -40,6 +40,10 @@ for (let i = 0; i < 8; i++) {
     await expect.poll(() => startsOn(sp.id), { message: "Start Session would seat them" }).toBeGreaterThan(0);
     const at = await startsOn(sp.id);
     await expect(gymCourt(at), "shown on the main Courts page").toContainText(first(sp.name));
+    // p95: the panel stays open on the court being arranged, so several players can be seated in a row. Close it
+    // before going back to the Courts page for the next step.
+    await expect(page.locator("#modal.open"), "the panel is still open after seating").toBeVisible();
+    await page.evaluate(() => closeModal());
     // Remove: unseated again.
     await gymCourt(at).click();
     await page.getByRole("button", { name: `Remove ${sp.name} from Court ${at}` }).click();
