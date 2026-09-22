@@ -2446,9 +2446,25 @@ async function setPlayerCourt(id,c){
   await loadAll();renderAll();
   return toast((court?`${p.name} (spare) is seated on Court ${court} for Session ${upcomingSessionNumber()}`:`${p.name} (spare) is no longer seated for Session ${upcomingSessionNumber()}`)+seatKnockOn(seatsBefore,upcomingSeats(),id),'success'); // p89
  }
+ // p90: a regular taken off a court is marked "not coming", and the line-up leaves out everyone who is not coming
+ // before it reads anyone's court. Putting them on a court means they are playing, so lift that the way the
+ // organizer's own Present mark does — otherwise the seat is written and nothing appears.
+ if(court){
+  const pre={...(S.preAttendance||{})};
+  if((S.rsvp||{})[id]==='notcoming'||pre[id]==='absent'){
+   pre[id]='present';
+   try{await setKV('pre_session_attendance',pre);S.preAttendance=pre;}
+   catch(e){await loadAll();renderAll();return toast('Seat not saved: '+e.message,'error');}
+  }
+ }
  await loadAll();renderAll();
- // p89: a regular's seat change said nothing at all, so a player the rules moved with it changed court in silence.
- toast((court?`${p.name} is on Court ${court}`:`${p.name} has no court for Session ${upcomingSessionNumber()}`)+seatKnockOn(seatsBefore,upcomingSeats(),id),'success');
+ // p89, corrected by p90: say where the player ended up, not where they were asked to go.
+ const seatsAfter=upcomingSeats(),landed=seatsAfter[id];
+ const where=!court?`${p.name} has no court for Session ${upcomingSessionNumber()}`
+  :landed===undefined?`${p.name} is not in tonight's line-up — mark them coming in Standings → RSVP, then seat them`
+  :landed===court?`${p.name} is on Court ${court}`
+  :`${p.name} is on Court ${landed}, not Court ${court} — the courts are settled so nobody plays alone`;
+ toast(where+seatKnockOn(seatsBefore,seatsAfter,id),landed===undefined&&court?'warn':'success');
 }
 // p71: Remove on the Courts page before a session: a spare is unseated; a regular is marked "not coming" (no penalty).
 async function removeFromUpcoming(id){
