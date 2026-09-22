@@ -39,7 +39,9 @@ for (let i = 0; i < 100; i++) {
     if (L.players.length) {
       await page.locator(`#court-gym-view .gym-court[onclick="showCourtDetail(${c})"]`).click();
       const medals = !L.current || !!L.current.completed;
-      await expect(page.locator("#modal-title")).toHaveText(`Court ${c} — ${medals ? (c === 1 ? "🥇 Top Court" : c === 2 ? "🥈 2nd Court" : c === 3 ? "🥉 3rd Court" : `Court ${c}`) : `Court ${c}`}`);
+      // p91: the top three courts carry a medal name; the rest are titled by their number alone.
+      const medal = medals ? (c === 1 ? "🥇 Top Court" : c === 2 ? "🥈 2nd Court" : c === 3 ? "🥉 3rd Court" : "") : "";
+      await expect(page.locator("#modal-title")).toHaveText(`Court ${c}${medal ? " — " + medal : ""}`);
       const tiles = (await page.locator("#modal-body div[style*='grid-template-columns:1fr 1fr'] > div").allInnerTexts()).map(norm);
       expect(tiles, `Court ${c} detail`).toEqual([...Array(Math.max(4, ids.length)).keys()].map((k) => { const p = L.players.find((x) => x.id === ids[k]); return p ? `Player ${k + 1} ${p.name} ${p.season_wins}W · ${p.season_losses}L${L.current ? "" : " Remove"}` : `Player ${k + 1} Empty`; }));
       await expect(page.locator("#modal-body .alert")).toHaveCount(L.current ? 1 : 0);

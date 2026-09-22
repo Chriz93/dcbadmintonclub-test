@@ -937,7 +937,7 @@ body{font-size:15px;line-height:1.5;background:radial-gradient(900px 480px at 50
 </div>
 
 <div id="undo-pill" hidden><button class="undo-btn" onclick="undoLast()" title="Undo the last admin step"><span class="undo-ic">↶</span><span><strong>Undo</strong> · <span id="undo-label"></span></span></button></div>
-<div class="watermark">DC Badminton Club · Christy George</div>
+<div class="watermark">DC Badminton Club · Christy George<span id="build-tag"></span></div>
 <nav class="bnav" id="bottom-nav" aria-label="Main navigation">
   <button class="bnav-btn active" id="bnav-home" onclick="nav('home',this)"><span class="bi">🏠</span>Home</button>
   <button class="bnav-btn" id="bnav-register" onclick="nav('register',this)" style="display:none;"><span class="bi">📋</span>Register</button>
@@ -1332,6 +1332,21 @@ async function enablePush(){
 }
 async function savePushSubscription(j){
   await rpc('save_push_subscription',{p_endpoint:j.endpoint,p_p256dh:j.keys&&j.keys.p256dh||'',p_auth:j.keys&&j.keys.auth||'',p_user_agent:navigator.userAgent.slice(0,200)});
+}
+// p91: the build serving this page, read from the service worker cache that is really in use. A tab kept open for
+// days serves the build it cached, and until now nothing on the page said which one that was.
+async function showBuildTag(){
+  const el=document.getElementById('build-tag');if(!el)return;
+  try{
+    if(!('caches'in window))return;
+    // This site's own caches only: the league site and the test site are different origins' worth of data, and a
+    // browser that has visited both must not report the other one's build.
+    const prefix=SITE_ENV==='production'?'dcbc-prod-':'dcbc-test-';
+    const mine=(await caches.keys()).filter(k=>k.startsWith(prefix)).sort();
+    if(!mine.length)return;
+    const v=mine[mine.length-1].slice(prefix.length);
+    el.textContent=` · build ${v}`;
+  }catch(e){/* storage can be blocked; the watermark simply stays as it was */}
 }
 async function checkPushState(){const epoch=_accountEpoch;try{if(!pushSupported())return _pushOn=false;const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();const owned=sub?await sbG('push_subscriptions','endpoint=eq.'+encodeURIComponent(sub.endpoint)+'&select=endpoint&order=id.asc'):[];if(epoch!==_accountEpoch)return false;return _pushOn=!!sub&&owned.some(x=>x.endpoint===sub.endpoint);}catch(e){if(epoch===_accountEpoch)_pushOn=false;return false;}}
 // One-tap vote links from reminder emails: /?vote=coming&s=12 (applied once signed in).
@@ -3752,8 +3767,10 @@ function showCourtDetail(court){
   const pids=assignments[court]||[];
   const players=pids.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
   const showMedals=!S.current||S.current.completed;
-  const badge=showMedals?(court===1?'🥇 Top Court':court===2?'🥈 2nd Court':court===3?'🥉 3rd Court':`Court ${court}`):`Court ${court}`;
-  openModal(`Court ${court} — ${badge}`,`
+  // p91: only the top three courts have a name of their own; the rest are just their number, and printing that
+  // after the court name gave "Court 4 — Court 4".
+  const medal=showMedals?(court===1?'🥇 Top Court':court===2?'🥈 2nd Court':court===3?'🥉 3rd Court':''):'';
+  openModal(`Court ${court}${medal?' — '+medal:''}`,`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       ${[...Array(Math.max(4,players.length)).keys()].map(i=>{const p=players[i];
         return `<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
@@ -6492,8 +6509,10 @@ setInterval(verifyLicensedDomain,30000);
 function registerServiceWorker(){
   if(location.protocol!=='file:'&&'serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{showBuildTag();}); // p91: a new build took over
   }
 }
+showBuildTag(); // p91
 init();
 
 </script>

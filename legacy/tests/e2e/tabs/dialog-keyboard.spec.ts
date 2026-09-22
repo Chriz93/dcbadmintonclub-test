@@ -64,7 +64,7 @@ test.describe("dialogs · organizer", () => {
   dialogChecks("court details", async (k) => {
     await load(ctx, genLeague(67200 + k, { ...variety(720 + k), regulars: 16, live: "r1-partial" }));
     await ctx.page.evaluate(() => nav("courts"));
-    return { page: ctx.page, opener: ctx.page.locator("#page-courts .gym-court").first(), title: /^Court 1 — / };
+    return { page: ctx.page, opener: ctx.page.locator("#page-courts .gym-court").first(), title: /^Court 1(?: — 🥇 Top Court)?$/ }; // p91
   }, 0);
   dialogChecks("add a player to a court", async (k) => {
     await load(ctx, genLeague(67300 + k, { ...variety(730 + k), regulars: 16, spares: 2, live: "r1-partial" }));
@@ -83,7 +83,7 @@ test.describe("dialogs · organizer", () => {
     }
     expect(ring, "a court card took the focus, with a visible ring").toBeGreaterThanOrEqual(2);
     await page.keyboard.press(" ");
-    await expect(page.getByRole("dialog", { name: /^Court \d — / })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: /^Court \d(?: — [🥇🥈🥉] [\w\s]+)?$/ })).toBeVisible(); // p91
   });
   test("Players tab · every note button says whose note it is", async () => {
     const L = genLeague(67500, { ...variety(750), regulars: 12 });
