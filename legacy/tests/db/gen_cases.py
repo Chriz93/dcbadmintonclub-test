@@ -259,11 +259,13 @@ for k in range(260):
     on = assign[str(c)]
     ids = [x for x in (a1, a2, b1, b2) if x is not None]
     need = 4 if len(on) >= 4 else 2
-    # expected outcome, checked in the order the rules state them
-    if ver != 5: want = "Stale state"
-    elif p_cycle != cy: want = "Stale state"
-    elif completed: want = "scores are locked"
+    # expected outcome, checked in the order the rules state them.
+    # L27: the league-wide version is NOT a conflict for a score save. Two courts finishing together must both save,
+    # so a stale `ver` alone no longer refuses; the same night, the same round, the same line-up and an unfinished
+    # session still do. The "stale" variant therefore falls through to whatever the other rules say.
+    if p_cycle != cy: want = "Stale state"
     elif not 1 <= p_court <= 6: want = "Invalid court"
+    elif completed: want = "scores are locked"
     elif who != "ORG2" and not (who == "P1" and "P1" in on): want = "Only players on this court"
     elif len(on) < 2: want = "Court needs two to five players"
     elif key_c != p_court or key_cy != p_cycle: want = "is not on this court and round"

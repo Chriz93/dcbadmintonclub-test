@@ -62,4 +62,17 @@ from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace
 where ns.nspname='public' and p.prosrc like '%pg_advisory_xact_lock(7262026)%'
   and not (coalesce(array_to_string(p.proconfig,','),'') like '%lock_timeout%' and coalesce(array_to_string(p.proconfig,','),'') like '%statement_timeout%')
 union all
+-- L27: a score save locks its own court, so six courts never queue behind one another.
+select 'save_court_scores locks per court (L27)',
+  case when exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                   where n.nspname='public' and p.proname='save_court_scores'
+                     and p.prosrc like '%pg_advisory_xact_lock(7262026, p_court)%')
+       then 'OK' else 'FAIL: still takes the league-wide lock' end
+union all
+-- L27: a dropped connection can never hold the league lock by going idle inside its transaction (22 September).
+select 'app roles give up an idle transaction (L27)',
+  case when (select count(*) from pg_roles where rolname in ('authenticated','anon','service_role')
+               and array_to_string(rolconfig,',') like '%idle_in_transaction_session_timeout%') = 3
+       then 'OK' else 'FAIL: a stranded transaction can hold the league lock' end
+union all
 select 'retired unsafe API signatures',case when to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null and to_regprocedure('public.start_new_season(text)') is null and to_regprocedure('public.record_payment(bigint,text,numeric,int,date,text)') is null then 'OK' else 'FAIL: old API still callable' end;

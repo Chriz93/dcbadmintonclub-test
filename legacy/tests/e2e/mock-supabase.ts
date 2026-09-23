@@ -295,7 +295,9 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "save_court_scores") {
         const st = s.state["current_session"]; if (!st) return json(400, { message: "No active session" });
         const cur = JSON.parse(st.value);
-        if (a.p_expected !== st.version || String(a.p_session)!==String(cur.id)) return deny("Stale state: refresh before saving", "40001");
+        // L27: a score save is NOT refused because another court saved in between — the league version is no longer a
+        // conflict for scores. The same night and the same round still are (mirrors save_court_scores in the database).
+        if (String(a.p_session) !== String(cur.id)) return deny("Stale state: this match changed; refresh before saving", "40001");
         if ((cur.cycle || 1) !== a.p_cycle) return deny("That round is over — refresh to see the current round", "40001");
         if (cur.completed) return json(400, { message: "Session is complete; scores are locked" });
         const assigned: number[] = cur.assignments?.[String(a.p_court)] || [];
