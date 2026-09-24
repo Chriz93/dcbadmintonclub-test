@@ -63,4 +63,8 @@ $PG -d postgres -q -c "drop database $DB"
 [ "$pass" -eq "$total" ] && [ "$errors" -eq 0 ]
 
 # A night as it is played: every court saving at the same moment (22 September's "database sync error").
-sh legacy/tests/db/concurrency.sh || exit 1
+bash legacy/tests/db/concurrency.sh || exit 1
+
+# The whole night end to end: six courts, twenty-four players, two rounds, a phone dropping mid-round, the organizer's
+# page polling throughout. Without L27 this stalls at 4 of 18 games and the night cannot be ended.
+bash legacy/tests/db/night.sh || exit 1
