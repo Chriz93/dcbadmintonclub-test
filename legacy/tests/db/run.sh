@@ -43,9 +43,17 @@ if $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$LOG/failed-upgrade.sql" > "$LOG/failed-
 if ! grep -q 'division by zero' "$LOG/failed-upgrade.out"; then tail -15 "$LOG/failed-upgrade.out";exit 1;fi
 $PG -d $DB -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null or exists(select 1 from information_schema.columns where table_schema='public' and table_name='players' and column_name='archived_at') then raise exception 'Failed upgrade did not roll back';end if;end \$\$;"
 echo "atomic upgrade rollback: OK"
-for migration in legacy/migrations/TEST_2026-09-13.sql legacy/migrations/L25_open_registration.sql legacy/migrations/L26_lock_and_statement_timeouts.sql legacy/migrations/L27_per_court_scores.sql legacy/migrations/L28_organizer_keys_in_undo_and_rollover.sql legacy/migrations/L29_regular_capacity.sql legacy/migrations/L30_spare_seats_match_the_app.sql; do
+node legacy/scripts/build-october-migration.mjs --check
+# The October migrations are applied as the bundle that will actually be pasted into the SQL editor, guard and all.
+for migration in legacy/migrations/TEST_2026-09-13.sql legacy/migrations/L25_open_registration.sql legacy/migrations/L26_lock_and_statement_timeouts.sql legacy/migrations/L27_per_court_scores.sql legacy/migrations/TEST_2026-10-06.sql; do
   if ! $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$migration" >> "$LOG/latest.out" 2>&1; then tail -30 "$LOG/latest.out";exit 1;fi
 done
+# The production bundle must refuse this database: it is marked test. (The near-miss of 23 September, made impossible.)
+if $PG -d $DB -q -v ON_ERROR_STOP=1 -f legacy/migrations/PROD_2026-10-06.sql > "$LOG/prod-guard.out" 2>&1; then
+  echo "the production bundle ran on a database marked test"; exit 1
+fi
+if ! grep -q "this database is marked test" "$LOG/prod-guard.out"; then tail -5 "$LOG/prod-guard.out"; echo "the production bundle was refused for the wrong reason"; exit 1; fi
+echo "production bundle refused on TEST: OK"
 $PG -d $DB -At -v ON_ERROR_STOP=1 -f legacy/migrations/verify.sql > "$LOG/verify.out"
 if grep 'FAIL' "$LOG/verify.out"; then echo "release verification failed";exit 1;fi
 echo "release verification: all checks OK"
