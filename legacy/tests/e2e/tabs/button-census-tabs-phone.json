@@ -282,6 +282,20 @@
  {
   "state": "between-rounds",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -326,6 +340,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -1115,6 +1150,20 @@
  {
   "state": "big-before",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -1166,6 +1215,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -1801,6 +1871,20 @@
  {
   "state": "complete",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -1838,6 +1922,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -2578,6 +2683,20 @@
  {
   "state": "complete-big",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -2629,6 +2748,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -3355,6 +3495,20 @@
  {
   "state": "complete-small",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -3392,6 +3546,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -4132,6 +4307,13 @@
  {
   "state": "first-night",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -4183,6 +4365,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -4818,6 +5021,20 @@
  {
   "state": "late-season",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -4855,6 +5072,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -6204,6 +6442,20 @@
  {
   "state": "pre-session",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -6255,6 +6507,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -6918,6 +7191,20 @@
  {
   "state": "round-1",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -6969,6 +7256,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -7744,6 +8052,20 @@
  {
   "state": "round-1-big",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -7795,6 +8117,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -8542,6 +8885,13 @@
  {
   "state": "round-1-small",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -8586,6 +8936,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -9354,6 +9725,20 @@
  {
   "state": "round-2",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -9391,6 +9776,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -10166,6 +10572,20 @@
  {
   "state": "round-2-big",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "💰",
   "tag": "span"
@@ -10203,6 +10623,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -10971,6 +11412,20 @@
  {
   "state": "small-before",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -11008,6 +11463,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {
@@ -12182,6 +12658,20 @@
  {
   "state": "spares-before",
   "view": "admin → a-pl",
+  "key": "span|setMembership(#,'regular')",
+  "label": "Spare",
+  "tag": "span"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-pl",
+  "key": "span|setMembership(#,'spare')",
+  "label": "Regular",
+  "tag": "span"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
   "label": "⏳",
   "tag": "span"
@@ -12233,6 +12723,27 @@
   "view": "admin → a-reg",
   "key": "button|rejectPlayer(#)",
   "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-reg",
+  "key": "button|saveRegularPlaces()",
+  "label": "Save",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'regular')",
+  "label": "→ Regular",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-reg",
+  "key": "button|setMembership(#,'spare')",
+  "label": "→ Spare",
   "tag": "button"
  },
  {

@@ -2126,7 +2126,7 @@ async function togglePaid(id){recordPaymentUI(id);}
 // ── Undo ─────────────────────────────────────────────────────────────────────────────────────────
 // Every wrapped admin action gets a database checkpoint first; if the action changed nothing the checkpoint is
 // discarded. Score saves are journaled by the database itself. undoLast() restores the latest checkpoint exactly.
-const UNDOABLE={"applyCourtAdjust":"Adjust courts","startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","saveEditRegistration":"Edit registration","saveDropIn":"Starting points","clearDropIn":"Starting points"};
+const UNDOABLE={"applyCourtAdjust":"Adjust courts","startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","saveEditRegistration":"Edit registration","saveDropIn":"Starting points","clearDropIn":"Starting points","setMembership":"Change membership","saveRegularPlaces":"Regular places"};
 let _ckDepth=0,_undoing=false,_undoEpoch=0;
 function undoLabel(name,args){
   const pn=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'player';};
@@ -2575,7 +2575,8 @@ async function toggleMembership(id,type){
   // Primary: store in KV override (works regardless of DB schema)
   const overrides=await getKV('membership_overrides')||{};
   overrides[id]=type;
-  await setKV('membership_overrides',overrides);
+  try{await setKV('membership_overrides',overrides);} // p104: say so when it does not save
+  catch(e){await loadAll();renderAll();return toast('Membership not changed: '+e.message,'error');}
   // Secondary: also try to update DB column (best-effort)
   // Membership columns are changed atomically by set_state.
   await loadAll();renderAll();
@@ -2663,6 +2664,7 @@ function renderAdminPlayers(){
       <div style="font-size:10px;color:var(--muted);">${esc(p.email)||'—'} · C${p.currentCourt} · ${p.seasonWins}W ${p.seasonLosses}L · Absent:${p.noShowCount}</div>
     </div>
     <button class="notes-btn" onclick="openAdminNote(${p.id})" aria-label="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}" title="${p.adminNote?'Private note':'Add a private note'} for ${esc(p.name)}">${noteIcon}</button>
+    ${membershipBtn(p,true)}
     <span class="tag ${attStatus==='absent'?'tg-red':attStatus==='present'?'tg-green':'tg-gray'}" style="cursor:pointer;font-size:11px;" onclick="togglePlayerPresence(${p.id})" title="Toggle present/absent">${attStatus==='absent'?'❌':attStatus==='present'?'✅':'—'}</span>
     <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;font-size:11px;" onclick="togglePaid(${p.id})" title="Toggle paid">${p.paid?'💰':'⏳'}</span>
     <select aria-label="Court for ${esc(p.name)}"${courtLock()} style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 4px;font-size:10px;" onchange="setPlayerCourt(${p.id},this.value)">
@@ -2750,6 +2752,13 @@ function renderRegPlayers(){
       <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${notRegistered.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Not Reg.</div></div>
       <div><div style="font-size:18px;font-weight:800;color:var(--red2);">${unpaidCount}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Unpaid</div></div>
     </div></div>`;
+  // p104: the number of regular places is the organizer's, not something only a new season can change (L29).
+  html+=`<div class="card" id="season-places"><div class="card-title">🎟️ Regular places this season</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;"><strong style="color:var(--text);">${regularCount} of ${REGULAR_CAPACITY} taken.</strong> This is the number the registration form stops at: a player who registers when the places are full goes on the waitlist. Raise it to run the season with more regulars — up to ${PLACES_MAX} — or lower it to close the season off. It cannot go below the regulars already approved.</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1 1 120px;min-width:0;"><label class="lbl" for="rc-places">Places</label><input class="inp" id="rc-places" type="number" inputmode="numeric" min="2" max="${PLACES_MAX}" step="1" value="${REGULAR_CAPACITY}"></div>
+      <button class="btn btn-primary btn-sm" id="rc-save" onclick="saveRegularPlaces()">Save</button>
+    </div></div>`;
   // Not registered — admin-added without waiver
   if(notRegistered.length){
     html+=`<div class="card" style="border-color:var(--red);"><div class="card-title" style="color:var(--red2);">❌ Not Registered — No Waiver (${notRegistered.length})</div>
@@ -2809,6 +2818,35 @@ function renderRegPlayers(){
     else{badge.style.display='none';}
   }
 }
+// p104: the season's regular places. The database allows 2 to 30 and refuses anything below the regulars already
+// approved (L29), so the only thing to do here is ask for a number and say what came back.
+const PLACES_MAX=30;
+async function saveRegularPlaces(){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const want=parseInt(document.getElementById('rc-places')?.value||'');
+  if(!Number.isInteger(want)||want<2||want>PLACES_MAX)return toast(`Regular places must be a number from 2 to ${PLACES_MAX}`,'warn');
+  if(want===REGULAR_CAPACITY)return toast(`The season already has ${want} regular places`,'info');
+  try{await rpc('set_regular_capacity',{p_capacity:want});}
+  catch(e){return toast('Places not changed: '+e.message,'error');}
+  REGULAR_CAPACITY=want;
+  await loadAll();renderAll();
+  toast(`The season now has ${want} regular places`,'success');
+}
+// p104: one click between Regular and Spare. Going to spare frees a regular place and costs the player nothing they
+// have earned; going to regular asks the over-cap question when the places are full (p101).
+async function setMembership(id,type){
+  const p=S.players.find(x=>x.id===id);if(!p)return;
+  if(type===p.membershipType)return toast(`${p.name} is already a ${type==='spare'?'spare':'regular member'}`,'info');
+  if(type==='spare'&&!confirm(`Make ${p.name} a spare?\n\nThey keep their waiver, their payment record and every game they have played. Their regular place is freed, and they play when you call them in.`))return;
+  return toggleMembership(id,type);
+}
+function membershipBtn(p,compact){
+  const spare=p.membershipType==='spare',to=spare?'regular':'spare';
+  const title=spare?`Make ${esc(p.name)} a regular member`:`Make ${esc(p.name)} a spare — frees their regular place, keeps their waiver, payments and games`;
+  return compact
+    ? `<span class="tag ${spare?'tg-yellow':'tg-teal'} member-type" data-pid="${p.id}" style="cursor:pointer;font-size:11px;" title="${title}" onclick="setMembership(${p.id},'${to}')">${spare?'Spare':'Regular'}</span>`
+    : `<button class="btn btn-ghost btn-sm member-type" data-pid="${p.id}" style="padding:4px 8px;" title="${title}" onclick="setMembership(${p.id},'${to}')">${spare?'→ Regular':'→ Spare'}</button>`;
+}
 async function promoteFromWaitlist(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
   const taken=regularPlacesTaken(id); // p100, p101
@@ -2825,7 +2863,7 @@ function regPlayerCard(p,showApprove){
   return `<div style="padding:12px;border-bottom:1px solid var(--border);">
     <div class="flex-between" style="margin-bottom:6px;">
       <div style="font-weight:800;font-size:13px;">${esc(p.name)}${isSpare?'<span class="spare-badge">SPARE</span>':''}</div>
-      <div style="display:flex;gap:5px;">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
         <span class="tag ${p.paid?'tg-green':'tg-yellow'}" style="cursor:pointer;" onclick="togglePaid(${p.id})">${p.paid?'✅ Paid':'⏳ Unpaid'}</span>
         ${showApprove?`<button class="btn btn-success btn-sm" onclick="approvePlayer(${p.id})" style="padding:4px 8px;">✓ Approve</button>`:''}
         ${(()=>{
@@ -2835,6 +2873,7 @@ function regPlayerCard(p,showApprove){
           if(linkedTo)return '<span class="tag tg-green" style="font-size:11px;">✅ Linked to '+esc(linkedTo.name.split(' ')[0])+'</span>';
           return '<button class="btn btn-primary btn-sm" onclick="linkWaiverToPlayer('+p.id+')" style="padding:4px 8px;">Waiver details</button>';
         })()}
+        ${membershipBtn(p)}
         <button class="btn btn-ghost btn-sm" onclick="editRegistration(${p.id})" style="padding:4px 8px;">✏️ Edit</button>
         <button class="btn btn-danger btn-sm" onclick="rejectPlayer(${p.id})" style="padding:4px 8px;">✕</button>
       </div>

@@ -1,14 +1,14 @@
 {
- "generated": "2026-10-06T03:52:17.796Z",
+ "generated": "2026-10-06T11:12:01.192Z",
  "summary": [
   {
    "k": "Control handler",
-   "n": 122,
+   "n": 124,
    "g": 0
   },
   {
    "k": "Database function",
-   "n": 56,
+   "n": 57,
    "g": 0
   },
   {
@@ -23,7 +23,7 @@
   },
   {
    "k": "Form field",
-   "n": 83,
+   "n": 84,
    "g": 0
   },
   {
@@ -84,6 +84,7 @@
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/registered.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
@@ -340,6 +341,7 @@
     "e2e/tabs/lineup.suite.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/waitlist-over-cap.spec.ts",
@@ -362,6 +364,7 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
@@ -679,7 +682,8 @@
    "tests": [
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/organizer-vote.spec.ts",
-    "e2e/tabs/seat-brings-back.spec.ts"
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts"
    ]
   },
   {
@@ -725,7 +729,9 @@
    "item": "assignMove",
    "tests": [
     "e2e/tabs/assign-before-session.spec.ts",
-    "e2e/tabs/audit-controls.spec.ts"
+    "e2e/tabs/audit-controls.spec.ts",
+    "e2e/tabs/seat-brings-back.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts"
    ]
   },
   {
@@ -1161,6 +1167,7 @@
     "e2e/tabs/round-complete.spec.ts",
     "e2e/tabs/schedule.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/seat-brings-back.spec.ts",
     "e2e/tabs/seat-knock-on.spec.ts",
@@ -1518,6 +1525,13 @@
   },
   {
    "kind": "Control handler",
+   "item": "saveRegularPlaces",
+   "tests": [
+    "e2e/tabs/season-places.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
    "item": "saveScoreEdits",
    "tests": [
     "e2e/tabs/edit-session-scores.spec.ts"
@@ -1568,6 +1582,13 @@
    "item": "setEmailReminders",
    "tests": [
     "e2e/tabs/controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "setMembership",
+   "tests": [
+    "e2e/tabs/season-places.spec.ts"
    ]
   },
   {
@@ -1689,6 +1710,7 @@
     "e2e/tabs/players.spec.ts",
     "e2e/tabs/registered.spec.ts",
     "e2e/tabs/review-regressions.spec.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/session.spec.ts",
@@ -1950,6 +1972,7 @@
     "e2e/tabs/schedule.spec.ts",
     "e2e/tabs/scores.spec.ts",
     "e2e/tabs/scores.suite.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/seat-brings-back.spec.ts",
     "e2e/tabs/seat-knock-on.spec.ts",
@@ -2531,6 +2554,13 @@
     "e2e/matchnight.spec.ts",
     "e2e/tabs/register.suite.ts",
     "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "rc-places",
+   "tests": [
+    "e2e/tabs/season-places.spec.ts"
    ]
   },
   {
@@ -3255,6 +3285,7 @@
    "item": "set_rsvp",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "db/review.sql",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
@@ -3274,6 +3305,7 @@
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/tabs/adjust-edge.spec.ts",
+    "e2e/tabs/season-places.spec.ts",
     "e2e/tabs/slow-network.spec.ts",
     "rules.sql",
     "unit/slow-replies.test.mjs"
@@ -3297,9 +3329,17 @@
   },
   {
    "kind": "Database function",
+   "item": "spare_seat_count",
+   "tests": [
+    "db/operations-regressions.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
    "item": "spare_seat_status",
    "tests": [
-    "db/internal-functions.sql"
+    "db/internal-functions.sql",
+    "db/operations-regressions.sql"
    ]
   },
   {
