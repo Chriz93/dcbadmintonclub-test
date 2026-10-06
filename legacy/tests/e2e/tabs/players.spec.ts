@@ -111,7 +111,9 @@ for (let i = 0; i < 100; i++) {
       const taken = P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved).length;
       if (!name) { await expect(toast).toHaveText("Enter a name"); return; }
       if(P.some(p=>p.name.toLowerCase()===name.toLowerCase())){await expect(toast).toHaveText('This name is already on file. Open their player record to edit or approve it.');return;}
-      if(kind==='regular'&&taken>=26){await expect(toast).toHaveText('Player not added: Regular places are full');return;}
+      // p101: the cap stops the registration form overfilling the season, not the organizer. Adding a regular to a full
+      // season now asks what it would mean (the harness accepts), adds the place, and goes through.
+      if(kind==='regular'&&taken>=26){await expect.poll(()=>JSON.parse(ctx.state.state.season_config?.value||'{}').regular_capacity,{message:'the season gained a place'}).toBe(taken+1);}
       await expect.poll(()=>ctx.state.players.some(p=>p.name===name)).toBe(true);
       const row = ctx.state.players.find((x) => x.name === name)!;
       expect({sig:row.sig,court:row.current_court,approved:row.approved,waiver:row.waiver_signed}).toEqual({sig:'admin',court:cur?0:c,approved:true,waiver:false});

@@ -34,8 +34,9 @@ test("a player taken off a court can be seated again, and lands where the messag
   await expect(toast).toContainText(`Answer updated for ${rahul.name}`);
   expect((await page.evaluate(() => upcomingSeats() as Record<string, number>))[rahul.id], "off the courts while not coming").toBeUndefined();
 
-  // Seating him on Court 4 must bring him back — this did nothing at all before p90.
-  await page.evaluate((id) => setPlayerCourt(id, 4), rahul.id);
+  // Seating him on Court 4 must bring him back — this did nothing at all before p90. p103: the seat has to come from a
+  // screen that arranges tonight (the Assign board here); Admin → Players sets the ladder court and answers for nobody.
+  await page.evaluate((id) => assignMove(id, 4), rahul.id);
   const seats = await page.evaluate(() => upcomingSeats() as Record<string, number>);
   expect(seats[rahul.id], "back in the line-up, on the court he was given").toBe(4);
   await expect(toast).toContainText(`${rahul.name} is on Court 4`);

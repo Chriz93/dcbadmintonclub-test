@@ -51,7 +51,9 @@ for (let i = 0; i < 100; i++) {
       if (n > 28) { await expect(start).toBeDisabled(); return; }
       const up = upcoming(L);
       await start.click();
-      await expect(toast).toHaveText(`Session ${n} started — ${up.declined.size} excused, ${up.spares.length} spare${up.spares.length === 1 ? "" : "s"} seated`);
+      // p96: silence is recorded too, and said out loud — a decline and a silence both cost nothing.
+      const silent = up.silent.size ? `, ${up.silent.size} never answered` : "";
+      await expect(toast).toHaveText(`Session ${n} started — ${up.declined.size} excused${silent}, ${up.spares.length} spare${up.spares.length === 1 ? "" : "s"} seated`);
       const cs = kv("current_session");
       expect({ number: cs.number, date: cs.date, cycle: cs.cycle }).toEqual({ number: n, date: ctx.dates[n - 1], cycle: 1 });
       expect(cs.assignments, "seated from the votes").toEqual(up.assign);
@@ -59,6 +61,9 @@ for (let i = 0; i < 100; i++) {
       const seated = new Set(Object.values(up.assign).flat());
       const att: Record<string, string> = {};
       up.declined.forEach((id) => (att[id] = "declined"));
+      // p96: a regular who never answered is recorded as such when they hold a ladder court. Like "declined" it is read
+      // by nothing that penalises a player — only "absent" costs a no-show and a court.
+      up.silent.forEach((id) => { const p = L.players.find((x) => x.id === id)!; if (p.current_court > 0) att[id] = "noanswer"; });
       seated.forEach((id) => { if (up.vote[id] === "coming") att[id] = "present"; });
       expect(cs.attendance, "votes become attendance").toEqual(att);
       for (const id of up.spares) expect(ctx.state.players.find((p) => p.id === id)!.current_court, `spare ${name(id)} carries a court tonight`).toBe(courtOf(up.assign, id));
