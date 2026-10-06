@@ -483,6 +483,8 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
   });
 
   test("the admin queues email from Tools; the browser never holds a mail password", async ({ page }) => {
+    // This case is about reminding the players who have NOT answered, so it starts from a week where nobody has.
+    state.rsvps = [];
     state.state["reminder_last_run"] = { value: JSON.stringify({ at: "2026-09-10T14:00:00-04:00", mode: "test-inbox", sent: 3, planned: 24, note: "Sent to the league inbox instead of players (at most 3 per run)." }), version: 1 };
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
