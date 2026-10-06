@@ -226,13 +226,13 @@ export function spareSeatCount(L: League) {
 }
 
 /** Wins and points scored this season per player, from every game on record — completed sessions and the live one. */
-export function seasonRecord(L: League): Record<number, { w: number; l: number; pts: number }> {
-  const rec: Record<number, { w: number; l: number; pts: number }> = {};
-  const bump = (id: number) => (rec[id] ??= { w: 0, l: 0, pts: 0 });
+export function seasonRecord(L: League): Record<number, { w: number; l: number; gp: number; pts: number }> {
+  const rec: Record<number, { w: number; l: number; gp: number; pts: number }> = {};
+  const bump = (id: number) => (rec[id] ??= { w: 0, l: 0, gp: 0, pts: 0 });
   for (const x of [...L.sessions, ...(L.current ? [L.current] : [])]) for (const sc of Object.values(x.scores || {})) {
     if (!sc || (sc.w !== "A" && sc.w !== "B")) continue;
-    for (const id of [sc.a1, sc.a2].filter((v): v is number => v != null)) { const r = bump(id); r.pts += sc.sA || 0; if (sc.w === "A") r.w++; else r.l++; }
-    for (const id of [sc.b1, sc.b2].filter((v): v is number => v != null)) { const r = bump(id); r.pts += sc.sB || 0; if (sc.w === "B") r.w++; else r.l++; }
+    for (const id of [sc.a1, sc.a2].filter((v): v is number => v != null)) { const r = bump(id); r.gp++; r.pts += sc.sA || 0; if (sc.w === "A") r.w++; else r.l++; }
+    for (const id of [sc.b1, sc.b2].filter((v): v is number => v != null)) { const r = bump(id); r.gp++; r.pts += sc.sB || 0; if (sc.w === "B") r.w++; else r.l++; }
   }
   return rec;
 }
@@ -253,9 +253,10 @@ export function upcoming(L: League) {
   const spares = (spareSeatCount(L).decided ? claims.slice(0, spareSeatCount(L).seats) : []).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
   // Everyone coming keeps the court they earned; spares fill open seats from the bottom; lone or over-five courts are settled (p54).
   const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id) && !silent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
-  // p97: each court is then listed strongest first — most wins, then most points scored — so the player an over-full
-  // court sends down is the weakest on it. Counted from the same games the app counts (seasonRecord).
-  const rec = seasonRecord(L), rank = (id: number) => [rec[id]?.w ?? 0, rec[id]?.pts ?? 0] as [number, number];
+  // p105: each court is listed by rating, then wins per game — the rating because it is the only one of these numbers
+  // that does not move when a player misses a night. Counted from the same games the app counts.
+  const rec = seasonRecord(L), rate = eloReference(L.players as never, allSessions(L) as never, undefined, L.seeds);
+  const rank = (id: number) => [rate[id] ?? 1000, rec[id]?.gp ? rec[id].w / rec[id].gp : 0] as [number, number];
   const start = startingCourts(earned, spares, rank);
   const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), start.lineup[i + 1]]));
   return { vote, declined, preAbsent, silent, spares, assign, start };

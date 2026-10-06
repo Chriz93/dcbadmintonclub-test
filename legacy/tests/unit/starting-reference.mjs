@@ -3,12 +3,15 @@
 //   1. Everyone who is coming keeps the court they earned (in the order given).
 //   2. Confirmed spares take open seats from the bottom court up: a court short of four first, then a fifth seat from the
 //      bottom once every court in use has four. With no court in use, a spare starts the bottom court.
-//   3. p97: each court is then listed strongest first — most wins, then most points scored, then lowest id — with the
-//      spares seated in step 2 kept at the top, because the organizer put them there on purpose. `rank(id)` supplies
-//      the two numbers; without it the courts keep the order they were given (the callers that do not model a season).
-//   4. A court left with one player or more than five is settled by the independent reference engine, as at the gym.
-//      Over five, the engine sends the court's last players on — which, after step 3, is the weakest on it.
-//   5. A player who would still be alone because every other court in use has five is joined by one player from the
+//   3. p97, p105: each court is then listed strongest first — by rating, then wins per game, then lowest id — with the
+//      spares seated in step 2 kept at the top, because the organizer put them there on purpose. `rank(id)` supplies the
+//      numbers, compared in order and descending; without it the courts keep the order they were given.
+//   4. p105: a court of more than five sends its bottom player to the next court IN USE below and places them there by
+//      the same ranking, and that court settles the same way. So a player keeps the court they earned when somebody on
+//      it is below them, and otherwise stops at the first court below where somebody is.
+//   5. A court left with one player, or over five with nothing in use below, is settled by the independent reference
+//      engine, as at the gym.
+//   6. A player who would still be alone because every other court in use has five is joined by one player from the
 //      nearest court in use (on a tie the court above, whose last player moves down; from below, the first moves up).
 //      So a night with 2 to 30 players coming is never refused.
 import { reference } from "./adjust-reference.mjs";
@@ -24,14 +27,26 @@ export function startingCourts(earned, spares = [], rank) {
     const c = used.find((x) => L[x].length < 4) ?? used.find((x) => L[x].length < 5) ?? used[0] ?? NC;
     L[c].push(id); spareSeat[id] = c;
   }
+  const cascade = [];
   if (rank) {
     const key = (id) => rank(id) || [0, 0];
     const cmp = (x, y) => { const a = key(x), b = key(y); return (b[0] || 0) - (a[0] || 0) || (b[1] || 0) - (a[1] || 0) || x - y; };
-    for (let c = 1; c <= NC; c++) L[c] = [...L[c].filter((id) => spareSeat[id] !== undefined), ...L[c].filter((id) => spareSeat[id] === undefined).sort(cmp)];
+    const order = (ids) => [...ids.filter((id) => spareSeat[id] !== undefined), ...ids.filter((id) => spareSeat[id] === undefined).sort(cmp)];
+    for (let c = 1; c <= NC; c++) L[c] = order(L[c]);
+    for (let c = 1; c < NC; c++) {
+      while (L[c].length > 5) {
+        let to = 0; for (let x = c + 1; x <= NC; x++) if (L[x].length) { to = x; break; }
+        if (!to) break;                                  // nothing in use below: the engine places them
+        const moved = L[c][L[c].length - 1];
+        if (spareSeat[moved] !== undefined) break;       // everyone left was placed by the organizer
+        L[c] = L[c].slice(0, -1); L[to] = order([...L[to], moved]);
+        cascade.push({ id: moved, from: c, to, reason: "full" });
+      }
+    }
   }
   const res = reference({ nc: NC, lineup: Object.fromEntries(L.map((ids, c) => [c, ids]).slice(1)), locked: [], closed: [], absent: [], returning: [], late: [], partner: true });
   const lineup = res.ok ? [[], ...[1, 2, 3, 4, 5, 6].map((c) => [...(res.lineup[c] || res.lineup[String(c)] || [])])] : L;
-  return { ok: res.ok, why: res.why, lineup, moves: res.ok ? res.moves : [], spareSeat };
+  return { ok: res.ok, why: res.why, lineup, moves: res.ok ? [...cascade, ...res.moves] : [], spareSeat };
 }
 
 /** The sentences the Courts page shows before the night, written from the rule text. */

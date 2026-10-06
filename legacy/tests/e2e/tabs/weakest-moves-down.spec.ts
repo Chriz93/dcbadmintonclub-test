@@ -55,15 +55,59 @@ test("six earned one court: the fewest wins moves down, and the court lists stro
   await expect(page.locator("#lineup-notes-list")).toContainText(`Court 2 would have more than five players, so ${L.players.find((p) => p.id === 7)!.name} starts on Court 3.`);
 });
 
-test("level on wins: the player who scored the fewest points moves down", async () => {
-  const courts = [1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3];
-  // Everyone on Court 2 won one game; player 9 scored the fewest points in the game they lost.
-  const L = crowded(97002, courts, { 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 1: 1, 2: 1, 3: 1, 4: 1, 11: 1, 12: 1, 13: 1, 14: 1 },
-    { 5: 19, 6: 18, 7: 17, 8: 16, 9: 4, 10: 15 });
+// p105: the rating decides, because it is the only one of these numbers that does not move when a player misses a night.
+/** A league whose season is the given singles games, [winner, loser] at 21-10, with attendance marks per session. */
+function singlesLeague(seed: number, courts: number[], seasons: [number, number][][], attendance: Record<number, Record<string, string>> = {}) {
+  const L: League = genLeague(seed, { regulars: courts.length, spares: 0, pending: 0, sessions: 0, live: "none", absentRate: 0, declineRate: 0, dates: ctx.dates });
+  L.players.forEach((p, i) => { p.current_court = courts[i]; p.highest_court = courts[i]; p.season_wins = 0; p.season_losses = 0; p.games_played = 0; });
+  L.sessions = seasons.map((games, k) => {
+    const scores: Record<string, unknown> = {}; let g = 0;
+    for (const [w, l] of games) scores[`c1_y1_g${++g}`] = { a1: w, a2: null, b1: l, b2: null, sA: 21, sB: 10, w: "A" };
+    return { id: k + 1, number: k + 1, date: ctx.dates[k], cycle: 1, assignments: {}, initialAssignments: {}, scores, movements: [], completed: true, preTosses: {}, attendance: attendance[k + 1] || {}, absentFrom: {} };
+  }) as never;
+  L.upcoming = seasons.length + 1;
+  L.nowMs = ctx.fd[L.upcoming - 1] - 24 * 3600e3;
+  const at = new Date(L.nowMs - 3600e3).toISOString();
+  L.rsvps = L.players.map((p) => ({ session_number: L.upcoming, player_id: p.id, response: "coming", note: "", updated_at: at })) as League["rsvps"];
+  for (const p of L.players) {
+    const w = seasons.flat().filter(([x]) => x === p.id).length, l = seasons.flat().filter(([, y]) => y === p.id).length;
+    p.season_wins = w; p.season_losses = l; p.games_played = w + l;
+  }
+  return L;
+}
+
+test("a player back after missing a night keeps the court: the rating, not the games played", async () => {
+  // Court 3 is earned by 9 to 14. Player 14 missed Session 1 entirely; 9, 10 and 11 beat 12 and 13 twice over; then 14
+  // plays two games in Session 2 and wins both. On season totals 14 is bottom of the court; on rating they are top.
+  const L = singlesLeague(97010, LADDER6, [[[9, 12], [9, 13], [10, 12], [10, 13], [11, 12], [11, 13]], [[14, 9], [14, 10]]]);
   await load(ctx, L);
-  const assign = await ctx.page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
-  expect(seatOf(assign, 9), "equal wins, fewest points scored").toBe(3);
-  expect(assign[2]).toEqual([5, 6, 7, 8, 10]);
+  const page = ctx.page;
+  const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
+  const rate = await page.evaluate(() => eloCached() as Record<string, number>);
+  expect(assign[3].length, "Court 3 is back to five").toBe(5);
+  expect(seatOf(assign, 14), "the player who was away keeps the court they earned").toBe(3);
+  for (const id of [9, 10, 11]) expect(seatOf(assign, id), `player ${id} keeps Court 3`).toBe(3);
+  const moved = [9, 10, 11, 12, 13, 14].find((id) => seatOf(assign, id) !== 3)!;
+  expect(rate[14], "and is rated above the player who went down, on fewer games").toBeGreaterThan(rate[moved]);
+  expect(rate[moved], "who is the lowest rating on the court").toBe(Math.min(...[9, 10, 11, 12, 13, 14].map((id) => rate[id])));
+  // The independent reference says the same.
+  const want = upcoming(L).assign;
+  for (let c = 1; c <= 6; c++) expect(assign[c] || [], `Court ${c}`).toEqual(want[c] || []);
+});
+
+test("a no-show costs 25 rating points, and that is what sends them down", async () => {
+  // Nobody has played, so everyone on Court 3 starts level at 1300 — except player 11, who said they were coming to
+  // Session 1 and did not turn up.
+  const L = singlesLeague(97011, LADDER6, [[]], { 1: { 11: "absent" } });
+  await load(ctx, L);
+  const page = ctx.page;
+  const rate = await page.evaluate(() => eloCached() as Record<string, number>);
+  expect(rate[11], "1300 on Court 3, less 25 for the night they did not turn up").toBe(1275);
+  expect(rate[12], "everybody else is untouched").toBe(1300);
+  const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
+  expect(seatOf(assign, 11), "and that is what sends them down from a court of six").toBe(4);
+  // Declining in time costs nothing: the player is simply not in the line-up, and their rating is where it was.
+  expect(rate[9]).toBe(1300);
 });
 
 test("a player back from a night off keeps the court they earned when somebody on it is weaker", async () => {

@@ -39,20 +39,22 @@ test("the board arranges tonight's courts before a session", async () => {
   for (let c = 1; c <= 6; c++) expect(shown[String(c)].slice().sort((a, b) => a - b), `Court ${c}`).toEqual((lineup[c] || []).slice().sort((a, b) => a - b));
 });
 
-test("each court lists its players by wins, then points scored", async () => {
+test("each court lists its players by rating, and the chip carries the numbers", async () => {
   await load(ctx, seasonLeague(62002));
   const page = ctx.page;
   await openBoard(page);
   const board = page.locator("#assign-ui");
-  const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; pts: number }>);
+  const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; gp: number; pts: number }>);
+  const rate = await page.evaluate(() => eloCached() as Record<string, number>);
   for (let c = 1; c <= 6; c++) {
     const ids = await board.locator(`.dnd-court[data-court="${c}"] .dnd-player`).evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))));
     if (ids.length < 2) continue;
-    const want = [...ids].sort((x, y) => (rec[y]?.w ?? 0) - (rec[x]?.w ?? 0) || (rec[y]?.pts ?? 0) - (rec[x]?.pts ?? 0) || x - y);
-    expect(ids, `Court ${c}: most wins first, then most points — the bottom player is the one to move down`).toEqual(want);
-    // The two numbers the decision is made on are on the chip.
+    const rateOf = (id: number) => rate[id] ?? 1000, wr = (id: number) => (rec[id]?.gp ? rec[id].w / rec[id].gp : 0);
+    const want = [...ids].sort((x, y) => rateOf(y) - rateOf(x) || wr(y) - wr(x) || x - y);
+    expect(ids, `Court ${c}: highest rating first — the bottom player is the one to move down`).toEqual(want);
+    // p105: the deciding number first, then the record it was earned on.
     const first = board.locator(`.dnd-court[data-court="${c}"] .dnd-player`).first();
-    await expect(first.locator(".dnd-rec")).toHaveText(`${rec[ids[0]]?.w ?? 0}W · ${rec[ids[0]]?.pts ?? 0} pts`);
+    await expect(first.locator(".dnd-rec")).toHaveText(`${rateOf(ids[0])} · ${rec[ids[0]]?.w ?? 0}W · ${rec[ids[0]]?.pts ?? 0} pts`);
   }
 });
 

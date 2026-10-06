@@ -1126,6 +1126,9 @@ function courtGames(n){return n===5?5:3;}
 function bestOfThreeDecided(c,cy){const sc=S.current?.scores||{},g1=sc[`c${c}_y${cy}_g1`],g2=sc[`c${c}_y${cy}_g2`];return !!(g1&&g2&&g1.w===g2.w);}
 function gamesNeeded(c,cy){const n=(S.current?.assignments?.[c]||[]).filter(id=>S.players.some(p=>p.id===id)).length;if(n<2)return 0;if(n===2&&bestOfThreeDecided(c,cy??S.current.cycle))return 2;return courtGames(n);}            // every court plays 3 games, except five players play 5
 function courtTarget(n){return n===5?15:21;}         // five-player games go to 15, everything else to 21
+// p105: what a no-show costs in rating points. A round moves a rating by at most 32, so this is a little less than
+// losing a whole round — real, and not more than the night itself could have cost them.
+const NO_SHOW_PENALTY=25;
 function courtCap(c){return 5;}                    // any court can take a fifth player (then it plays five games to 15)
 // Courts hold four; with more than 24 playing, the extras become a fifth player on the bottom courts (Court 6, then 5, then 4…).
 // With fewer, courts fill four at a time; a single leftover joins the court above as its fifth player (two or three play singles).
@@ -1845,12 +1848,12 @@ function renderHome(){
 }
 
 function mySeasonData(p){
-  const elo=computeEloRatings()[p.id]||0;
+  const elo=eloCached()[p.id]||0; // p105
   const played=S.sessions.filter(s=>Object.values(s.scores||{}).some(sc=>[sc.a1,sc.a2,sc.b1,sc.b2].includes(p.id))).length;
   const wr=p.gamesPlayed>0?Math.round(p.seasonWins/p.gamesPlayed*100):0;
   const streak=(computePlayerStreakAndImprovement()[p.id]||{}).streak||0;
   const courts=S.sessions.map(s=>{const fa=sessFinalAssignments(s);for(let c=1;c<=NC;c++)if((fa[c]||[]).includes(p.id))return c;return null;});
-  const rank=[...leaderboardPlayers()].map(x=>({id:x.id,r:computeEloRatings()[x.id]||0})).sort((a,b)=>b.r-a.r).findIndex(x=>x.id===p.id)+1;
+  const rank=[...leaderboardPlayers()].map(x=>({id:x.id,r:eloCached()[x.id]||0})).sort((a,b)=>b.r-a.r).findIndex(x=>x.id===p.id)+1; // p105: one pass, not one per player
   return{elo,played,held:S.sessions.length,wr,streak,courts,rank,court:p.currentCourt,w:p.seasonWins,l:p.seasonLosses,g:p.gamesPlayed,bal:balanceOf(p)};
 }
 function renderMySeason(){
@@ -2444,15 +2447,38 @@ function spareCourtUpcoming(id){if(S.current)return 0;const a=upcomingLineup().a
 // p62: once both rounds are finished, controls that would change tonight's courts are shown disabled, with the reason.
 // p93: every player's season so far, taken from the games played: wins, losses and the points they scored. The
 // organizer picks who moves down on wins, then points — never on rating — so those are the numbers the board shows.
-let _seasonRecCache=null,_seasonRecKey='';
-function seasonRecord(){
-  const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
-  // p102: what the games say, not just how many there are — who played them, what they scored and who won, in order.
-  // A correction keeps the session's id and its number of scores, so neither of those can tell the record it is stale.
-  const key=sess.map(x=>`${x.id}:${Object.keys(x.scores||{}).length}:${Object.entries(x.scores||{}).reduce((t,[k,sc])=>{
+// p102, p105: what the games say, not just how many there are — who played them, what they scored, who won and who was
+// marked absent, in order. A correction (Edit scores) keeps the session's id and its number of scores, so neither of
+// those can tell a cached answer that it is stale. Integer arithmetic, so a redraw costs one pass, not a rebuild.
+function seasonStamp(sess){
+  return sess.map(x=>`${x.id}:${Object.keys(x.scores||{}).length}:${Object.entries(x.scores||{}).reduce((t,[k,sc])=>{
     if(!sc)return t;
     const h=(sc.a1||0)*3+(sc.a2||0)*5+(sc.b1||0)*11+(sc.b2||0)*13+(sc.sA||0)*31+(sc.sB||0)*37+(sc.w==='A'?1:sc.w==='B'?2:0)+k.length;
-    return (t*33+h)>>>0;},0)}`).join('|');
+    return (t*33+h)>>>0;},0)}:${Object.entries(x.attendance||{}).reduce((t,[id,v])=>v==='absent'?(t*33+Number(id))>>>0:t,0)}`).join('|');
+}
+let _seasonRecCache=null,_seasonRecKey='';
+let _eloCache=null,_eloKey='';
+// p105: the whole season's ratings, worked out once per change. mySeasonData asked for them once per player.
+function eloCached(){
+  const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
+  const key=seasonStamp(sess)+'|'+(S.players||[]).map(p=>`${p.id}:${p.currentCourt}`).join(',')+'|'+JSON.stringify(S.seedPoints||{});
+  if(_eloCache&&_eloKey===key)return _eloCache;
+  _eloCache=computeEloRatings();_eloKey=key;return _eloCache;
+}
+// p105: where a player stands when the courts have to decide — the rating first, then wins per game, then lowest id so
+// the answer is the same every time. Elo is the only one of these numbers that does not move when a player misses a
+// night, which is exactly what the court order must not punish.
+function byRating(ids,rate,rec){
+  return [...ids].sort((x,y)=>{
+    const rx=rate[x]??1000,ry=rate[y]??1000;
+    if(rx!==ry)return ry-rx;
+    const a=rec[x]||{w:0,gp:0},b=rec[y]||{w:0,gp:0};
+    const wx=a.gp?a.w/a.gp:0,wy=b.gp?b.w/b.gp:0;
+    return wy-wx||x-y;});
+}
+function seasonRecord(){
+  const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
+  const key=seasonStamp(sess); // p102, p105
   if(_seasonRecCache&&_seasonRecKey===key)return _seasonRecCache;
   const rec={};
   const bump=id=>{if(!rec[id])rec[id]={w:0,l:0,gp:0,pts:0};return rec[id];};
@@ -3031,11 +3057,26 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
     const c=used.find(x=>L[x].length<4)||used.find(x=>L[x].length<5)||used[0]||NC;
     L[c].push(id);notes.push(`${nm(id)} (spare) takes an open seat on Court ${c}.`);
   }
-  // p97: order every court strongest first — most wins, then most points scored — so that the player the engine
-  // sends down from an over-full court is the weakest on it. Spares the organizer placed stay at the top: that seat was
-  // a decision, not something earned, and a full court should not undo it.
-  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rec=seasonRecord();
-   for(let c=1;c<=NC;c++)L[c]=[...L[c].filter(id=>pinned.has(id)),...byWinsThenPoints(L[c].filter(id=>!pinned.has(id)),rec)];}
+  // p97, p105: order every court by rating, highest first, so the player an over-full court sends down is the weakest
+  // on it by the measure that does not punish a player for missing nights. Spares the organizer placed stay at the top:
+  // that seat was a decision, not something earned, and a full court should not undo it.
+  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rate=eloCached(),rec=seasonRecord();
+   const order=ids=>[...ids.filter(id=>pinned.has(id)),...byRating(ids.filter(id=>!pinned.has(id)),rate,rec)];
+   for(let c=1;c<=NC;c++)L[c]=order(L[c]);
+   // p105: a court of more than five sends its bottom player to the next court in use below and places them there BY
+   // RATING; that court then settles the same way. So a player coming back to the court they earned keeps it when
+   // somebody on it is below them, and otherwise stops at the first court below where somebody is — "where he fits in
+   // with the points" — instead of being dropped to the bottom of whichever court took them.
+   for(let c=1;c<NC;c++){
+     while(L[c].length>5){
+       let to=0;for(let x=c+1;x<=NC;x++)if(L[x].length){to=x;break;}
+       if(!to)break;                                   // nothing in use below: the engine places them
+       const moved=L[c][L[c].length-1];
+       if(pinned.has(moved))break;                     // everyone left was placed by the organizer
+       L[c]=L[c].slice(0,-1);L[to]=order([...L[to],moved]);
+       notes.push(`Court ${c} would have more than five players, so ${nm(moved)} starts on Court ${to}.`);
+     }
+   }}
   const res=adjustCourts({nc:NC,lineup:L,names:Object.fromEntries(S.players.map(p=>[p.id,p.name])),locked:[],closed:[],absent:[],returning:[],late:[],partner:true});
   _lineupProblem=res.ok?'':res.problem;
   if(res.ok)for(const m of res.moves)notes.push(m.reason==='full'?`Court ${m.from} would have more than five players, so ${nm(m.id)} starts on Court ${m.to}.`
@@ -3717,9 +3758,10 @@ function renderAssignUI(){
   const unassigned=S.current?S.players.filter(p=>!assignedSet.has(p.id))
     :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id));
   const _rec=seasonRecord(); // p93
+  const _rate=eloCached(); // p105
   const _chip=(p,c)=>{const r=_rec[p.id]||{w:0,l:0,pts:0};
     return `<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}`
-      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${r.w}W · ${r.pts} pts</span>`
+      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${_rate[p.id]??1000} · ${r.w}W · ${r.pts} pts</span>`
       +`<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="assignMove(${p.id},Number(this.value))"><option value="0">${S.current?'Unassigned':'Not playing'}</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`;};
   if(unassigned.length){
     html+=`<div class="dnd-court" data-court="0" ondragover="dndOver(event)" ondrop="dndDrop(event,0)" ondragleave="dndLeave(event)">
@@ -4789,6 +4831,10 @@ function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the r
       });
       Object.keys(sum).forEach(id=>{elo[id]=rating(id)+32*(sum[id]/cnt[id]);});
     });
+    // p105: a player who said they were coming and did not turn up loses NO_SHOW_PENALTY points for that night, on top
+    // of the court it already costs them (finalize_session). Only a player who said yes can be marked absent, so a
+    // decline in time and a night nobody answered for cost nothing (p96).
+    Object.entries(sess.attendance||{}).forEach(([id,v])=>{if(v==='absent')elo[id]=rating(id)-NO_SHOW_PENALTY;});
   });
   Object.keys(elo).forEach(id=>{elo[id]=Math.round(elo[id]);});
   return elo;

@@ -61,50 +61,16 @@ export async function scoreCourt(page: Page, court: number, scores: [number, num
   await expect.poll(() => page.evaluate(() => S.current ? Object.keys(S.current.scores).length : Infinity), { timeout: 15000 }).toBeGreaterThan(saved);
 }
 export type Score = { a1: number | null; a2: number | null; b1: number | null; b2: number | null; w: string; sA: number; sB: number };
-export type Sess = { scores: Record<string, Score> };
-/** The court each player first played on this season, from the score keys (round order, then court order). */
-export function firstCourts(sessions: Sess[]): Record<number, number> {
-  const first: Record<number, number> = {};
-  for (const sess of sessions) {
-    const keys = Object.keys(sess.scores).map((k) => { const m = k.match(/^c(\d+)_y(\d+)_g/); return m ? { k, c: +m[1], y: +m[2] } : null; })
-      .filter((x): x is { k: string; c: number; y: number } => !!x).sort((a, b) => a.y - b.y || a.c - b.c);
-    for (const { k, c } of keys) { const sc = sess.scores[k]; for (const id of [sc.a1, sc.a2, sc.b1, sc.b2]) if (id != null && first[id] === undefined) first[id] = c; }
-  }
-  return first;
-}
-// Independent Elo reference (team-average expectation, K = 32, mean change per round, ratings frozen within a round).
-// p84: `applyUpTo` limits how many sessions are PLAYED OUT; the seeding always reads the whole list, so a rating
-// measured before the last session stands on the same starting line as the rating measured after it.
-// p99: `seeds` are the starting points the organizer set for a drop-in (app_state.player_seed_points). They replace the
-// court's own starting number for that player, and only the start.
-export function eloReference(players: MockState["players"], sessions: Sess[], applyUpTo?: number, seeds?: Record<number, number>): Record<number, number> {
-  const elo: Record<number, number> = {};
-  const first = firstCourts(sessions);
-  for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
-    const seed = first[p.id] ?? (p.current_court > 0 && p.current_court <= 6 ? p.current_court : 6);
-    elo[p.id] = 1500 - (seed - 1) * 100;
-  }
-  // p84: seed everyone the season's scores name, including a spare called in before End Session writes their court.
-  for (const [id, c] of Object.entries(first)) if (elo[+id] === undefined) elo[+id] = 1500 - (c - 1) * 100;
-  for (const [id, v] of Object.entries(seeds || {})) if (Number.isFinite(Number(v))) elo[+id] = Number(v); // p99
-  const r = (id: number) => elo[id] ?? 1000;
-  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-  for (const sess of (applyUpTo === undefined ? sessions : sessions.slice(0, Math.max(0, applyUpTo)))) {
-    const cycles = [...new Set(Object.keys(sess.scores).map((k) => parseInt(k.match(/_y(\d+)_/)![1])))].sort((a, b) => a - b);
-    for (const cy of cycles) {
-      const sum: Record<number, number> = {}, cnt: Record<number, number> = {};
-      for (const [k, sc] of Object.entries(sess.scores)) {
-        if (!k.includes(`_y${cy}_`) || (sc.w !== "A" && sc.w !== "B")) continue;
-        const A = [sc.a1, sc.a2].filter((x): x is number => x != null), B = [sc.b1, sc.b2].filter((x): x is number => x != null);
-        const ea = 1 / (1 + Math.pow(10, (avg(B.map(r)) - avg(A.map(r))) / 400));
-        for (const id of A) { sum[id] = (sum[id] || 0) + ((sc.w === "A" ? 1 : 0) - ea); cnt[id] = (cnt[id] || 0) + 1; }
-        for (const id of B) { sum[id] = (sum[id] || 0) + ((sc.w === "B" ? 1 : 0) - (1 - ea)); cnt[id] = (cnt[id] || 0) + 1; }
-      }
-      for (const id of Object.keys(sum).map(Number)) elo[id] = r(id) + 32 * (sum[id] / cnt[id]);
-    }
-  }
-  return Object.fromEntries(Object.entries(elo).map(([k, v]) => [k, Math.round(v)]));
-}
+export type Sess = { scores: Record<string, Score>; attendance?: Record<string, string> };
+// The rating reference lives with the other independent references (legacy/tests/unit/elo-reference.mjs) so the unit
+// tests and the browser tests check the app against exactly the same rules, written once.
+import { eloReference as eloRef, firstCourts as firstCourtsRef, NO_SHOW_PENALTY } from "../unit/elo-reference.mjs";
+export { NO_SHOW_PENALTY };
+export const firstCourts = (sessions: Sess[]): Record<number, number> => firstCourtsRef(sessions as never) as Record<number, number>;
+/** p84: `applyUpTo` limits how many sessions are PLAYED OUT; the seeding always reads the whole list.
+ *  p99: `seeds` are the starting points the organizer set for a drop-in. p105: a no-show costs NO_SHOW_PENALTY. */
+export const eloReference = (players: MockState["players"], sessions: Sess[], applyUpTo?: number, seeds?: Record<number, number>): Record<number, number> =>
+  eloRef(players as never, sessions as never, applyUpTo as never, seeds as never) as Record<number, number>;
 export const wl = (text: string) => [...text.matchAll(/(\d+)W (\d+)L/g)].map((m) => ({ w: +m[1], l: +m[2] }));
 const SHOTS = process.env.SCREENS ? `${__dirname}/screens/${process.env.SCREENS}` : "";
 export async function shot(page: Page, name: string) {

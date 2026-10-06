@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T11:12:01.192Z",
+ "generated": "2026-10-06T12:00:29.756Z",
  "summary": [
   {
    "k": "Control handler",
@@ -665,6 +665,7 @@
     "unit/adjust-reference.mjs",
     "unit/adjust.test.mjs",
     "unit/call-in-court.test.mjs",
+    "unit/elo-reference.mjs",
     "unit/helpers.test.mjs",
     "unit/lineup.test.mjs",
     "unit/load-app.mjs",
@@ -2010,6 +2011,7 @@
     "unit/button-feedback.test.mjs",
     "unit/call-in-court.test.mjs",
     "unit/coverage-gate.test.mjs",
+    "unit/elo-reference.mjs",
     "unit/fetch-guard.mjs",
     "unit/helpers.test.mjs",
     "unit/isolation.test.mjs",
