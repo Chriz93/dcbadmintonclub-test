@@ -121,8 +121,29 @@
  {
   "state": "between-rounds",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Mateo Silva",
+  "tag": "select"
+ },
+ {
+  "state": "between-rounds",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Tremblay — Court #Aisha O'Connor — Court",
   "tag": "select"
  },
  {
@@ -926,8 +947,29 @@
  {
   "state": "big-before",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Kenji Dubé",
+  "label": "Move Nia Iyer",
+  "tag": "select"
+ },
+ {
+  "state": "big-before",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Kim — Court #Aisha Mensah — Court #Anany",
   "tag": "select"
  },
  {
@@ -1615,6 +1657,27 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Anne-Marie Roy — Court #Elif Silva — Court #Em",
+  "tag": "select"
  },
  {
   "state": "complete",
@@ -2374,6 +2437,27 @@
  },
  {
   "state": "complete-big",
+  "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Sharma — Court #Aisha Silva — Court #Ana",
+  "tag": "select"
+ },
+ {
+  "state": "complete-big",
   "view": "admin → a-att",
   "key": "button|markAttForTab(#,'absent',#)",
   "label": "❌ Absent",
@@ -3127,6 +3211,27 @@
   "key": "button|saveAssignments()",
   "label": "💾 Save Assignments",
   "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Park — Court #Diego Iyer — Court #Ethan",
+  "tag": "select"
  },
  {
   "state": "complete-small",
@@ -3887,8 +3992,29 @@
  {
   "state": "first-night",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Oscar Cohen",
+  "tag": "select"
+ },
+ {
+  "state": "first-night",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Dubois — Court #Amara Ahmed — Court #Chl",
   "tag": "select"
  },
  {
@@ -4531,8 +4657,29 @@
  {
   "state": "late-season",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Fatima Silva",
+  "label": "Move Sofia Nair",
+  "tag": "select"
+ },
+ {
+  "state": "late-season",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Tremblay (spare) — Court #Amara Martin —",
   "tag": "select"
  },
  {
@@ -5889,8 +6036,29 @@
  {
   "state": "pre-session",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Ryan Boateng",
+  "tag": "select"
+ },
+ {
+  "state": "pre-session",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aisha Park (spare) — no courtAnne-Marie Petrov",
   "tag": "select"
  },
  {
@@ -6582,8 +6750,29 @@
  {
   "state": "round-1",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Oscar Ahmed",
+  "tag": "select"
+ },
+ {
+  "state": "round-1",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Chen — Court #Aisha Gill — Court #Chloe",
   "tag": "select"
  },
  {
@@ -7394,8 +7583,29 @@
  {
   "state": "round-1-big",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Ananya Silva",
+  "tag": "select"
+ },
+ {
+  "state": "round-1-big",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Wong — Court #Aisha Park — Court #Ananya",
   "tag": "select"
  },
  {
@@ -8178,8 +8388,29 @@
  {
   "state": "round-1-small",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Fatima Alvarez",
+  "tag": "select"
+ },
+ {
+  "state": "round-1-small",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Daniel Rahman — Court #Ethan Cohen — Court #Fa",
   "tag": "select"
  },
  {
@@ -8948,8 +9179,29 @@
  {
   "state": "round-2",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Omar Khan",
+  "tag": "select"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Amara Gill — Court #Ananya Martin — Court #Ann",
   "tag": "select"
  },
  {
@@ -9739,8 +9991,29 @@
  {
   "state": "round-2-big",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Kwame Wong",
+  "tag": "select"
+ },
+ {
+  "state": "round-2-big",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aisha Park — Court #Ananya O'Connor — Court #A",
   "tag": "select"
  },
  {
@@ -10537,8 +10810,29 @@
  {
   "state": "small-before",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
   "label": "Move Sana Cohen",
+  "tag": "select"
+ },
+ {
+  "state": "small-before",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Ethan Gill — Court #Imani Alvarez — Court #Lea",
   "tag": "select"
  },
  {
@@ -11720,8 +12014,29 @@
  {
   "state": "spares-before",
   "view": "admin → a-assign",
+  "key": "button|saveDropIn()",
+  "label": "Save starting points",
+  "tag": "button"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-assign",
+  "key": "select|#di-court",
+  "label": "No courtCourt #Court #Court #Court #Court #Court #",
+  "tag": "select"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Felix Haddad",
+  "label": "Move Theo Alvarez",
+  "tag": "select"
+ },
+ {
+  "state": "spares-before",
+  "view": "admin → a-assign",
+  "key": "select|dropInPick()",
+  "label": "— Choose — Aarav Khan — Court #Amara Cohen (spare) — no c",
   "tag": "select"
  },
  {

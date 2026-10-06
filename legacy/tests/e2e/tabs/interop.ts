@@ -29,6 +29,13 @@ export function defineInterop(from: number, to: number) {
     const opts: GenOpts = { ...base, regulars: Math.max(6, base.regulars ?? 6), ...extra, ...(withPlayer ? { viewerEmail: PLAYER, viewerKind: "regular" as const, pending: 0 } : {}) };
     test(`Interop ${String(i + 1).padStart(3, "0")} · ${journey} · ${genLeague(30000 + i, opts).title}`, async () => {
       const L = genLeague(30000 + i, { ...opts, dates: admin.dates });
+      // p96: silence keeps a regular off the courts, so a journey that starts a session needs an answered league — the
+      // point of these two is the decline and the absence, not who forgot to vote. Everyone else is left as generated.
+      if (journey === "decline-start" || journey === "absent-start") {
+        const answered = new Set(L.rsvps.filter((v) => v.session_number === L.upcoming).map((v) => v.player_id));
+        for (const p of L.players) if (isReg(p) && p.current_court > 0 && !answered.has(p.id))
+          L.rsvps.push({ session_number: L.upcoming, player_id: p.id, response: "coming", note: "", updated_at: "2026-09-09T12:00:00Z" });
+      }
       await load(admin, L);
       if (withPlayer) await refresh(player);
       const page = admin.page, r = rng(2000 + i), toast = page.locator("#_t");

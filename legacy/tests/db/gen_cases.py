@@ -345,16 +345,19 @@ for k in range(45):
     answers = {p: R.choice(["coming", "notcoming", "notcoming"]) for p in REGS + ["W1", "U1"] if R.random() < 0.7}
     answers.update({p: R.choice(["coming", "coming", "notcoming"]) for p in SPARES + ["U2"] if R.random() < 0.7})
     order = list(answers); R.shuffle(order)
-    setup = "delete from public.rsvps where session_number=28;" + "".join(
-        f" insert into public.rsvps(session_number,player_id,response,updated_at) values(28,{ID(p)},'{answers[p]}',now()+interval '{i} minutes');" for i, p in enumerate(order))
-    declined = sum(1 for p in REGS if answers.get(p) == "notcoming")        # a waitlisted or unapproved regular opens no seat
+    setup = ("delete from public.rsvps where session_number=28; delete from public.app_state where key='pre_session_attendance';" + "".join(
+        f" insert into public.rsvps(session_number,player_id,response,updated_at) values(28,{ID(p)},'{answers[p]}',now()+interval '{i} minutes');" for i, p in enumerate(order)))
+    # L30: the spares fill the night up to 24 players — six courts of four — so the seats are 24 minus the regulars who
+    # said "coming". Silence is not a yes (p96), and a waitlisted or unapproved regular is not one of the 24.
+    coming = sum(1 for p in REGS if answers.get(p) == "coming")
+    seats = max(24 - coming, 0)
     claims = [p for p in order if p in SPARES and answers[p] == "coming"]   # an unapproved spare never claims
-    open_seats = max(declined - len(claims), 0)
+    open_seats = max(seats - len(claims), 0)
     body = rows("select 1 from public.spare_seats(28)", len(claims))
     for rank, p in enumerate(claims, 1):
         body += (f" select rank, confirmed, open_seats into vn, vb, vm from public.spare_seats(28) where player_id={ID(p)};"
                  f" if vn <> {rank} or vb is distinct from false or vm <> {open_seats} then raise exception '{p}: rank %, confirmed %, open %', vn, vb, vm; end if;")
-    case(f"spare seats {k + 1} with {declined} declined and {len(claims)} spares available", "P1", body, setup)
+    case(f"spare seats {k + 1} with {coming} of the {len(REGS)} regulars coming and {len(claims)} spares available", "P1", body, setup)
     if k < 25:
         mute = R.sample(REGS + SPARES, 2)
         body2 = ""

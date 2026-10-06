@@ -7,11 +7,14 @@ import { load } from "./load-app.mjs";
 
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints"], { _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+// p96: a regular is seated only when they said yes, so the regulars in these cases say yes — the point here is the
+// spare's seat, not the vote. A caller's own answer for a player still wins.
 function run(players, pre = {}, votes = {}) {
+  const all = { ...Object.fromEntries(players.filter((p) => !p.spare).map((p) => [p.id, "coming"])), ...votes };
   api.setS({ players: players.map((p) => ({ id: p.id, name: `P${p.id}`, currentCourt: p.court, membershipType: p.spare ? "spare" : "regular", approved: true, waitlisted: false })),
-    rsvp: { ...votes }, rsvpRows: Object.entries(votes).map(([id, response], i) => ({ player_id: +id, response, updated_at: `2026-09-10T12:0${i}:00Z` })),
-    preAttendance: pre, current: null, payments: [] });
+    rsvp: { ...all }, rsvpRows: Object.entries(all).map(([id, response], i) => ({ player_id: +id, response, updated_at: `2026-09-10T12:0${i}:00Z` })),
+    preAttendance: pre, current: null, sessions: [], payments: [] });
   return api.upcomingLineup();
 }
 const courtOf = (a, id) => +Object.keys(a).find((c) => (a[c] || []).includes(id) ) || 0;

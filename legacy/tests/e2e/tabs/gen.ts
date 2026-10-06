@@ -14,7 +14,7 @@ export type LiveState = "none" | "r1-partial" | "r1-done" | "r2-partial" | "comp
 export type GenOpts = { regulars?: number; spares?: number; pending?: number; sessions?: number; live?: LiveState; absentRate?: number; declineRate?: number; tieRate?: number; benchRate?: number; viewerEmail?: string; viewerKind?: "regular" | "spare" | "pending"; hoursBefore?: number; dates?: string[] };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = any;
-export type League = { pre?: Record<string, string>; seed: number; players: Player[]; sessions: SessionRec[]; current: SessionRec | null; rsvps: MockState["rsvps"]; payments: MockState["payments"]; questions: Row[]; announcements: Row[]; invitations: Record<string, string>; nowMs: number; upcoming: number; live: LiveState; title: string };
+export type League = { pre?: Record<string, string>; seeds?: Record<number, number>; seed: number; players: Player[]; sessions: SessionRec[]; current: SessionRec | null; rsvps: MockState["rsvps"]; payments: MockState["payments"]; questions: Row[]; announcements: Row[]; invitations: Record<string, string>; nowMs: number; upcoming: number; live: LiveState; title: string };
 
 export const NC = 6;
 export const target = (n: number) => (n === 5 ? 15 : 21);

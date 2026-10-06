@@ -4,7 +4,7 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
 import fs from "node:fs";
 import { resolve } from "node:path";
-import { installMock, freshState, SB, type MockState } from "../mock-supabase";
+import { installMock, freshState, everyoneComing, SB, type MockState } from "../mock-supabase";
 import { refuseProduction, isForbidden, PROD_REF, TEST_REF } from "../isolation";
 import { signIn, unlockOrganizer } from "../helpers";
 const INVITED = "christygeorge993+regular@gmail.com";   // invited in freshState
@@ -123,7 +123,8 @@ test.describe("isolation · the harness", () => {
 });
 
 test("Isolation · a whole organizer evening talks only to the TEST stand-in", async ({ browser }) => {
-  const { page, s, seen } = await fresh(browser);
+  // p96: an evening needs players who said yes — silence keeps a regular off the courts.
+  const { page, s, seen } = await fresh(browser, (st) => { everyoneComing(st); });
   page.on("dialog", (d) => d.accept());
   await page.goto("/"); await signIn(page, "christygeorge993@gmail.com"); await unlockOrganizer(page);
   await page.evaluate(async () => { await startSession(); });

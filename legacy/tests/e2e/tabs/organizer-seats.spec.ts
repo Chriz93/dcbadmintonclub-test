@@ -57,7 +57,9 @@ for (let i = 0; i < 4; i++) {
   test(`Organizer seats ${String(i + 9).padStart(3, "0")} · before a session · Remove marks a regular "not coming" (no penalty, court kept)`, async () => {
     const opts: GenOpts = { ...variety(i + 720), regulars: 10 + i, spares: 1, pending: 0, live: "none", sessions: 1 };
     const L = genLeague(53100 + i, { ...opts, dates: ctx.dates }), U = L.upcoming;
-    L.rsvps = L.rsvps.filter((v) => v.session_number !== U);         // nobody has answered: everyone is coming
+    // p96: a regular is seated only when they said yes, so everyone says yes — the point here is what Remove does.
+    L.rsvps = [...L.rsvps.filter((v) => v.session_number !== U), ...L.players.filter((p) => isReg(p)).map((p) => ({
+      session_number: U, player_id: p.id, response: "coming", note: "", updated_at: "2026-09-10T12:00:00Z" }))] as League["rsvps"];
     await load(ctx, L);
     const page = ctx.page, reg = L.players.filter((p) => isReg(p) && p.current_court > 0)[i];
     const c = await startsOn(reg.id);

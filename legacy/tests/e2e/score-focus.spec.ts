@@ -2,12 +2,12 @@
 // failing now and then on GitHub ("Enter all 3 scores", Game 1's first box empty): an ordinary redraw of the same
 // court and round replaced the input under the cursor, focus fell back to the page and the next keystrokes were lost.
 import { test, expect } from "@playwright/test";
-import { installMock, freshState, ORGANIZER } from "./mock-supabase";
+import { installMock, freshState, everyoneComing, ORGANIZER } from "./mock-supabase";
 import { signIn, unlockOrganizer } from "./helpers";
 
 test.describe("score entry survives a redraw", () => {
   test("typing carries on in the same box after any redraw of the same court and round", async ({ page }) => {
-    const state = freshState(); await installMock(page, state); page.on("dialog", (d) => d.accept());
+    const state = everyoneComing(freshState()); await installMock(page, state); page.on("dialog", (d) => d.accept());
     await page.goto("/"); await signIn(page, ORGANIZER); await unlockOrganizer(page);
     await page.evaluate(() => startSession()); await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(1);
     await page.click("#bnav-scores"); await page.selectOption("#sc-sel", "1"); await expect(page.locator("#si_1_1_a")).toBeVisible();

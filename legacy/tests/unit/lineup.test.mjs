@@ -1,48 +1,68 @@
 // Tonight's starting courts (p54), the app's own functions (upcomingLineup, autoAssign, spareSeats… loaded straight out of
-// index.html) against the independent reference (starting-reference.mjs): everyone who is coming keeps the court they
-// earned, declines and absences marked before the night never promote anyone, confirmed spares fill open seats from the
-// bottom, and courts of one or of more than five are settled as at the gym. 20 named situations (the first is the one the
-// organizer found on TEST) and 200 generated leagues.
+// index.html) against the independent reference (starting-reference.mjs): everyone who said yes keeps the court they
+// earned, declines, silence and absences marked before the night never promote anyone, confirmed spares fill open seats
+// from the bottom, and courts of one or of more than five are settled as at the gym. 20 named situations (the first is
+// the one the organizer found on TEST) and 200 generated leagues.
+// p96: a regular who has not answered is not seated — silence is not a yes.
+// p97: each court is listed strongest first (wins, then points scored), so an over-full court sends its weakest down.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { load } from "./load-app.mjs";
-import { startingCourts, offLine, spareLine, moveLine } from "./starting-reference.mjs";
+import { startingCourts, offLine, spareLine, moveLine, silentLine } from "./starting-reference.mjs";
 import { rng } from "./adjust-reference.mjs";
 
 // p69: spare seats are decided when the regulars' vote closes (46 hours before play). The page's clock is fixed after
 // that deadline (Monday evening before the Tuesday session), so confirmed spares are seated as on the night.
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem"], { _lineupNotes: [], _lineupProblem: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints"], { _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
-/** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}. */
-function run(players, votes = {}, pre = {}) {
+/** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}.
+ *  `sess` are played sessions ({number, scores}) — the wins and points each court is ordered by (p97). */
+function run(players, votes = {}, pre = {}, sess = []) {
   const S = {
     players: players.map((p) => ({ id: p.id, name: p.name ?? `P${p.id}`, currentCourt: p.court, membershipType: p.spare ? "spare" : "regular", approved: p.approved ?? true, waitlisted: !!p.waitlisted })),
     rsvp: { ...votes }, rsvpRows: Object.entries(votes).map(([id, response], i) => ({ player_id: +id, response, updated_at: `2026-09-10T12:${String(i).padStart(2, "0")}:00Z` })),
-    preAttendance: pre, current: null, payments:players.filter(p=>p.spare).map(p=>({player_id:p.id,kind:"spare",session_number:1,amount:20})),
+    preAttendance: pre, current: null, sessions: sess, payments:players.filter(p=>p.spare).map(p=>({player_id:p.id,kind:"spare",session_number:1,amount:20})),
   };
   api.setS(S);
   return api.upcomingLineup();
 }
+/** Wins and points scored per player, counted here from the same games the app counts (seasonRecord). */
+function recordOf(sess = []) {
+  const rec = {};
+  const bump = (id) => (rec[id] ??= { w: 0, pts: 0 });
+  for (const x of sess) for (const sc of Object.values(x.scores || {})) {
+    if (!sc || (sc.w !== "A" && sc.w !== "B")) continue;
+    for (const id of [sc.a1, sc.a2].filter((v) => v != null)) { const r = bump(id); r.pts += sc.sA || 0; if (sc.w === "A") r.w++; }
+    for (const id of [sc.b1, sc.b2].filter((v) => v != null)) { const r = bump(id); r.pts += sc.sB || 0; if (sc.w === "B") r.w++; }
+  }
+  return rec;
+}
 /** What the rules say, worked out here: who is off, which spares are confirmed (answer order, up to 24 players; p69), then the reference. */
-function expected(players, votes = {}, pre = {}) {
+function expected(players, votes = {}, pre = {}, sess = []) {
   const byId = (id) => players.find((p) => p.id === id), name = (id) => byId(id)?.name ?? `P${id}`;
   const isReg = (p) => p && (p.approved ?? true) && !p.waitlisted && !p.spare, isSpare = (p) => p && (p.approved ?? true) && p.spare;
   const absent = new Set(players.filter((p) => pre[p.id] === "absent").map((p) => p.id));
   const declined = new Set(players.filter((p) => isReg(p) && votes[p.id] === "notcoming" && pre[p.id] !== "present" && !absent.has(p.id)).map((p) => p.id));
+  // p96: a regular who has not answered is not playing either. Only "coming", or the organizer's Present mark, seats one.
+  const silentSet = new Set(players.filter((p) => isReg(p) && !votes[p.id] && pre[p.id] !== "present" && !absent.has(p.id)).map((p) => p.id));
   // p69: spare seats fill the courts up to 24 players: 24 minus the regulars coming (those the starting courts seat).
-  const earned = players.filter((p) => p.court > 0 && isReg(p) && !declined.has(p.id) && !absent.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
+  const earned = players.filter((p) => p.court > 0 && isReg(p) && !declined.has(p.id) && !absent.has(p.id) && !silentSet.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
   const seats = Math.max(0, 24 - earned.length);
   const spares = Object.entries(votes).filter(([id, r]) => r === "coming" && isSpare(byId(+id))).map(([id]) => +id).slice(0, seats).filter((id) => !absent.has(id));
-  const ref = startingCourts(earned, spares);
+  // p97: the two numbers each court is ordered by, counted from the games played.
+  const rec = recordOf(sess), rank = (id) => [rec[id]?.w ?? 0, rec[id]?.pts ?? 0];
+  const ref = startingCourts(earned, spares, rank);
   const off = players.filter((p) => p.court > 0 && !isSpare(p) && (declined.has(p.id) || absent.has(p.id))).sort((a, b) => a.court - b.court || a.id - b.id).map((p) => offLine(name(p.id), p.court, absent.has(p.id)));
-  const notes = ref.ok ? [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id])), ...ref.moves.map((m) => moveLine(name(m.id), m, name))] : [...off, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id]))];
+  const waiting = players.filter((p) => p.court > 0 && !isSpare(p) && silentSet.has(p.id)).sort((a, b) => a.court - b.court || a.id - b.id);
+  const silent = waiting.length ? [silentLine(waiting.map((p) => `${name(p.id)} (Court ${p.court})`))] : [];
+  const notes = ref.ok ? [...off, ...silent, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id])), ...ref.moves.map((m) => moveLine(name(m.id), m, name))] : [...off, ...silent, ...spares.filter((id) => ref.spareSeat[id]).map((id) => spareLine(name(id), ref.spareSeat[id]))];
   return { ref, notes, lineup: Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, ref.lineup[c]])) };
 }
-function check(players, votes, pre, extra = () => {}) {
-  const got = run(players, votes, pre), want = expected(players, votes, pre);
+function check(players, votes, pre, extra = () => {}, sess = []) {
+  const got = run(players, votes, pre, sess), want = expected(players, votes, pre, sess);
   assert.deepEqual(sorted(got.assign), sorted(want.lineup), "who starts where");
   assert.equal(!got.problem, want.ref.ok, `a valid night (${got.problem || "no problem"})`);
   if (want.ref.ok) assert.deepEqual(got.notes, want.notes, "what the Courts page says");
@@ -160,6 +180,92 @@ test("lineup · Court 1 left with one player while Court 2 already has five: the
   const players = ladder([2, 5, 4, 4, 4, 4]);   // Court 1: players 1 and 2
   const got = check(players, coming(players, [1]));
   assert.equal(courtOf(got.assign, 2), 3); assert.equal(got.assign[2].length, 5); assert.equal(got.assign[3].length, 5);
+});
+
+// ── p96: silence is not a yes ────────────────────────────────────────────────────────────────────────────────────────
+test("lineup · p96 · a regular who has not answered is not seated, and nobody moves up into their place", () => {
+  const players = ladder([4, 4, 4, 4, 4, 4]);
+  const votes = coming(players); delete votes[9];           // player 9 (Court 3) never answered
+  const got = check(players, votes);
+  assert.equal(courtOf(got.assign, 9), 0, "not seated");
+  assert.deepEqual([...got.assign[3]].sort((a, b) => a - b), [10, 11, 12], "Court 3 keeps its other three");
+  for (const p of players.filter((x) => x.id !== 9)) assert.equal(courtOf(got.assign, p.id), p.court, "nobody else moved");
+  assert.deepEqual(got.notes, ["1 regular has not answered yet, so they are not in tonight's line-up: P9 (Court 3)."]);
+});
+test("lineup · p96 · nobody has answered: nobody is seated, and the line says who is waited on", () => {
+  const players = ladder([4, 4]);
+  const got = check(players, {});
+  assert.deepEqual(Object.values(got.assign).flat(), []);
+  assert.equal(got.notes.length, 1);
+  assert.match(got.notes[0], /^8 regulars have not answered yet, so they are not in tonight's line-up: P1 \(Court 1\)/);
+});
+test("lineup · p96 · more than eight unanswered: eight are named and the rest counted", () => {
+  const players = ladder([4, 4, 4]);
+  const got = check(players, {});
+  assert.deepEqual(got.notes, [silentLine(players.map((p) => `P${p.id} (Court ${p.court})`))]);
+  assert.match(got.notes[0], / and 4 more\.$/);
+});
+test("lineup · p96 · silence frees a spare seat: 24 minus the regulars who said yes", () => {
+  const players = ladder([4, 4, 4, 4, 4, 4], 1, 1);        // 24 regulars, 1 spare
+  const all = coming(players);
+  assert.equal(courtOf(run(players, { ...all, 25: "coming" }).assign, 25), 0, "no seat while all 24 say yes");
+  const quiet = { ...all }; delete quiet[24];               // one regular goes quiet: one seat opens
+  const got = check(players, { ...quiet, 25: "coming" });
+  assert.equal(courtOf(got.assign, 25), 6, "the spare takes the seat the silence left");
+});
+test("lineup · p96 · the organizer's Present mark seats a regular who never answered (p98)", () => {
+  const players = ladder([4, 4, 4, 4, 4, 4]);
+  const votes = coming(players); delete votes[9];
+  const got = check(players, votes, { 9: "present" });
+  assert.equal(courtOf(got.assign, 9), 3);
+  assert.deepEqual(got.notes, [], "nothing to explain: the court is as earned");
+});
+
+// ── p97: an over-full court sends its weakest player down ───────────────────────────────────────────────────────────
+// A season of one session, written here so each player has a known record: `wins[id]` games won 21-10, the rest lost.
+const seasonOf = (wins) => {
+  const scores = {}; let g = 0;
+  for (const [id, n] of Object.entries(wins)) for (let k = 0; k < n; k++) scores[`c1_y1_g${++g}`] = { a1: +id, a2: null, b1: 99, b2: null, sA: 21, sB: 10, w: "A" };
+  return [{ id: 1, number: 1, scores }];
+};
+test("lineup · p97 · six on one court: the fewest wins moves down, not whoever registered last", () => {
+  // Court 3 is earned by six players (one came back from a night off). Player 11 has won nothing; the rest have.
+  const players = ladder([4, 4, 6, 3, 4, 4]);
+  const sess = seasonOf({ 9: 4, 10: 3, 11: 0, 12: 3, 13: 2, 14: 1 });
+  const got = check(players, coming(players), {}, () => {}, sess);
+  assert.equal(got.assign[3].length, 5); assert.equal(courtOf(got.assign, 11), 4, "the winless player goes down");
+  assert.deepEqual(got.assign[3], [9, 10, 12, 13, 14], "strongest first, so the bottom is the one to move");
+});
+test("lineup · p97 · wins tie: the fewer points scored moves down", () => {
+  const players = ladder([4, 4, 6, 3, 4, 4]);
+  // 9-14 all won one game; points scored separate them, and 13 scored the fewest (one win at 21 and one loss at 5).
+  const scores = {}; let g = 0;
+  for (const id of [9, 10, 11, 12, 13, 14]) scores[`c1_y1_g${++g}`] = { a1: id, a2: null, b1: 99, b2: null, sA: 21, sB: 10, w: "A" };
+  for (const [id, pts] of [[9, 19], [10, 18], [11, 17], [12, 16], [13, 5], [14, 15]]) scores[`c1_y2_g${++g}`] = { a1: id, a2: null, b1: 99, b2: null, sA: pts, sB: 21, w: "B" };
+  const got = check(players, coming(players), {}, () => {}, [{ id: 1, number: 1, scores }]);
+  assert.equal(courtOf(got.assign, 13), 4, "equal wins, fewest points scored: 13 moves down");
+});
+test("lineup · p97 · a player back from a night off keeps the court they earned when somebody there is weaker", () => {
+  const players = ladder([4, 4, 5, 3, 4, 4]);              // Court 3: 9, 10, 11, 12, 13
+  const back = { id: 30, court: 3 }; players.push(back);     // 30 is back on the Court 3 they earned: six on it
+  const sess = seasonOf({ 9: 5, 10: 4, 11: 3, 12: 2, 13: 0, 30: 1 });
+  const got = check(players, coming(players), {}, () => {}, sess);
+  assert.equal(courtOf(got.assign, 30), 3, "the returning player keeps Court 3");
+  assert.equal(courtOf(got.assign, 13), 4, "the weakest on it moves down");
+});
+// A confirmed spare can never overfill a court (the seats run out at 24 players), but a spare the organizer seats by
+// hand can — and that seat was a decision, usually because a strong player turned up, so it is not the one undone.
+test("lineup · p97 · a spare the organizer seated on a full court is not the one sent away", () => {
+  const players = ladder([4, 4, 4, 4, 4, 5]);               // Court 6: 21, 22, 23, 24, 25
+  players.push({ id: 40, name: "P40", court: 6, spare: true });
+  const sess = seasonOf({ 21: 5, 22: 4, 23: 3, 24: 2, 25: 0 });
+  const got = run(players, coming(players), { 40: "present" }, sess);
+  assert.equal(got.problem, "");
+  assert.equal(courtOf(got.assign, 40), 6, "the spare the organizer placed keeps the court");
+  assert.equal(courtOf(got.assign, 25), 5, "the winless regular on it is the one who moves");
+  assert.deepEqual(got.assign[6], [40, 21, 22, 23, 24], "the placed spare first, then strongest to weakest");
+  assert.ok(got.notes.includes("P40 (spare) is seated by the organizer on Court 6."), got.notes.join(" | "));
+  assert.ok(got.notes.includes("Court 6 would have more than five players, so P25 starts on Court 5."), got.notes.join(" | "));
 });
 
 // ── A lone player when every other court in use has five (p55): never refused ────────────────────────────────────────

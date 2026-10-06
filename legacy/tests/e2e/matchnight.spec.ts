@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { installMock, freshState, ORGANIZER, type MockState } from "./mock-supabase";
+import { installMock, freshState, everyoneComing, ORGANIZER, type MockState } from "./mock-supabase";
 import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, firstCourts, registerSelf, wl, shot, type Sess } from "./helpers";
 
 const FOUR: [number, number][] = [[21, 15], [21, 10], [18, 21]]; // A top on points, D bottom
@@ -13,7 +13,7 @@ const bestOfThree = <T extends { a2: number | null; b2: number | null }>(games: 
 test.describe("2026–27 match night on the test copy (mocked database rules)", () => {
   let state: MockState;
   test.beforeEach(async ({ page }) => {
-    state = freshState();
+    state = everyoneComing(freshState());
     // A fixed moment before Session 1 (as the tab suites use), for the page and the database clock alike. The suite used
     // the machine's clock, so Session 1's vote closed for it at 8 p.m. on September 13 (48 hours before play) and the
     // registration case could no longer vote. The voting-deadline case below sets its own moment.

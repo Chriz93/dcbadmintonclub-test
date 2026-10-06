@@ -59,10 +59,11 @@ export function leaders(L: League) {
 
 export const allSessions = (L: League) => [...L.sessions, ...(L.current ? [L.current] : [])];
 export function rankings(L: League) {
-  const elo = eloReference(L.players as never, allSessions(L) as never);
+  // p99: the starting points the organizer set for a drop-in replace the court's own, and only the start.
+  const elo = eloReference(L.players as never, allSessions(L) as never, undefined, L.seeds);
   // p76: what the Elo did over the session being played (or the last one played) — the arrow the rankings show.
   const all = allSessions(L) as never[];
-  const before = eloReference(L.players as never, all as never, all.length - 1); // p84: one seeding, one session fewer played
+  const before = eloReference(L.players as never, all as never, all.length - 1, L.seeds); // p84: one seeding, one session fewer played
   const rows = lbPlayers(L).map((p) => {
     const cp = seatOf(L, p) || p.current_court, W = p.season_wins, Lo = p.season_losses, GP = p.games_played, rating = elo[p.id] || 1000, active = p.current_court > 0;
     return { id: p.id, name: p.name, rating, spare: p.membership_type === "spare", absent: !active, sub: `${active ? "Court " + cp : "Absent"} · ${W}W ${Lo}L · ${GP > 0 ? Math.round((W / GP) * 100) : 0}%`,
@@ -211,17 +212,29 @@ export function pos(L: League) {
 
 /** Next session's seating from the votes, as the rules describe it. */
 /** p69: spare seats for the upcoming session: 24 minus the regulars coming, counted as the starting courts seat them
- *  (regulars with a ladder court who have not voted "not coming", without those marked absent before the night, with
- *  those marked present despite a "not coming" vote). Decided when the regulars' vote closes (46 hours before play);
- *  before that no seat is reserved. */
+ *  (p96: regulars with a ladder court who said "coming", without those marked absent before the night, with those
+ *  marked present whatever they answered). Decided when the regulars' vote closes (46 hours before play); before that no
+ *  seat is reserved. */
 export function spareSeatCount(L: League) {
   const rows = L.rsvps.filter((r) => r.session_number === L.upcoming).sort((a, b) => a.updated_at.localeCompare(b.updated_at));
   const vote: Record<number, string> = {}; rows.forEach((r) => (vote[r.player_id] = r.response));
   const pre: Record<number, string> = L.current ? {} : (L.pre || {});
   const regs = L.players.filter((p) => p.approved && !p.waitlisted && p.membership_type !== "spare" && p.current_court > 0);
-  const coming = regs.filter((p) => pre[p.id] !== "absent" && (vote[p.id] !== "notcoming" || pre[p.id] === "present")).length;
+  const coming = regs.filter((p) => pre[p.id] !== "absent" && (vote[p.id] === "coming" || pre[p.id] === "present")).length;
   const deadline = sessionStartMs((season.approved_dates as string[])[L.upcoming - 1]) - 46 * 3600e3;
   return { coming, seats: Math.max(0, 24 - coming), decided: !!L.current || L.nowMs > deadline, deadline };
+}
+
+/** Wins and points scored this season per player, from every game on record — completed sessions and the live one. */
+export function seasonRecord(L: League): Record<number, { w: number; l: number; pts: number }> {
+  const rec: Record<number, { w: number; l: number; pts: number }> = {};
+  const bump = (id: number) => (rec[id] ??= { w: 0, l: 0, pts: 0 });
+  for (const x of [...L.sessions, ...(L.current ? [L.current] : [])]) for (const sc of Object.values(x.scores || {})) {
+    if (!sc || (sc.w !== "A" && sc.w !== "B")) continue;
+    for (const id of [sc.a1, sc.a2].filter((v): v is number => v != null)) { const r = bump(id); r.pts += sc.sA || 0; if (sc.w === "A") r.w++; else r.l++; }
+    for (const id of [sc.b1, sc.b2].filter((v): v is number => v != null)) { const r = bump(id); r.pts += sc.sB || 0; if (sc.w === "B") r.w++; else r.l++; }
+  }
+  return rec;
 }
 
 export function upcoming(L: League) {
@@ -233,14 +246,19 @@ export function upcoming(L: League) {
   // Attendance marked before the session: absent = not seated; present = seated despite a "not coming" vote.
   const pre = L.pre || {}, preAbsent = new Set(L.players.filter((p) => pre[p.id] === "absent").map((p) => p.id));
   const declined = new Set(L.players.filter((p) => isReg(p) && vote[p.id] === "notcoming" && pre[p.id] !== "present" && !preAbsent.has(p.id)).map((p) => p.id));
+  // p96: a regular who has not answered is not playing either — only "coming", or the organizer's Present mark, seats one.
+  const silent = new Set(L.players.filter((p) => isReg(p) && !vote[p.id] && pre[p.id] !== "present" && !preAbsent.has(p.id)).map((p) => p.id));
   const declinedRows = rows.filter((r) => r.response === "notcoming" && isReg(byId(r.player_id))).length;
   const claims = rows.filter((r) => r.response === "coming" && isSpare(byId(r.player_id))).sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.player_id - b.player_id);
   const spares = (spareSeatCount(L).decided ? claims.slice(0, spareSeatCount(L).seats) : []).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
   // Everyone coming keeps the court they earned; spares fill open seats from the bottom; lone or over-five courts are settled (p54).
-  const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
-  const start = startingCourts(earned, spares);
+  const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id) && !silent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
+  // p97: each court is then listed strongest first — most wins, then most points scored — so the player an over-full
+  // court sends down is the weakest on it. Counted from the same games the app counts (seasonRecord).
+  const rec = seasonRecord(L), rank = (id: number) => [rec[id]?.w ?? 0, rec[id]?.pts ?? 0] as [number, number];
+  const start = startingCourts(earned, spares, rank);
   const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), start.lineup[i + 1]]));
-  return { vote, declined, preAbsent, spares, assign, start };
+  return { vote, declined, preAbsent, silent, spares, assign, start };
 }
 
 export function courts(L: League) {

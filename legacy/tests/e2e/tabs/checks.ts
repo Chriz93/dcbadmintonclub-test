@@ -10,7 +10,8 @@ export function kvOf(ctx: Ctx, k: string) { const v = ctx.state.state[k]; return
 export function fromDb(ctx: Ctx, base: League): League {
   const s = ctx.state, sessions = kvOf(ctx, "completed_sessions") || [], current = kvOf(ctx, "current_session");
   return { ...base, players: structuredClone(s.players), sessions, current, rsvps: structuredClone(s.rsvps), payments: structuredClone(s.payments),
-    questions: structuredClone(s.questions) as never, announcements: structuredClone(s.announcements) as never, nowMs: s.nowMs!, upcoming: current ? current.number : Math.min(sessions.length + 1, 28), pre: current ? {} : kvOf(ctx, "pre_session_attendance") || {} };
+    questions: structuredClone(s.questions) as never, announcements: structuredClone(s.announcements) as never, nowMs: s.nowMs!, upcoming: current ? current.number : Math.min(sessions.length + 1, 28), pre: current ? {} : kvOf(ctx, "pre_session_attendance") || {},
+    seeds: kvOf(ctx, "player_seed_points") || undefined }; // p99: the starting points the organizer set, as the database holds them
 }
 async function standings(page: Page, label: RegExp) {
   await page.evaluate(() => nav("standings"));

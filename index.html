@@ -1302,7 +1302,8 @@ function spareSeats(){
  const SPARE_TARGET=24;
  const rows=S.rsvpRows||[],byId=id=>S.players.find(p=>p.id===id),vote={};rows.forEach(r=>{vote[r.player_id]=r.response;});
  const pre=S.current?{}:(S.preAttendance||{}),regulars=S.players.filter(p=>isRegularMember(p)&&p.currentCourt>0);
- const declined=regulars.filter(p=>vote[p.id]==='notcoming').length,coming=regulars.filter(p=>pre[p.id]!=='absent'&&(vote[p.id]!=='notcoming'||pre[p.id]==='present')).length;
+ // p96: a seat is free unless a regular said yes. Silence used to count as coming, which hid the seats to fill.
+ const declined=regulars.filter(p=>vote[p.id]==='notcoming').length,coming=regulars.filter(p=>pre[p.id]!=='absent'&&(vote[p.id]==='coming'||pre[p.id]==='present')).length;
  const seats=Math.max(0,SPARE_TARGET-coming),n=upcomingSessionNumber(),startAt=FD[n-1];
  const deadline=startAt?new Date(startAt.getTime()-FEES.voteDeadlineHours*3600000):null,decided=!!S.current||!deadline||Date.now()>deadline.getTime();
  const claims=rows.filter(r=>r.response==='coming'&&isSpareMember(byId(r.player_id))).sort((a,b)=>String(a.updated_at).localeCompare(String(b.updated_at))||a.player_id-b.player_id)
@@ -1657,6 +1658,7 @@ async function _loadAllOnce(){
     draft.qaQuestions=((await sbG('questions','select=id,player_id,asker,question,answer,answered_at,created_at&order=created_at.asc'))||[]).map(q=>({id:q.id,playerId:q.player_id,playerName:q.asker,question:q.question,answer:q.answer,ts:q.created_at,answeredAt:q.answered_at}));
     draft.preAttendance=await loadKV('pre_session_attendance')||{};
     draft.adminCourtMoves=await loadKV('admin_court_moves')||{}; // p92: courts the organizer moved by hand, not won
+    draft.seedPoints=await loadKV('player_seed_points')||{}; // p99: starting points the organizer set for a drop-in
     const roundSnapshots=await loadKV('round_snapshots')||[];
     draft.seasonConfig=await loadKV('season_config');draft.seasonDates=await sbG('season_dates','order=session_number.asc');
     for(const [key,rd]of Object.entries(reads))if((_stateVersion[key]||0)>(rd.known||0))return false; // a save completed while this load was in flight
@@ -1989,6 +1991,9 @@ async function addPlayer(){
  if(!name)return toast('Enter a name','warn');
  const existing=S.players.find(p=>p.name.toLowerCase()===name.toLowerCase());
  if(existing)return toast('This name is already on file. Open their player record to edit or approve it.','warn');
+ // p101: a new regular in a full season is the same decision as promoting one — ask it here too, rather than letting
+ // add_league_player refuse with "Regular places are full".
+ if(mtype==='regular'&&!await overCapOk(name,regularPlacesTaken()))return;
  try{const id=await rpc('add_league_player',{p_name:name,p_court:court,p_membership:mtype});document.getElementById('np-name').value='';await loadAll();renderAll();if(S.current&&court>0){toast(name+' added. Reviewing court placement…','info');await moveCourtPlayer(id,court);}else toast(name+' added as '+mtype+'!','success');}catch(e){toast('Player not added: '+e.message,'error');}
 }
 async function invitePlayer(){
@@ -2034,10 +2039,22 @@ async function invitePastPlayer(id){
   if(r&&r.code)return toast('Invitation not saved: '+(r.message||r.code),'error');
   await loadAll();renderAll();toast(`Invited ${p.name} back as ${membership_type}. Registration allowed for ${email}; share this site link with them. No email was sent.`,'success');
 }
+// p100, p101: the cap stops the registration form overfilling the season; it does not stop the organizer. Over the cap
+// the organizer is told what they are about to make true, and confirming adds the place to the season (L29) so the
+// approval goes through instead of being refused by the database. Returns false when nothing should happen.
+async function overCapOk(name,taken){
+  if(taken<REGULAR_CAPACITY)return true;
+  const want=taken+1;
+  if(!confirm(`All ${REGULAR_CAPACITY} regular places are taken. Making ${name} a regular puts the season at ${want} regulars.\n\nThis is your call: confirming adds a place, so the season's regular places become ${want}. Go ahead?`))return false;
+  try{await rpc('set_regular_capacity',{p_capacity:want});}
+  catch(e){toast('The season still has '+REGULAR_CAPACITY+' regular places: '+e.message,'error');return false;}
+  REGULAR_CAPACITY=want;
+  return true;
+}
 async function promoteWaitlisted(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
   const regularCount=S.players.filter(x=>x.membershipType!=='spare'&&!x.waitlisted&&x.approved&&x.id!==id).length;
-  if(regularCount>=REGULAR_CAPACITY)return toast('No regular place is free','warn');
+  if(!await overCapOk(p.name,regularCount))return; // p100, p101
   const approvals=await getKV('player_approvals')||{};
   approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:false,membershipType:'regular'};
   await setKV('player_approvals',approvals);
@@ -2109,7 +2126,7 @@ async function togglePaid(id){recordPaymentUI(id);}
 // ── Undo ─────────────────────────────────────────────────────────────────────────────────────────
 // Every wrapped admin action gets a database checkpoint first; if the action changed nothing the checkpoint is
 // discarded. Score saves are journaled by the database itself. undoLast() restores the latest checkpoint exactly.
-const UNDOABLE={"applyCourtAdjust":"Adjust courts","startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","saveEditRegistration":"Edit registration"};
+const UNDOABLE={"applyCourtAdjust":"Adjust courts","startSession":"Start session","endSession":"End session","nextCycle":"Advance round","autoAdvanceCheck":"Advance round","undoScore":"Undo score entry","clearCycleScores":"Clear round scores","resetSession":"Reset session","cancelSession":"Cancel session","markAttForTab":"Attendance","markAbsentFromPlayers":"Mark absent","saveAttendanceTab":"Save attendance","saveAttendance":"Save attendance","togglePlayerPresence":"Attendance","callInSpare":"Seat player","setPlayerCourt":"Change court","removePlayerFromCourtNow":"Remove from court","quickAddToCourt":"Add to court","saveAssignments":"Court assignments","rebalanceCourts":"Rebalance courts","rebalancePlayerCourts":"Rebalance courts","assignCourtToRegistered":"Assign court","syncCourtsFromLastSession":"Sync courts","markPlayerLate":"Mark late","handleAbsentAndReplace":"Absent and replace","approvePlayer":"Approve player","rejectPlayer":"Reject player","toggleMembership":"Change membership","promoteWaitlisted":"Promote from waitlist","promoteFromWaitlist":"Promote from waitlist","saveEditRegistration":"Edit registration","saveDropIn":"Starting points","clearDropIn":"Starting points"};
 let _ckDepth=0,_undoing=false,_undoEpoch=0;
 function undoLabel(name,args){
   const pn=id=>{const p=S.players.find(x=>x.id===id);return p?p.name:'player';};
@@ -2430,7 +2447,12 @@ function spareCourtUpcoming(id){if(S.current)return 0;const a=upcomingLineup().a
 let _seasonRecCache=null,_seasonRecKey='';
 function seasonRecord(){
   const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
-  const key=sess.map(x=>`${x.id}:${Object.keys(x.scores||{}).length}`).join('|');
+  // p102: what the games say, not just how many there are — who played them, what they scored and who won, in order.
+  // A correction keeps the session's id and its number of scores, so neither of those can tell the record it is stale.
+  const key=sess.map(x=>`${x.id}:${Object.keys(x.scores||{}).length}:${Object.entries(x.scores||{}).reduce((t,[k,sc])=>{
+    if(!sc)return t;
+    const h=(sc.a1||0)*3+(sc.a2||0)*5+(sc.b1||0)*11+(sc.b2||0)*13+(sc.sA||0)*31+(sc.sB||0)*37+(sc.w==='A'?1:sc.w==='B'?2:0)+k.length;
+    return (t*33+h)>>>0;},0)}`).join('|');
   if(_seasonRecCache&&_seasonRecKey===key)return _seasonRecCache;
   const rec={};
   const bump=id=>{if(!rec[id])rec[id]={w:0,l:0,gp:0,pts:0};return rec[id];};
@@ -2451,7 +2473,7 @@ function byWinsThenPoints(ids,rec){
 async function assignMove(id,court){
   if(S.current)return moveCourtPlayer(id,court);
   if(!court)return removeFromUpcoming(id); // taking a player out before a session means they are not coming
-  return setPlayerCourt(id,court);
+  return setPlayerCourt(id,court,true); // p103: the board arranges tonight
 }
 function courtLock(){return S.current&&S.current.completed?' disabled title="Both rounds are finished. End the session to save the final courts, then change courts."':'';}
 // p61: the pool's action for a player: a spare who is already coming for the next session shows their status instead.
@@ -2481,7 +2503,9 @@ function seatKnockOn(before,after,movedId){
   if(!out.length)return '';
   return ' · also moved: '+(out.length>3?out.slice(0,3).join(', ')+` and ${out.length-3} more`:out.join(', '));
 }
-async function setPlayerCourt(id,c){
+// p103: `tonight` is true only where the organizer is arranging the coming session — the Assign board and the Courts
+// page's + Add. From Admin → Players this sets the ladder court and says nothing about who is playing.
+async function setPlayerCourt(id,c,tonight){
  const court=Number(c);if(S.current)return moveCourtPlayer(id,court);
  if(!Number.isInteger(court)||court<0||court>NC)return toast('Choose a valid court','warn');
  const p=S.players.find(x=>x.id===id);if(!p)return;
@@ -2505,9 +2529,12 @@ async function setPlayerCourt(id,c){
  // p90: a regular taken off a court is marked "not coming", and the line-up leaves out everyone who is not coming
  // before it reads anyone's court. Putting them on a court means they are playing, so lift that the way the
  // organizer's own Present mark does — otherwise the seat is written and nothing appears.
- if(court){
+ if(court&&tonight){
   const pre={...(S.preAttendance||{})};
-  if((S.rsvp||{})[id]==='notcoming'||pre[id]==='absent'){
+  // p98: anything other than a plain "coming" would keep them out of the line-up (p96 counts silence as not playing),
+  // so the organizer's seat is recorded as a Present mark. "Coming" needs no mark and is left alone.
+  // p103: only when this is about tonight. Setting the ladder court must not answer for the player.
+  if((S.rsvp||{})[id]!=='coming'||pre[id]==='absent'){
    pre[id]='present';
    try{await setKV('pre_session_attendance',pre);S.preAttendance=pre;}
    catch(e){await loadAll();renderAll();return toast('Seat not saved: '+e.message,'error');}
@@ -2543,7 +2570,7 @@ async function toggleMembership(id,type){
   if(type===p.membershipType)return; // no change
   if(type==='regular'){
     const regularCount=S.players.filter(x=>x.membershipType==='regular'&&!x.waitlisted&&x.sig&&x.sig!=='admin'&&x.id!==id).length;
-    if(regularCount>=REGULAR_CAPACITY){toast(`Regular slots full (${REGULAR_CAPACITY}/${REGULAR_CAPACITY}). Cannot switch to Regular.`,'warn');return;}
+    if(!await overCapOk(p.name,regularCount))return; // p100, p101
   }
   // Primary: store in KV override (works regardless of DB schema)
   const overrides=await getKV('membership_overrides')||{};
@@ -2745,7 +2772,8 @@ function renderRegPlayers(){
       <div class="flex-between" style="margin-bottom:4px;">
         <div style="font-weight:800;font-size:13px;">#${i+1} ${esc(p.name)}<span class="waitlist-badge">WAITLIST</span></div>
         <div style="display:flex;gap:5px;">
-          ${regularCount<REGULAR_CAPACITY?`<button class="btn btn-success btn-sm" onclick="promoteFromWaitlist(${p.id})" style="padding:4px 8px;">↑ Promote</button>`:'<span class="tag tg-gray">Slots Full</span>'}
+          ${regularCount>=REGULAR_CAPACITY?`<span class="tag tg-gray" title="All ${REGULAR_CAPACITY} regular places are taken — promoting goes over the cap, and asks you first">${regularCount}/${REGULAR_CAPACITY} full</span>`:''}
+          <button class="btn btn-success btn-sm" onclick="promoteFromWaitlist(${p.id})" style="padding:4px 8px;">↑ Promote</button>
           <button class="btn btn-danger btn-sm" onclick="rejectPlayer(${p.id})" style="padding:4px 8px;">✕</button>
         </div>
       </div>
@@ -2783,8 +2811,9 @@ function renderRegPlayers(){
 }
 async function promoteFromWaitlist(id){
   const p=S.players.find(x=>x.id===id);if(!p)return;
-  if(regularPlacesTaken(id)>=REGULAR_CAPACITY){toast(`Still no open regular slots (${REGULAR_CAPACITY}/${REGULAR_CAPACITY})`,'warn');return;}
-  if(!confirm(`Promote ${p.name} off the waitlist to Regular member?`))return;
+  const taken=regularPlacesTaken(id); // p100, p101
+  if(taken>=REGULAR_CAPACITY){if(!await overCapOk(p.name,taken))return;}
+  else if(!confirm(`Promote ${p.name} off the waitlist to Regular member?`))return;
   const approvals=await getKV('player_approvals')||{};
   approvals[id]={...(approvals[id]||{}),approved:true,waitlisted:false};
   await setKV('player_approvals',approvals);
@@ -2914,27 +2943,36 @@ function upcomingLineup(){
   const votes=S.rsvp||{},pre=S.current?{}:(S.preAttendance||{});
   const preAbsent=new Set(S.players.filter(p=>pre[p.id]==='absent').map(p=>p.id));
   const declined=new Set(S.players.filter(p=>isRegularMember(p)&&votes[p.id]==='notcoming'&&pre[p.id]!=='present'&&!preAbsent.has(p.id)).map(p=>p.id));
+  // p96: a regular who has not answered is not playing. Only "coming", or the organizer's own Present mark, seats them.
+  const noAnswer=new Set(S.players.filter(p=>isRegularMember(p)&&!votes[p.id]&&pre[p.id]!=='present'&&!preAbsent.has(p.id)).map(p=>p.id));
   const confirmedSpares=spareSeats().claims.filter(c=>c.confirmed).map(c=>c.id).filter(id=>!preAbsent.has(id));
   const seatedSpares=organizerSeated(pre); // p71
-  const assign=autoAssign(new Set([...declined,...preAbsent]),confirmedSpares,seatedSpares),nm=id=>S.players.find(p=>p.id===id)?.name||'Player';
+  const assign=autoAssign(new Set([...declined,...preAbsent,...noAnswer]),confirmedSpares,seatedSpares),nm=id=>S.players.find(p=>p.id===id)?.name||'Player'; // p96
   const off=S.players.filter(p=>p.currentCourt>0&&!isSpareMember(p)&&(declined.has(p.id)||preAbsent.has(p.id))).sort((a,b)=>a.currentCourt-b.currentCourt||a.id-b.id)
     .map(p=>`${nm(p.id)} ${preAbsent.has(p.id)?'is marked absent':'is not coming'} (Court ${p.currentCourt}).`);
-  return{votes,pre,declined,preAbsent,confirmedSpares,assign,notes:[...off,..._lineupNotes],problem:_lineupProblem};
+  // p96: who has not answered, in one line — the organizer needs the count and the names, not 20 sentences.
+  const waiting=S.players.filter(p=>p.currentCourt>0&&!isSpareMember(p)&&noAnswer.has(p.id)).sort((a,b)=>a.currentCourt-b.currentCourt||a.id-b.id);
+  const names=waiting.slice(0,8).map(p=>`${nm(p.id)} (Court ${p.currentCourt})`).join(', ');
+  const silent=waiting.length?[`${waiting.length} regular${waiting.length===1?' has':'s have'} not answered yet, so ${waiting.length===1?'they are':'they are'} not in tonight's line-up: ${names}${waiting.length>8?` and ${waiting.length-8} more`:''}.`]:[];
+  return{votes,pre,declined,preAbsent,noAnswer,confirmedSpares,assign,notes:[...off,...silent,..._lineupNotes],problem:_lineupProblem};
 }
 async function startSession(){
   if(S.current)return toast('Session already active','warn');
   const n=upcomingSessionNumber();if(seasonComplete())return toast('All '+DATES.length+' sessions are done!','warn');
-  const{votes,pre,declined,preAbsent,confirmedSpares,assign:initAssign,problem}=upcomingLineup();
+  const{votes,pre,declined,preAbsent,noAnswer,confirmedSpares,assign:initAssign,problem}=upcomingLineup(); // p96
   {const why=seatingProblem(Object.values(initAssign).flat().length)||problem;if(why)return toast(why,'error');}
   // Votes become tonight's attendance: coming → present, not coming → excused (no court penalty).
   const attendance={};
   declined.forEach(id=>{attendance[id]='declined';});
+  // p96: silence is not a no-show. "noanswer" is recorded so the night says who never replied; like "declined" it is
+  // read by nothing that penalises a player — only "absent" costs a no-show and a court (finalize_session, L23).
+  noAnswer.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p&&p.currentCourt>0)attendance[id]='noanswer';});
   const absentFrom={};
   preAbsent.forEach(id=>{const p=S.players.find(x=>x.id===id);if(p&&p.currentCourt>0&&!isSpareMember(p)){attendance[id]='absent';absentFrom[id]=p.currentCourt;}});
   for(let c=1;c<=NC;c++)initAssign[c].forEach(id=>{if(votes[id]==='coming'||pre[id]==='present')attendance[id]='present';});
   const sess={id:Date.now(),number:n,date:DATES[n-1],cycle:1,assignments:initAssign,initialAssignments:JSON.parse(JSON.stringify(initAssign)),scores:{},movements:[],completed:false,preTosses:{},attendance,absentFrom};
   try{await rpc('start_league_session',{p_session:sess});}catch(e){return toast('Session not started: '+e.message,'error');}
-  await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused${preAbsent.size?`, ${preAbsent.size} marked absent`:''}, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
+  await loadAll();renderAll();toast(`Session ${n} started — ${declined.size} excused${noAnswer.size?`, ${noAnswer.size} never answered`:''}${preAbsent.size?`, ${preAbsent.size} marked absent`:''}, ${confirmedSpares.length} spare${confirmedSpares.length===1?'':'s'} seated`,'success');
 }
 // More players than six courts seat (five each) is not a valid night: say so instead of overfilling a court.
 function seatingProblem(n){return n>NC*5?`${n} players are coming, but the ${NC} courts seat at most ${NC*5}. Mark someone absent or not coming, then start the session.`:n===1?'Only one player is coming — a game needs at least two. Start the session when another player is coming.':n===0?'Nobody is coming — a game needs at least two players. Start the session when players are coming.':'';}
@@ -2954,6 +2992,11 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
     const c=used.find(x=>L[x].length<4)||used.find(x=>L[x].length<5)||used[0]||NC;
     L[c].push(id);notes.push(`${nm(id)} (spare) takes an open seat on Court ${c}.`);
   }
+  // p97: order every court strongest first — most wins, then most points scored — so that the player the engine
+  // sends down from an over-full court is the weakest on it. Spares the organizer placed stay at the top: that seat was
+  // a decision, not something earned, and a full court should not undo it.
+  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rec=seasonRecord();
+   for(let c=1;c<=NC;c++)L[c]=[...L[c].filter(id=>pinned.has(id)),...byWinsThenPoints(L[c].filter(id=>!pinned.has(id)),rec)];}
   const res=adjustCourts({nc:NC,lineup:L,names:Object.fromEntries(S.players.map(p=>[p.id,p.name])),locked:[],closed:[],absent:[],returning:[],late:[],partner:true});
   _lineupProblem=res.ok?'':res.problem;
   if(res.ok)for(const m of res.moves)notes.push(m.reason==='full'?`Court ${m.from} would have more than five players, so ${nm(m.id)} starts on Court ${m.to}.`
@@ -3621,6 +3664,7 @@ function renderAssignUI(){
   // p93: before a session the board arranges tonight's starting courts; during one it arranges the live courts.
   const a=S.current?S.current.assignments:upcomingLineup().assign;let html='';
   if(!S.current)html+=`<div class="alert alert-info" style="margin-bottom:10px;">Tonight's starting courts. Drag a player to another court, or out to <strong>Not playing</strong>. Each court lists its players by wins, then points scored — the player at the bottom is the one to move down. Moving somebody is your decision and is not counted as a court drop in their stats.</div>`;
+  html+=dropInCard(); // p99
   // Count courts with <4 players
   const underFull=[];
   for(let c=1;c<=NC;c++){if((a[c]||[]).length===1||(a[c]||[]).length>5)underFull.push(c);}
@@ -3645,9 +3689,9 @@ function renderAssignUI(){
     </div>`;
   }
   for(let c=1;c<=NC;c++){
-    // p93: before a session the court is listed in the order the organizer decides on — most wins, then most points,
-    // so the player to move down is last. During a session the court keeps the order the night put it in.
-    const pids=S.current?(a[c]||[]):byWinsThenPoints(a[c]||[],_rec);
+    // p93, p97: the line-up itself is ordered most wins then most points before a session (autoAssign), so the board
+    // shows the order it was given — the same order as the Courts page — and the player to move down is last.
+    const pids=(a[c]||[]);
     const players=pids.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
     const cnt=players.length;
     const warn=cnt===1||cnt>5;
@@ -3664,6 +3708,76 @@ function renderAssignUI(){
     </div>`;
   }
   el.innerHTML=html;
+}
+// p99: the starting points a drop-in plays from. The court a player first plays on decides this for everybody else
+// (Court 1 is 1500, each court below is 100 less); for a player the organizer knows plays above or below that court,
+// the organizer sets the number instead.
+const ELO_SEED_MIN=800,ELO_SEED_MAX=2000;
+function seedPointsOf(id){const n=Number((S.seedPoints||{})[id]);return Number.isFinite(n)?n:null;}
+function courtStartPoints(p){const c=p&&p.currentCourt>0&&p.currentCourt<=NC?p.currentCourt:NC;return 1500-((c-1)*100);}
+function dropInCard(){
+  if(!adminUnlocked)return '';
+  const pick=S.players.filter(p=>p.approved&&!p.waitlisted).sort((a,b)=>a.name.localeCompare(b.name));
+  const set=Object.keys(S.seedPoints||{}).map(Number).map(id=>S.players.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+  return `<div class="card" id="drop-in" style="margin-bottom:10px;border-color:var(--teal);">
+    <div class="card-title" style="color:var(--teal2);">🎯 Drop-in or returning player</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;">A player with no season behind them starts from the court they first play on — Court 1 is 1500 points, each court below is 100 fewer. Set the number yourself when you know they play above or below that court, and give them the court to start on. Only the start changes: every game they play is scored like everybody else's, and the court you give them is not counted as a court drop.</div>
+    <label class="lbl" for="di-player">Player</label>
+    <select class="inp" id="di-player" onchange="dropInPick()">
+      <option value="">— Choose —</option>
+      ${pick.map(p=>`<option value="${p.id}">${esc(p.name)}${isSpareMember(p)?' (spare)':''} — ${p.currentCourt?'Court '+p.currentCourt:'no court'}${seedPointsOf(p.id)!==null?` · set to ${seedPointsOf(p.id)}`:''}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="flex:1 1 130px;min-width:0;"><label class="lbl" for="di-points">Starting points</label><input class="inp" id="di-points" type="number" inputmode="numeric" min="${ELO_SEED_MIN}" max="${ELO_SEED_MAX}" step="1" placeholder="the court's own"></div>
+      <div style="flex:1 1 130px;min-width:0;"><label class="lbl" for="di-court">Starting court</label><select class="inp" id="di-court">${[0,1,2,3,4,5,6].map(c=>`<option value="${c}">${c?'Court '+c:'No court'}</option>`).join('')}</select></div>
+    </div>
+    <button class="btn btn-primary btn-sm" id="di-save" onclick="saveDropIn()">Save starting points</button>
+    ${set.length?`<div id="di-set" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.8;">Set by you: ${set.map(p=>`${esc(p.name)} <strong style="color:var(--text);">${seedPointsOf(p.id)}</strong> <button class="btn btn-ghost btn-sm di-clear" data-pid="${p.id}" style="padding:1px 5px;font-size:10px;margin:0;" title="Put ${esc(p.name)} back on the court's own starting points" onclick="clearDropIn(${p.id})">✕</button>`).join(' · ')}</div>`:''}
+  </div>`;
+}
+// Choosing a player fills the two boxes in with what they have now, so saving without typing changes nothing.
+function dropInPick(){
+  const pts=document.getElementById('di-points'),crt=document.getElementById('di-court');if(!pts||!crt)return;
+  const p=S.players.find(x=>x.id===parseInt(document.getElementById('di-player')?.value||'0'));
+  if(!p){pts.value='';pts.placeholder="the court's own";crt.value='0';return;}
+  const seed=seedPointsOf(p.id);
+  pts.value=seed===null?'':String(seed);
+  pts.placeholder=`${courtStartPoints(p)} on Court ${p.currentCourt>0?p.currentCourt:NC}`;
+  crt.value=String(p.currentCourt||0);
+}
+async function writeSeedPoints(id,pts){
+  const seeds={...(S.seedPoints||{})};
+  if(pts===null)delete seeds[id];else seeds[id]=pts;
+  await setKV('player_seed_points',seeds);S.seedPoints=seeds;
+}
+async function saveDropIn(){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const id=parseInt(document.getElementById('di-player')?.value||'0');
+  const p=S.players.find(x=>x.id===id);if(!p)return toast('Choose a player','warn');
+  const court=parseInt(document.getElementById('di-court')?.value||'0');
+  if(!Number.isInteger(court)||court<0||court>NC)return toast('Choose a valid court','warn');
+  const raw=String(document.getElementById('di-points')?.value||'').trim();
+  let pts=null;
+  if(raw!==''){
+    pts=Number(raw);
+    if(!Number.isFinite(pts))return toast('Starting points must be a number','warn');
+    pts=Math.round(pts);
+    if(pts<ELO_SEED_MIN||pts>ELO_SEED_MAX)return toast(`Starting points must be between ${ELO_SEED_MIN} and ${ELO_SEED_MAX}`,'warn');
+  }
+  if(pts!==seedPointsOf(id)){
+    try{await writeSeedPoints(id,pts);}
+    catch(e){await loadAll();renderAll();return toast('Starting points not saved: '+e.message,'error');}
+  }
+  const said=pts===null?`${p.name} starts on the court's own points`:`${p.name} starts on ${pts} points`;
+  if(court!==p.currentCourt){await setPlayerCourt(id,court);toast(said,'success');return;}
+  await loadAll();renderAll();toast(said+(court?` · Court ${court}`:''),'success');
+}
+async function clearDropIn(id){
+  if(!adminUnlocked)return toast('Organizer verification required','warn');
+  const p=S.players.find(x=>x.id===id);if(!p)return;
+  try{await writeSeedPoints(id,null);}
+  catch(e){await loadAll();renderAll();return toast('Starting points not cleared: '+e.message,'error');}
+  await loadAll();renderAll();toast(`${p.name} is back on the court's own starting points (${courtStartPoints(p)})`,'success');
 }
 // Drag-and-drop handlers
 let dragPid=null;
@@ -3689,7 +3803,7 @@ function showCourtAddPlayer(court){
 // During a session the move goes through the court engine, which puts its own preview on screen; leave that alone.
 async function quickAddToCourt(court){
   const id=parseInt(document.getElementById('modal-player-sel')?.value);if(!id)return toast('Select a player','warn');
-  if(!S.current){closeModal();await setPlayerCourt(id,court);return showCourtDetail(court);}
+  if(!S.current){closeModal();await setPlayerCourt(id,court,true);return showCourtDetail(court);} // p103: + Add is tonight
   await moveCourtPlayer(id,court);
 }
 
@@ -4612,6 +4726,9 @@ function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the r
   // p84: the scores are the last word on who played. A spare called in tonight has no ladder court yet; seed them
   // from the court they were called onto, so their arrow measures their night like everyone else's.
   Object.keys(firstCourt).forEach(id=>{if(elo[id]===undefined)elo[id]=1500-((firstCourt[id]-1)*100);});
+  // p99: a starting number the organizer set for a drop-in replaces the court's own, and only the start: every game
+  // after it is scored exactly as it is for everybody else.
+  Object.entries(S.seedPoints||{}).forEach(([id,v])=>{const n=Number(v);if(Number.isFinite(n))elo[id]=n;});
   const rating=id=>elo[id]??1000;
   // Every completed session, then the live one, round by round in order. Ratings are frozen within a round.
   // p84: applyCount plays out only the first N sessions. The seeding above still reads the whole season, so a rating
@@ -6385,6 +6502,14 @@ function renderAttendanceTab(){
     html+=`<div class="card" id="excused-tonight"><div class="card-title">🙋 Not playing tonight (voted out)</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${excused.length} regular${excused.length===1?'':'s'} declined in time — no court penalty. Players are set before the session starts.</div>`;
     excused.forEach(p=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">${avatar(p.name,'sm')}<span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} <span class="tag tg-red">excused</span></span></div>`;});
+    html+=`</div>`;
+  }
+  // p96: the regulars who never answered. No penalty either — they are listed so the night is accounted for.
+  const silent=Object.entries(att).filter(([,v])=>v==='noanswer').map(([id])=>S.players.find(p=>p.id===parseInt(id))).filter(Boolean);
+  if(silent.length){
+    html+=`<div class="card" id="silent-tonight"><div class="card-title">🔕 Not playing tonight (never answered)</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${silent.length} regular${silent.length===1?'':'s'} did not answer the vote — no court penalty and no no-show. Players are set before the session starts.</div>`;
+    silent.forEach(p=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">${avatar(p.name,'sm')}<span style="flex:1;font-size:12px;font-weight:700;">${esc(p.name)} <span class="tag tg-gray">no answer</span></span></div>`;});
     html+=`</div>`;
   }
   // Spares for the session: seats for fewer than 24 regulars coming, decided when the regulars' vote closes (p69)

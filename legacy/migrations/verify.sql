@@ -51,7 +51,7 @@ union all
 select 'waiver records cannot be written directly (L20)',case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end from information_schema.role_table_grants where table_schema='public' and table_name in('waiver_acceptances','waiver_versions','environment') and privilege_type in('INSERT','UPDATE','DELETE') and grantee in('anon','authenticated','service_role')
 union all
 select 'function '||f,case when to_regprocedure(sig) is not null then 'OK' else 'FAIL: missing' end
-from (values('start_league_session','public.start_league_session(jsonb)'),('finalize_session','public.finalize_session(text,int,jsonb,boolean,text)'),('save_league_snapshot','public.save_league_snapshot(text)'),('restore_league_snapshot','public.restore_league_snapshot(text)'),('list_league_snapshots','public.list_league_snapshots()'),('archive_player','public.archive_player(bigint)'),('add_league_player','public.add_league_player(text,int,text)'),('cancel_league_session','public.cancel_league_session(int,int,text,text,numeric)'),('settle_cancellation','public.settle_cancellation(int,bigint)'),('spare_seat_status','public.spare_seat_status(int)')) v(f,sig)
+from (values('start_league_session','public.start_league_session(jsonb)'),('finalize_session','public.finalize_session(text,int,jsonb,boolean,text)'),('save_league_snapshot','public.save_league_snapshot(text)'),('restore_league_snapshot','public.restore_league_snapshot(text)'),('list_league_snapshots','public.list_league_snapshots()'),('archive_player','public.archive_player(bigint)'),('add_league_player','public.add_league_player(text,int,text)'),('cancel_league_session','public.cancel_league_session(int,int,text,text,numeric)'),('settle_cancellation','public.settle_cancellation(int,bigint)'),('spare_seat_status','public.spare_seat_status(int)'),('set_regular_capacity','public.set_regular_capacity(int)'),('spare_seat_count','public.spare_seat_count(int)')) v(f,sig)
 union all
 select 'payment request uniqueness',case when exists(select 1 from pg_index where indexrelid=to_regclass('public.payments_request_unique') and indisunique) then 'OK' else 'FAIL: missing unique request index' end
 union all
@@ -75,4 +75,29 @@ select 'app roles give up an idle transaction (L27)',
                and array_to_string(rolconfig,',') like '%idle_in_transaction_session_timeout%') = 3
        then 'OK' else 'FAIL: a stranded transaction can hold the league lock' end
 union all
-select 'retired unsafe API signatures',case when to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null and to_regprocedure('public.start_new_season(text)') is null and to_regprocedure('public.record_payment(bigint,text,numeric,int,date,text)') is null then 'OK' else 'FAIL: old API still callable' end;
+select 'retired unsafe API signatures',case when to_regprocedure('public.save_court_scores(int,int,jsonb,int)') is null and to_regprocedure('public.start_new_season(text)') is null and to_regprocedure('public.record_payment(bigint,text,numeric,int,date,text)') is null then 'OK' else 'FAIL: old API still callable' end
+union all
+-- L28: the keys the organizer's own decisions live in — hand-made court moves (p92) and a drop-in's starting points
+-- (p99) — are snapshotted and restored by Undo, and archived and cleared at season rollover. Left out of either list
+-- they would survive an Undo that put the court back, and carry last season's adjustments into the new one.
+select 'the organizer''s keys are in undo and rollover (L28)',
+  case when (select count(*) from (values('capture_state'),('undo_last'),('rollover_season_internal')) f(n)
+             join pg_proc p on p.proname=f.n join pg_namespace ns on ns.oid=p.pronamespace and ns.nspname='public'
+             where p.prosrc like '%admin_court_moves%' and p.prosrc like '%player_seed_points%') = 3
+       then 'OK' else 'FAIL: admin_court_moves / player_seed_points missing from undo or rollover' end
+union all
+-- L29: the organizer's own number, and nobody else's. A player must never be able to move the season's regular places.
+select 'only the organizer can change the regular places (L29)',
+  case when not exists(select 1 from information_schema.role_routine_grants
+                       where specific_schema='public' and routine_name='set_regular_capacity' and grantee in('anon','service_role','public'))
+        and exists(select 1 from information_schema.role_routine_grants
+                   where specific_schema='public' and routine_name='set_regular_capacity' and grantee='authenticated')
+       then 'OK' else 'FAIL: set_regular_capacity is granted to the wrong roles' end
+union all
+-- L30: one rule for the spare seats. Both functions that tell a spare anything must read spare_seat_count, so the
+-- organizer's screen and the messages that go out can never give different numbers for the same night.
+select 'the spare seats are counted in one place (L30)',
+  case when (select count(*) from (values('spare_seat_status'),('reminder_targets')) f(n)
+             join pg_proc p on p.proname=f.n join pg_namespace ns on ns.oid=p.pronamespace and ns.nspname='public'
+             where p.prosrc like '%spare_seat_count(p_session)%') = 2
+       then 'OK' else 'FAIL: a function still counts spare seats its own way' end;

@@ -75,7 +75,9 @@ export function firstCourts(sessions: Sess[]): Record<number, number> {
 // Independent Elo reference (team-average expectation, K = 32, mean change per round, ratings frozen within a round).
 // p84: `applyUpTo` limits how many sessions are PLAYED OUT; the seeding always reads the whole list, so a rating
 // measured before the last session stands on the same starting line as the rating measured after it.
-export function eloReference(players: MockState["players"], sessions: Sess[], applyUpTo?: number): Record<number, number> {
+// p99: `seeds` are the starting points the organizer set for a drop-in (app_state.player_seed_points). They replace the
+// court's own starting number for that player, and only the start.
+export function eloReference(players: MockState["players"], sessions: Sess[], applyUpTo?: number, seeds?: Record<number, number>): Record<number, number> {
   const elo: Record<number, number> = {};
   const first = firstCourts(sessions);
   for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
@@ -84,6 +86,7 @@ export function eloReference(players: MockState["players"], sessions: Sess[], ap
   }
   // p84: seed everyone the season's scores name, including a spare called in before End Session writes their court.
   for (const [id, c] of Object.entries(first)) if (elo[+id] === undefined) elo[+id] = 1500 - (c - 1) * 100;
+  for (const [id, v] of Object.entries(seeds || {})) if (Number.isFinite(Number(v))) elo[+id] = Number(v); // p99
   const r = (id: number) => elo[id] ?? 1000;
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
   for (const sess of (applyUpTo === undefined ? sessions : sessions.slice(0, Math.max(0, applyUpTo)))) {

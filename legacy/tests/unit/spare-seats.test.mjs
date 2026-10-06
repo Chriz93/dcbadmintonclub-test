@@ -9,10 +9,14 @@ import { fnSource } from './load-app.mjs';
 const start=Date.parse('2026-09-15T20:00:00-04:00'),H=3600e3;
 const regular=(id,court=1)=>({id,approved:true,waitlisted:false,membershipType:'regular',currentCourt:court});
 const spare=id=>({id,approved:true,waitlisted:false,membershipType:'spare',currentCourt:0});
-/** spareSeats() for a league: `regs` regulars on the ladder, `declines` of them "not coming", spares 101.. replying in order. */
-function seatsFor({regs=27,declines=0,spares=[],paid=[],now=start-30*H,current=null,pre={},extra=[]}){
+/** spareSeats() for a league: `regs` regulars on the ladder, `declines` of them "not coming", `silent` of them never
+ *  answering (p96: that frees a seat too), spares 101.. replying in order. */
+function seatsFor({regs=27,declines=0,silent=0,spares=[],paid=[],now=start-30*H,current=null,pre={},extra=[]}){
  const players=[...Array.from({length:regs},(_,i)=>regular(i+1,1+(i%6))),...extra,...spares.map(spare)];
+ // p96: a regular counts as coming only when they said so. Players 1..declines say no, the next `silent` say nothing,
+ // the rest say yes.
  const rsvpRows=[...Array.from({length:declines},(_,i)=>({player_id:i+1,response:'notcoming',updated_at:`2026-09-10T0${i%9}:00:00Z`})),
+  ...Array.from({length:Math.max(0,regs-declines-silent)},(_,i)=>({player_id:declines+silent+i+1,response:'coming',updated_at:'2026-09-10T12:00:00Z'})),
   ...spares.map((id,k)=>({player_id:id,response:'coming',updated_at:`2026-09-11T1${k}:00:00Z`}))];
  const S={players,rsvpRows,current,preAttendance:pre};
  const isRegularMember=p=>!!p&&p.approved&&!p.waitlisted&&p.membershipType!=='spare',isSpareMember=p=>!!p&&p.approved&&p.membershipType==='spare';
@@ -55,4 +59,19 @@ test('p69 · counted as the starting courts seat them: no ladder court, absent o
  assert.equal(seatsFor({regs:22,extra:noCourt}).coming,22,'regulars without a ladder court are not seated, so not counted');
  assert.equal(seatsFor({regs:22,pre:{3:'absent'}}).coming,21,'marked absent before the night');
  assert.equal(seatsFor({regs:22,declines:2,pre:{1:'present'}}).coming,21,'marked present despite a "not coming" vote');
+});
+
+// ── p96: silence frees a seat, exactly as a decline does ─────────────────────────────────────────────────────────────
+test('p96 · a regular who never answered is not counted as coming, so their seat is a spare seat',()=>{
+ const s=seatsFor({regs:27,declines:3,silent:4,spares:[101,102,103,104,105],paid:[101,102,103,104,105]});
+ assert.deepEqual([s.coming,s.seats],[20,4],'20 said yes, so four seats');
+ assert.deepEqual(s.claims.filter(c=>c.confirmed).map(c=>c.id),[101,102,103,104]);
+ assert.equal(s.claims.find(c=>c.id===105).reserved,false,'the fifth is on standby');
+});
+test('p96 · nobody has answered: every one of the 24 seats is open',()=>{
+ const s=seatsFor({regs:27,silent:27,spares:[]});
+ assert.deepEqual([s.coming,s.seats,s.open],[0,24,24]);
+});
+test('p96 · a regular who never answered but is marked present is counted as coming',()=>{
+ assert.equal(seatsFor({regs:22,silent:2,pre:{1:'present'}}).coming,21,'20 said yes, plus the one marked present');
 });

@@ -1,14 +1,14 @@
 {
- "generated": "2026-09-22T12:26:35.934Z",
+ "generated": "2026-10-06T03:52:17.796Z",
  "summary": [
   {
    "k": "Control handler",
-   "n": 119,
+   "n": 122,
    "g": 0
   },
   {
    "k": "Database function",
-   "n": 55,
+   "n": 56,
    "g": 0
   },
   {
@@ -23,7 +23,7 @@
   },
   {
    "k": "Form field",
-   "n": 80,
+   "n": 83,
    "g": 0
   },
   {
@@ -70,6 +70,7 @@
     "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/edit-session-scores.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/keyboard-redraw.spec.ts",
@@ -90,8 +91,11 @@
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/vote-reminder-one.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -104,6 +108,7 @@
     "e2e/tabs/checks.ts",
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.suite.ts",
@@ -115,6 +120,8 @@
     "e2e/tabs/seat-brings-back.spec.ts",
     "e2e/tabs/seat-knock-on.spec.ts",
     "e2e/tabs/tonight-2026-09-16.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -141,6 +148,7 @@
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/season-rollover.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/vote.suite.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts"
@@ -246,7 +254,10 @@
     "e2e/tabs/census.ts",
     "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/phone/reflow.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -273,6 +284,7 @@
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/sequences.spec.ts",
     "e2e/tabs/slow-network.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -330,6 +342,7 @@
     "e2e/tabs/review-regressions.spec.ts",
     "e2e/tabs/slow-network.spec.ts",
     "e2e/tabs/sync-race-tables.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/waiver.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
@@ -349,6 +362,7 @@
     "e2e/tabs/interop.ts",
     "e2e/tabs/phone/reflow.spec.ts",
     "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -552,8 +566,10 @@
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/organizer-seats.spec.ts",
-    "e2e/tabs/players.spec.ts"
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts"
    ]
   },
   {
@@ -596,11 +612,13 @@
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/edit-session-scores.spec.ts",
     "e2e/tabs/gen.ts",
     "e2e/tabs/home-court-card.spec.ts",
@@ -637,6 +655,8 @@
     "e2e/tabs/sync-race.spec.ts",
     "e2e/tabs/tonight-2026-09-16.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts",
     "rules.sql",
     "unit/adjust-reference.mjs",
@@ -758,6 +778,13 @@
   },
   {
    "kind": "Control handler",
+   "item": "clearDropIn",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
    "item": "clearNotSeated",
    "tests": [
     "e2e/tabs/attendance-count.spec.ts"
@@ -777,6 +804,7 @@
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/audit-controls.spec.ts",
     "e2e/tabs/buttons.suite.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
     "e2e/tabs/harness.ts",
@@ -888,6 +916,13 @@
    "item": "downloadWaiverWording",
    "tests": [
     "e2e/tabs/waiver.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
+   "item": "dropInPick",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
    ]
   },
   {
@@ -1090,10 +1125,12 @@
     "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/edit-session-scores.spec.ts",
     "e2e/tabs/elo-change-baseline.spec.ts",
     "e2e/tabs/harness.ts",
@@ -1138,9 +1175,12 @@
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/vote-reminder-one.spec.ts",
     "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -1209,14 +1249,16 @@
    "kind": "Control handler",
    "item": "promoteFromWaitlist",
    "tests": [
-    "e2e/tabs/registered.spec.ts"
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts"
    ]
   },
   {
    "kind": "Control handler",
    "item": "promoteWaitlisted",
    "tests": [
-    "e2e/tabs/registered.spec.ts"
+    "e2e/tabs/registered.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts"
    ]
   },
   {
@@ -1239,6 +1281,7 @@
    "item": "quickAddToCourt",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/organizer-seats.spec.ts"
    ]
   },
@@ -1329,6 +1372,7 @@
    "tests": [
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/session.spec.ts"
    ]
@@ -1449,6 +1493,13 @@
   },
   {
    "kind": "Control handler",
+   "item": "saveDropIn",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
+   ]
+  },
+  {
+   "kind": "Control handler",
    "item": "saveEditRegistration",
    "tests": [
     "e2e/tabs/admin-extras.spec.ts"
@@ -1526,7 +1577,8 @@
     "e2e/opener.spec.ts",
     "e2e/tabs/admin-move-not-a-drop.spec.ts",
     "e2e/tabs/seat-brings-back.spec.ts",
-    "e2e/tabs/seat-knock-on.spec.ts"
+    "e2e/tabs/seat-knock-on.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts"
    ]
   },
   {
@@ -1589,6 +1641,7 @@
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/admin.spec.ts",
     "e2e/tabs/checks.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/lineup.suite.ts",
@@ -1622,6 +1675,7 @@
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/edit-session-scores.spec.ts",
     "e2e/tabs/interop.ts",
     "e2e/tabs/keyboard-redraw.spec.ts",
@@ -1642,9 +1696,12 @@
     "e2e/tabs/sync-race-tables.spec.ts",
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/vote-reminder-one.spec.ts",
     "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts"
    ]
   },
@@ -1700,7 +1757,8 @@
     "e2e/season.spec.ts",
     "e2e/tabs/isolation.spec.ts",
     "e2e/tabs/lineup.suite.ts",
-    "e2e/tabs/seating.spec.ts"
+    "e2e/tabs/seating.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts"
    ]
   },
   {
@@ -1778,8 +1836,10 @@
    "kind": "Form field",
    "item": "*",
    "tests": [
+    "db/concurrency.sh",
     "db/gen_cases.py",
     "db/internal-functions.sql",
+    "db/night.sh",
     "db/operations-regressions.sql",
     "db/review.sql",
     "db/rollback-check.sql",
@@ -1825,12 +1885,14 @@
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
     "e2e/tabs/court-history.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/court-panel-title.spec.ts",
     "e2e/tabs/courts-layout-and-elo.spec.ts",
     "e2e/tabs/courts.spec.ts",
     "e2e/tabs/courts.suite.ts",
     "e2e/tabs/coverage-report.mjs",
     "e2e/tabs/dialog-keyboard.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/edit-session-scores.spec.ts",
     "e2e/tabs/elo-change-baseline.spec.ts",
     "e2e/tabs/gen.ts",
@@ -1906,10 +1968,13 @@
     "e2e/tabs/tools.spec.ts",
     "e2e/tabs/toss-birds.spec.ts",
     "e2e/tabs/vote-changes.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
     "e2e/tabs/vote-reminder-one.spec.ts",
     "e2e/tabs/vote.spec.ts",
     "e2e/tabs/vote.suite.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts",
     "e2e/tabs/waiver.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "e2e/tabs/wording.spec.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/remind.test.mjs",
@@ -2024,6 +2089,27 @@
    "item": "cancel-resolution",
    "tests": [
     "e2e/tabs/audit-controls.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "di-court",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "di-player",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
+   ]
+  },
+  {
+   "kind": "Form field",
+   "item": "di-points",
+   "tests": [
+    "e2e/tabs/drop-in-points.spec.ts"
    ]
   },
   {
@@ -2147,6 +2233,7 @@
    "tests": [
     "e2e/tabs/admin-extras.spec.ts",
     "e2e/tabs/controls.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
     "e2e/tabs/organizer-seats.spec.ts"
    ]
   },
@@ -2310,7 +2397,8 @@
    "kind": "Form field",
    "item": "np-name",
    "tests": [
-    "e2e/tabs/players.spec.ts"
+    "e2e/tabs/players.spec.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts"
    ]
   },
   {
@@ -2922,6 +3010,7 @@
    "kind": "Database function",
    "item": "finalize_session",
    "tests": [
+    "db/night.sh",
     "db/operations-regressions.sql",
     "db/review.sql",
     "db/season-recovery.sql",
@@ -2932,7 +3021,9 @@
    "kind": "Database function",
    "item": "game_pairing",
    "tests": [
-    "db/internal-functions.sql"
+    "db/concurrency.sh",
+    "db/internal-functions.sql",
+    "db/night.sh"
    ]
   },
   {
@@ -3095,7 +3186,9 @@
    "kind": "Database function",
    "item": "save_court_scores",
    "tests": [
+    "db/concurrency.sh",
     "db/gen_cases.py",
+    "db/night.sh",
     "db/review.sql",
     "db/run.sh",
     "db/season-recovery.sql",
@@ -3128,7 +3221,8 @@
    "kind": "Database function",
    "item": "season_setting",
    "tests": [
-    "db/internal-functions.sql"
+    "db/internal-functions.sql",
+    "db/operations-regressions.sql"
    ]
   },
   {
@@ -3149,6 +3243,15 @@
   },
   {
    "kind": "Database function",
+   "item": "set_regular_capacity",
+   "tests": [
+    "db/operations-regressions.sql",
+    "e2e/mock-supabase.ts",
+    "e2e/tabs/waitlist-over-cap.spec.ts"
+   ]
+  },
+  {
+   "kind": "Database function",
    "item": "set_rsvp",
    "tests": [
     "db/gen_cases.py",
@@ -3164,6 +3267,7 @@
    "item": "set_state",
    "tests": [
     "db/gen_cases.py",
+    "db/night.sh",
     "db/operations-regressions.sql",
     "db/review.sql",
     "db/season-recovery.sql",
@@ -3279,6 +3383,7 @@
    "item": "audit_log",
    "tests": [
     "db/gen_cases.py",
+    "db/operations-regressions.sql",
     "db/season-recovery.sql",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
@@ -3386,9 +3491,14 @@
     "e2e/mock-supabase.ts",
     "e2e/tabs/admin-move-not-a-drop.spec.ts",
     "e2e/tabs/assign-before-session.spec.ts",
+    "e2e/tabs/court-panel-stays.spec.ts",
+    "e2e/tabs/drop-in-points.spec.ts",
     "e2e/tabs/gen.ts",
+    "e2e/tabs/organizer-seats.spec.ts",
     "e2e/tabs/seat-brings-back.spec.ts",
     "e2e/tabs/seat-knock-on.spec.ts",
+    "e2e/tabs/vote-gates-courts.spec.ts",
+    "e2e/tabs/weakest-moves-down.spec.ts",
     "legacy/automation/backup-waiver.test.mjs",
     "legacy/automation/restore.test.mjs",
     "rules.sql",

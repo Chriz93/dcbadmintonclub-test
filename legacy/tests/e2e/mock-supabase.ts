@@ -95,7 +95,9 @@ function snapshot(s:MockState,label:string){
  const key='snapshot_'+crypto.randomUUID(),tables={players:s.players,payments:s.payments,rsvps:s.rsvps,announcements:s.announcements,questions:s.questions,invitations:Object.entries(s.invitations).map(([email,membership_type])=>({email,membership_type})),past_players:s.pastPlayers,waiver_versions:s.waiverVersions,waiver_acceptances:s.waiverAcceptances,app_state:Object.entries(s.state).filter(([k])=>!k.startsWith('snapshot_')&&!['reminder_request','reminder_last_run','vote_digest_last_id'].includes(k)).map(([key,v])=>({key,...v}))};
  s.state[key]={value:JSON.stringify({format:2,environment:'test',label,ts:new Date().toISOString(),tables}),version:1};return key;
 }
-const TRACKED = ["current_session", "completed_sessions", "player_approvals", "membership_overrides", "pre_session_attendance"];
+// L28: the same keys the database snapshots and restores — the organizer's hand-made court moves (p92) and a drop-in's
+// starting points (p99) included, so Undo puts those back too.
+const TRACKED = ["current_session", "completed_sessions", "player_approvals", "membership_overrides", "pre_session_attendance", "admin_court_moves", "player_seed_points"];
 export function captureState(s: MockState) {
   return JSON.stringify({
     app_state: Object.fromEntries(TRACKED.filter((k) => s.state[k]).map((k) => [k, s.state[k].value])),
@@ -121,6 +123,16 @@ export function freshState(): MockState {
     admins: [ORGANIZER], users: { [ORGANIZER]: "00000000-0000-4000-8000-000000000001" }, factors: {}, audit: [], requests: [],
     waiverVersions: waiverVersions(), waiverAcceptances: [],
   };
+}
+
+/** p96: a regular is in tonight's line-up only when they said "coming" — silence is not a yes. A case that starts a
+ *  session from a fresh database needs the answers that a real week would have collected, so this fills them in for every
+ *  approved regular who holds a court. */
+export function everyoneComing(s: MockState, session = 1, at = "2026-09-10T12:00:00Z") {
+  const want = s.players.filter((p) => p.approved && !p.waitlisted && p.membership_type !== "spare" && p.current_court > 0);
+  s.rsvps = [...s.rsvps.filter((r) => r.session_number !== session || !want.some((p) => p.id === r.player_id)),
+    ...want.map((p) => ({ session_number: session, player_id: p.id, response: "coming", note: "", updated_at: at }))];
+  return s;
 }
 
 const PUBLIC_COLS = ["id", "name", "paid", "current_court", "highest_court", "season_wins", "season_losses", "games_played", "no_show_count", "membership_type", "approved", "waitlisted", "registered_at", "created_at"];
@@ -337,6 +349,19 @@ export async function installMock(page: Page, s: MockState) {
         if(Object.values(cur.assignments as Record<string,number[]>).some(ids=>ids.length===1||ids.length>5))return deny('Courts must have zero or 2–5 players');
         for(const [c,ids]of Object.entries(cur.assignments as Record<string,number[]>))for(const id of ids){const p=s.players.find(p=>p.id===id);if(!p?.approved||p.waitlisted)return deny('Only approved players can start');if(p.membership_type==='spare')p.current_court=Number(c);}
         s.state.current_session={value:JSON.stringify(cur),version:1};delete s.state.pre_session_attendance;return json(200,1);
+      }
+      // L29: the organizer can add a regular place to the season — bounded 2..30 and never below the regulars already
+      // approved, exactly as the database does it.
+      if(fn==='set_regular_capacity'){
+        if(!admin)return deny('Organizer verification required');
+        const want=Number(a.p_capacity);
+        if(!Number.isInteger(want)||want<2||want>30)return deny('Regular places must be a number from 2 to 30');
+        const cfgRow=s.state.season_config,cfg=JSON.parse(cfgRow?.value||JSON.stringify(defaultSeason));
+        const have=s.players.filter(p=>!p.archived_at&&p.approved&&!p.waitlisted&&p.membership_type==='regular').length;
+        if(want<have)return deny(`There are already ${have} regular members; the number cannot be set below that`);
+        if(want===cfg.regular_capacity)return json(200,want);
+        s.state.season_config={value:JSON.stringify({...cfg,regular_capacity:want}),version:(cfgRow?.version||0)+1};
+        return json(200,want);
       }
       if(fn==='add_league_player'){
         if(!admin)return deny('Organizer verification required');const cap=JSON.parse(s.state.season_config?.value||JSON.stringify(defaultSeason)).regular_capacity;

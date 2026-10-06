@@ -13,7 +13,7 @@ import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
 import { upcoming, courtOf } from "./oracle";
 import { checkCourts, kvOf, fromDb } from "./checks";
 import { members } from "../rules-model";
-import { offLine, spareLine, moveLine } from "../../unit/starting-reference.mjs";
+import { offLine, spareLine, moveLine, silentLine } from "../../unit/starting-reference.mjs";
 
 const firstOf = (n: string) => n.split(" ")[0];
 
@@ -57,7 +57,11 @@ export function define(first: number, count: number, phone = false) {
       // 2. The explanation: who is not coming, where each spare sits, who moved and why.
       const off = L.players.filter((p) => p.current_court > 0 && p.membership_type !== "spare" && (want.declined.has(p.id) || want.preAbsent.has(p.id)))
         .sort((a, b) => a.current_court - b.current_court || a.id - b.id).map((p) => offLine(p.name, p.current_court, want.preAbsent.has(p.id)));
-      const lines = [...off, ...want.spares.filter((id) => want.start.spareSeat[id]).map((id) => spareLine(name(id), want.start.spareSeat[id])), ...want.start.moves.map((m: { id: number }) => moveLine(name(m.id), m, name))];
+      // p96: one line for the regulars who have not answered — they are not seated, and nobody moves up for them.
+      const waiting = L.players.filter((p) => p.current_court > 0 && p.membership_type !== "spare" && want.silent.has(p.id))
+        .sort((a, b) => a.current_court - b.current_court || a.id - b.id);
+      const silent = waiting.length ? [silentLine(waiting.map((p) => `${p.name} (Court ${p.current_court})`))] : [];
+      const lines = [...off, ...silent, ...want.spares.filter((id) => want.start.spareSeat[id]).map((id) => spareLine(name(id), want.start.spareSeat[id])), ...want.start.moves.map((m: { id: number }) => moveLine(name(m.id), m, name))];
       if (lines.length) await expect(page.locator("#lineup-notes-list li")).toHaveText(lines);
       else await expect(page.locator("#lineup-notes")).toBeEmpty();
       if (phone && lines.length) { const b = (await page.locator("#lineup-notes .card").boundingBox())!; expect(b.x + b.width, "the explanation fits the screen").toBeLessThanOrEqual(page.viewportSize()!.width + 1); }
@@ -87,7 +91,7 @@ export function define(first: number, count: number, phone = false) {
       await expect.poll(() => kvOf(ctx, "current_session")?.number ?? null, { message: "session started" }).toBe(next);
       const cs = kvOf(ctx, "current_session");
       expect(members(cs.assignments), "Start Session = the Courts page").toEqual(members(want.assign));
-      for (const p of regs) if (!want.declined.has(p.id) && !want.preAbsent.has(p.id) && !want.start.moves.some((m: { id: number }) => m.id === p.id))
+      for (const p of regs) if (!want.declined.has(p.id) && !want.preAbsent.has(p.id) && !want.silent.has(p.id) && !want.start.moves.some((m: { id: number }) => m.id === p.id))
         expect(courtOf(cs.assignments, p.id), `${p.name} starts on the court they earned`).toBe(p.current_court);
       await checkCourts(page, fromDb(ctx, L));
     });

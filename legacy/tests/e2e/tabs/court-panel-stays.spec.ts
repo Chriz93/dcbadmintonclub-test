@@ -38,9 +38,16 @@ test("players can be added one after another without reopening the court", async
     added.push(Number(value));
   }
   const after = await seats(page);
-  for (const id of added) expect(after[id], `player ${id} is on Court 5`).toBe(5);
-  // And the panel on screen lists them, without the organizer reopening anything.
-  for (const id of added) {
+  // p97: Court 5 starts with four, so the first player added fills it; the next two take it over five and the courts are
+  // settled as at the gym — the weakest on it moves down (which may be one of the players just added). What must hold is
+  // that every player the organizer added is in tonight's line-up, and that no court is left holding more than five.
+  expect(after[added[0]], `player ${added[0]} is on Court 5`).toBe(5);
+  for (const id of added) expect(after[id], `player ${id} is in tonight's line-up`).toBeGreaterThan(0);
+  const lineup = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
+  expect(lineup[5].length, "Court 5 is full, not overfull").toBe(5);
+  for (let c = 1; c <= 6; c++) expect(lineup[c].length === 1 || lineup[c].length > 5, `Court ${c} is a real court`).toBe(false);
+  // And the panel on screen lists the ones Court 5 kept, without the organizer reopening anything.
+  for (const id of added.filter((x) => after[x] === 5)) {
     const name = await page.evaluate((x) => S.players.find((p: any) => p.id === x).name, id);
     await expect(modal).toContainText(name);
   }

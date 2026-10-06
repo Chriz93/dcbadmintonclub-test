@@ -2,7 +2,7 @@
 // The model never calls the app's ranking, rotation, statistics or Elo code: it re-implements the published rules and
 // the app must agree with it after every round, every session and on every tab.
 import { test, expect, type Page } from "@playwright/test";
-import { installMock, freshState, ORGANIZER, type MockState } from "./mock-supabase";
+import { installMock, freshState, everyoneComing, ORGANIZER, type MockState } from "./mock-supabase";
 import { signIn, unlockOrganizer, courtGames, scoreCourt, eloReference, type Game, type Sess } from "./helpers";
 
 const NC = 6, SESSIONS = parseInt(process.env.SIM_SESSIONS || "10"), ABSENT_SESSION = Math.min(5, SESSIONS);
@@ -14,7 +14,7 @@ test.describe("ten-session season simulation", () => {
   test("scores, movements, statistics, Elo, history and every tab agree with the independent rules model", async ({ page }) => {
     test.skip(test.info().project.name !== "desktop", "data is identical on every viewport; run once");
     test.setTimeout(900000);
-    const state = freshState();
+    const state = everyoneComing(freshState());
     state.players.forEach((p, i) => { p.name = `${NAMES[i]} Sim`; });
     await installMock(page, state);
     page.on("dialog", (d) => d.accept());
@@ -28,6 +28,9 @@ test.describe("ten-session season simulation", () => {
     for (let k = 1; k <= SESSIONS; k++) {
       // ── Start: everyone starts on the court they earned ───────────────────────────────────────
       model.seat();
+      // p96: a regular is seated only when they said yes, so this session's week of answers comes in first.
+      everyoneComing(state, k);
+      await page.evaluate(async () => { await loadAll(); renderAll(); });
       await page.evaluate(() => startSession());
       await expect.poll(() => page.evaluate(() => S.current?.number)).toBe(k);
       expect(members(await page.evaluate(() => S.current.assignments))).toEqual(modelMembers(model));

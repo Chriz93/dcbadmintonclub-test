@@ -4,6 +4,7 @@ import {manualMoveExpected} from "./manual-move-oracle";
 import { test, expect } from "@playwright/test";
 import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
+import { upcoming } from "./oracle";
 
 const LIVES: LiveState[] = ["r1-partial", "r2-partial", "r1-done", "none", "r1-partial"];
 let ctx: Ctx;
@@ -25,11 +26,15 @@ for (let i = 0; i < 100; i++) {
       await expect(ui).toContainText("Tonight's starting courts.");
       const lineup = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
       const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; pts: number }>);
+      // p97: each court is listed strongest first — most wins, then most points scored — with the spares the organizer
+      // placed kept at the top, and anyone the seating rules then moved added at the end of the court they moved to. The
+      // independent reference (starting-reference.mjs, through the oracle) produces that order, so the board is compared
+      // with it position by position rather than as a set.
+      const want = upcoming(L).assign;
       for (let c = 1; c <= NC; c++) {
         const ids = await ui.locator(`.dnd-court[data-court='${c}'] .dnd-player`).evaluateAll((es) => es.map((e) => Number(e.getAttribute("data-pid"))));
         expect([...ids].sort((x, y) => x - y), `Court ${c} holds tonight's players`).toEqual([...(lineup[c] || [])].sort((x, y) => x - y));
-        // Most wins first, then most points scored: the player to move down is the one at the bottom.
-        expect(ids, `Court ${c} is ordered by wins then points`).toEqual([...ids].sort((x, y) => (rec[y]?.w ?? 0) - (rec[x]?.w ?? 0) || (rec[y]?.pts ?? 0) - (rec[x]?.pts ?? 0) || x - y));
+        expect(ids, `Court ${c}: the order the reference gives — the player to move down is the one at the bottom`).toEqual(want[c] || []);
         for (const id of ids) await expect(ui.locator(`.dnd-court[data-court='${c}'] .dnd-player[data-pid='${id}'] .dnd-rec`))
           .toHaveText(`${rec[id]?.w ?? 0}W · ${rec[id]?.pts ?? 0} pts`);
       }

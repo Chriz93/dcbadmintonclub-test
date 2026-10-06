@@ -38,7 +38,12 @@ for (let i = 0; i < 100; i++) {
     if (notReg.length) await expect(cardOf(/^❌ Not Registered/)).toContainText("Walk-in Guest");
     const free = Math.max(0, 26 - taken()), first = [...waitlisted].sort((a, b) => String(a.registered_at).localeCompare(String(b.registered_at)) || a.id - b.id)[0];
     await expect(sec.locator("#waitlist-offer"), "waitlist offer only when a place is free").toHaveCount(first && free > 0 ? 1 : 0);
-    if (waitlisted.length) await expect(cardOf(/^⏳ Waitlist/).locator(free > 0 ? "button:has-text('↑ Promote')" : ".tag:has-text('Slots Full')")).toHaveCount(waitlisted.length);
+    // p100: Promote is always drawn — the cap stops the registration form, not the organizer. When the places are full it
+    // is drawn beside the count, and the confirm names what going over the cap would mean.
+    if (waitlisted.length) {
+      await expect(cardOf(/^⏳ Waitlist/).locator("button:has-text('↑ Promote')"), "Promote is always offered").toHaveCount(waitlisted.length);
+      await expect(cardOf(/^⏳ Waitlist/).locator(`.tag:has-text('${taken()}/26 full')`), "the count is shown only when full").toHaveCount(free > 0 ? 0 : waitlisted.length);
+    }
     // One registration card in detail.
     const shown = [...pending, ...approved.filter((p) => p.membership_type !== "spare"), ...approved.filter((p) => p.membership_type === "spare")];
     if (shown.length) {
