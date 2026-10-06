@@ -3,12 +3,12 @@
 //   1. Everyone who is coming keeps the court they earned (in the order given).
 //   2. Confirmed spares take open seats from the bottom court up: a court short of four first, then a fifth seat from the
 //      bottom once every court in use has four. With no court in use, a spare starts the bottom court.
-//   3. p97, p105: each court is then listed strongest first — by rating, then wins per game, then lowest id — with the
-//      spares seated in step 2 kept at the top, because the organizer put them there on purpose. `rank(id)` supplies the
-//      numbers, compared in order and descending; without it the courts keep the order they were given.
-//   4. p105: a court of more than five sends its bottom player to the next court IN USE below and places them there by
-//      the same ranking, and that court settles the same way. So a player keeps the court they earned when somebody on
-//      it is below them, and otherwise stops at the first court below where somebody is.
+//   3. p97, p108: each court is then listed strongest first — the season's wins, then the points scored, then lowest id
+//      — with the spares seated in step 2 kept at the top, because the organizer put them there on purpose. `rank(id)`
+//      supplies the numbers, compared in order and descending; without it the courts keep the order they were given.
+//   4. p105, p107: a court of more than five sends a player to the next court IN USE below and places them there by the
+//      same ranking, and that court settles the same way. The player sent down is the bottom one who has NOT already
+//      been moved during this settling, so nobody falls more than a single court in one evening.
 //   5. A court left with one player, or over five with nothing in use below, is settled by the independent reference
 //      engine, as at the gym.
 //   6. A player who would still be alone because every other court in use has five is joined by one player from the
@@ -35,13 +35,16 @@ export function startingCourts(earned, spares = [], rank) {
       return x - y; };
     const order = (ids) => [...ids.filter((id) => spareSeat[id] !== undefined), ...ids.filter((id) => spareSeat[id] === undefined).sort(cmp)];
     for (let c = 1; c <= NC; c++) L[c] = order(L[c]);
+    const arrived = new Set();
     for (let c = 1; c < NC; c++) {
       while (L[c].length > 5) {
         let to = 0; for (let x = c + 1; x <= NC; x++) if (L[x].length) { to = x; break; }
         if (!to) break;                                  // nothing in use below: the engine places them
-        const moved = L[c][L[c].length - 1];
-        if (spareSeat[moved] !== undefined) break;       // everyone left was placed by the organizer
-        L[c] = L[c].slice(0, -1); L[to] = order([...L[to], moved]);
+        let i = L[c].length - 1;
+        while (i >= 0 && (spareSeat[L[c][i]] !== undefined || arrived.has(L[c][i]))) i--;
+        if (i < 0) break;                                // everyone left was placed by the organizer, or has moved already
+        const moved = L[c][i];
+        L[c] = L[c].filter((x) => x !== moved); L[to] = order([...L[to], moved]); arrived.add(moved);
         cascade.push({ id: moved, from: c, to, reason: "full" });
       }
     }

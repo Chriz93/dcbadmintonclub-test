@@ -5,6 +5,8 @@
 //     drop-in replaces that, and only the start (p99).
 //   * Within a round every rating is frozen; a team's expectation is taken from the two ratings' average, and a player's
 //     rating moves by 32 × (their mean result minus their mean expectation) over the round (K = 32).
+//     p108: the rating decides nothing about where a player stands on a court — the season's wins and points do — so it
+//     stays where it has always been rather than being sped up to carry a job it no longer has.
 //   * p105: a player marked absent on the night — which only a player who said they were coming can be — loses
 //     NO_SHOW_PENALTY points for that night, after the round's games are counted.
 export const NO_SHOW_PENALTY = 25;

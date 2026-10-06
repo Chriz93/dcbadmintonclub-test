@@ -26,7 +26,6 @@ for (let i = 0; i < 100; i++) {
       await expect(ui).toContainText("Tonight's starting courts.");
       const lineup = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
       const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; pts: number }>);
-      const gained = await page.evaluate(() => eloEarnedCached() as Record<string, number>); // p106: the deciding number
       // p97: each court is listed strongest first — most wins, then most points scored — with the spares the organizer
       // placed kept at the top, and anyone the seating rules then moved added at the end of the court they moved to. The
       // independent reference (starting-reference.mjs, through the oracle) produces that order, so the board is compared
@@ -37,7 +36,7 @@ for (let i = 0; i < 100; i++) {
         expect([...ids].sort((x, y) => x - y), `Court ${c} holds tonight's players`).toEqual([...(lineup[c] || [])].sort((x, y) => x - y));
         expect(ids, `Court ${c}: the order the reference gives — the player to move down is the one at the bottom`).toEqual(want[c] || []);
         for (const id of ids) await expect(ui.locator(`.dnd-court[data-court='${c}'] .dnd-player[data-pid='${id}'] .dnd-rec`))
-          .toHaveText(`${(gained[id] ?? 0) >= 0 ? "+" : ""}${gained[id] ?? 0} · ${rec[id]?.w ?? 0}W · ${rec[id]?.pts ?? 0} pts`);
+          .toHaveText(`${rec[id]?.w ?? 0}W · ${rec[id]?.pts ?? 0} pts`);
       }
       // Everyone approved and not in tonight's line-up sits in the pool, ready to be dragged on.
       const seatedNow = new Set(Object.values(lineup).flat());

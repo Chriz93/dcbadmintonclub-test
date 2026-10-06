@@ -2465,26 +2465,8 @@ function eloCached(){
   if(_eloCache&&_eloKey===key)return _eloCache;
   _eloCache=computeEloRatings();_eloKey=key;return _eloCache;
 }
-// p106: what each player has EARNED this season — their rating now, less the number they started from. Play and
-// nothing else: a player who won their way up a court is not still carrying the lower court they began on.
-function eloEarnedCached(){
-  const rate=eloCached(),seed=seedRatings(),out={};
-  Object.keys(rate).forEach(id=>{out[id]=rate[id]-(seed[id]??1000);});
-  return out;
-}
-// p105, p106: where a player stands when the courts have to decide — what they have earned this season, then the court
-// they started from, then wins per game, then the lowest id so the answer is the same every time. Measured this way the
-// number does not move when a player misses a night, and it does not carry the court they happened to begin on either.
-function byRating(ids,earned,seed,rec){
-  return [...ids].sort((x,y)=>{
-    const ex=earned[x]??0,ey=earned[y]??0;
-    if(ex!==ey)return ey-ex;
-    const sx=seed[x]??1000,sy=seed[y]??1000;
-    if(sx!==sy)return sy-sx;
-    const a=rec[x]||{w:0,gp:0},b=rec[y]||{w:0,gp:0};
-    const wx=a.gp?a.w/a.gp:0,wy=b.gp?b.w/b.gp:0;
-    return wy-wx||x-y;});
-}
+// p107: where a player stands is the organizer's own measure — the season's wins, then the points scored when wins tie,
+// then the lowest id so the answer is the same every time (byWinsThenPoints, p93). The rating decides nothing here.
 function seasonRecord(){
   const sess=[...(S.sessions||[]),...(S.current?[S.current]:[])].filter(Boolean);
   const key=seasonStamp(sess); // p102, p105
@@ -3066,23 +3048,27 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
     const c=used.find(x=>L[x].length<4)||used.find(x=>L[x].length<5)||used[0]||NC;
     L[c].push(id);notes.push(`${nm(id)} (spare) takes an open seat on Court ${c}.`);
   }
-  // p97, p105, p106: order every court by the rating each player has EARNED this season, highest first, so the player an
-  // over-full court sends down is the weakest on it by a measure that punishes neither a missed night nor a promotion. Spares the organizer placed stay at the top:
-  // that seat was a decision, not something earned, and a full court should not undo it.
-  {const pinned=new Set([...seated.map(p=>p.id),...spares]),earned=eloEarnedCached(),seed=seedRatings(),rec=seasonRecord();
-   const order=ids=>[...ids.filter(id=>pinned.has(id)),...byRating(ids.filter(id=>!pinned.has(id)),earned,seed,rec)];
+  // p97, p107: order every court by the season's wins, then the points scored, so the player an over-full court sends
+  // down is the one standing lowest by the organizer's own measure. Spares the organizer placed stay at the top: that
+  // seat was a decision, not something earned, and a full court should not undo it.
+  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rec=seasonRecord();
+   const order=ids=>[...ids.filter(id=>pinned.has(id)),...byWinsThenPoints(ids.filter(id=>!pinned.has(id)),rec)];
    for(let c=1;c<=NC;c++)L[c]=order(L[c]);
-   // p105: a court of more than five sends its bottom player to the next court in use below and places them there BY
-   // RATING; that court then settles the same way. So a player coming back to the court they earned keeps it when
-   // somebody on it is below them, and otherwise stops at the first court below where somebody is — "where he fits in
-   // with the points" — instead of being dropped to the bottom of whichever court took them.
+   // p105, p107: a court of more than five sends a player to the next court in use below and places them there by the
+   // same measure, and that court settles the same way — "where he fits in with the points" — instead of dropping them
+   // at the bottom of whichever court took them. The player sent down is the bottom one who has NOT already been moved
+   // this evening, so nobody falls more than a single court in one night. Losing a night's play still costs a court at
+   // the end of the night, every night, with no floor: that is the rotation, and it is untouched.
+   const arrived=new Set();
    for(let c=1;c<NC;c++){
      while(L[c].length>5){
        let to=0;for(let x=c+1;x<=NC;x++)if(L[x].length){to=x;break;}
        if(!to)break;                                   // nothing in use below: the engine places them
-       const moved=L[c][L[c].length-1];
-       if(pinned.has(moved))break;                     // everyone left was placed by the organizer
-       L[c]=L[c].slice(0,-1);L[to]=order([...L[to],moved]);
+       let i=L[c].length-1;
+       while(i>=0&&(pinned.has(L[c][i])||arrived.has(L[c][i])))i--;
+       if(i<0)break;                                   // everyone left was placed by the organizer, or has moved already
+       const moved=L[c][i];
+       L[c]=L[c].filter(x=>x!==moved);L[to]=order([...L[to],moved]);arrived.add(moved);
        notes.push(`Court ${c} would have more than five players, so ${nm(moved)} starts on Court ${to}.`);
      }
    }}
@@ -3767,10 +3753,10 @@ function renderAssignUI(){
   const unassigned=S.current?S.players.filter(p=>!assignedSet.has(p.id))
     :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id));
   const _rec=seasonRecord(); // p93
-  const _earned=eloEarnedCached(); // p105, p106
+  // p107: the two numbers the decision is made on.
   const _chip=(p,c)=>{const r=_rec[p.id]||{w:0,l:0,pts:0};
     return `<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}`
-      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${(_earned[p.id]??0)>=0?'+':''}${_earned[p.id]??0} · ${r.w}W · ${r.pts} pts</span>`
+      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${r.w}W · ${r.pts} pts</span>`
       +`<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="assignMove(${p.id},Number(this.value))"><option value="0">${S.current?'Unassigned':'Not playing'}</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`;};
   if(unassigned.length){
     html+=`<div class="dnd-court" data-court="0" ondragover="dndOver(event)" ondrop="dndDrop(event,0)" ondragleave="dndLeave(event)">

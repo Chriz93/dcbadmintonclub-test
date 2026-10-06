@@ -39,10 +39,14 @@ for (let n = 0; n <= 32; n++) {
     model.seat();
     expect(members(cs.assignments), "who sits where (reference)").toEqual(modelMembers(model));
     // Each player keeps the earned court unless the reference moved them (a court of one, or more than five).
-    // p106: the reference ranks each court by what a player has earned this season. Nobody has played in these leagues,
-    // so nobody has earned anything and the court they started from settles it — 1500 on Court 1, 100 fewer per court.
-    const seatRank = (id: number): [number, number, number] => [0, 1500 - (Math.min(6, Math.max(1, L.players.find((p) => p.id === id)!.current_court)) - 1) * 100, 0];
+    // p108: the reference ranks each court by the season's wins then points scored. Nobody has played in these leagues,
+    // so everybody is level at nothing and the lowest id settles it, exactly as the app's own ranking does.
+    const seatRank = (): [number, number] => [0, 0];
     const start = startingCourts(L.players.map((p) => ({ id: p.id, court: p.current_court })), [], seatRank), moved = new Map(start.moves.map((m) => [m.id, m.to]));
+    // p107: nobody is sent DOWN more than once in an evening. (A player can still be moved up afterwards — the bottom
+    // court has nothing below it, so the engine places its overflow on a court above.)
+    const down = start.moves.filter((m) => m.reason === "full" && m.to > m.from).map((m) => m.id);
+    expect(down.length, "nobody falls twice in one evening").toBe(new Set(down).size);
     for (const p of L.players) expect(courtOf(cs.assignments, p.id), `${p.name} (earned Court ${p.current_court})`).toBe(moved.get(p.id) ?? p.current_court);
     expect(Object.values(cs.assignments).every((ids) => (ids as number[]).length !== 1 && (ids as number[]).length <= 5), "no court of one, none over five").toBe(true);
     expect(members(cs.initialAssignments), "the starting lineup is kept as the initial allocation").toEqual(members(cs.assignments));
