@@ -27,6 +27,10 @@ export function define(first: number, count: number, phone = false, slow = false
       // Replies 20–120 ms late and out of order (p63). Heavier delays (SLOW_NET=40-400) make each page reload take several
       // seconds, longer than these checks wait for the Adjust preview, which reloads first while showing "Checking…".
       if (slow) ctx.state.latency = { min: 20, max: 120, seed: i + 1 };
+      // On the slow variant every reply arrives 20-120 ms late and out of order, so a step that waits on a round trip
+      // needs more patience than the five seconds an assertion gets by default — the same allowance playwright.config.ts
+      // already makes for a SLOW_NET run. Without it these cases fail on a loaded machine for being slow, not wrong.
+      const wait = slow ? { timeout: 20000 } : undefined;
       const page = ctx.page, r = rng(4500 + i), toast = page.locator("#_t");
       const kv = () => JSON.parse(ctx.state.state["current_session"]?.value ?? "null");
       const ver = () => ctx.state.state["current_session"]?.version ?? 0;
@@ -90,9 +94,9 @@ export function define(first: number, count: number, phone = false, slow = false
       // One click: the preview.
       const st = kv(), inp = adjustInput(st), ref = run(inp), n = changes(ref), lines = explanation(inp, ref, nm);
       await sec.locator("#adj-btn").click();
-      if (ref.ok && !n && !lines.length) { await expect(toast).toHaveText("Courts already match attendance — nothing to change"); await expect(page.locator("#modal.open")).toHaveCount(0); return; }
+      if (ref.ok && !n && !lines.length) { await expect(toast).toHaveText("Courts already match attendance — nothing to change", wait); await expect(page.locator("#modal.open")).toHaveCount(0); return; }
       const modal = page.locator("#modal.open");
-      await expect(modal.locator("#modal-title")).toHaveText(`Adjust courts — Round ${cur.cycle}`);
+      await expect(modal.locator("#modal-title"), "the preview opened").toHaveText(`Adjust courts — Round ${cur.cycle}`, wait);
       if (!ref.ok) {
         await expect(modal.locator("#adj-explain .alert-error"), "the reason nothing can change").toBeVisible();
         await expect(modal.locator("#adj-apply")).toBeDisabled();
