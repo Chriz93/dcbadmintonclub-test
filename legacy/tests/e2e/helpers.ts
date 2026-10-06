@@ -64,13 +64,18 @@ export type Score = { a1: number | null; a2: number | null; b1: number | null; b
 export type Sess = { scores: Record<string, Score>; attendance?: Record<string, string> };
 // The rating reference lives with the other independent references (legacy/tests/unit/elo-reference.mjs) so the unit
 // tests and the browser tests check the app against exactly the same rules, written once.
-import { eloReference as eloRef, firstCourts as firstCourtsRef, NO_SHOW_PENALTY } from "../unit/elo-reference.mjs";
+import { eloReference as eloRef, eloEarned as eloEarnedRef, seedRatings as seedRef, firstCourts as firstCourtsRef, NO_SHOW_PENALTY } from "../unit/elo-reference.mjs";
 export { NO_SHOW_PENALTY };
 export const firstCourts = (sessions: Sess[]): Record<number, number> => firstCourtsRef(sessions as never) as Record<number, number>;
 /** p84: `applyUpTo` limits how many sessions are PLAYED OUT; the seeding always reads the whole list.
  *  p99: `seeds` are the starting points the organizer set for a drop-in. p105: a no-show costs NO_SHOW_PENALTY. */
 export const eloReference = (players: MockState["players"], sessions: Sess[], applyUpTo?: number, seeds?: Record<number, number>): Record<number, number> =>
   eloRef(players as never, sessions as never, applyUpTo as never, seeds as never) as Record<number, number>;
+/** p106: the number each player started the season from, and what they have earned since — the court order reads the latter. */
+export const seedRatings = (players: MockState["players"], sessions: Sess[], seeds?: Record<number, number>): Record<number, number> =>
+  seedRef(players as never, sessions as never, seeds as never) as Record<number, number>;
+export const eloEarned = (players: MockState["players"], sessions: Sess[], seeds?: Record<number, number>): Record<number, number> =>
+  eloEarnedRef(players as never, sessions as never, seeds as never) as Record<number, number>;
 export const wl = (text: string) => [...text.matchAll(/(\d+)W (\d+)L/g)].map((m) => ({ w: +m[1], l: +m[2] }));
 const SHOTS = process.env.SCREENS ? `${__dirname}/screens/${process.env.SCREENS}` : "";
 export async function shot(page: Page, name: string) {

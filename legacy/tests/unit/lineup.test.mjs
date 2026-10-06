@@ -9,14 +9,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { load } from "./load-app.mjs";
 import { startingCourts, offLine, spareLine, moveLine, silentLine } from "./starting-reference.mjs";
-import { eloReference } from "./elo-reference.mjs";
+import { eloReference, eloEarned, seedRatings } from "./elo-reference.mjs";
 import { rng } from "./adjust-reference.mjs";
 
 // p69: spare seats are decided when the regulars' vote closes (46 hours before play). The page's clock is fixed after
 // that deadline (Monday evening before the Tuesday session), so confirmed spares are seated as on the night.
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "byRating", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "eloEarnedCached", "seedRatings", "byRating", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
 /** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}.
@@ -53,11 +53,13 @@ function expected(players, votes = {}, pre = {}, sess = []) {
   const earned = players.filter((p) => p.court > 0 && isReg(p) && !declined.has(p.id) && !absent.has(p.id) && !silentSet.has(p.id)).map((p) => ({ id: p.id, court: p.court }));
   const seats = Math.max(0, 24 - earned.length);
   const spares = Object.entries(votes).filter(([id, r]) => r === "coming" && isSpare(byId(+id))).map(([id]) => +id).slice(0, seats).filter((id) => !absent.has(id));
-  // p105: where a player stands is the rating, then wins per game — the rating because it does not move when somebody
-  // misses a night, which is the thing the court order must not punish.
+  // p105, p106: where a player stands is what they have EARNED this season — their rating now, less the number they
+  // started from — then the court they started from, then wins per game. It punishes neither a missed night nor a
+  // promotion, which is what the court order must not do.
   const rec = recordOf(sess);
-  const rate = eloReference(players.map((p) => ({ id: p.id, current_court: p.court, games_played: rec[p.id]?.gp ?? 0, season_wins: rec[p.id]?.w ?? 0 })), sess);
-  const rank = (id) => [rate[id] ?? 1000, rec[id]?.gp ? rec[id].w / rec[id].gp : 0];
+  const pp = players.map((p) => ({ id: p.id, current_court: p.court, games_played: rec[p.id]?.gp ?? 0, season_wins: rec[p.id]?.w ?? 0 }));
+  const gained = eloEarned(pp, sess), seed = seedRatings(pp, sess);
+  const rank = (id) => [gained[id] ?? 0, seed[id] ?? 1000, rec[id]?.gp ? rec[id].w / rec[id].gp : 0];
   const ref = startingCourts(earned, spares, rank);
   const off = players.filter((p) => p.court > 0 && !isSpare(p) && (declined.has(p.id) || absent.has(p.id))).sort((a, b) => a.court - b.court || a.id - b.id).map((p) => offLine(name(p.id), p.court, absent.has(p.id)));
   const waiting = players.filter((p) => p.court > 0 && !isSpare(p) && silentSet.has(p.id)).sort((a, b) => a.court - b.court || a.id - b.id);
@@ -256,21 +258,24 @@ test("lineup · p105 · a player back after missing a night keeps the court: the
   for (const id of [9, 10, 11]) assert.equal(courtOf(got.assign, id), 3, `P${id} keeps Court 3`);
   // Whoever went down is the lowest rating on the court, by the independent reference.
   const rec = recordOf(sess);
-  const rate = eloReference(players.map((p) => ({ id: p.id, current_court: p.court, games_played: rec[p.id]?.gp ?? 0, season_wins: rec[p.id]?.w ?? 0 })), sess);
+  const pp = players.map((p) => ({ id: p.id, current_court: p.court, games_played: rec[p.id]?.gp ?? 0, season_wins: rec[p.id]?.w ?? 0 }));
+  const gained = eloEarned(pp, sess), seed = seedRatings(pp, sess);
   const moved = [9, 10, 11, 12, 13, 14].find((id) => courtOf(got.assign, id) !== 3);
   assert.ok(moved, "somebody moved");
-  // Last by the court's own order: rating, then wins per game, then lowest id — so ties are settled the same way twice.
-  const last = [9, 10, 11, 12, 13, 14].slice().sort((a, b) => (rate[b] ?? 1000) - (rate[a] ?? 1000)
+  // Last by the court's own order: earned, then the court started from, then wins per game, then lowest id.
+  const last = [9, 10, 11, 12, 13, 14].slice().sort((a, b) => (gained[b] ?? 0) - (gained[a] ?? 0) || (seed[b] ?? 1000) - (seed[a] ?? 1000)
     || (rec[b]?.gp ? rec[b].w / rec[b].gp : 0) - (rec[a]?.gp ? rec[a].w / rec[a].gp : 0) || a - b).at(-1);
-  assert.equal(moved, last, "the bottom of the court by rating is the one who moves");
-  assert.ok((rate[14] ?? 1000) > (rate[moved] ?? 1000), "the player who was away is rated above them, on fewer games");
+  assert.equal(moved, last, "the bottom of the court by what they have earned is the one who moves");
+  assert.ok((gained[14] ?? 0) > (gained[moved] ?? 0), "the player who was away has earned more than them, on fewer games");
 });
 test("lineup · p105 · a no-show costs 25 rating points, and that is what the court order reads", () => {
   const players = ladder([4, 4, 6, 3, 4, 4]);
   // Everyone on Court 3 is level; player 11 said they were coming to Session 1 and did not turn up.
   const sess = [{ ...singles([], 1), attendance: { 11: "absent" } }];
-  const rate = eloReference(players.map((p) => ({ id: p.id, current_court: p.court, games_played: 0, season_wins: 0 })), sess);
+  const pp0 = players.map((p) => ({ id: p.id, current_court: p.court, games_played: 0, season_wins: 0 }));
+  const rate = eloReference(pp0, sess);
   assert.equal(rate[11], 1275, "1300 on Court 3, less 25 for the night they did not turn up");
+  assert.equal(eloEarned(pp0, sess)[11], -25, "which is 25 off what they have earned this season");
   const got = check(players, coming(players), {}, () => {}, sess);
   assert.equal(courtOf(got.assign, 11), 4, "and that is what sends them down from a court of six");
 });

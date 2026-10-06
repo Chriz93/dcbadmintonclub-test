@@ -28,6 +28,11 @@ export function defineDiscover() {
         for (const v of VIEWS.filter((x) => x.roles.includes(st.role))) {
           await ctx.page.evaluate(() => { try { closeModal(); } catch { /* none open */ } });
           await v.open(ctx.page);
+          // The view has to have SETTLED before its controls are listed. A fixed wait does not settle anything: recorded
+          // under load (both projects at once) this captured a view mid-render, and the census then disagreed with the
+          // page the Buttons cases replay — "controls without a test" for a control that was simply drawn a moment late.
+          // Wait for the page to be idle, the way the harness waits everywhere else, and only then read the controls.
+          await expect.poll(() => ctx.page.evaluate(() => _activeLoads === 0 && _ckDepth === 0), { message: `${st.id} · ${v.id} settled`, timeout: 15000 }).toBe(true);
           await ctx.page.waitForTimeout(150);
           for (const c of await ctx.page.evaluate(pageControls, { scope: v.scope, exclude: v.exclude })) out.push({ state: st.id, view: v.id, ...c });
         }

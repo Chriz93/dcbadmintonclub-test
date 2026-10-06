@@ -7,7 +7,7 @@ import { load } from "./load-app.mjs";
 
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "byRating", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "eloEarnedCached", "seedRatings", "byRating", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 // p96: a regular is seated only when they said yes, so the regulars in these cases say yes — the point here is the
 // spare's seat, not the vote. A caller's own answer for a player still wins.
 function run(players, pre = {}, votes = {}) {

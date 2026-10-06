@@ -1109,7 +1109,7 @@
   "state": "big-before",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Zara Wong",
+  "label": "Add a private note for Mateo Garcia",
   "tag": "button"
  },
  {
@@ -1144,7 +1144,7 @@
   "state": "big-before",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Zara Wong",
+  "label": "Court for Mateo Garcia",
   "tag": "select"
  },
  {
@@ -1165,7 +1165,7 @@
   "state": "big-before",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -1774,7 +1774,7 @@
   "state": "complete",
   "view": "admin → a-att",
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
-  "label": "Session # — Oct #, # ✅ #❌ #",
+  "label": "Session # — Oct #, # ✅ #",
   "tag": "div"
  },
  {
@@ -1963,7 +1963,7 @@
   "state": "complete",
   "view": "admin → a-reg",
   "key": "span|togglePaid(#)",
-  "label": "✅ Paid",
+  "label": "⏳ Unpaid",
   "tag": "span"
  },
  {
@@ -2376,7 +2376,7 @@
   "state": "complete",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 ML Mei LeblancSPARECourt # · #W #L · #% · tap",
+  "label": "🥇 LT Leah TremblayCourt # · #W #L · #% · tap fo",
   "tag": "div"
  },
  {
@@ -2586,7 +2586,7 @@
   "state": "complete-big",
   "view": "admin → a-att",
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
-  "label": "Session # — Nov #, # ✅ #",
+  "label": "Session # — Nov #, # ✅ #❌ #",
   "tag": "div"
  },
  {
@@ -3202,14 +3202,28 @@
   "state": "complete-big",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 ZN Zoë NairCourt # · #W #L · #% · tap for his",
+  "label": "🥇 SR Samuel RahmanCourt # · #W #L · #% · tap fo",
   "tag": "div"
+ },
+ {
+  "state": "complete-big",
+  "view": "standings → qa",
+  "key": "button|answerQuestion(#)",
+  "label": "Answer",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "standings → qa",
+  "key": "button|deleteQuestion(#)",
+  "label": "Delete",
+  "tag": "button"
  },
  {
   "state": "complete-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# ZN Zoë Nair Court # · #W #L ·",
+  "label": "# SR Samuel Rahman Court # · #W #",
   "tag": "div"
  },
  {
@@ -3390,6 +3404,13 @@
  {
   "state": "complete-small",
   "view": "admin → a-att",
+  "key": "button|markAttForTab(#,'present')",
+  "label": "✅ Here after all",
+  "tag": "button"
+ },
+ {
+  "state": "complete-small",
+  "view": "admin → a-att",
   "key": "button|saveAttendanceTab()",
   "label": "💾 Save Attendance",
   "tag": "button"
@@ -3510,7 +3531,7 @@
   "state": "complete-small",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -3587,7 +3608,7 @@
   "state": "complete-small",
   "view": "admin → a-reg",
   "key": "span|togglePaid(#)",
-  "label": "⏳ Unpaid",
+  "label": "✅ Paid",
   "tag": "span"
  },
  {
@@ -4000,7 +4021,7 @@
   "state": "complete-small",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 AP Aarav ParkCourt # · #W #L · #% · tap for hi",
+  "label": "🥇 LM Liam MensahCourt # · #W #L · #% · tap for h",
   "tag": "div"
  },
  {
@@ -4875,7 +4896,7 @@
   "state": "late-season",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Sofia Nair",
+  "label": "Move Jonas Boateng",
   "tag": "select"
  },
  {
@@ -4980,7 +5001,7 @@
   "state": "late-season",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Jonas Boateng",
+  "label": "Add a private note for Olivia Mensah",
   "tag": "button"
  },
  {
@@ -5015,7 +5036,7 @@
   "state": "late-season",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Jonas Boateng",
+  "label": "Court for Olivia Mensah",
   "tag": "select"
  },
  {
@@ -5120,7 +5141,7 @@
   "state": "late-season",
   "view": "admin → a-reg",
   "key": "span|togglePaid(#)",
-  "label": "✅ Paid",
+  "label": "⏳ Unpaid",
   "tag": "span"
  },
  {
@@ -5419,20 +5440,6 @@
  },
  {
   "state": "late-season",
-  "view": "standings → qa",
-  "key": "button|answerQuestion(#)",
-  "label": "Edit Answer",
-  "tag": "button"
- },
- {
-  "state": "late-season",
-  "view": "standings → qa",
-  "key": "button|deleteQuestion(#)",
-  "label": "Delete",
-  "tag": "button"
- },
- {
-  "state": "late-season",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
   "label": "# JB Jonas Boateng Court # · #W #",
@@ -5659,7 +5666,7 @@
   "state": "player-before",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 IS Ingrid SinghCourt # · #W #L · #% · tap for",
+  "label": "🥇 ZP Zoë PetrovaCourt # · #W #L · #% · tap for h",
   "tag": "div"
  },
  {
@@ -6043,6 +6050,13 @@
  {
   "state": "player-round-2",
   "view": "scores",
+  "key": "button|copyRoundSummary()",
+  "label": "📋 Copy Summary",
+  "tag": "button"
+ },
+ {
+  "state": "player-round-2",
+  "view": "scores",
   "key": "button|saveGameScore(#,#)",
   "label": "💾 Save Game #",
   "tag": "button"
@@ -6052,6 +6066,13 @@
   "view": "scores",
   "key": "button|saveScores(#)",
   "label": "💾 Save All Court # Scores",
+  "tag": "button"
+ },
+ {
+  "state": "player-round-2",
+  "view": "scores",
+  "key": "button|shareMessenger()",
+  "label": "💬 Share to Messenger",
   "tag": "button"
  },
  {
@@ -6128,7 +6149,7 @@
   "state": "player-round-2",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 AI Aarav Iyer (+#W live)Court # · #W #L · #% ·",
+  "label": "🥇 IR Isabelle Roy (+#W live)Court # · #W #L · #%",
   "tag": "div"
  },
  {
@@ -6142,7 +6163,7 @@
   "state": "player-round-2",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# MC Mei Chen Court # · #W #L ·",
+  "label": "# AI Aarav Iyer Court # · #W #L ·",
   "tag": "div"
  },
  {
@@ -7038,7 +7059,7 @@
   "state": "round-1",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Oscar Ahmed",
+  "label": "Move Omar O'Connor",
   "tag": "select"
  },
  {
@@ -7206,7 +7227,7 @@
   "state": "round-1",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "💰",
+  "label": "⏳",
   "tag": "span"
  },
  {
@@ -7731,7 +7752,7 @@
   "state": "round-1",
   "view": "standings → qa",
   "key": "button|answerQuestion(#)",
-  "label": "Edit Answer",
+  "label": "Answer",
   "tag": "button"
  },
  {
@@ -7969,7 +7990,7 @@
   "state": "round-1-big",
   "view": "admin → a-edit",
   "key": "select|setEdCourt(this.value)",
-  "label": "Court #Court #Court #Court #Court #Court #",
+  "label": "Court #Court #Court #Court #Court #",
   "tag": "select"
  },
  {
@@ -8011,7 +8032,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Kenji Ahmed",
+  "label": "Add a private note for Imani Okafor",
   "tag": "button"
  },
  {
@@ -8046,7 +8067,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Kenji Ahmed",
+  "label": "Court for Imani Okafor",
   "tag": "select"
  },
  {
@@ -8067,7 +8088,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -8571,7 +8592,7 @@
   "state": "round-1-big",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 EK Ethan Kim (+#W live)Court # · #W #L · #% ·",
+  "label": "🥇 VA Vikram Alvarez (+#W live)Court # · #W #L ·",
   "tag": "div"
  },
  {
@@ -10412,7 +10433,7 @@
   "state": "round-2-big",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Kwame Wong",
+  "label": "Move Samuel Dubé",
   "tag": "select"
  },
  {
@@ -10441,13 +10462,6 @@
   "view": "admin → a-att",
   "key": "button|markAttForTab(#,'present',#)",
   "label": "✅ Present",
-  "tag": "button"
- },
- {
-  "state": "round-2-big",
-  "view": "admin → a-att",
-  "key": "button|markAttForTab(#,'present')",
-  "label": "✅ Here after all",
   "tag": "button"
  },
  {
@@ -10482,7 +10496,7 @@
   "state": "round-2-big",
   "view": "admin → a-edit",
   "key": "select|setEdCourt(this.value)",
-  "label": "Court #Court #Court #Court #Court #Court #",
+  "label": "Court #Court #Court #Court #Court #",
   "tag": "select"
  },
  {
@@ -10531,7 +10545,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Chloe Singh",
+  "label": "Add a private note for Fatima Chen",
   "tag": "button"
  },
  {
@@ -10566,7 +10580,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Chloe Singh",
+  "label": "Court for Fatima Chen",
   "tag": "select"
  },
  {
@@ -10587,7 +10601,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "💰",
+  "label": "⏳",
   "tag": "span"
  },
  {
@@ -10671,7 +10685,7 @@
   "state": "round-2-big",
   "view": "admin → a-reg",
   "key": "span|togglePaid(#)",
-  "label": "⏳ Unpaid",
+  "label": "✅ Paid",
   "tag": "span"
  },
  {
@@ -11091,7 +11105,7 @@
   "state": "round-2-big",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 CS Chloe Singh (+#W live)Court # · #W #L · #%",
+  "label": "🥇 NK Nadia Khan (+#W live)Court # · #W #L · #%",
   "tag": "div"
  },
  {
@@ -11112,7 +11126,7 @@
   "state": "round-2-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# CS Chloe Singh Court # · #W #L",
+  "label": "# AO Ananya O'Connor Court # · #W",
   "tag": "div"
  },
  {

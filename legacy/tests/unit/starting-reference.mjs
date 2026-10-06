@@ -29,8 +29,10 @@ export function startingCourts(earned, spares = [], rank) {
   }
   const cascade = [];
   if (rank) {
-    const key = (id) => rank(id) || [0, 0];
-    const cmp = (x, y) => { const a = key(x), b = key(y); return (b[0] || 0) - (a[0] || 0) || (b[1] || 0) - (a[1] || 0) || x - y; };
+    const key = (id) => rank(id) || [0];
+    const cmp = (x, y) => { const a = key(x), b = key(y);
+      for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = (b[i] || 0) - (a[i] || 0); if (d) return d; }
+      return x - y; };
     const order = (ids) => [...ids.filter((id) => spareSeat[id] !== undefined), ...ids.filter((id) => spareSeat[id] === undefined).sort(cmp)];
     for (let c = 1; c <= NC; c++) L[c] = order(L[c]);
     for (let c = 1; c < NC; c++) {

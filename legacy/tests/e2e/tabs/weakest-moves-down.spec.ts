@@ -83,13 +83,13 @@ test("a player back after missing a night keeps the court: the rating, not the g
   await load(ctx, L);
   const page = ctx.page;
   const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
-  const rate = await page.evaluate(() => eloCached() as Record<string, number>);
+  const gained = await page.evaluate(() => eloEarnedCached() as Record<string, number>);
   expect(assign[3].length, "Court 3 is back to five").toBe(5);
   expect(seatOf(assign, 14), "the player who was away keeps the court they earned").toBe(3);
   for (const id of [9, 10, 11]) expect(seatOf(assign, id), `player ${id} keeps Court 3`).toBe(3);
   const moved = [9, 10, 11, 12, 13, 14].find((id) => seatOf(assign, id) !== 3)!;
-  expect(rate[14], "and is rated above the player who went down, on fewer games").toBeGreaterThan(rate[moved]);
-  expect(rate[moved], "who is the lowest rating on the court").toBe(Math.min(...[9, 10, 11, 12, 13, 14].map((id) => rate[id])));
+  expect(gained[14], "and has earned more than the player who went down, on fewer games").toBeGreaterThan(gained[moved]);
+  expect(gained[moved], "who has earned the least on the court").toBe(Math.min(...[9, 10, 11, 12, 13, 14].map((id) => gained[id])));
   // The independent reference says the same.
   const want = upcoming(L).assign;
   for (let c = 1; c <= 6; c++) expect(assign[c] || [], `Court ${c}`).toEqual(want[c] || []);
@@ -102,12 +102,16 @@ test("a no-show costs 25 rating points, and that is what sends them down", async
   await load(ctx, L);
   const page = ctx.page;
   const rate = await page.evaluate(() => eloCached() as Record<string, number>);
+  const gained = await page.evaluate(() => eloEarnedCached() as Record<string, number>);
   expect(rate[11], "1300 on Court 3, less 25 for the night they did not turn up").toBe(1275);
+  expect(gained[11], "which is 25 off what they have earned this season").toBe(-25);
   expect(rate[12], "everybody else is untouched").toBe(1300);
+  expect(gained[12], "and has earned nothing either way").toBe(0);
   const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
   expect(seatOf(assign, 11), "and that is what sends them down from a court of six").toBe(4);
   // Declining in time costs nothing: the player is simply not in the line-up, and their rating is where it was.
   expect(rate[9]).toBe(1300);
+  expect(gained[9]).toBe(0);
 });
 
 test("a player back from a night off keeps the court they earned when somebody on it is weaker", async () => {

@@ -41,9 +41,16 @@ export class Model {
   constructor(players: MockState["players"]) { for (const p of players) { this.earned.set(p.id, p.current_court); this.stats.set(p.id, { w: 0, l: 0, g: 0, noShow: 0 }); if (p.membership_type === "spare") this.spareIds.add(p.id); } }
   // Seating rule (p54): everyone who is coming keeps the court they earned; confirmed spares fill open seats from the bottom;
   // a court left with one player or more than five is settled as at the gym (startingCourts).
-  seat(exclude: Set<number> = new Set(), spares: number[] = []) {
+  // p105, p106: each court is listed by what a player has EARNED this season, and a court of more than five sends its
+  // bottom player down, placed there the same way. `gained` is what each player has earned; without it nobody has earned
+  // anything, which is exactly true of a league where no games have been played — a caller whose league has games must
+  // pass the real numbers.
+  seat(exclude: Set<number> = new Set(), spares: number[] = [], gained?: Record<number, number>) {
     const earned = [...this.earned.entries()].filter(([id, c]) => !exclude.has(id) && !this.spareIds.has(id) && c > 0).map(([id, court]) => ({ id, court }));
-    this.lineup = startingCourts(earned, spares).lineup;
+    const seat0 = (id: number) => 1500 - ((Math.min(NC, Math.max(1, this.earned.get(id) || NC))) - 1) * 100;
+    const stat = (id: number) => this.stats.get(id) || { w: 0, g: 0 };
+    const rank = (id: number): [number, number, number] => [gained?.[id] ?? 0, seat0(id), stat(id).g ? stat(id).w / stat(id).g : 0];
+    this.lineup = startingCourts(earned, spares, rank).lineup;
     this.sessionWins.clear(); this.sessionGames.clear(); this.initialCourt.clear(); this.absentFrom.clear(); this.round2Court.clear();
     for (let c = 1; c <= NC; c++) for (const id of this.lineup[c]) this.initialCourt.set(id, c);
   }

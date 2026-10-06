@@ -2465,13 +2465,22 @@ function eloCached(){
   if(_eloCache&&_eloKey===key)return _eloCache;
   _eloCache=computeEloRatings();_eloKey=key;return _eloCache;
 }
-// p105: where a player stands when the courts have to decide — the rating first, then wins per game, then lowest id so
-// the answer is the same every time. Elo is the only one of these numbers that does not move when a player misses a
-// night, which is exactly what the court order must not punish.
-function byRating(ids,rate,rec){
+// p106: what each player has EARNED this season — their rating now, less the number they started from. Play and
+// nothing else: a player who won their way up a court is not still carrying the lower court they began on.
+function eloEarnedCached(){
+  const rate=eloCached(),seed=seedRatings(),out={};
+  Object.keys(rate).forEach(id=>{out[id]=rate[id]-(seed[id]??1000);});
+  return out;
+}
+// p105, p106: where a player stands when the courts have to decide — what they have earned this season, then the court
+// they started from, then wins per game, then the lowest id so the answer is the same every time. Measured this way the
+// number does not move when a player misses a night, and it does not carry the court they happened to begin on either.
+function byRating(ids,earned,seed,rec){
   return [...ids].sort((x,y)=>{
-    const rx=rate[x]??1000,ry=rate[y]??1000;
-    if(rx!==ry)return ry-rx;
+    const ex=earned[x]??0,ey=earned[y]??0;
+    if(ex!==ey)return ey-ex;
+    const sx=seed[x]??1000,sy=seed[y]??1000;
+    if(sx!==sy)return sy-sx;
     const a=rec[x]||{w:0,gp:0},b=rec[y]||{w:0,gp:0};
     const wx=a.gp?a.w/a.gp:0,wy=b.gp?b.w/b.gp:0;
     return wy-wx||x-y;});
@@ -3057,11 +3066,11 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
     const c=used.find(x=>L[x].length<4)||used.find(x=>L[x].length<5)||used[0]||NC;
     L[c].push(id);notes.push(`${nm(id)} (spare) takes an open seat on Court ${c}.`);
   }
-  // p97, p105: order every court by rating, highest first, so the player an over-full court sends down is the weakest
-  // on it by the measure that does not punish a player for missing nights. Spares the organizer placed stay at the top:
+  // p97, p105, p106: order every court by the rating each player has EARNED this season, highest first, so the player an
+  // over-full court sends down is the weakest on it by a measure that punishes neither a missed night nor a promotion. Spares the organizer placed stay at the top:
   // that seat was a decision, not something earned, and a full court should not undo it.
-  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rate=eloCached(),rec=seasonRecord();
-   const order=ids=>[...ids.filter(id=>pinned.has(id)),...byRating(ids.filter(id=>!pinned.has(id)),rate,rec)];
+  {const pinned=new Set([...seated.map(p=>p.id),...spares]),earned=eloEarnedCached(),seed=seedRatings(),rec=seasonRecord();
+   const order=ids=>[...ids.filter(id=>pinned.has(id)),...byRating(ids.filter(id=>!pinned.has(id)),earned,seed,rec)];
    for(let c=1;c<=NC;c++)L[c]=order(L[c]);
    // p105: a court of more than five sends its bottom player to the next court in use below and places them there BY
    // RATING; that court then settles the same way. So a player coming back to the court they earned keeps it when
@@ -3758,10 +3767,10 @@ function renderAssignUI(){
   const unassigned=S.current?S.players.filter(p=>!assignedSet.has(p.id))
     :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id));
   const _rec=seasonRecord(); // p93
-  const _rate=eloCached(); // p105
+  const _earned=eloEarnedCached(); // p105, p106
   const _chip=(p,c)=>{const r=_rec[p.id]||{w:0,l:0,pts:0};
     return `<div class="dnd-player" draggable="true" data-pid="${p.id}" ondragstart="dndStart(event,${p.id})">${esc(p.name)}${p.membershipType==='spare'?'<span class="spare-badge" style="margin-left:4px;">S</span>':''}`
-      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${_rate[p.id]??1000} · ${r.w}W · ${r.pts} pts</span>`
+      +`<span class="dnd-rec" style="margin-left:6px;font-size:10px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;">${(_earned[p.id]??0)>=0?'+':''}${_earned[p.id]??0} · ${r.w}W · ${r.pts} pts</span>`
       +`<select class="inp" aria-label="Move ${esc(p.name)}"${courtLock()} onchange="assignMove(${p.id},Number(this.value))"><option value="0">${S.current?'Unassigned':'Not playing'}</option>${[1,2,3,4,5,6].map(t=>`<option value="${t}" ${t===c?'selected':''}>Court ${t}</option>`).join('')}</select></div>`;};
   if(unassigned.length){
     html+=`<div class="dnd-court" data-court="0" ondragover="dndOver(event)" ondrop="dndDrop(event,0)" ondragleave="dndLeave(event)">
@@ -4789,10 +4798,10 @@ function renderLeaderboard(){
       </div></div>`;
   }).join('');
 }
-function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the rounds played, never the seeding
-  // Start from the court each player first played on this season: 1500 on Court 1 down to 1000 on Court 6.
-  // Players who have not played yet start from their current court. (Seeding from the peak court instead would hand
-  // every climber a retroactive +100 on top of the rating they earned by winning.)
+// p106: the number each player STARTS the season from, on its own — the court they first played on (1500 on Court 1,
+// 100 fewer for each court below), or the number the organizer set for them (p99). Pulled out of computeEloRatings so
+// that "what have they earned this season" can be asked without repeating any of it.
+function seedRatings(sessList){
   const elo={};
   const seasonSess=(sessList?[...sessList]:[...(S.sessions||[]),...(S.current?[S.current]:[])]).filter(Boolean); // p76
   const firstCourt={};
@@ -4800,6 +4809,8 @@ function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the r
     Object.keys(sess.scores||{}).map(k=>{const m=k.match(/^c(\d+)_y(\d+)_g/);return m?{k,c:+m[1],y:+m[2]}:null;}).filter(Boolean)
       .sort((a,b)=>a.y-b.y||a.c-b.c).forEach(({k,c})=>{const sc=sess.scores[k];[sc.a1,sc.a2,sc.b1,sc.b2].forEach(id=>{if(id!=null&&firstCourt[id]===undefined)firstCourt[id]=c;});});
   });
+  // Players who have not played yet start from their current court. (Seeding from the peak court instead would hand
+  // every climber a retroactive +100 on top of the rating they earned by winning.)
   leaderboardPlayers().forEach(p=>{
     const startCourt=firstCourt[p.id]||(p.currentCourt>0&&p.currentCourt<=NC?p.currentCourt:NC);
     elo[p.id]=1500-((startCourt-1)*100);
@@ -4810,6 +4821,11 @@ function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the r
   // p99: a starting number the organizer set for a drop-in replaces the court's own, and only the start: every game
   // after it is scored exactly as it is for everybody else.
   Object.entries(S.seedPoints||{}).forEach(([id,v])=>{const n=Number(v);if(Number.isFinite(n))elo[id]=n;});
+  return elo;
+}
+function computeEloRatings(sessList,applyCount){ // p84: applyCount limits the rounds played, never the seeding
+  const elo=seedRatings(sessList); // p106
+  const seasonSess=(sessList?[...sessList]:[...(S.sessions||[]),...(S.current?[S.current]:[])]).filter(Boolean); // p76
   const rating=id=>elo[id]??1000;
   // Every completed session, then the live one, round by round in order. Ratings are frozen within a round.
   // p84: applyCount plays out only the first N sessions. The seeding above still reads the whole season, so a rating

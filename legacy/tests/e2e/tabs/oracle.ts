@@ -2,7 +2,7 @@
 import type { League, SessionRec, Score, Player } from "./gen";
 import { NC, sessionStartMs } from "./gen";
 import season from "../../../automation/season.json";
-import { eloReference } from "../helpers";
+import { eloReference, eloEarned, seedRatings } from "../helpers";
 import { fillCourts, startingCourts } from "../rules-model";
 
 export const first = (n: string) => n.split(" ")[0];
@@ -253,10 +253,12 @@ export function upcoming(L: League) {
   const spares = (spareSeatCount(L).decided ? claims.slice(0, spareSeatCount(L).seats) : []).map((r) => r.player_id).filter((id) => !preAbsent.has(id) && L.payments.filter(x=>x.player_id===id&&x.kind==="spare"&&x.session_number===L.upcoming).reduce((n,x)=>n+Number(x.amount),0)>=20);
   // Everyone coming keeps the court they earned; spares fill open seats from the bottom; lone or over-five courts are settled (p54).
   const earned = L.players.filter((p) => p.current_court > 0 && isReg(p) && !declined.has(p.id) && !preAbsent.has(p.id) && !silent.has(p.id)).map((p) => ({ id: p.id, court: p.current_court }));
-  // p105: each court is listed by rating, then wins per game — the rating because it is the only one of these numbers
-  // that does not move when a player misses a night. Counted from the same games the app counts.
-  const rec = seasonRecord(L), rate = eloReference(L.players as never, allSessions(L) as never, undefined, L.seeds);
-  const rank = (id: number) => [rate[id] ?? 1000, rec[id]?.gp ? rec[id].w / rec[id].gp : 0] as [number, number];
+  // p105, p106: each court is listed by what a player has EARNED this season — their rating now, less the number they
+  // started from — then the court they started from, then wins per game. Measured this way it punishes neither a missed
+  // night nor a promotion. Counted from the same games the app counts.
+  const rec = seasonRecord(L), gained = eloEarned(L.players as never, allSessions(L) as never, L.seeds);
+  const seed = seedRatings(L.players as never, allSessions(L) as never, L.seeds);
+  const rank = (id: number) => [gained[id] ?? 0, seed[id] ?? 1000, rec[id]?.gp ? rec[id].w / rec[id].gp : 0] as [number, number, number];
   const start = startingCourts(earned, spares, rank);
   const assign: Record<string, number[]> = Object.fromEntries(Array.from({ length: NC }, (_, i) => [String(i + 1), start.lineup[i + 1]]));
   return { vote, declined, preAbsent, silent, spares, assign, start };

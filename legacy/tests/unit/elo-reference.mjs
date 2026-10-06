@@ -22,7 +22,8 @@ export function firstCourts(sessions) {
 
 /** `players` need id, current_court (and, for who to seed, games_played / season_wins). `applyUpTo` limits how many
  *  sessions are PLAYED OUT; the seeding always reads the whole list (p84). `seeds` are the organizer's own numbers. */
-export function eloReference(players, sessions, applyUpTo, seeds) {
+/** p106: the number each player STARTS from — the court they first played on, or the organizer's own number (p99). */
+export function seedRatings(players, sessions, seeds) {
   const elo = {};
   const first = firstCourts(sessions);
   for (const p of players) if (p.current_court > 0 || p.games_played > 0 || p.season_wins > 0) {
@@ -32,6 +33,16 @@ export function eloReference(players, sessions, applyUpTo, seeds) {
   // p84: seed everyone the season's scores name, including a spare called in before End Session writes their court.
   for (const [id, c] of Object.entries(first)) if (elo[+id] === undefined) elo[+id] = 1500 - (c - 1) * 100;
   for (const [id, v] of Object.entries(seeds || {})) if (Number.isFinite(Number(v))) elo[+id] = Number(v); // p99
+  return elo;
+}
+/** p106: what each player has EARNED this season — their rating now, less the number they started from. */
+export function eloEarned(players, sessions, seeds) {
+  const now = eloReference(players, sessions, undefined, seeds), seed = seedRatings(players, sessions, seeds), out = {};
+  for (const id of Object.keys(now)) out[id] = now[id] - (seed[id] ?? 1000);
+  return out;
+}
+export function eloReference(players, sessions, applyUpTo, seeds) {
+  const elo = seedRatings(players, sessions, seeds);
   const r = (id) => elo[id] ?? 1000;
   const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
   for (const sess of (applyUpTo === undefined ? sessions : sessions.slice(0, Math.max(0, applyUpTo)))) {

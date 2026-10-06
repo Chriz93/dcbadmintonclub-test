@@ -39,22 +39,23 @@ test("the board arranges tonight's courts before a session", async () => {
   for (let c = 1; c <= 6; c++) expect(shown[String(c)].slice().sort((a, b) => a - b), `Court ${c}`).toEqual((lineup[c] || []).slice().sort((a, b) => a - b));
 });
 
-test("each court lists its players by rating, and the chip carries the numbers", async () => {
+test("each court lists its players by what they have earned, and the chip carries the numbers", async () => {
   await load(ctx, seasonLeague(62002));
   const page = ctx.page;
   await openBoard(page);
   const board = page.locator("#assign-ui");
   const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; gp: number; pts: number }>);
-  const rate = await page.evaluate(() => eloCached() as Record<string, number>);
+  const gained = await page.evaluate(() => eloEarnedCached() as Record<string, number>);
+  const seed = await page.evaluate(() => seedRatings() as Record<string, number>);
   for (let c = 1; c <= 6; c++) {
     const ids = await board.locator(`.dnd-court[data-court="${c}"] .dnd-player`).evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))));
     if (ids.length < 2) continue;
-    const rateOf = (id: number) => rate[id] ?? 1000, wr = (id: number) => (rec[id]?.gp ? rec[id].w / rec[id].gp : 0);
-    const want = [...ids].sort((x, y) => rateOf(y) - rateOf(x) || wr(y) - wr(x) || x - y);
-    expect(ids, `Court ${c}: highest rating first — the bottom player is the one to move down`).toEqual(want);
-    // p105: the deciding number first, then the record it was earned on.
+    const g = (id: number) => gained[id] ?? 0, sd = (id: number) => seed[id] ?? 1000, wr = (id: number) => (rec[id]?.gp ? rec[id].w / rec[id].gp : 0);
+    const want = [...ids].sort((x, y) => g(y) - g(x) || sd(y) - sd(x) || wr(y) - wr(x) || x - y);
+    expect(ids, `Court ${c}: most earned this season first — the bottom player is the one to move down`).toEqual(want);
+    // p106: the deciding number first, then the record it was earned on.
     const first = board.locator(`.dnd-court[data-court="${c}"] .dnd-player`).first();
-    await expect(first.locator(".dnd-rec")).toHaveText(`${rateOf(ids[0])} · ${rec[ids[0]]?.w ?? 0}W · ${rec[ids[0]]?.pts ?? 0} pts`);
+    await expect(first.locator(".dnd-rec")).toHaveText(`${g(ids[0]) >= 0 ? "+" : ""}${g(ids[0])} · ${rec[ids[0]]?.w ?? 0}W · ${rec[ids[0]]?.pts ?? 0} pts`);
   }
 });
 
