@@ -18,6 +18,13 @@ export async function registerSelf(page: Page, name: string, opt: string | { pay
   await page.fill("#r-phone", o.phone || "613-555-0100");
   await page.fill("#r-emergency", "Emergency Person 613-555-0101");
   await page.click("text=Continue →");
+  // The waiver has to have LOADED before the waiver step can be submitted: regStep2() refuses with "The waiver has not
+  // loaded yet" and leaves the form where it is, so #lf-all on the step after never appears and the next line times
+  // out on an element that is present but hidden. Racing it passed locally and failed about one CI run in two
+  // (opener.spec, 9 October); reproduced on demand with SLOW_NET=200-900. Wait for the precondition instead — if the
+  // waiver really never loads, this still fails, and says so.
+  await expect.poll(() => page.evaluate(() => !!(S.waiver && S.waiver.body)),
+    { message: "the waiver has loaded, so Continue will advance", timeout: 20000 }).toBe(true);
   await page.check("#w1");
   if (await page.locator("#w5-row").isVisible()) await page.check("#w5");
   if (await page.locator("#w6-row").isVisible()) await page.check("#w6");
