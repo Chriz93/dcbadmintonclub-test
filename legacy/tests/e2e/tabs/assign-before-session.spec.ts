@@ -57,6 +57,36 @@ test("each court lists its players by wins, then points scored", async () => {
   }
 });
 
+// p108, p109: tonight's share is four to a court, so a court the organizer drags somebody onto is over it. The
+// placement is not the machine's to undo: the court keeps the placed player and sends down its own weakest instead.
+// Before p109 the settling treated the placed player as the bottom of the court and sent them straight back.
+test("the organizer's placement stands, and the court sends down its own weakest instead", async () => {
+  await load(ctx, seasonLeague(62004));
+  const page = ctx.page;
+  await openBoard(page);
+  const board = page.locator("#assign-ui");
+  const before4 = await board.locator('.dnd-court[data-court="4"] .dnd-player').evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))));
+  const c2 = await board.locator('.dnd-court[data-court="2"] .dnd-player').evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))));
+  const moved = c2[0];                                   // the TOP of Court 2, so the move is plainly deliberate
+  const wasBottomOf4 = before4[before4.length - 1];
+
+  await page.evaluate((id) => assignMove(id, 4), moved);
+  const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
+  const seatOf = (id: number) => [1, 2, 3, 4, 5, 6].find((c) => (assign[c] || []).includes(id)) ?? 0;
+  expect(seatOf(moved), "the player the organizer placed is on the court they were placed on").toBe(4);
+  expect(seatOf(wasBottomOf4), "and Court 4's own weakest player is the one who goes down").toBe(5);
+  // Court 4 stays inside the hard ceiling of five. It is NOT required to reach tonight's share of four: it sheds its
+  // weakest, then takes Court 3's, and by then everyone left on it was either placed by hand or has already moved
+  // once tonight — so the settling stops. One move per player per evening (p107) outranks the share (p108).
+  expect(assign[4].length, "Court 4 holds at most five").toBeLessThanOrEqual(5);
+  expect(assign[4], "the placed player is on it").toContain(moved);
+  expect(assign[4], "and the player it sent down is not").not.toContain(wasBottomOf4);
+  const landed = [1, 2, 3, 4, 5, 6].find((c) => (assign[c] || []).includes(wasBottomOf4));
+  await page.evaluate(() => nav("courts"));
+  await expect(page.locator("#lineup-notes-list"), "and the Courts page says who moved and why")
+    .toContainText(`so ${await page.evaluate((id) => S.players.find((p: any) => p.id === id).name, wasBottomOf4)} starts on Court ${landed}.`);
+});
+
 test("moving a player on the board sets their court, and is not a court drop", async () => {
   await load(ctx, seasonLeague(62003));
   const page = ctx.page;

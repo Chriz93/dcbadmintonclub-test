@@ -51,14 +51,25 @@ test("seating a player on the empty court says who else the rules moved", async 
 
 test("a seat change that moves nobody else says only what it did", async () => {
   const { L } = leagueWithLonePlayerOnCourt4(57002);
+  // p108: tonight's share is four to a court here, so moving a player onto a court that already has four is no longer
+  // a change that disturbs nobody — that court is then over its share and sends its own weakest down. For a move that
+  // really does move nobody else, the court taking the player has to have ROOM: one of Court 2's four is excused, so
+  // the move fills the seat they left and no court ends up over its share or holding one player.
+  const regs = L.players.filter((p) => p.approved && !p.waitlisted && p.membership_type !== "spare");
+  const excused = regs.find((p) => p.current_court === 2)!;
+  L.rsvps = (L.rsvps as { player_id: number; response: string }[]).map((r) =>
+    r.player_id === excused.id ? { ...r, response: "notcoming" } : r) as League["rsvps"];
   await load(ctx, L);
   const page = ctx.page, toast = page.locator("#_t");
   await page.evaluate(() => nav("courts"));
-  // Court 1 has four; moving one of them to Court 2 (which has four) leaves no court alone or over five.
   const before = await page.evaluate(() => upcomingSeats() as Record<string, number>);
+  expect(Object.values(before).filter((c) => c === 2).length, "Court 2 has a seat free").toBe(3);
   const onC1 = Object.keys(before).map(Number).filter((id) => before[id] === 1);
   const who = L.players.find((p) => p.id === onC1[0])!;
   await page.evaluate((id) => setPlayerCourt(id, 2), who.id);
   await expect(toast).toContainText(`${who.name} is on Court 2`);
   await expect(toast, "nothing else moved, so nothing else is claimed").not.toContainText("also moved");
+  const after = await page.evaluate(() => upcomingSeats() as Record<string, number>);
+  const others = Object.keys(after).map(Number).filter((id) => id !== who.id && before[id] !== after[id]);
+  expect(others, "and truly nobody else changed court").toEqual([]);
 });

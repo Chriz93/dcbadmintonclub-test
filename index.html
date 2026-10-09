@@ -1133,6 +1133,26 @@ function courtCap(c){return 5;}                    // any court can take a fifth
 // Courts hold four; with more than 24 playing, the extras become a fifth player on the bottom courts (Court 6, then 5, then 4…).
 // With fewer, courts fill four at a time; a single leftover joins the court above as its fifth player (two or three play singles).
 function courtSizes(n){const s={};for(let c=1;c<=NC;c++)s[c]=0;if(n<=NC*4){let last=0;for(let c=1;c<=NC&&n>0;c++){s[c]=Math.min(4,n);n-=s[c];last=c;}if(last>1&&s[last]===1){s[last-1]++;s[last]=0;}}else{const extra=Math.min(n-NC*4,NC);for(let c=1;c<=NC;c++)s[c]=4+(c>NC-extra?1:0);}return s;}
+// p108: what a full court is TONIGHT. This is NOT courtCap() above: that is the hard ceiling the end-of-night
+// rotation and adjustCourts enforce, and it stays five. Four to a court is the shape of the night; the fifth seat
+// opens only when more than four times the courts IN USE are coming, and it opens on the lowest of those courts first
+// — courtSizes()' own arithmetic, but counted over the courts tonight actually uses. Counting it over all six would
+// promise seats on courts nobody earned, and the settling would push players down only for the engine to fetch them
+// straight back up.
+// p109: what the organizer did by hand to one player. Rows written before p109 are a bare delta; rows written since
+// also carry the session the placement was for (s) and the court it was onto (c).
+function adminMoveOf(id){const v=(S.adminCourtMoves||{})[id];return v==null?{d:0}:typeof v==='number'?{d:v}:{d:v.d||0,s:v.s,c:v.c};}
+// p109: the players the organizer placed on a court for tonight — their placement is not the machine's to undo.
+function adminPlacedTonight(){
+  if(S.current)return new Set();
+  const n=upcomingSessionNumber(),out=new Set();
+  for(const p of S.players){const m=adminMoveOf(p.id);if(m.s===n&&m.c>0&&m.c===p.currentCourt)out.add(p.id);}
+  return out;}
+function nightCaps(total,used){const cap={};for(let c=1;c<=NC;c++)cap[c]=0;
+  const u=(used&&used.length?[...used]:[...Array(NC).keys()].map(i=>i+1)).sort((a,b)=>a-b),n=u.length;
+  const extra=Math.max(0,Math.min(total-n*4,n));                       // the fifth seats owed tonight
+  u.forEach((c,i)=>{cap[c]=4+(i>=n-extra?1:0);});                      // owed to the LOWEST courts in use first
+  return cap;}
 function fillCourts(ids){const z=courtSizes(ids.length),a={};let i=0;for(let c=1;c<=NC;c++){a[c]=ids.slice(i,i+z[c]);i+=z[c];}if(i<ids.length)a[NC].push(...ids.slice(i));return a;}
 // A court's bottom player moves down only into a court that has players (the last occupied court is the bottom court).
 // Ladder neighbours skip empty courts: "one court up/down" is the next court in use, so a court whose players are
@@ -2531,8 +2551,9 @@ async function setPlayerCourt(id,c,tonight){
  // leave it out. Seating someone who had no court, or taking their court away, is not a move between courts.
  const wasCourt=p.currentCourt;
  if(court>0&&wasCourt>0&&court!==wasCourt){
-  const moves={...(S.adminCourtMoves||{})};
-  moves[id]=(moves[id]||0)+(court-wasCourt);
+  const moves={...(S.adminCourtMoves||{})},was=adminMoveOf(id);
+  // p109: the delta p92 subtracts from the climb figure, and — when this is about tonight — the placement itself.
+  moves[id]={d:was.d+(court-wasCourt),...(tonight?{s:upcomingSessionNumber(),c:court}:(was.s?{s:was.s,c:was.c}:{}))};
   try{await setKV('admin_court_moves',moves);S.adminCourtMoves=moves;}
   catch(e){await loadAll();renderAll();return toast('Court not changed: '+e.message,'error');}
  }
@@ -3051,17 +3072,19 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
   // p97, p107: order every court by the season's wins, then the points scored, so the player an over-full court sends
   // down is the one standing lowest by the organizer's own measure. Spares the organizer placed stay at the top: that
   // seat was a decision, not something earned, and a full court should not undo it.
-  {const pinned=new Set([...seated.map(p=>p.id),...spares]),rec=seasonRecord();
+  // p109: the organizer's placements for tonight are pinned alongside the spares they seated by hand.
+  {const pinned=new Set([...seated.map(p=>p.id),...spares,...adminPlacedTonight()]),rec=seasonRecord();
    const order=ids=>[...ids.filter(id=>pinned.has(id)),...byWinsThenPoints(ids.filter(id=>!pinned.has(id)),rec)];
    for(let c=1;c<=NC;c++)L[c]=order(L[c]);
-   // p105, p107: a court of more than five sends a player to the next court in use below and places them there by the
-   // same measure, and that court settles the same way — "where he fits in with the points" — instead of dropping them
-   // at the bottom of whichever court took them. The player sent down is the bottom one who has NOT already been moved
-   // this evening, so nobody falls more than a single court in one night. Losing a night's play still costs a court at
-   // the end of the night, every night, with no floor: that is the rotation, and it is untouched.
-   const arrived=new Set();
+   // p105, p107, p108: a court holding more than tonight's share sends a player to the next court in use below and
+   // places them there by the same measure, and that court settles the same way — "where he fits in with the points" —
+   // instead of dropping them at the bottom of whichever court took them. The player sent down is the bottom one who
+   // has NOT already been moved this evening, so nobody falls more than a single court in one night. Losing a night's
+   // play still costs a court at the end of the night, every night, with no floor: that is the rotation, untouched.
+   const used=[];for(let c=1;c<=NC;c++)if(L[c].length)used.push(c);
+   const arrived=new Set(),cap=nightCaps(used.reduce((n,c)=>n+L[c].length,0),used);
    for(let c=1;c<NC;c++){
-     while(L[c].length>5){
+     while(L[c].length>cap[c]){
        let to=0;for(let x=c+1;x<=NC;x++)if(L[x].length){to=x;break;}
        if(!to)break;                                   // nothing in use below: the engine places them
        let i=L[c].length-1;
@@ -3069,7 +3092,7 @@ function autoAssign(exclude=new Set(),spares=[],seated=[]){
        if(i<0)break;                                   // everyone left was placed by the organizer, or has moved already
        const moved=L[c][i];
        L[c]=L[c].filter(x=>x!==moved);L[to]=order([...L[to],moved]);arrived.add(moved);
-       notes.push(`Court ${c} would have more than five players, so ${nm(moved)} starts on Court ${to}.`);
+       notes.push(`Court ${c} would have more than ${cap[c]===4?'four':'five'} players, so ${nm(moved)} starts on Court ${to}.`);
      }
    }}
   const res=adjustCourts({nc:NC,lineup:L,names:Object.fromEntries(S.players.map(p=>[p.id,p.name])),locked:[],closed:[],absent:[],returning:[],late:[],partner:true});
@@ -4947,7 +4970,7 @@ function computePlayerStreakAndImprovement(){
       for(let c=1;c<=NC;c++){if((S.current.assignments[c]||[]).includes(p.id)){currentPos=c;break;}}
     }
     // p92: add back every court the organizer moved them by hand, so the figure is what they did on court.
-    const adminMoved=(S.adminCourtMoves||{})[p.id]||0;
+    const adminMoved=adminMoveOf(p.id).d; // p109: the delta, whichever shape the row is in
     const courtClimb=allSessions.length>0?startCourt-currentPos+adminMoved:0;
     result[p.id]={streak:cur,maxStreak:max,courtClimb,improvement:Math.max(0,courtClimb)};
   });

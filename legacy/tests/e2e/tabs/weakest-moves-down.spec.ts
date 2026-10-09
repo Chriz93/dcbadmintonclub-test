@@ -44,7 +44,8 @@ test("six earned one court: the fewest wins moves down, and the court lists stro
   await load(ctx, L);
   const page = ctx.page;
   const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
-  expect(assign[2].length, "Court 2 is back to five").toBe(5);
+  // p108: 14 coming and only three courts in use, so those three hold 4+5+5 — Court 2's six sheds exactly one.
+  expect(assign[2].length, "Court 2 is back to tonight's share, which is five here").toBe(5);
   expect(seatOf(assign, 7), "the winless player is the one who moves down").toBe(3);
   expect(assign[2], "strongest first, so the bottom player is the one to move").toEqual([5, 6, 8, 9, 10]);
   // The independent oracle says the same.
@@ -84,7 +85,7 @@ test("a player back after missing a night keeps the court: the rating, not the g
   const page = ctx.page;
   const assign = await page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
   const rec = await page.evaluate(() => seasonRecord() as Record<string, { w: number; pts: number }>);
-  expect(assign[3].length, "Court 3 is back to five").toBe(5);
+  expect(assign[3].length, "p108: Court 3 is back to tonight's share of four").toBe(4);
   expect(seatOf(assign, 14), "the player who was away keeps the court they earned").toBe(3);
   for (const id of [9, 10, 11]) expect(seatOf(assign, id), `player ${id} keeps Court 3`).toBe(3);
   const moved = [9, 10, 11, 12, 13, 14].find((id) => seatOf(assign, id) !== 3)!;
@@ -110,14 +111,18 @@ test("a no-show costs 25 rating points, and that is what sends them down", async
   expect(rate[9]).toBe(1300);
 });
 
-test("a player back from a night off keeps the court they earned when somebody on it is weaker", async () => {
+test("p108 · a player back from a night off is ranked with everyone else, so four seats can still cost them the court", async () => {
   // Court 3 is earned by five players plus player 14, who missed Session 1 and is back. Player 12 has won nothing.
+  // Tonight's share is four, and six earned the court, so the bottom TWO go down: player 12 on nothing, and the
+  // returning player 14 on one win. A night off buys no protection once the court is down to four seats — and
+  // neither of them falls more than a single court, which is p107's promise.
   const courts = LADDER6;
   const L = crowded(97003, courts, { 9: 5, 10: 4, 11: 3, 12: 0, 13: 2, 14: 1, 1: 2, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2 });
   await load(ctx, L);
   const assign = await ctx.page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
-  expect(seatOf(assign, 14), "the returning player keeps Court 3").toBe(3);
+  expect(assign[3], "the four who stand highest keep the court").toEqual([9, 10, 11, 13]);
   expect(seatOf(assign, 12), "the weakest on it moves down").toBe(4);
+  expect(seatOf(assign, 14), "and so does the returning player, next up from the bottom").toBe(4);
 });
 
 test("the returning player with the weakest record is the one who moves — the rule cuts both ways", async () => {
@@ -125,8 +130,9 @@ test("the returning player with the weakest record is the one who moves — the 
   const L = crowded(97004, courts, { 9: 5, 10: 4, 11: 3, 12: 2, 13: 1, 14: 0, 1: 2, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2 });
   await load(ctx, L);
   const assign = await ctx.page.evaluate(() => upcomingLineup().assign as Record<string, number[]>);
-  expect(seatOf(assign, 14), "nobody on Court 3 is below them, so they are the one who moves").toBe(4);
-  expect(assign[3]).toEqual([9, 10, 11, 12, 13]);
+  expect(seatOf(assign, 14), "nobody on Court 3 is below them, so they are the first to move").toBe(4);
+  expect(seatOf(assign, 13), "and with four seats the next from the bottom follows").toBe(4);
+  expect(assign[3]).toEqual([9, 10, 11, 12]);
 });
 
 // p102: found here. seasonRecord() cached its answer against each session's id and how many scores it held, so two
@@ -173,6 +179,6 @@ test("the Courts page and the Assign board list each court in the same order", a
   await page.evaluate(() => { nav("admin"); showSec("admin", "a-assign"); });
   const onBoard = await page.locator('#assign-ui .dnd-court[data-court="2"] .dnd-player').evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-pid"))));
   const names = onBoard.map((id) => L.players.find((p) => p.id === id)!.name.split(" ")[0]);
-  expect(onPage.length, "five players on Court 2").toBe(5);
+  expect(onPage.length, "five players on Court 2: three courts in use hold 4+5+5 tonight").toBe(5);
   expect(onPage, "the page and the board agree, in order").toEqual(names);
 });

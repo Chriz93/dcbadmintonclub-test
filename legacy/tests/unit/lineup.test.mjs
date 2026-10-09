@@ -1,14 +1,16 @@
 // Tonight's starting courts (p54), the app's own functions (upcomingLineup, autoAssign, spareSeats… loaded straight out of
 // index.html) against the independent reference (starting-reference.mjs): everyone who said yes keeps the court they
 // earned, declines, silence and absences marked before the night never promote anyone, confirmed spares fill open seats
-// from the bottom, and courts of one or of more than five are settled as at the gym. 20 named situations (the first is
+// from the bottom, and courts of one or over tonight's share are settled as at the gym. 20 named situations (the first is
 // the one the organizer found on TEST) and 200 generated leagues.
 // p96: a regular who has not answered is not seated — silence is not a yes.
 // p97: each court is listed strongest first (wins, then points scored), so an over-full court sends its weakest down.
+// p108: tonight's share is FOUR to a court, with a fifth seat on the lowest courts only when more than 24 are coming.
+//   So a court sitting at exactly five sheds its bottom player, and a court of six may have to lose two.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { load } from "./load-app.mjs";
-import { startingCourts, offLine, spareLine, moveLine, silentLine } from "./starting-reference.mjs";
+import { startingCourts, offLine, spareLine, moveLine, silentLine, nightCaps } from "./starting-reference.mjs";
 import { eloReference, eloEarned } from "./elo-reference.mjs";
 import { rng } from "./adjust-reference.mjs";
 
@@ -16,7 +18,7 @@ import { rng } from "./adjust-reference.mjs";
 // that deadline (Monday evening before the Tuesday session), so confirmed spares are seated as on the night.
 const START = Date.parse("2026-09-15T20:00:00-04:00"), NOW = Date.parse("2026-09-14T18:00:00-04:00");
 const FIXED_DATE = class extends Date { static now() { return NOW; } };
-const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "seedRatings", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
+const { api } = load(["activePlayers", "isRegularMember", "isSpareMember", "spareSeats", "paidForSession", "adminMoveOf", "adminPlacedTonight", "nightCaps", "autoAssign", "upcomingLineup", "organizerSeated", "seatingProblem", "seasonRecord", "byWinsThenPoints", "seasonStamp", "eloCached", "seedRatings", "computeEloRatings", "leaderboardPlayers"], { NO_SHOW_PENALTY: 25, _lineupNotes: [], _lineupProblem: "", _seasonRecCache: null, _seasonRecKey: "", _eloCache: null, _eloKey: "", S_me:{organizer:true},FEES:{spareSession:20,voteDeadlineHours:46},FD:[new Date(START)],Date:FIXED_DATE,upcomingSessionNumber:()=>1 });
 const sorted = (a) => Object.fromEntries([1, 2, 3, 4, 5, 6].map((c) => [c, [...(a[c] || [])].sort((x, y) => x - y)]));
 
 /** A league: players [{id, name, court, spare?, approved?, waitlisted?}], votes {id: response} in answer order, pre {id: present|absent}.
@@ -108,10 +110,12 @@ test("lineup · a court left with one player gets the spares first, so nobody ha
   const got = check(players, { ...coming(players, [22, 23]), 24: "coming", 25: "coming" });
   assert.deepEqual([...got.assign[6]].sort((a, b) => a - b), [21, 24, 25]);
 });
-test("lineup · six earned on one court (a no-show came down): the extra player starts on the nearest court below with room", () => {
-  const players = [...ladder([4, 4, 6, 3, 4, 4])];
+test("lineup · p108 · six earned on one court: it settles to four, and the night takes the shape the rule asks for", () => {
+  const players = [...ladder([4, 4, 6, 3, 4, 4])];   // 25 coming, so one fifth seat is owed, on the bottom court
   const got = check(players, coming(players));
-  assert.equal(got.assign[3].length, 5); assert.equal(got.assign[4].length, 4);
+  const cap = nightCaps(25);
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((c) => got.assign[c].length), [4, 4, 4, 4, 4, 5], "four to a court, the 25th on Court 6");
+  for (let c = 1; c <= 6; c++) assert.ok(got.assign[c].length <= cap[c], `Court ${c} is within tonight's share of ${cap[c]}`);
 });
 test("lineup · everyone on Court 2 declines: Court 2 stays empty and nobody from Court 3 moves up", () => {
   const players = ladder([4, 4, 4, 4, 4, 4]);
@@ -179,10 +183,13 @@ test("lineup · Court 1 left with one player: they join Court 2 below", () => {
   assert.equal(courtOf(got.assign, 2), 2);
 });
 
-test("lineup · Court 1 left with one player while Court 2 already has five: they start on Court 3, the next court below with room", () => {
+test("lineup · p108 · Court 1 left with one player: Court 2 has already settled to four, so they join it", () => {
   const players = ladder([2, 5, 4, 4, 4, 4]);   // Court 1: players 1 and 2
   const got = check(players, coming(players, [1]));
-  assert.equal(courtOf(got.assign, 2), 3); assert.equal(got.assign[2].length, 5); assert.equal(got.assign[3].length, 5);
+  // 22 coming, so tonight's share is four everywhere: Court 2's five sheds one before the lone player is placed, and
+  // the seat that opens is on the court directly below them instead of two down.
+  assert.equal(courtOf(got.assign, 2), 2, "the lone player joins the court directly below");
+  assert.equal(got.assign[3].length, 4, "and Court 3 is at tonight's share");
 });
 
 // ── p96: silence is not a yes ────────────────────────────────────────────────────────────────────────────────────────
@@ -236,8 +243,9 @@ test("lineup · p97 · six on one court: the fewest wins moves down, not whoever
   const players = ladder([4, 4, 6, 3, 4, 4]);
   const sess = seasonOf({ 9: 4, 10: 3, 11: 0, 12: 3, 13: 2, 14: 1 });
   const got = check(players, coming(players), {}, () => {}, sess);
-  assert.equal(got.assign[3].length, 5); assert.equal(courtOf(got.assign, 11), 4, "the winless player goes down");
-  assert.deepEqual(got.assign[3], [9, 10, 12, 13, 14], "strongest first, so the bottom is the one to move");
+  assert.equal(got.assign[3].length, 4, "p108: four to a court");
+  assert.equal(courtOf(got.assign, 11), 4, "the winless player goes down");
+  assert.deepEqual(got.assign[3], [9, 10, 12, 13], "strongest first; the bottom two of six are the ones to move");
 });
 // p105: the rating is what decides, because it is the only one of these numbers that does not move when a player misses
 // a night. Totals say the player who was away is bottom; the rating says who is actually weakest.
@@ -250,17 +258,20 @@ test("lineup · p108 · a player back after missing a night keeps the court when
   // Session 2: 14 plays two games and wins both. So 12 and 13 have won nothing and 14 has won two.
   const sess = [singles([[9, 12], [9, 13], [10, 12], [10, 13], [11, 12], [11, 13]], 1), singles([[14, 9], [14, 10]], 2)];
   const got = check(players, coming(players), {}, () => {}, sess);
-  assert.equal(got.assign[3].length, 5);
+  assert.equal(got.assign[3].length, 4, "p108: four to a court");
   assert.equal(courtOf(got.assign, 14), 3, "the player who was away keeps the court they earned");
   for (const id of [9, 10, 11]) assert.equal(courtOf(got.assign, id), 3, `P${id} keeps Court 3`);
-  // Whoever went down is the bottom of the court by the organizer's measure: wins, then the points they scored.
+  // p108: four seats and six claimants, so the bottom TWO by the organizer's measure go down — wins, then the points
+  // they scored. The player who was away is above both of them, so their night off costs them nothing.
   const rec = recordOf(sess);
-  const moved = [9, 10, 11, 12, 13, 14].find((id) => courtOf(got.assign, id) !== 3);
-  assert.ok(moved, "somebody moved");
-  const last = [9, 10, 11, 12, 13, 14].slice().sort((a, b) => (rec[b]?.w ?? 0) - (rec[a]?.w ?? 0) || (rec[b]?.pts ?? 0) - (rec[a]?.pts ?? 0) || a - b).at(-1);
-  assert.equal(moved, last, "the bottom of the court by wins, then points, is the one who moves");
+  const court = [9, 10, 11, 12, 13, 14];
+  const movers = court.filter((id) => courtOf(got.assign, id) !== 3);
+  assert.equal(movers.length, 2, "two of the six have to leave");
+  const byMeasure = court.slice().sort((a, b) => (rec[b]?.w ?? 0) - (rec[a]?.w ?? 0) || (rec[b]?.pts ?? 0) - (rec[a]?.pts ?? 0) || a - b);
+  assert.deepEqual([...movers].sort((a, b) => a - b), byMeasure.slice(-2).sort((a, b) => a - b), "and they are the bottom two by wins, then points");
   assert.equal(rec[14].w, 2, "the player who was away has won more than them, on fewer games");
-  assert.equal(rec[moved].w, 0);
+  for (const id of movers) assert.equal(rec[id].w, 0, `P${id} has won nothing`);
+  for (const id of movers) assert.equal(courtOf(got.assign, id), 4, `P${id} falls one court, not two`);
 });
 test("lineup · p105, p108 · a no-show costs 25 rating points; the court order is decided by wins and points", () => {
   const players = ladder([4, 4, 6, 3, 4, 4]);
@@ -277,25 +288,35 @@ test("lineup · p105, p108 · a no-show costs 25 rating points; the court order 
   assert.equal(courtOf(got.assign, 14), 4, "the bottom of a court of six by the organizer's measure");
   assert.equal(courtOf(got.assign, 11), 3, "the no-show keeps their court: the rating is not what this reads");
 });
-test("lineup · p107 · nobody is sent down more than one court in an evening", () => {
-  // Court 1 is earned by eight and Court 2 by seven, so both have to settle and the courts below take the players.
-  // Whatever the numbers say, no player appears in two moves.
-  const players = ladder([8, 7, 4, 4, 4, 2]);
+test("lineup · p107, p108 · nobody is sent down more than one court in an evening", () => {
+  // Five courts are earned by five players each and the bottom court by two, so with 27 coming the top three courts
+  // owe a player and the settling cascades the whole way down. Whatever the numbers say, no player appears in two
+  // moves. (Five to a court is the most any court can carry: courtCap() is the ceiling the rotation enforces, so a
+  // court of six or more is not a state this league can be in.)
+  const players = ladder([5, 5, 5, 5, 5, 2]);
   const got = check(players, coming(players));
-  const full = (got.notes || []).filter((n) => /would have more than five players/.test(n));
+  const full = (got.notes || []).filter((n) => /would have more than (four|five) players/.test(n));
   const names = full.map((n) => n.match(/so (P\d+) starts/)?.[1]).filter(Boolean);
   assert.ok(names.length >= 2, `more than one player had to move (${full.length})`);
   assert.equal(new Set(names).size, names.length, "no player is sent down twice: " + names.join(", "));
+  // And every move in the whole night — the settling and the engine's own — touches a player once.
+  const all = (got.moves || []).map((m) => m.id);
+  assert.equal(new Set(all).size, all.length, "no player is moved twice by the night as a whole");
   for (let c = 1; c <= 6; c++) assert.ok(got.assign[c].length <= 5, `Court ${c} holds at most five`);
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((c) => got.assign[c].length), [4, 4, 4, 5, 5, 5], "27 coming: three fifth seats, on the lowest courts");
 });
 
-test("lineup · p97 · a player back from a night off keeps the court they earned when somebody there is weaker", () => {
+test("lineup · p108 · a player back from a night off is ranked with everyone else, and four seats mean two of six leave", () => {
   const players = ladder([4, 4, 5, 3, 4, 4]);              // Court 3: 9, 10, 11, 12, 13
   const back = { id: 30, court: 3 }; players.push(back);     // 30 is back on the Court 3 they earned: six on it
   const sess = seasonOf({ 9: 5, 10: 4, 11: 3, 12: 2, 13: 0, 30: 1 });
   const got = check(players, coming(players), {}, () => {}, sess);
-  assert.equal(courtOf(got.assign, 30), 3, "the returning player keeps Court 3");
+  // Court 3 holds four tonight and six earned it, so the bottom TWO by wins go down. P13 has won nothing and the
+  // returning P30 one game, so both leave — a night off buys no protection once the court is down to four seats.
+  // Neither falls more than a single court, which is p107's promise and is untouched.
+  assert.deepEqual(got.assign[3], [9, 10, 11, 12], "the four who stand highest keep the court");
   assert.equal(courtOf(got.assign, 13), 4, "the weakest on it moves down");
+  assert.equal(courtOf(got.assign, 30), 4, "and so does the returning player, who is next up from the bottom");
 });
 // A confirmed spare can never overfill a court (the seats run out at 24 players), but a spare the organizer seats by
 // hand can — and that seat was a decision, usually because a strong player turned up, so it is not the one undone.
@@ -319,21 +340,30 @@ test("lineup · the interop situation: Court 1 left with one player, Court 2 has
   assert.equal(got.problem, ""); assert.deepEqual(sorted(got.assign)[1], [2, 3]); assert.deepEqual(sorted(got.assign)[2], [4, 5, 6, 7]);
   assert.ok(got.notes.includes("P2 would be the only player on Court 1 and every other court in use has five, so P3 moves up from Court 2 to play there."), got.notes.join(" | "));
 });
-test("lineup · the bottom court left with one player and every court above has five: the court above sends its last player down", () => {
+test("lineup · p108 · the bottom court left with one player: settling to four fills it, so nobody has to be fetched", () => {
   const players = ladder([5, 5, 2]);   // Court 3: 11, 12
   const got = check(players, coming(players, [12]));
-  assert.equal(got.problem, ""); assert.deepEqual(sorted(got.assign)[3], [10, 11]); assert.equal(got.assign[2].length, 4);
-  assert.ok(got.notes.includes("P11 would be the only player on Court 3 and every other court in use has five, so P10 moves down from Court 2 to play there."), got.notes.join(" | "));
+  // 11 coming, so tonight's share is four. Courts 1 and 2 each shed into the court below them, and the two who reach
+  // Court 3 give P11 a game — the lone-player rule has nothing left to fix.
+  assert.equal(got.problem, "");
+  assert.deepEqual(sorted(got.assign)[3], [9, 10, 11], "Court 3 is a real game without fetching anybody");
+  assert.equal(got.assign[1].length, 4); assert.equal(got.assign[2].length, 4);
+  assert.ok(!got.notes.some((n) => /only player on Court/.test(n)), "nobody is left alone to rescue: " + got.notes.join(" | "));
 });
 test("lineup · a lone player with full courts at the same distance above and below: the court above sends its last player down", () => {
   const players = ladder([5, 0, 2, 0, 5]);   // Court 1: 1–5 · Court 3: 6, 7 · Court 5: 8–12
   const got = check(players, coming(players, [7]));
   assert.equal(got.problem, ""); assert.deepEqual(sorted(got.assign)[3], [5, 6]); assert.equal(got.assign[5].length, 5);
 });
-test("lineup · a lone player whose nearest full court is below: that court's first player moves up", () => {
+test("lineup · p108 · a lone player with a court above over its share: that court's bottom player comes down instead", () => {
   const players = ladder([5, 0, 0, 2, 5]);   // Court 1: 1–5 · Court 4: 6, 7 · Court 5: 8–12
   const got = check(players, coming(players, [7]));
-  assert.equal(got.problem, ""); assert.deepEqual(sorted(got.assign)[4], [6, 8]); assert.equal(got.assign[1].length, 5);
+  // 11 coming, so Court 1's five is one over tonight's share. The next court in use below it is P6's, so the player
+  // who comes down is the bottom of Court 1 — and Court 5 is left alone, nobody fetched up from it.
+  assert.equal(got.problem, "");
+  assert.deepEqual(sorted(got.assign)[4], [5, 6], "Court 1's bottom player joins the lone player");
+  assert.equal(got.assign[1].length, 4, "and Court 1 is at tonight's share");
+  assert.equal(got.assign[5].length, 5, "Court 5 is untouched: it has nothing in use below it to shed into");
 });
 test("lineup · the only two players coming are on different courts: they play together, and the night is not refused", () => {
   const players = ladder([2, 0, 0, 0, 0, 2]);   // Court 1: 1, 2 · Court 6: 3, 4
