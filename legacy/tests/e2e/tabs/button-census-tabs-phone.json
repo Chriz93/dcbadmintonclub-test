@@ -947,13 +947,6 @@
  {
   "state": "big-before",
   "view": "admin → a-ann",
-  "key": "button|deleteAnn(#)",
-  "label": "✕",
-  "tag": "button"
- },
- {
-  "state": "big-before",
-  "view": "admin → a-ann",
   "key": "button|postAnn()",
   "label": "📣 Post",
   "tag": "button"
@@ -997,7 +990,7 @@
   "state": "big-before",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Nia Iyer",
+  "label": "Move Kenji Dubé",
   "tag": "select"
  },
  {
@@ -1109,7 +1102,7 @@
   "state": "big-before",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Mateo Garcia",
+  "label": "Add a private note for Diego Roy",
   "tag": "button"
  },
  {
@@ -1144,7 +1137,7 @@
   "state": "big-before",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Mateo Garcia",
+  "label": "Court for Diego Roy",
   "tag": "select"
  },
  {
@@ -1557,14 +1550,14 @@
   "state": "big-before",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 OB Omar BoatengCourt # · #W #L · #% · tap for",
+  "label": "🥇 IG Imani GillCourt # · #W #L · #% · tap for hi",
   "tag": "div"
  },
  {
   "state": "big-before",
   "view": "standings → qa",
   "key": "button|answerQuestion(#)",
-  "label": "Answer",
+  "label": "Edit Answer",
   "tag": "button"
  },
  {
@@ -1578,7 +1571,7 @@
   "state": "big-before",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# IG Imani Gill Court # · #W #L",
+  "label": "# IG Imani Gill Court # · #W #L ·",
   "tag": "div"
  },
  {
@@ -1766,6 +1759,13 @@
  {
   "state": "complete",
   "view": "admin → a-att",
+  "key": "button|markAttForTab(#,'present')",
+  "label": "✅ Here after all",
+  "tag": "button"
+ },
+ {
+  "state": "complete",
+  "view": "admin → a-att",
   "key": "button|saveAttendanceTab()",
   "label": "💾 Save Attendance",
   "tag": "button"
@@ -1837,7 +1837,7 @@
   "state": "complete",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Leah Tremblay",
+  "label": "Add a private note for Anne-Marie Roy",
   "tag": "button"
  },
  {
@@ -1886,7 +1886,7 @@
   "state": "complete",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "💰",
+  "label": "⏳",
   "tag": "span"
  },
  {
@@ -2397,7 +2397,7 @@
   "state": "complete",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# ML Mei LeblancSPARE Court # · #",
+  "label": "# LT Leah Tremblay Court # · #W #",
   "tag": "div"
  },
  {
@@ -2578,6 +2578,13 @@
  {
   "state": "complete-big",
   "view": "admin → a-att",
+  "key": "button|markAttForTab(#,'present')",
+  "label": "✅ Here after all",
+  "tag": "button"
+ },
+ {
+  "state": "complete-big",
+  "view": "admin → a-att",
   "key": "button|saveAttendanceTab()",
   "label": "💾 Save Attendance",
   "tag": "button"
@@ -2698,14 +2705,14 @@
   "state": "complete-big",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "💰",
+  "label": "⏳",
   "tag": "span"
  },
  {
   "state": "complete-big",
   "view": "admin → a-pl",
   "key": "span|togglePlayerPresence(#)",
-  "label": "✅",
+  "label": "—",
   "tag": "span"
  },
  {
@@ -3202,28 +3209,14 @@
   "state": "complete-big",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 SR Samuel RahmanCourt # · #W #L · #% · tap fo",
+  "label": "🥇 ZN Zoë NairCourt # · #W #L · #% · tap for his",
   "tag": "div"
- },
- {
-  "state": "complete-big",
-  "view": "standings → qa",
-  "key": "button|answerQuestion(#)",
-  "label": "Answer",
-  "tag": "button"
- },
- {
-  "state": "complete-big",
-  "view": "standings → qa",
-  "key": "button|deleteQuestion(#)",
-  "label": "Delete",
-  "tag": "button"
  },
  {
   "state": "complete-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# SR Samuel Rahman Court # · #W #",
+  "label": "# DA Diego Ahmed Court # · #W #L",
   "tag": "div"
  },
  {
@@ -4896,7 +4889,7 @@
   "state": "late-season",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Jonas Boateng",
+  "label": "Move Olivia Mensah",
   "tag": "select"
  },
  {
@@ -4938,7 +4931,7 @@
   "state": "late-season",
   "view": "admin → a-att",
   "key": "div|_expandedHist['att#']=!_expandedHist['att#'];renderAttendanceTab();",
-  "label": "Session # — Mar #, # ✅ #",
+  "label": "Session # — Mar #, # ✅ #❌ #",
   "tag": "div"
  },
  {
@@ -5001,7 +4994,7 @@
   "state": "late-season",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Olivia Mensah",
+  "label": "Add a private note for Daniel Sharma",
   "tag": "button"
  },
  {
@@ -5036,7 +5029,7 @@
   "state": "late-season",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Olivia Mensah",
+  "label": "Court for Daniel Sharma",
   "tag": "select"
  },
  {
@@ -5435,14 +5428,28 @@
   "state": "late-season",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 JB Jonas BoatengCourt # · #W #L · #% · tap fo",
+  "label": "🥇 HL Hamza LeblancCourt # · #W #L · #% · tap fo",
   "tag": "div"
+ },
+ {
+  "state": "late-season",
+  "view": "standings → qa",
+  "key": "button|answerQuestion(#)",
+  "label": "Answer",
+  "tag": "button"
+ },
+ {
+  "state": "late-season",
+  "view": "standings → qa",
+  "key": "button|deleteQuestion(#)",
+  "label": "Delete",
+  "tag": "button"
  },
  {
   "state": "late-season",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# JB Jonas Boateng Court # · #W #",
+  "label": "# RG Ryan GarciaSPARE Court # · #",
   "tag": "div"
  },
  {
@@ -6317,14 +6324,14 @@
   "state": "pre-session",
   "view": "admin → a-assign",
   "key": "select|dropInPick()",
-  "label": "— Choose — Aisha Park (spare) — no courtAnne-Marie Petrov",
+  "label": "— Choose — Aisha Park (spare) — Court #Anne-Marie Petrova",
   "tag": "select"
  },
  {
   "state": "pre-session",
   "view": "admin → a-att",
   "key": "button|callInSpare(#)",
-  "label": "Call in Ryan Boateng",
+  "label": "Call in Liam Mensah",
   "tag": "button"
  },
  {
@@ -6408,7 +6415,7 @@
   "state": "pre-session",
   "view": "admin → a-pl",
   "key": "button|callInSpare(#)",
-  "label": "Call in Ryan Boateng",
+  "label": "Call in Liam Mensah",
   "tag": "button"
  },
  {
@@ -6422,7 +6429,7 @@
   "state": "pre-session",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Mateo Cohen",
+  "label": "Add a private note for Leah Singh",
   "tag": "button"
  },
  {
@@ -6457,7 +6464,7 @@
   "state": "pre-session",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Mateo Cohen",
+  "label": "Court for Leah Singh",
   "tag": "select"
  },
  {
@@ -6478,7 +6485,7 @@
   "state": "pre-session",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -6870,14 +6877,14 @@
   "state": "pre-session",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 LS Leah SinghCourt # · #W #L · #% · tap for his",
+  "label": "🥇 LS Leah SinghCourt # · #W #L · #% · tap for hi",
   "tag": "div"
  },
  {
   "state": "pre-session",
   "view": "standings → qa",
   "key": "button|answerQuestion(#)",
-  "label": "Edit Answer",
+  "label": "Answer",
   "tag": "button"
  },
  {
@@ -8032,7 +8039,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Imani Okafor",
+  "label": "Add a private note for Hannah Boateng",
   "tag": "button"
  },
  {
@@ -8067,7 +8074,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Imani Okafor",
+  "label": "Court for Hannah Boateng",
   "tag": "select"
  },
  {
@@ -8088,7 +8095,7 @@
   "state": "round-1-big",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "💰",
+  "label": "⏳",
   "tag": "span"
  },
  {
@@ -8599,7 +8606,7 @@
   "state": "round-1-big",
   "view": "standings → qa",
   "key": "button|answerQuestion(#)",
-  "label": "Edit Answer",
+  "label": "Answer",
   "tag": "button"
  },
  {
@@ -9543,6 +9550,13 @@
  {
   "state": "round-2",
   "view": "admin → a-ann",
+  "key": "button|deleteAnn(#)",
+  "label": "✕",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "admin → a-ann",
   "key": "button|postAnn()",
   "label": "📣 Post",
   "tag": "button"
@@ -9761,7 +9775,7 @@
   "state": "round-2",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -9845,7 +9859,7 @@
   "state": "round-2",
   "view": "admin → a-reg",
   "key": "span|togglePaid(#)",
-  "label": "⏳ Unpaid",
+  "label": "✅ Paid",
   "tag": "span"
  },
  {
@@ -10166,13 +10180,6 @@
  {
   "state": "round-2",
   "view": "scores",
-  "key": "button|copyRoundSummary()",
-  "label": "📋 Copy Summary",
-  "tag": "button"
- },
- {
-  "state": "round-2",
-  "view": "scores",
   "key": "button|saveGameScore(#,#)",
   "label": "💾 Save Game #",
   "tag": "button"
@@ -10182,13 +10189,6 @@
   "view": "scores",
   "key": "button|saveScores(#)",
   "label": "💾 Save All Court # Scores",
-  "tag": "button"
- },
- {
-  "state": "round-2",
-  "view": "scores",
-  "key": "button|shareMessenger()",
-  "label": "💬 Share to Messenger",
   "tag": "button"
  },
  {
@@ -10267,6 +10267,20 @@
   "key": "div|renderGameHistory(#)",
   "label": "🥇 TR Theo Rossi (+#W live)Court # · #W #L · #% ·",
   "tag": "div"
+ },
+ {
+  "state": "round-2",
+  "view": "standings → qa",
+  "key": "button|answerQuestion(#)",
+  "label": "Answer",
+  "tag": "button"
+ },
+ {
+  "state": "round-2",
+  "view": "standings → qa",
+  "key": "button|deleteQuestion(#)",
+  "label": "Delete",
+  "tag": "button"
  },
  {
   "state": "round-2",
@@ -10433,7 +10447,7 @@
   "state": "round-2-big",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Samuel Dubé",
+  "label": "Move Mei Sharma",
   "tag": "select"
  },
  {
@@ -10496,7 +10510,7 @@
   "state": "round-2-big",
   "view": "admin → a-edit",
   "key": "select|setEdCourt(this.value)",
-  "label": "Court #Court #Court #Court #Court #",
+  "label": "Court #Court #Court #Court #Court #Court #",
   "tag": "select"
  },
  {
@@ -10545,7 +10559,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "button|openAdminNote(#)",
-  "label": "Add a private note for Fatima Chen",
+  "label": "Add a private note for Chloe Singh",
   "tag": "button"
  },
  {
@@ -10580,7 +10594,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "select|setPlayerCourt(#,this.value)",
-  "label": "Court for Fatima Chen",
+  "label": "Court for Chloe Singh",
   "tag": "select"
  },
  {
@@ -10601,7 +10615,7 @@
   "state": "round-2-big",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -11105,28 +11119,14 @@
   "state": "round-2-big",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 NK Nadia Khan (+#W live)Court # · #W #L · #%",
+  "label": "🥇 TL Theo Leblanc (+#W live)Court # · #W #L · #",
   "tag": "div"
- },
- {
-  "state": "round-2-big",
-  "view": "standings → qa",
-  "key": "button|answerQuestion(#)",
-  "label": "Edit Answer",
-  "tag": "button"
- },
- {
-  "state": "round-2-big",
-  "view": "standings → qa",
-  "key": "button|deleteQuestion(#)",
-  "label": "Delete",
-  "tag": "button"
  },
  {
   "state": "round-2-big",
   "view": "standings → rank",
   "key": "div|renderGameHistory(#)",
-  "label": "# AO Ananya O'Connor Court # · #W",
+  "label": "# TL Theo Leblanc Court # · #W #",
   "tag": "div"
  },
  {
@@ -12519,7 +12519,7 @@
   "state": "spares-before",
   "view": "admin → a-assign",
   "key": "select|assignMove(#,Number(this.value))",
-  "label": "Move Theo Alvarez",
+  "label": "Move Ananya Martin",
   "tag": "select"
  },
  {
@@ -12533,7 +12533,7 @@
   "state": "spares-before",
   "view": "admin → a-att",
   "key": "button|callInSpare(#)",
-  "label": "Call in Amara Cohen",
+  "label": "Call in Felix Haddad",
   "tag": "button"
  },
  {
@@ -12617,7 +12617,7 @@
   "state": "spares-before",
   "view": "admin → a-pl",
   "key": "button|callInSpare(#)",
-  "label": "Call in Amara Cohen",
+  "label": "Call in Felix Haddad",
   "tag": "button"
  },
  {
@@ -12687,7 +12687,7 @@
   "state": "spares-before",
   "view": "admin → a-pl",
   "key": "span|togglePaid(#)",
-  "label": "⏳",
+  "label": "💰",
   "tag": "span"
  },
  {
@@ -13079,7 +13079,7 @@
   "state": "spares-before",
   "view": "standings → lb",
   "key": "div|renderGameHistory(#)",
-  "label": "🥇 TA Theo AlvarezCourt # · #W #L · #% · tap for",
+  "label": "🥇 TA Theo AlvarezCourt # · #W #L · #% · tap for h",
   "tag": "div"
  },
  {
