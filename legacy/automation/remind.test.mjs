@@ -19,14 +19,19 @@ test("upcoming session follows completed sessions, then the active night", () =>
   assert.deepEqual(upcomingSession(3, { number: 4 },sessionStart(SEASON.approved_dates[3]).getTime()), { number: 4, started: true, complete: false });
   assert.equal(upcomingSession(28, null).complete, true);
 });
-test("stage bands: Thursday night, Saturday before the cutoff, Monday afternoon; spares up to 3 hours before", () => {
-  assert.equal(voteStage(119).kind, "vote-1");
-  assert.equal(voteStage(100), null);
-  assert.equal(voteStage(80).kind, "vote-2");
-  assert.equal(voteStage(72).kind, "vote-2");
-  assert.equal(voteStage(71.9), null);
-  assert.equal(voteStage(50).kind, "vote-3"); // Sunday afternoon, before the 10 PM deadline
-  assert.equal(voteStage(24), null); // after the deadline nobody is nagged
+test("stage bands: Friday morning and Sunday teatime, and nothing else; spares up to 3 hours before", () => {
+  // Session Tuesday 8 PM, notice 72 h, deadline 46 h. The worker runs hourly at :07, so these are the hour values
+  // a real run actually sees — never a whole number.
+  assert.equal(voteStage(107.88).kind, "vote-1");   // Friday 08:07, the first send
+  assert.equal(voteStage(96.88).kind, "vote-1");    // still Friday; the log stops a second email
+  assert.equal(voteStage(95.88), null);             // Friday 8 PM onwards, nothing
+  assert.equal(voteStage(80), null);                // Saturday is quiet now: two reminders, not three
+  assert.equal(voteStage(72), null);
+  assert.equal(voteStage(52.88), null);             // Sunday 3:07 PM — too early, the final one aims at 4
+  assert.equal(voteStage(51.88).kind, "vote-2");    // Sunday 16:07
+  assert.equal(voteStage(50.88).kind, "vote-2");    // Sunday 17:07, the catch-up run
+  assert.equal(voteStage(49.88), null);             // and then it stops, six hours before voting closes
+  assert.equal(voteStage(24), null);                // after the deadline nobody is nagged
   assert.equal(voteStage(2), null);
   assert.equal(spareWindow(2), false); assert.equal(spareWindow(5), true); assert.equal(spareWindow(71), true); assert.equal(spareWindow(72), false); assert.equal(spareWindow(200), false);
 });
@@ -37,10 +42,10 @@ test("plan: one message per player per stage, spares only while seats are open",
     { player_id: 9, name: "S P", email: "s@x", membership_type: "spare", kind: "spare", open_seats: 1 },
     { player_id: 10, name: "S Q", email: "q@x", membership_type: "spare", kind: "spare", open_seats: 0 },
   ];
-  const plan = planReminders(targets, 80, new Set(["1:vote-2"]));
-  assert.deepEqual(plan.map((p) => `${p.player_id}:${p.stage}`), ["2:vote-2"]); // Saturday morning: regulars only, spares are asked from Saturday 8 PM
+  const plan = planReminders(targets, 100, new Set(["1:vote-1"]));
+  assert.deepEqual(plan.map((p) => `${p.player_id}:${p.stage}`), ["2:vote-1"]); // Friday: regulars only, and not the one already emailed
   assert.deepEqual(planReminders(targets, 65, new Set()).map((p) => p.stage), ["spare"]); // between bands, spares still invited once seats are open
-  assert.deepEqual(planReminders(targets, 100, new Set()), []); // spares are not asked before Saturday 8 PM
+  assert.deepEqual(planReminders(targets, 120, new Set()), []); // before Friday nobody is asked anything
 });
 test("test mode never addresses a player", () => {
   const t = { name: "Real Person", email: "real@example.com" };
@@ -48,9 +53,24 @@ test("test mode never addresses a player", () => {
   assert.deepEqual(redirectRecipient(t, { ALLOW_REAL_RECIPIENTS: "true" }), { to: "real@example.com", prefix: "" });
 });
 test("emails carry one-tap links for the right session and the refund note before the cutoff", () => {
-  const m = composeEmail({ name: "Pat Lee", stage: "vote-2", open_seats: 0 }, 3, "https://chriz93.github.io/dcbadmintonclub-test/", "org@x");
+  // Friday. The refund cutoff (72 h) has not passed, so the refund is worth mentioning; the final Sunday email is
+  // sent at 52 h, after that cutoff, and must NOT promise a refund that has already gone.
+  const m = composeEmail({ name: "Pat Lee", stage: "vote-1", open_seats: 0 }, 3, "https://chriz93.github.io/dcbadmintonclub-test/", "org@x");
   assert.match(m.text, /\?vote=coming&s=3/); assert.match(m.text, /\?vote=notcoming&s=3/); assert.match(m.text, /\$14 refund/);
-  assert.match(m.subject, /Session 3\? \(Tuesday, September 29\)/);
+  assert.match(m.subject, /Session 3 is Tuesday, September 29 — are you playing\?/);
+  assert.match(m.text, /not in Tuesday's line-up/, "p96: silence is not a yes, and the email has to say so");
+
+  const fin = composeEmail({ name: "Pat Lee", stage: "vote-2", open_seats: 0 }, 3, "https://x/", "org@x");
+  assert.match(fin.subject, /^Last call — Session 3 closes /);
+  assert.doesNotMatch(fin.text, /refund/, "the refund cutoff has already passed by the final reminder");
+  assert.match(fin.text, /no court on Tuesday/);
+
+  // L31: given a token the buttons open the confirm page instead of the app, and say so.
+  const tap = composeEmail({ name: "Pat Lee", stage: "vote-1", voteUrl: "https://fn.example/vote?t=abc" }, 3, "https://x/", "org@x");
+  assert.match(tap.text, /https:\/\/fn\.example\/vote\?t=abc&r=coming/);
+  assert.match(tap.text, /https:\/\/fn\.example\/vote\?t=abc&r=notcoming/);
+  assert.match(tap.text, /you will not need to sign in/);
+  assert.doesNotMatch(tap.text, /\?vote=coming/, "with a token the old sign-in link is not offered as well");
   const s = composeEmail({ name: "Sam Spare", stage: "spare", open_seats: 2 }, 3, "https://x/", "org@x");
   assert.match(s.subject, /Spare seat open/); assert.match(s.text, /2 seats have opened/); assert.match(s.text, /\$20/);
   // 8 PM in the league's time zone whatever zone the job runs in (GitHub's machines use UTC): 20:00 EDT is 00:00 UTC.
@@ -172,7 +192,7 @@ test("run: dry run plans without sending; live test mode claims, redirects and c
     claim: async (s, p, k) => { claims.push(`${s}:${p}:${k}`); return true; },
     unclaim: async () => {},
   };
-  const now = sessionStart(SEASON.approved_dates[2]).getTime() - 80 * 3600000; // 80 h before Session 3
+  const now = sessionStart(SEASON.approved_dates[2]).getTime() - 100 * 3600000; // Friday, 100 h before Session 3
   const lines = [];
   const base = { SUPABASE_URL: "https://x", SUPABASE_SERVICE_ROLE_KEY: "k", SITE_URL: "https://site/", GMAIL_USER: "league@gmail.com", TEST_INBOX: "inbox@x" };
   const dry = await run({ ...base }, { db, now, log: (l) => lines.push(l) });
@@ -180,5 +200,5 @@ test("run: dry run plans without sending; live test mode claims, redirects and c
   assert.ok(lines.some((l) => l.includes("DRY RUN → inbox@x: [TEST for P 1 <p1@x>]")));
   const sentTo = [];
   const live = await run({ ...base, DELIVERY_MODE: "live", ALLOW_REAL_RECIPIENTS: "false" }, { db, now, log: () => {}, transport: { sendMail: async (m) => sentTo.push(m.to) } });
-  assert.equal(live.sent, 3); assert.deepEqual(sentTo, ["inbox@x", "inbox@x", "inbox@x"]); assert.deepEqual(claims, ["3:1:vote-2", "3:2:vote-2", "3:3:vote-2"]);
+  assert.equal(live.sent, 3); assert.deepEqual(sentTo, ["inbox@x", "inbox@x", "inbox@x"]); assert.deepEqual(claims, ["3:1:vote-1", "3:2:vote-1", "3:3:vote-1"]);
 });

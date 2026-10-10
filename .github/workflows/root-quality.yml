@@ -23,6 +23,12 @@ jobs:
       - run: node legacy/scripts/build-audit-migration.mjs --check
       - run: node --import ./legacy/tests/unit/fetch-guard.mjs --test legacy/tests/unit/*.test.mjs
       - run: node --test legacy/automation/*.test.mjs
+      # L31's confirm page is Deno, not Node: it is the only thing standing between an email link scanner and a
+      # false "coming", so it is tested here rather than only by hand.
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: v2.x }
+      - run: deno check supabase/functions/vote/index.ts
+      - run: deno test --allow-env --allow-net supabase/functions/vote/index.test.ts
       - name: Start disposable local PostgreSQL
         run: |
           sudo systemctl start postgresql

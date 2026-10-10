@@ -31,16 +31,24 @@ export function upcomingSession(completed, current, now = Date.now(), season = S
  return {number:n,started:!!current&&(now>=sessionStart(season.approved_dates[n-1],season).getTime()||Object.keys(current.scores||{}).length>0),complete:false};
 }
 // Stage bands in hours before the 8 PM start. Hourly runs: the first run inside a band sends, the log stops repeats.
+// The organizer, 10 October: "one on friday and final reminder on sunday evening around 4pm". Two, not three — the
+// Saturday nag went, because three messages for one yes/no is how people switch the emails off. Sessions start
+// Tuesday at 8 PM, so Friday morning is ~107 hours out and Sunday 4 PM is 52.
+// Both bands are read off the season's own numbers, never off a weekday: a league that moves its deadline moves its
+// reminders with it (review-regressions covers exactly this). With the 2026-27 numbers — play Tuesday 8 PM, notice
+// 72 h, deadline 46 h — they land on Friday morning and Sunday teatime:
+//   vote-1  notice+36 → notice+24  = 108 → 96 h  = Friday 08:00 – 20:00, so the first hourly run is Friday 08:07
+//   vote-2  deadline+6 → deadline+4 =  52 → 50 h = Sunday 16:00 – 18:00, so the first hourly run is Sunday 16:07
+// The final band is two hours wide on purpose: it aims at 4 PM and still catches up if one hourly run fails.
 export const STAGES = [
-  { kind: "vote-1", from: 120, to: 108, label: "first reminder" },   // Thu 8 PM – Fri 8 AM
-  { kind: "vote-2", from: 84, to: 72, label: "before the refund cutoff" }, // Sat 8 AM – Sat 8 PM
-  { kind: "vote-3", from: 58, to: 46, label: "final reminder before the Sunday 10 PM deadline" }, // Sun 10 AM – Sun 10 PM
+  { kind: "vote-1", from: 108, to: 96, label: "first reminder" },
+  { kind: "vote-2", from: 52, to: 50, label: "final reminder" },
 ];
 export function voteStage(hoursUntil, season = SEASON) {
- const bands=[{...STAGES[0],from:season.fees.absence_notice_hours+48,to:season.fees.absence_notice_hours+36},
- {...STAGES[1],from:season.fees.absence_notice_hours+12,to:season.fees.absence_notice_hours},
- {...STAGES[2],from:season.fees.vote_deadline_hours+12,to:season.fees.vote_deadline_hours,label:'final reminder before voting closes'}];
- return bands.find(s=>hoursUntil<s.from&&hoursUntil>=s.to&&hoursUntil>=season.fees.vote_deadline_hours)||null;
+ const notice=season.fees.absence_notice_hours, deadline=season.fees.vote_deadline_hours;
+ const bands=[{...STAGES[0],from:notice+36,to:notice+24},
+ {...STAGES[1],from:deadline+6,to:deadline+4,label:'final reminder before voting closes'}];
+ return bands.find(s=>hoursUntil<s.from&&hoursUntil>=s.to&&hoursUntil>=deadline)||null;
 }
 export function spareWindow(hoursUntil, season = SEASON) { return hoursUntil < season.fees.spare_ask_hours && hoursUntil >= 3; } // spares are asked from 3 days before
 /** Decide what to send. targets = rows from reminder_targets(); logged = Set of `${player_id}:${kind}` already claimed. */
@@ -60,7 +68,11 @@ export function redirectRecipient(target, env) {
 }
 export function composeEmail(t, session, siteUrl, organizerEmail, season = SEASON) {
   const date = new Date(sessionStart(season.approved_dates[session - 1],season)).toLocaleDateString("en-CA", { timeZone:season.time_zone, weekday: "long", month: "long", day: "numeric" });
-  const yes = `${siteUrl}?vote=coming&s=${session}`, no = `${siteUrl}?vote=notcoming&s=${session}`;
+  // L31: with a token the buttons open the one-tap confirm page and nobody signs in. Without one (a spare seat
+  // message, or a worker that could not mint a link) they fall back to the site, which still works but asks for a
+  // sign-in first.
+  const yes = t.voteUrl ? `${t.voteUrl}&r=coming` : `${siteUrl}?vote=coming&s=${session}`,
+        no  = t.voteUrl ? `${t.voteUrl}&r=notcoming` : `${siteUrl}?vote=notcoming&s=${session}`;
   if(['spare-reserved','spare-confirmed'].includes(t.stage)){
    const confirmed=t.stage==='spare-confirmed',subject=`Spare seat ${confirmed?'confirmed':'reserved'} — Session ${session}, ${date}`;
    const detail=confirmed?'Your payment is verified and your seat is confirmed.':`A seat is reserved for you. E-transfer $${season.fees.spare_session} to ${organizerEmail}; the organizer will confirm your payment.`;
@@ -78,11 +90,26 @@ export function composeEmail(t, session, siteUrl, organizerEmail, season = SEASO
   const start=sessionStart(season.approved_dates[session-1],season), fmt=d=>d.toLocaleString('en-CA',{timeZone:season.time_zone,weekday:'long',hour:'numeric',minute:'2-digit'});
   const deadline=fmt(new Date(start.getTime()-season.fees.vote_deadline_hours*3600000)),cutoff=fmt(new Date(start.getTime()-cutoffHours*3600000));
   const time=start.toLocaleTimeString('en-CA',{timeZone:season.time_zone,hour:'numeric',minute:'2-digit'});
-  const refund = t.stage === "vote-2" ? `Decline by ${cutoff} (${cutoffHours} hours before play) to keep the $${season.fees.absence_refund} refund. ` : t.stage === "vote-3" ? `Votes close ${deadline}. ` : "";
+  // p96 made silence mean "not playing", so the warning has to be plain: the people most likely to be caught by it
+  // are exactly the people reading this email.
+  const last = t.stage === "vote-2";
+  const warn = last
+    ? `No answer by ${deadline} means no court on Tuesday. The line-up is built from the players who said yes.`
+    : `Voting closes ${deadline}. If you have not answered by then you are not in Tuesday's line-up.`;
+  const opener = last
+    ? `Voting for Session ${session} closes ${deadline}. You are the last few we are waiting on.`
+    : `Session ${session} is ${date} at ${time}. You have not answered yet.`;
+  const refund = !last && cutoffHours
+    ? `Declining more than ${cutoffHours} hours before play (by ${cutoff}) keeps the $${season.fees.absence_refund} refund. ` : "";
   return {
-    subject: `Are you playing Session ${session}? (${date})`,
-    text: `Hi ${t.name.split(" ")[0]},\n\nYou haven't answered for Session ${session} on ${date} (${time}, ${season.time_zone}). Everyone votes by ${deadline}. ${refund}One tap:\n\nI'm coming: ${yes}\nNot coming: ${no}\n\n— Maplewood League\nTurn these emails off from the vote card on the site.`,
-    html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>You haven't answered for <strong>Session ${session} on ${date}</strong> (${esc(time)}, ${esc(season.time_zone)}). ${esc(refund)}One tap:</p><p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm coming</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Not coming</a></p><p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the vote card on the site.</p>`,
+    subject: last ? `Last call — Session ${session} closes ${deadline}` : `Session ${session} is ${date} — are you playing?`,
+    text: `Hi ${t.name.split(" ")[0]},\n\n${opener}\n\nI'm playing: ${yes}\nCan't make it: ${no}\n\n${t.voteUrl ? "One tap — you will not need to sign in.\n\n" : ""}${refund}${warn}\n\n— Maplewood League\nTurn these emails off from the RSVP card on the site.`,
+    html: `<p>Hi ${esc(t.name.split(" ")[0])},</p><p>${esc(opener)}</p>`
+      + `<p><a href="${yes}" style="${BTN}background:#1f9d6a;">I'm playing</a> &nbsp; <a href="${no}" style="${BTN}background:#b83b4b;">Can't make it</a></p>`
+      + (t.voteUrl ? `<p>One tap — you will not need to sign in.</p>` : "")
+      + (refund ? `<p>${esc(refund)}</p>` : "")
+      + `<p style="background:#fdf5e6;border-left:3px solid #b8862b;padding:9px 12px;font-size:13px;">${esc(warn)}</p>`
+      + `<p style="color:#888;font-size:12px;">— Maplewood League · turn these emails off from the RSVP card on the site.</p>`,
   };
 }
 export function composePush(t, session, siteUrl, season = SEASON) {
@@ -132,6 +159,9 @@ function api(env) {
   const h = key.startsWith("sb_secret_") ? { apikey: key, "Content-Type": "application/json" } : { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
   return {
     async state(k) { const r = await fetch(`${base}/rest/v1/app_state?key=eq.${k}&select=value`, { headers: h }); if (!r.ok) throw new Error(`app_state ${k}: ${r.status}`); const rows = await r.json(); return rows[0] ? JSON.parse(rows[0].value) : null; },
+    // L31: one link per player per session; asking twice returns the same one, so Friday's and Sunday's emails
+    // carry the same door and an old message is not a second way in.
+    async voteLink(player, session) { const r = await fetch(`${base}/rest/v1/rpc/issue_vote_link`, { method: "POST", headers: h, body: JSON.stringify({ p_player: player, p_session: session }) }); if (!r.ok) throw new Error(`issue_vote_link: ${r.status}`); return r.json(); },
     async targets(session) { const r = await fetch(`${base}/rest/v1/rpc/reminder_targets`, { method: "POST", headers: h, body: JSON.stringify({ p_session: session }) }); if (!r.ok) throw new Error(`reminder_targets: ${r.status}`); return r.json(); },
     async reservations(session) { const r=await fetch(`${base}/rest/v1/rpc/spare_reservation_targets`,{method:'POST',headers:h,body:JSON.stringify({p_session:session})});if(!r.ok)throw new Error(`spare_reservation_targets: ${r.status}`);return r.json(); },
     async logged(session) { const r = await fetch(`${base}/rest/v1/reminder_log?session_number=eq.${session}&select=player_id,kind`, { headers: h }); if (!r.ok) throw new Error(`reminder_log: ${r.status}`); return new Set((await r.json()).map((x) => `${x.player_id}:${x.kind}`)); },
@@ -212,6 +242,12 @@ export async function run(env = process.env, deps = {}) {
   for (const t of plan) {
     if (sent >= cap) { log("Test-mode cap reached; remaining reminders left for the next run."); break; }
     const { to, prefix } = redirectRecipient(t, env);
+    // L31: a vote reminder carries a one-tap link when the confirm page is configured. If minting fails the email
+    // still goes, with the old sign-in link — a reminder that asks for a sign-in beats no reminder.
+    if (t.stage?.startsWith("vote") && env.VOTE_CONFIRM_URL && db.voteLink) {
+      try { t.voteUrl = `${env.VOTE_CONFIRM_URL}?t=${await db.voteLink(t.player_id, up.number)}`; }
+      catch (e) { log(`No one-tap link for player ${t.player_id}: ${e.message}`); }
+    }
     const mail = composeEmail(t, up.number, env.SITE_URL, env.ORGANIZER_EMAIL || env.GMAIL_USER, season);
     if (!live) { log(`DRY RUN → ${to}: ${prefix}${mail.subject}`); continue; }
     if (!(await db.claim(up.number, t.player_id, t.stage))) { log(`Already claimed: player ${t.player_id} ${t.stage}`); continue; }

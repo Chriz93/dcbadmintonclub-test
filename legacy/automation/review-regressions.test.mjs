@@ -53,9 +53,12 @@ test('review · next-season dates and fees drive worker output regardless of hos
 test('review · custom deadlines drive reminders and dates, not hard-coded Sundays',()=>{
  const cfg={...SEASON,approved_dates:['2027-11-10'],start_time_local:'18:30',time_zone:'America/Vancouver',fees:{...SEASON.fees,absence_notice_hours:48,vote_deadline_hours:24}};
  const voter={...target,kind:'vote'};
- assert.equal(planReminders([voter],25,new Set(),cfg)[0].stage,'vote-3');
- assert.equal(planReminders([voter],23,new Set(),cfg).length,0);
- const mail=composeEmail({...target,stage:'vote-3'},1,env.SITE_URL,env.GMAIL_USER,cfg);
+ // notice 48 h and deadline 24 h, so the bands move with them: Friday-equivalent 84→72, final 30→28.
+ assert.equal(planReminders([voter],29,new Set(),cfg)[0].stage,'vote-2');   // the final reminder, four hours out
+ assert.equal(planReminders([voter],80,new Set(),cfg)[0].stage,'vote-1');   // the first one, read off the notice hours
+ assert.equal(planReminders([voter],31,new Set(),cfg).length,0);            // not yet
+ assert.equal(planReminders([voter],23,new Set(),cfg).length,0);            // and never after the deadline
+ const mail=composeEmail({...target,stage:'vote-2'},1,env.SITE_URL,env.GMAIL_USER,cfg);
  assert.match(mail.text,/Tuesday.*6:30/s);assert.doesNotMatch(mail.text,/Sunday|8:00/);
  for(const stage of ['spare-reserved','spare-confirmed']){const push=composePush({...target,stage},1,env.SITE_URL,cfg);assert.equal(push.actions,undefined);assert.match(push.title,/Spare seat/);}
 });

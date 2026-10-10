@@ -100,4 +100,40 @@ select 'the spare seats are counted in one place (L30)',
   case when (select count(*) from (values('spare_seat_status'),('reminder_targets')) f(n)
              join pg_proc p on p.proname=f.n join pg_namespace ns on ns.oid=p.pronamespace and ns.nspname='public'
              where p.prosrc like '%spare_seat_count(p_session)%') = 2
-       then 'OK' else 'FAIL: a function still counts spare seats its own way' end;
+       then 'OK' else 'FAIL: a function still counts spare seats its own way' end
+union all
+-- L31: the email vote path. The token table is reachable only by the worker and the confirm page, the three
+-- functions are service_role only, and rsvp_write — which writes a vote with no auth check of its own — is closed
+-- to every site role.
+select 'vote link table is RLS-protected (L31)',
+ case when (select relrowsecurity from pg_class where oid=to_regclass('public.vote_links')) then 'OK'
+      else 'FAIL: vote_links missing or RLS off' end
+union all
+select 'no site role reads the vote tokens (L31)',
+ case when count(*)=0 then 'OK' else 'FAIL: '||count(*)||' grant(s)' end
+ from information_schema.role_table_grants
+ where table_schema='public' and table_name='vote_links' and grantee in('anon','authenticated')
+union all
+select 'the worker holds no TRUNCATE on vote tokens (L31)',
+ case when count(*)=0 then 'OK' else 'FAIL: '||count(*) end
+ from information_schema.role_table_grants
+ where table_schema='public' and table_name='vote_links'
+   and grantee in('anon','authenticated','service_role')
+   and privilege_type in('TRUNCATE','REFERENCES','TRIGGER')
+union all
+select 'the vote link functions are the worker''s alone (L31)',
+ case when count(*)=0 then 'OK' else 'FAIL: '||count(*)||' reachable by a site role' end
+ from information_schema.role_routine_grants
+ where specific_schema='public' and grantee in('anon','authenticated')
+   and routine_name in('issue_vote_link','vote_link_info','apply_vote_link','rsvp_write')
+union all
+select 'the vote link functions exist (L31)',
+ case when (select count(*) from (values('public.issue_vote_link(bigint,int)'),('public.vote_link_info(text)'),
+                                        ('public.apply_vote_link(text,text)'),
+                                        ('public.rsvp_write(int,bigint,text,text,boolean)')) f(sig)
+           where to_regprocedure(f.sig) is not null) = 4
+      then 'OK' else 'FAIL: one is missing' end
+union all
+select 'answering still goes through one set of rules (L31)',
+ case when position('rsvp_write' in pg_get_functiondef('public.set_rsvp(int,bigint,text,text)'::regprocedure))>0
+      then 'OK' else 'FAIL: set_rsvp no longer shares the rules with the email path' end;

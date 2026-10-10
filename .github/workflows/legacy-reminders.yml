@@ -54,6 +54,9 @@ jobs:
           SUPABASE_URL: https://bwepvxelvwgwxrnaglrx.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SITE_URL: https://chriz93.github.io/dcbadmintonclub/
+          # L31: the one-tap confirm page. Unset until the Edge Function is deployed, and the worker then falls back
+          # to the old sign-in links rather than sending a reminder with a dead button.
+          VOTE_CONFIRM_URL: ${{ vars.VOTE_CONFIRM_URL }}
           DELIVERY_MODE: ${{ vars.LEGACY_DELIVERY_MODE || 'dry-run' }}
           ALLOW_REAL_RECIPIENTS: ${{ vars.ALLOW_REAL_RECIPIENTS || 'false' }}
           GMAIL_USER: maplewoodbadmintonleague@gmail.com
