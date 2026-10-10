@@ -5,7 +5,7 @@
 //
 // WHY A BUTTON AND NOT JUST THE LINK. Outlook Safe Links, Gmail and corporate antivirus fetch every URL in a message
 // before the person sees it. If GET recorded the vote, those scanners would mark players "coming" who never touched
-// the email — the exact fault p96 was written to remove. So GET only ever SHOWS the question; POST records it, and a
+// the email -- the exact fault p96 was written to remove. So GET only ever SHOWS the question; POST records it, and a
 // scanner does not submit forms.
 //
 // The service-role key never leaves this function: the browser gets HTML, nothing else.
@@ -26,7 +26,7 @@ async function rpc(fn: string, body: unknown) {
 const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
-/** Tuesday 13 October, 8:00 PM — in the league's timezone, not the visitor's. */
+/** Tuesday 13 October, 8:00 PM -- in the league's timezone, not the visitor's. */
 function when(startAt: string) {
   const d = new Date(startAt);
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", weekday: "long", day: "numeric", month: "long" }).format(d);
@@ -39,7 +39,7 @@ function page(title: string, body: string, status = 200) {
     `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>${esc(title)} · Maplewood League</title>
+<title>${esc(title)} &middot; Maplewood League</title>
 <style>
  :root{color-scheme:light dark;--ink:#17201c;--soft:#4c5a52;--ground:#f4f2ec;--panel:#fff;--line:#ddd9cf;
        --green:#1f9d6a;--red:#b83b4b}
@@ -69,10 +69,10 @@ function page(title: string, body: string, status = 200) {
 }
 
 const PROBLEM: Record<string, { icon: string; head: string; say: string }> = {
-  unknown: { icon: "🤔", head: "This link is not one of ours", say: "It may have been cut short by your email app. Answer on the site instead — it takes a moment." },
-  closed: { icon: "⏰", head: "Voting has closed", say: "Answers for this session closed at the deadline, so the courts are already being drawn. Message the organizer if you still want to play." },
-  cancelled: { icon: "🚫", head: "That session was cancelled", say: "Nothing to answer. Check the site for the next one." },
-  bad_response: { icon: "🤔", head: "That link was incomplete", say: "Answer on the site instead — it takes a moment." },
+  unknown: { icon: "&#x1F914;", head: "This link is not one of ours", say: "It may have been cut short by your email app. Answer on the site instead &mdash; it takes a moment." },
+  closed: { icon: "&#x23F0;", head: "Voting has closed", say: "Answers for this session closed at the deadline, so the courts are already being drawn. Message the organizer if you still want to play." },
+  cancelled: { icon: "&#x1F6AB;", head: "That session was cancelled", say: "Nothing to answer. Check the site for the next one." },
+  bad_response: { icon: "&#x1F914;", head: "That link was incomplete", say: "Answer on the site instead &mdash; it takes a moment." },
 };
 const problemPage = (kind: string) => {
   const p = PROBLEM[kind] ?? PROBLEM.unknown;
@@ -80,8 +80,9 @@ const problemPage = (kind: string) => {
     <p class="foot"><a href="${esc(SITE)}">Open the league site</a></p>`, kind === "unknown" ? 404 : 200);
 };
 
-// Exported so the tests can drive it without binding a port; Supabase runs this file as the entry point, where
-// import.meta.main is true and the server starts as usual.
+// Exported so the tests can drive it directly, and wired to Supabase through the default export's fetch (the shape
+// the Edge Function runtime and the dashboard's own template use). Nothing binds a port on import, so importing this
+// file in a test starts no server.
 export async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   let token = url.searchParams.get("t") ?? "";
@@ -105,10 +106,10 @@ export async function handler(req: Request): Promise<Response> {
       const yes = want === "coming";
       const other = yes ? "notcoming" : "coming";
       return page("Confirm your answer",
-        `<div class="big">🏸</div>
+        `<div class="big">&#x1F3F8;</div>
          <h1>You're answering for Session ${esc(info.session)}</h1>
          <p>${esc(when(info.start_at))}<br>
-            ${esc(info.name)} — <strong>${yes ? "I'm playing" : "I can't make it"}</strong></p>
+            ${esc(info.name)} &mdash; <strong>${yes ? "I'm playing" : "I can't make it"}</strong></p>
          <form method="POST">
            <input type="hidden" name="t" value="${esc(token)}">
            <input type="hidden" name="r" value="${esc(want)}">
@@ -121,27 +122,27 @@ export async function handler(req: Request): Promise<Response> {
              text-decoration:underline;font-weight:400">
              ${yes ? "Actually, I can't make it" : "Actually, I'm playing"}</button>
          </form>
-         ${info.current ? `<p class="foot">You previously answered “${info.current === "coming" ? "I'm playing" : "I can't make it"}”.</p>` : ""}`);
+         ${info.current ? `<p class="foot">You previously answered &ldquo;${info.current === "coming" ? "I'm playing" : "I can't make it"}&rdquo;.</p>` : ""}`);
     }
 
     const out = await rpc("apply_vote_link", { p_token: token, p_response: want });
     if (out.status !== "ok") return problemPage(out.status);
     const yes = out.response === "coming";
     return page(yes ? "You're in" : "Thanks for telling us",
-      `<div class="big">${yes ? "✓" : "👍"}</div>
+      `<div class="big">${yes ? "&#x2713;" : "&#x1F44D;"}</div>
        <h1>${yes ? `You're in, ${esc(out.first_name)}` : `Thanks, ${esc(out.first_name)}`}</h1>
        <p>${yes
-         ? `Session ${esc(out.session)} — your court goes up when the line-up is published.`
+         ? `Session ${esc(out.session)} &mdash; your court goes up when the line-up is published.`
          : `You're marked as not playing Session ${esc(out.session)}. Your seat goes to a spare.`}</p>
        <p class="foot">Changed your mind? Answer again from <a href="${esc(SITE)}">the league site</a>
           any time before voting closes.</p>`);
   } catch (_e) {
     // Never leak the reason to the visitor; the player can always answer on the site.
     return page("Something went wrong",
-      `<div class="big">⚠️</div><h1>That didn't go through</h1>
+      `<div class="big">&#x26A0;</div><h1>That didn't go through</h1>
        <p>Your answer was not recorded. Please try the link again, or answer on the site.</p>
        <p class="foot"><a href="${esc(SITE)}">Open the league site</a></p>`, 500);
   }
 }
 
-if (import.meta.main) Deno.serve(handler);
+export default { fetch: handler };
