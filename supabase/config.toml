@@ -1,0 +1,15 @@
+# Supabase CLI configuration for the legacy league site.
+#
+# Only the Edge Function is managed here. The database is migrated by the guarded bundles in legacy/migrations that
+# are pasted into the SQL editor (TEST_*.sql / PROD_*.sql), not by `supabase db push` — those bundles refuse to run
+# against the wrong project, which is the protection this project relies on.
+project_id = "dcbadmintonclub-test"
+
+# The vote confirm page a reminder's Yes/No button opens (L31).
+#
+# verify_jwt = false is the whole point and is not an oversight: the page exists for a player who has NOT signed in.
+# What authorises the answer is the 256-bit token in the link, which is scoped to one player and one session, dies at
+# the voting deadline, and can do nothing else. Requiring a JWT here would put back the sign-in the organizer asked
+# to remove ("it should not be opening the app and then make them do, simple click").
+[functions.vote]
+verify_jwt = false
