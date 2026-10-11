@@ -81,7 +81,35 @@ insert into t values('and that is what landed in rsvps',
 insert into t values('rsvp_write still refuses a response nobody recognises',
   pg_temp.try_write(901,:pid,'perhaps',false),'refused');
 
--- 10. nobody but the worker can reach any of it
+-- 10. THE ORDINARY PLAYER PATH. operations-regressions drives set_rsvp as the organizer (aal2), which takes the
+-- is_admin branch and skips both the identity check and the deadline — so the path a PLAYER takes, which is the one
+-- L31 rewrote and the one every voter uses, had no test on a real database. It does now.
+insert into public.players(name,email,approved,waitlisted,membership_type,current_court)
+ values ('Voting Player','t9002@example.invalid',true,false,'regular',2);
+select id as vid from public.players where email='t9002@example.invalid' \gset
+create function pg_temp.as_player(se int, pl bigint, resp text) returns text language plpgsql as $f$
+begin perform public.set_rsvp(se,pl,resp,''); return 'wrote'; exception when others then return 'refused'; end $f$;
+
+-- Become a signed-in player: one factor, their own email, no user_id, which is how my_player_id() finds them.
+set local role authenticated;
+do $$ begin perform set_config('request.jwt.claims','{"aal":"aal1","email":"t9002@example.invalid"}',true); end $$;
+select pg_temp.as_player(901,:vid,'coming')    as r_self    \gset
+select pg_temp.as_player(901,:vid,'notcoming') as r_change  \gset
+select pg_temp.as_player(901,:pid,'coming')    as r_other   \gset
+select pg_temp.as_player(902,:vid,'coming')    as r_late    \gset
+reset role;
+do $$ begin perform set_config('request.jwt.claims','',true); end $$;
+
+insert into t values('a signed-in player answers for themselves', :'r_self','wrote');
+insert into t values('they can change their own answer',          :'r_change','wrote');
+insert into t values('they cannot answer for somebody else',      :'r_other','refused');
+insert into t values('and the deadline still holds them',         :'r_late','refused');
+insert into t values('their answer is what is recorded',
+  (select response from public.rsvps where session_number=901 and player_id=:vid),'notcoming');
+insert into t values('the late one wrote nothing',
+  (select coalesce((select response from public.rsvps where session_number=902 and player_id=:vid),'(none)')),'(none)');
+
+-- 11. nobody but the worker can reach any of it
 insert into t values('anon cannot mint a link',
   (select case when has_function_privilege('anon','public.issue_vote_link(bigint,int)','execute') then 'can' else 'cannot' end),'cannot');
 insert into t values('a signed-in player cannot answer for others',
