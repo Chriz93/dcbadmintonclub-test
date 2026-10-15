@@ -26,15 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Production job: pinned to the automation code production runs today (e3b1e22, L31). Change only
+          # Production job: pinned to the automation code production runs today (fbd1b1f). Change only
           # with the production release, never by merging TEST work into this branch.
-          #
-          # Moved off fbd1b1f on 14 October 2026 with the L31 release: the confirm page is deployed to the
-          # production project and VOTE_CONFIRM_URL is set, so the worker mints a one-tap token per reminder
-          # instead of a link that makes the player sign in first. If the token cannot be minted remind.mjs
-          # falls back to the old sign-in link, so a half-applied release still sends a reminder that works
-          # rather than a dead button.
-          ref: e3b1e22c350d6abe288685ee80dd4f6bb51c0c44
+          ref: fbd1b1f87458fcb7cfe5862f3f318cce01845a9a
       - uses: actions/setup-node@v4
         with:
           node-version: 24
