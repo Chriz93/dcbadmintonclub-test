@@ -269,12 +269,29 @@ describe.sequential("operations, queue and rate limits", () => {
     ).toBe(false);
   });
   it("rate limits successful mutation attempts", async () => {
-    await db.exec(`delete from club_app.rate_limits where user_id='${u}'`);
-    for (let i = 0; i < 30; i++)
-      await as(u, `select club_app.set_preference('${c}',false)`);
-    await expect(
-      as(u, `select club_app.set_preference('${c}',false)`),
-    ).rejects.toThrow("Rate limit");
+    // One transaction pins now(), so all 31 calls share a minute bucket even across a minute boundary.
+    const call = `select club_app.set_preference('${c}',false)`;
+    await db.exec(
+      `begin;delete from club_app.rate_limits where user_id='${u}'`,
+    );
+    try {
+      for (let i = 0; i < 30; i++) await as(u, call);
+      expect(
+        (
+          await db.query<{ hits: number }>(
+            `select hits from club_app.rate_limits where user_id='${u}' and bucket=date_trunc('minute',now())`,
+          )
+        ).rows,
+      ).toEqual([{ hits: 30 }]);
+      // Not as(): its reset role would fail in the aborted transaction and hide the error.
+      await expect(
+        db.exec(
+          `set role authenticated;select set_config('request.jwt.claim.sub','${u}',false);${call}`,
+        ),
+      ).rejects.toThrow("Rate limit");
+    } finally {
+      await db.exec("rollback;reset role");
+    }
   });
 });
 
