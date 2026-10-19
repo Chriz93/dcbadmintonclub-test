@@ -117,11 +117,37 @@ insert into t values('a signed-in player cannot answer for others',
 insert into t values('the token table is not readable through the API',
   (select case when has_table_privilege('authenticated','public.vote_links','select') then 'can' else 'cannot' end),'cannot');
 
+-- 12. L32: a spare seat is the organizer's to give, so none of these doors is open to the spare themselves
+insert into public.players(name,email,approved,waitlisted,membership_type,current_court,email_reminders)
+ values ('Spare Player','t9003@example.invalid',true,false,'spare',0,true);
+select id as sid from public.players where email='t9003@example.invalid' \gset
+
+insert into t values('a spare is never minted a one-tap token', pg_temp.try_issue(:sid,901),'refused');
+
+set local role authenticated;
+do $$ begin perform set_config('request.jwt.claims','{"aal":"aal1","email":"t9003@example.invalid"}',true); end $$;
+select pg_temp.as_player(901,:sid,'coming') as s_self \gset
+reset role;
+do $$ begin perform set_config('request.jwt.claims','',true); end $$;
+insert into t values('a spare cannot answer for themselves', :'s_self','refused');
+insert into t values('and their answer was not written',
+  (select coalesce((select response from public.rsvps where session_number=901 and player_id=:sid),'(none)')),'(none)');
+
+-- The rules core still takes that very answer, which is how the organizer's Call In seats them.
+insert into t values('Call In still writes the same row', pg_temp.try_write(901,:sid,'coming',false),'wrote');
+insert into t values('and that is what is recorded',
+  (select response from public.rsvps where session_number=901 and player_id=:sid),'coming');
+
+-- The open-seat invitation is not offered to a spare at all, however many seats are going.
+delete from public.rsvps where session_number=901 and player_id=:sid;
+insert into t values('a spare is not on the reminder list',
+  (select count(*)::text from public.reminder_targets(901) where player_id=:sid),'0');
+
 -- Fail the run, not just the page: run.sh gates on ON_ERROR_STOP.
 do $$ declare bad int; detail text; begin
  select count(*), coalesce(string_agg(name||' (got '||got||', want '||want||')', '; '), '')
    into bad, detail from t where got is distinct from want;
  if bad > 0 then raise exception 'vote links: % case(s) failed — %', bad, detail; end if;
 end $$;
-select 'PASS review: vote links — '||count(*)||' cases (token issue, read, answer, change, expiry, grants)' as result from t;
+select 'PASS review: vote links — '||count(*)||' cases (token issue, read, answer, change, expiry, grants, spare seats)' as result from t;
 rollback;

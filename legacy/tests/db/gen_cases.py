@@ -201,6 +201,10 @@ for who in ["P1", "S1", "STR", "ORG1", "ORG2"]:
                 s = R.randint(3, 24)
                 admin, me = who == "ORG2", who if who in ("P1", "S1") else None
                 if not admin and target != me: want = "only answer for yourself"
+                # L32: a spare does not answer for themselves -- the organizer gives the seat with Call In. set_rsvp
+                # refuses before it ever reaches rsvp_write, so this outranks the invalid-response case below. The
+                # organizer (ORG2) is not caught by it and still answers for a spare, which is what Call In does.
+                elif not admin and target in SPARES: want = "Spare seats are given out by the organizer"
                 elif resp == "bogus": want = "Invalid response"
                 elif not admin and target in REGS and off < 46: want = "Voting closed"
                 else: want = None
@@ -362,7 +366,10 @@ for k in range(45):
         mute = R.sample(REGS + SPARES, 2)
         body2 = ""
         for p in REGS + SPARES + ["W1", "U1", "U2"]:
-            expect = p not in answers and p not in mute and p not in ("W1", "U1", "U2") and (p in REGS or open_seats > 0)
+            # L32: a spare is never on the reminder list, however many seats are open -- there is nothing for them to
+            # claim, so inviting them to would be a lie. The organizer calls in the spare they want, and the
+            # "seat reserved"/"seat confirmed" mail comes from spare_reservation_targets, which is untouched.
+            expect = p not in answers and p not in mute and p not in ("W1", "U1", "U2") and p in REGS
             body2 += f" select exists(select 1 from public.reminder_targets(28) where player_id={ID(p)}) into vb; if vb is distinct from {str(expect).lower()} then raise exception '{p} on the list: %', vb; end if;"
         case(f"reminder list {k + 1} with {open_seats} open seats", "SVC", body2, setup + "".join(f" update public.players set email_reminders=false where id={ID(p)};" for p in mute))
         case(f"reminder list {k + 1} hidden from players", "P1", err("perform count(*) from public.reminder_targets(28)", "permission denied"), setup)

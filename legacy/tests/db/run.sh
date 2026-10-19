@@ -45,12 +45,13 @@ $PG -d $DB -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if to_regprocedure('public.sa
 echo "atomic upgrade rollback: OK"
 node legacy/scripts/build-october-migration.mjs --check
 node legacy/scripts/build-vote-link-migration.mjs --check
+node legacy/scripts/build-spare-seat-migration.mjs --check
 # The October migrations are applied as the bundle that will actually be pasted into the SQL editor, guard and all.
-for migration in legacy/migrations/TEST_2026-09-13.sql legacy/migrations/L25_open_registration.sql legacy/migrations/L26_lock_and_statement_timeouts.sql legacy/migrations/L27_per_court_scores.sql legacy/migrations/TEST_2026-10-06.sql legacy/migrations/TEST_2026-10-10.sql; do
+for migration in legacy/migrations/TEST_2026-09-13.sql legacy/migrations/L25_open_registration.sql legacy/migrations/L26_lock_and_statement_timeouts.sql legacy/migrations/L27_per_court_scores.sql legacy/migrations/TEST_2026-10-06.sql legacy/migrations/TEST_2026-10-10.sql legacy/migrations/TEST_2026-10-19.sql; do
   if ! $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$migration" >> "$LOG/latest.out" 2>&1; then tail -30 "$LOG/latest.out";exit 1;fi
 done
 # The production bundle must refuse this database: it is marked test. (The near-miss of 23 September, made impossible.)
-for prod in legacy/migrations/PROD_2026-10-06.sql legacy/migrations/PROD_2026-10-10.sql; do
+for prod in legacy/migrations/PROD_2026-10-06.sql legacy/migrations/PROD_2026-10-10.sql legacy/migrations/PROD_2026-10-19.sql; do
 if $PG -d $DB -q -v ON_ERROR_STOP=1 -f "$prod" > "$LOG/prod-guard.out" 2>&1; then
   echo "a production bundle ran on a database marked test: $prod"; exit 1
 fi

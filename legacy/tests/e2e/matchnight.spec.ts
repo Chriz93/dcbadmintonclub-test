@@ -318,10 +318,11 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     // play: Sunday 10 PM). With all 25 regulars coming there is no seat; before the deadline the spare is told when.
     await signIn(page, "christygeorge993+spare@gmail.com");
     await expect(page.locator("#page-home")).toHaveClass(/active/);
-    await expect(page.locator("#home-vote")).toContainText("Spare: are you available for Session 1");
+    await expect(page.locator("#home-vote")).toContainText("Spare seat: Session 1");
     await expect(page.locator("#home-vote .spare-seats-line")).toContainText("Spare seats: 0 if the vote closed now (25 regulars coming)");
-    await page.locator("#home-vote button", { hasText: "I'm available" }).click();
-    await expect(page.locator("#home-vote .spare-status")).toContainText("Available — spare seats are decided when the regulars' vote closes");
+    // p110: there is nothing here for a spare to press -- the seat is the organizer's to give, further down.
+    await expect(page.locator("#home-vote .spare-no-vote")).toContainText("given out by the organizer");
+    await expect(page.locator("#home-vote button").filter({ hasText: /I'm available|Not available/ })).toHaveCount(0);
     // Two regulars decline (their own answers, recorded earlier): player 1 from Court 1 and player 25, one of the five on
     // Court 6. With 23 coming, one seat will open when the vote closes.
     for (const id of [1, 25]) state.rsvps.push({ session_number: 1, player_id: id, response: "notcoming", note: "", updated_at: "2026-09-10T15:00:00Z" });
@@ -330,17 +331,28 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     // Reminder opt-out is the player's own switch.
     await page.uncheck("#home-vote .email-reminders-toggle");
     await expect.poll(() => state.players.find((p) => p.id === spareId)!.email_reminders).toBe(false);
-    // One-tap link from a reminder email: the vote is applied after sign-in without any other tap.
+    // L32: the one-tap URL from an old reminder is another door into set_rsvp, so it must refuse a spare too --
+    // and write nothing. (It still works for a regular: the opener spec votes that way.)
     await page.goto("/?vote=notcoming&s=1");
-    await expect.poll(() => state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)?.response, { timeout: 15000 }).toBe("notcoming");
+    await expect(page.locator("#home-vote .spare-no-vote")).toBeVisible();
     expect(new URL(page.url()).search).toBe("");
-    await expect(page.locator("#home-vote")).toContainText("Sit this one out");
-    // A link for a session that is not open is refused, not applied.
+    expect(state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1), "the link wrote nothing").toBeUndefined();
+    // Nor through the rpc directly, with the page out of the way entirely.
+    const spareDirect = await page.evaluate(async (id) => {
+      try { await rpc("set_rsvp", { p_session: 1, p_player: id, p_response: "coming" }); return "accepted"; } catch (e) { return (e as Error).message; }
+    }, spareId);
+    expect(spareDirect, "set_rsvp itself refuses a spare answering for themselves").toContain("given out by the organizer");
+    // A link for a session that is not open is still refused before any of that, not applied.
     await page.goto("/?vote=coming&s=5");
     await expect(page.locator("body")).toContainText("That link was for Session 5");
     expect(state.rsvps.find((r) => r.player_id === spareId && r.session_number === 5)).toBeUndefined();
-    // Back to "available" for the night (the one-tap link above said not available).
-    state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)!.response = "coming";
+    // p110: the organizer gives the seat with Call In -- the only way one is written now.
+    await page.evaluate(() => signOut());
+    await signIn(page, ORGANIZER); await unlockOrganizer(page);
+    await page.evaluate((id) => callInSpare(id), spareId);
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === spareId && r.session_number === 1)?.response).toBe("coming");
+    await page.evaluate(() => signOut());
+    await signIn(page, "christygeorge993+spare@gmail.com");
     await page.evaluate(async () => { await loadAll(); renderAll(); });
     // The regulars' vote has closed (Monday evening): the seat goes to the spare, the only one who replied.
     // The sign-in lasts an hour of page time: keep it valid across the jump, as the tab suites do (harness pinSession).
@@ -435,7 +447,7 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     expect(state.pushSubs[0].player_id).toBe(1);
     expect(state.payments.filter((x) => x.player_id !== 1)).toHaveLength(0);
   });
-  test("voting is final 48 hours before play: players are locked out, spares keep claiming, the admin can override", async ({ page }) => {
+  test("voting is final 48 hours before play: players are locked out, the organizer can still seat a spare and override a vote", async ({ page }) => {
     const frozen = new Date("2026-09-14T10:00:00-04:00"); // Monday morning before Session 1 (deadline was Sunday 8 PM)
     state.nowMs = frozen.getTime();
     await page.clock.setFixedTime(frozen);
@@ -448,18 +460,22 @@ test.describe("2026–27 match night on the test copy (mocked database rules)", 
     const direct = await page.evaluate(async () => { try { await rpc("set_rsvp", { p_session: 1, p_player: 1, p_response: "notcoming" }); return "accepted"; } catch (e) { return (e as Error).message; } });
     expect(direct).toContain("Voting closed");
     expect(state.rsvps.find((r) => r.player_id === 1)!.response).toBe("coming");
-    // A spare can still claim a seat after the deadline.
+    // p110: a spare has nothing to press, before the deadline or after it. But the deadline exemption that used to
+    // let them claim late is still real and still matters -- it is what lets the organizer seat a spare after the
+    // regulars are locked out, which is the whole point of having spares.
     await page.evaluate(() => signOut());
     Object.assign(state.players[24], { email: "christygeorge993+spare@gmail.com", user_id: null, membership_type: "spare", current_court: 0 });
     state.rsvps.push({ session_number: 1, player_id: 2, response: "notcoming", note: "", updated_at: "2026-09-12T11:00:00Z" });
     await signIn(page, "christygeorge993+spare@gmail.com");
-    await expect(page.locator("#home-vote button", { hasText: "I'm available" })).toBeEnabled();
-    await page.locator("#home-vote button", { hasText: "I'm available" }).click();
-    await expect.poll(() => state.rsvps.find((r) => r.player_id === 25)?.response).toBe("coming");
-    // The admin changes the regular's answer after a message in the group.
+    await expect(page.locator("#home-vote .spare-no-vote")).toBeVisible();
+    await expect(page.locator("#home-vote button").filter({ hasText: /I'm available|Not available/ })).toHaveCount(0);
     await page.evaluate(() => signOut());
+    // The organizer calls that spare in after the deadline -- allowed, where the regular's own change was refused.
     await signIn(page, ORGANIZER);
     await unlockOrganizer(page);
+    await page.evaluate(() => callInSpare(25));
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === 25)?.response).toBe("coming");
+    // The admin changes the regular's answer after a message in the group.
     await page.evaluate(() => { nav("standings"); showSec("standings", "vote"); });
     await page.locator("#vote-table tr.vote-row .admin-vote[title='Set not coming']").first().click(); // p85
     await expect.poll(() => state.rsvps.find((r) => r.player_id === 1)!.response).toBe("notcoming");

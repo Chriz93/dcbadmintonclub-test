@@ -39,14 +39,16 @@ export function define() {
   const fmtAll = (page: Page, ms: number[]) => page.evaluate((xs) => xs.map((x) => new Date(x).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })), ms);
   async function timing(page: Page, start: number, now: number, spare: boolean, seats = 0) {
     const [deadline, cutoff] = await fmtAll(page, [start - 46 * H, start - 72 * H]);
-    // p69: spare seats are decided when the regulars' vote closes; then the seats this session, or none.
-    if (spare) return now <= start - 46 * H ? `Spare seats are decided when the regulars' vote closes (${deadline}): with fewer than 24 regulars coming, available spares fill the seats in the order they replied, confirmed once paid. You can already say if you are available.` : seats ? `${seats} spare seat${seats === 1 ? "" : "s"} this session, taken in the order spares replied and confirmed once paid.` : "24 or more regulars are coming — no spare seats this session.";
+    // p69, p110: spare seats are still decided when the regulars' vote closes -- but the organizer fills them, so
+    // the line no longer promises a race to whoever replies first.
+    if (spare) return now <= start - 46 * H ? `Spare seats are decided when the regulars' vote closes (${deadline}): if fewer than 24 regulars are coming, the organizer calls in the spares they need.` : seats ? `${seats} spare seat${seats === 1 ? "" : "s"} open this session. The organizer calls in who they need; the seat is confirmed once paid.` : "24 or more regulars are coming — no spare seats this session.";
     return (now <= start - 46 * H ? `Vote by ${deadline} (46 hours before play) — after that your answer is final. ` : `Voting closed ${deadline}. To change your answer, message the admin in the group — only the admin can update it now. `)
       + (now <= start - 72 * H ? `$14 refund if you decline by ${cutoff}.` : `The 72-hour refund window closed ${cutoff}.`);
   }
   async function header(ctx: Ctx, card: ReturnType<Page["locator"]>, L: League, U: number, spare: boolean) {
     const t = tally(L, U);
-    await expect(card.locator(".card-title").first()).toHaveText(`🗳️ ${spare ? "Spare" : "Vote"}: are you ${spare ? "available for" : "playing"} Session ${U} (${ctx.dates[U - 1]})?`);
+    // p110: a spare's card is not a question put to them, so it is no longer phrased as one.
+    await expect(card.locator(".card-title").first()).toHaveText(spare ? `🎫 Spare seat: Session ${U} (${ctx.dates[U - 1]})` : `🗳️ Vote: are you playing Session ${U} (${ctx.dates[U - 1]})?`);
     expect(await card.locator("div[style*='1fr 1fr 1fr'] > div > div:first-child").allTextContents(), "coming / not coming / no reply, spares included").toEqual(t.counts);
     // The split table appears whenever there are spares to split out, and its total row is the headline again.
     const split = card.locator("table.vote-split");
@@ -130,17 +132,28 @@ export function define() {
       const spare = kind === "spare";
       const t = await header(ctx, card, L, U, spare);
       const locked = !spare && L.nowMs > ctx.fd[U - 1] - 46 * H, mine = t.vote[me.id];
-      const yes = card.getByRole("button", { name: spare ? "✅ I'm available" : "✅ I'm Coming" }), no = card.getByRole("button", { name: spare ? "❌ Not available" : "❌ Not Coming" });
+      const yes = card.getByRole("button", { name: "✅ I'm Coming" }), no = card.getByRole("button", { name: "❌ Not Coming" });
       await expect(card.locator(".email-reminders-toggle")).toBeChecked();
       const [deadlineText] = await fmtAll(page, [t.sc.deadline]);
       const status = (v: string | undefined, claims = t.claims, sc = t.sc) => {
         const c = claims.find((x) => x.id === me.id);
-        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed and paid (seat ${c.rank}).` : c.reserved ? `Seat reserved (seat ${c.rank}). E-transfer $20 to christygeorge993@gmail.com. Confirmation follows payment verification.` : !sc.decided ? `⏳ Available — spare seats are decided when the regulars' vote closes (${deadlineText}). You are #${c.rank} among the spares who replied.` : `⏳ Standby — you are #${c.rank - sc.seats} in line: ${sc.seats ? "every spare seat is taken" : "24 or more regulars are coming"}. The organizer contacts you if a seat opens.`;
+        // p110: the seat is a decision the organizer made, so the card reports that -- not a queue the spare joined.
+        if (spare && v === "coming" && c) return c.confirmed ? `🎉 Seat confirmed and paid (seat ${c.rank}).` : c.reserved ? `Seat reserved (seat ${c.rank}). E-transfer $20 to christygeorge993@gmail.com. Confirmation follows payment verification.` : !sc.decided ? `⏳ The organizer has called you in. Seats are settled when the regulars' vote closes (${deadlineText}).` : `⏳ Standby — ${sc.seats ? "every spare seat is taken" : "24 or more regulars are coming"}. The organizer contacts you if a seat opens.`;
         return v ? `${v === "coming" ? "✅ You confirmed - See you there!" : "❌ Noted - Sit this one out"}${locked ? "" : " · You can change your answer above."}` : null;
       };
       const alerts = async () => (await card.locator(".alert").allInnerTexts()).map(norm);
       const want = status(mine);
       if (want) expect(await alerts(), "my answer shown").toContain(want);
+      // p110: a spare answers nothing. The card says where the organizer's decision stands, there is no button to
+      // press, and set_rsvp refuses them with the page out of the way entirely.
+      if (spare) {
+        await expect(card.getByRole("button", { name: /I'm available|Not available|I'm Coming|Not Coming/ })).toHaveCount(0);
+        expect(await alerts(), "nothing for a spare to answer").toContain("Spare seats are given out by the organizer — there is nothing to answer here. If a seat opens and you are called in, it shows on this card and you will be emailed.");
+        const res = await page.evaluate(({ U, id }) => rpc("set_rsvp", { p_session: U, p_player: id, p_response: "coming" }).then(() => "saved", () => "refused"), { U, id: me.id });
+        expect(res, "a spare does not answer for themselves").toBe("refused");
+        expect(dbVote(me.id), "and nothing was written").toBe(mine);
+        return;
+      }
       if (locked) {
         await expect(yes).toBeDisabled(); await expect(no).toBeDisabled();
         expect(await alerts()).toContain(`🔒 Voting is closed for this session${mine ? ` — your answer is ${mine === "coming" ? "coming" : "not coming"}` : " — you did not answer"}. Any change needs the admin: message the group.`);

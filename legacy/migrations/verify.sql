@@ -136,4 +136,19 @@ select 'the vote link functions exist (L31)',
 union all
 select 'answering still goes through one set of rules (L31)',
  case when position('rsvp_write' in pg_get_functiondef('public.set_rsvp(int,bigint,text,text)'::regprocedure))>0
-      then 'OK' else 'FAIL: set_rsvp no longer shares the rules with the email path' end;
+      then 'OK' else 'FAIL: set_rsvp no longer shares the rules with the email path' end
+union all
+-- L32: the seat is the organizer's to give. Three doors, checked separately, because closing two of them is no use.
+select 'a spare does not answer for themselves (L32)',
+ case when position($x$membership_type='spare'$x$ in pg_get_functiondef('public.set_rsvp(int,bigint,text,text)'::regprocedure))>0
+      then 'OK' else 'FAIL: set_rsvp would take a spare answering for themselves' end
+union all
+select 'no one-tap token is minted for a spare (L32)',
+ case when position($x$membership_type='spare'$x$ in pg_get_functiondef('public.issue_vote_link(bigint,int)'::regprocedure))>0
+      then 'OK' else 'FAIL: a spare could be emailed a vote link' end
+union all
+-- Behaviour, not wording: over the whole calendar, no session may offer a spare a seat to claim.
+select 'spares are not invited to claim a seat (L32)',
+ case when not exists(select 1 from public.season_dates d, lateral public.reminder_targets(d.session_number) t
+                      where t.kind='spare')
+      then 'OK' else 'FAIL: reminder_targets still offers open seats to spares' end;

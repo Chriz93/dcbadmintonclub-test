@@ -91,33 +91,59 @@ test("season opener: 29 people register, vote and play Session 1 with an Undo; e
     state.nowMs = (state.nowMs || t0) + 7 * 60_000;       // answers arrive through the afternoon
     const p = byName(n);
     const spare = SPARES.includes(n);
-    const coming = spare ? SPARE_ANSWER[n] : !DECLINE.includes(n);
     await signIn(page, emailOf(n));
+    // p110: a spare has nothing to answer. The seat is the organizer's to give, and she gives it below.
+    if (spare) {
+      await expect(page.locator("#page-home")).toHaveClass(/active/);
+      await expect(page.locator("#home-vote .spare-no-vote")).toContainText("given out by the organizer");
+      await expect(page.locator("#home-vote button").filter({ hasText: /I'm|Not available/ })).toHaveCount(0);
+      expect(state.rsvps.find((r) => r.player_id === p.id && r.session_number === 1), `${n} wrote no answer`).toBeUndefined();
+      if (n === "Emma Clarke") await shot("09-spare-no-vote", `${n} (spare) has nothing to answer: spare seats are given out by the organizer`);
+      await page.evaluate(() => signOut());
+      continue;
+    }
+    const coming = !DECLINE.includes(n);
     if (n === ONE_TAP) await page.goto("/?vote=coming&s=1");
     else {
       await expect(page.locator("#page-home")).toHaveClass(/active/);
-      await page.locator("#home-vote button", { hasText: spare ? (coming ? "I'm available" : "Not available") : coming ? "I'm Coming" : "Not Coming" }).click();
+      await page.locator("#home-vote button", { hasText: coming ? "I'm Coming" : "Not Coming" }).click();
     }
     await expect.poll(() => state.rsvps.find((r) => r.player_id === p.id && r.session_number === 1)?.response).toBe(coming ? "coming" : "notcoming");
     if (n === REGULARS[1]) await shot("07-home-vote", `${n} votes on Home: one tap, with the Sunday deadline and the refund cutoff shown`);
     if (n === "Hannah Kim") await shot("08-decline", `${n} declines on Friday, before the Saturday 8 PM cutoff, so she is owed $14`);
-    // p69: spare seats are decided when the regulars' vote closes (Sunday 10 PM); on Friday spares say they are available.
-    if (n === "Emma Clarke") { await expect(page.locator("#home-vote .spare-status")).toContainText("Available — spare seats are decided when the regulars' vote closes"); await shot("09-spare-available", `${n} (spare) says she is available; seats are decided when the regulars' vote closes`); }
-    if (n === "Leah Cohen") { await expect(page.locator("#home-vote .spare-status")).toContainText("You are #3 among the spares who replied"); await shot("10-spare-third", `${n} (spare) is third among the spares who replied`); }
     await page.evaluate(() => signOut());
   }
-  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares Emma, Diego and Leah said they were available, in that order; Tomás was not.`);
+
+  // p110: the organizer gives out the spare seats with Call In, in the order she wants them ranked. Tomás is not
+  // called in. This writes exactly the rsvps row a spare used to write for themselves, so the reservation, the
+  // payment check and the line-up below are all unchanged -- they never cared who wrote it.
+  await signIn(page, ORGANIZER); await unlockOrganizer(page);
+  for (const name of SPARES.filter((s) => SPARE_ANSWER[s])) {
+    state.nowMs = (state.nowMs || t0) + 7 * 60_000;        // so the seats rank in the order she called them
+    await page.evaluate((id) => callInSpare(id), byName(name).id);
+    await expect.poll(() => state.rsvps.find((r) => r.player_id === byName(name).id && r.session_number === 1)?.response).toBe("coming");
+  }
+  expect(state.rsvps.find((r) => r.player_id === byName("Tomás Silva").id && r.session_number === 1), "Tomás was not called in").toBeUndefined();
+  await page.evaluate(() => signOut());
+
+  // p69, p110: seats are still settled when the regulars' vote closes; what changed is only who put the spares there.
+  await signIn(page, emailOf("Emma Clarke"));
+  await expect(page.locator("#home-vote .spare-status")).toContainText("The organizer has called you in");
+  await shot("10-spare-called-in", "Emma Clarke (spare) has been called in; seats are settled when the regulars' vote closes");
+  await page.evaluate(() => signOut());
+  timeline.push(`Voting: 23 regulars said coming (${ONE_TAP} used the one-tap email link). Hannah Kim and Ryan Gill declined before the refund cutoff. Spares answer nothing (p110): the organizer called in Emma, Diego and Leah, in that order, and left Tomás out.`);
   // The regulars' vote closes on Sunday at 10 PM (46 hours before play); the night is prepared on Monday.
   state.nowMs = new Date("2026-09-14T18:00:00-04:00").getTime();
   await page.clock.setFixedTime(new Date(state.nowMs));
-  timeline.push("The regulars' vote closed on Sunday at 10 PM with 23 regulars coming, so one spare seat opened (24 players): it went to Emma, the first spare who replied; Diego and Leah are on standby.");
+  timeline.push("The regulars' vote closed on Sunday at 10 PM with 23 regulars coming, so one spare seat opened (24 players): it went to Emma, the first spare the organizer called in; Diego and Leah are on standby.");
 
   // ── 5. Match night ────────────────────────────────────────────────────────────────────────────────
   await signIn(page, ORGANIZER); await unlockOrganizer(page);
   await page.click("#bnav-home");
-  // The card shows the latest 20 changes; the last three voters are the spares after the regulars.
-  // p88: grouped by the answer given; both of these said no, having said nothing before.
-  for (const who of ["Tomás Silva", "Ryan Gill"]) {
+  // The card shows the latest 20 changes.
+  // p88: grouped by the answer given. p110: Tomás is no longer here -- a spare writes no answer to change, so the
+  // only "now not coming" left is a regular's own decline.
+  for (const who of ["Ryan Gill"]) {
     const row = page.locator(`#vote-changes tr.vc-row:has(td:text-is("${who}"))`);
     await expect(row.locator("td").nth(1), `${who} had not answered before`).toHaveText("no answer");
     await expect(row.locator("td").nth(2)).toHaveText("S1");

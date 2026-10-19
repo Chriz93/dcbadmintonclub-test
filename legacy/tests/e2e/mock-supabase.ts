@@ -277,6 +277,9 @@ export async function installMock(page: Page, s: MockState) {
       if (fn === "set_rsvp") {
         if (a.p_player !== me && !admin) return deny("You can only answer for yourself");
         const target = s.players.find((x) => x.id === a.p_player);
+        // L32: a spare does not answer for themselves -- the organizer gives the seat with Call In. Placed exactly
+        // where set_rsvp has it: before the same-answer shortcut, so a spare cannot even re-confirm an old answer.
+        if (!admin && target && target.membership_type === "spare") return deny("Spare seats are given out by the organizer");
         const prior=s.rsvps.find(r=>r.session_number===a.p_session&&r.player_id===a.p_player);
         if(prior?.response===a.p_response){prior.note=a.p_note||'';return json(200,null);}
         const startIso = season.approved_dates[a.p_session - 1];

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T15:11:26.647Z",
+ "generated": "2026-10-19T15:32:26.220Z",
  "summary": [
   {
    "k": "Control handler",
@@ -8,12 +8,12 @@
   },
   {
    "k": "Database function",
-   "n": 57,
+   "n": 61,
    "g": 0
   },
   {
    "k": "Database table",
-   "n": 16,
+   "n": 17,
    "g": 0
   },
   {
@@ -106,6 +106,7 @@
    "tests": [
     "e2e/tabs/a11y.spec.ts",
     "e2e/tabs/admin-extras.spec.ts",
+    "e2e/tabs/assign-before-session.spec.ts",
     "e2e/tabs/checks.ts",
     "e2e/tabs/completed-round-cards.spec.ts",
     "e2e/tabs/controls.spec.ts",
@@ -739,6 +740,8 @@
    "kind": "Control handler",
    "item": "callInSpare",
    "tests": [
+    "e2e/matchnight.spec.ts",
+    "e2e/opener.spec.ts",
     "e2e/tabs/call-in.spec.ts",
     "e2e/tabs/complete-locks.spec.ts",
     "e2e/tabs/players.spec.ts",
@@ -1797,7 +1800,9 @@
    "item": "submitRSVP",
    "tests": [
     "e2e/tabs/controls.spec.ts",
-    "e2e/tabs/organizer-vote.spec.ts"
+    "e2e/tabs/interop.ts",
+    "e2e/tabs/organizer-vote.spec.ts",
+    "e2e/tabs/vote.suite.ts"
    ]
   },
   {
@@ -1868,6 +1873,7 @@
     "db/rollback-check.sql",
     "db/run.sh",
     "db/season-recovery.sql",
+    "db/vote-link.sql",
     "e2e/helpers.ts",
     "e2e/isolation.ts",
     "e2e/login-wait.spec.ts",
@@ -2935,6 +2941,13 @@
   },
   {
    "kind": "Database function",
+   "item": "apply_vote_link",
+   "tests": [
+    "db/vote-link.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
    "item": "archive_player",
    "tests": [
     "db/operations-regressions.sql",
@@ -3062,6 +3075,7 @@
    "kind": "Database function",
    "item": "is_admin",
    "tests": [
+    "db/vote-link.sql",
     "rules.sql"
    ]
   },
@@ -3070,6 +3084,13 @@
    "item": "is_admin_any_factor",
    "tests": [
     "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "issue_vote_link",
+   "tests": [
+    "db/vote-link.sql"
    ]
   },
   {
@@ -3099,6 +3120,7 @@
    "item": "my_player_id",
    "tests": [
     "db/gen_cases.py",
+    "db/vote-link.sql",
     "rules.sql"
    ]
   },
@@ -3180,6 +3202,7 @@
    "item": "reminder_targets",
    "tests": [
     "db/gen_cases.py",
+    "db/vote-link.sql",
     "rules.sql"
    ]
   },
@@ -3212,6 +3235,13 @@
    "item": "round_complete",
    "tests": [
     "db/internal-functions.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "rsvp_write",
+   "tests": [
+    "db/vote-link.sql"
    ]
   },
   {
@@ -3289,6 +3319,7 @@
     "db/gen_cases.py",
     "db/operations-regressions.sql",
     "db/review.sql",
+    "db/vote-link.sql",
     "e2e/matchnight.spec.ts",
     "e2e/mock-supabase.ts",
     "e2e/tabs/vote.suite.ts",
@@ -3394,6 +3425,13 @@
    "item": "validate_lineup",
    "tests": [
     "db/internal-functions.sql"
+   ]
+  },
+  {
+   "kind": "Database function",
+   "item": "vote_link_info",
+   "tests": [
+    "db/vote-link.sql"
    ]
   },
   {
@@ -3520,6 +3558,7 @@
    "item": "rsvp_log",
    "tests": [
     "db/gen_cases.py",
+    "db/vote-link.sql",
     "e2e/mock-supabase.ts",
     "rules.sql"
    ]
@@ -3530,6 +3569,7 @@
    "tests": [
     "db/gen_cases.py",
     "db/review.sql",
+    "db/vote-link.sql",
     "e2e/mock-supabase.ts",
     "e2e/tabs/admin-move-not-a-drop.spec.ts",
     "e2e/tabs/assign-before-session.spec.ts",
@@ -3553,6 +3593,7 @@
    "tests": [
     "db/gen_cases.py",
     "db/season-recovery.sql",
+    "db/vote-link.sql",
     "e2e/mock-supabase.ts",
     "legacy/automation/restore.test.mjs",
     "rules.sql"
@@ -3565,6 +3606,13 @@
     "db/gen_cases.py",
     "e2e/mock-supabase.ts",
     "rules.sql"
+   ]
+  },
+  {
+   "kind": "Database table",
+   "item": "vote_links",
+   "tests": [
+    "db/vote-link.sql"
    ]
   },
   {
