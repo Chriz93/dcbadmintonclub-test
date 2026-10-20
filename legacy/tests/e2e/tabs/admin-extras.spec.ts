@@ -3,7 +3,7 @@
 // present / absent tag on the Players tab. 100 leagues.
 import {manualMoveExpected} from "./manual-move-oracle";
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts } from "./gen";
 import { courtOf } from "./oracle";
 import { kvOf } from "./checks";
@@ -30,7 +30,7 @@ for (let i = 0; i < 100; i++) {
     await load(ctx, L);
     const page = ctx.page, toast = page.locator("#_t"), cur = L.current, db = (id: number) => ctx.state.players.find((p) => p.id === id)!;
     const adminTab = async (name: RegExp) => { await page.evaluate(() => nav("admin")); await page.locator("#admin-panel .ptab").filter({ hasText: name }).click(); };
-    const active = L.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court);
+    const active = L.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court || byName(a, b));
     const rows = page.locator("#a-pl-list .card > div:has(> .pl-num)");
 
     if (act === "note") {

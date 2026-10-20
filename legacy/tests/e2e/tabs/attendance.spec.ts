@@ -1,7 +1,7 @@
 // Admin → Attendance: tonight's counts, each court with votes and open slots, the spare pool, excused decliners, confirmed
 // spares, past sessions (expand to see names), and marking present / absent / saving — before and during a session.
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
 import { expectAdjust, changes, sorted } from "./adjust-oracle";
@@ -38,7 +38,7 @@ for (let i = 0; i < 100; i++) {
       expect(names, `Court ${c}: players and their votes`).toEqual(ids.map((id) => `${P.find((p) => p.id === id)!.name.split(" ")[0]} ${vote[id] === "coming" ? "voted in" : vote[id] === "notcoming" ? "voted out" : "no vote"}`));
       await expect(blk.getByText("🪑 Open slot")).toHaveCount(Math.max(0, 4 - ids.length));
     }
-    const pool = P.filter((p) => !p.current_court);
+    const pool = P.filter((p) => !p.current_court).sort(byName); // p111
     const poolCard = sec.locator(".card").filter({ has: page.locator(".card-title", { hasText: /^🪑 Spare Pool/ }) });
     await expect(poolCard).toHaveCount(pool.length ? 1 : 0);
     if (pool.length) {

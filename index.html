@@ -1318,6 +1318,9 @@ function renderRSVP(){
   renderRSVPInto(document.getElementById('home-vote'),true);
 }
 // Seats: each declined regular opens one seat; the organizer calls in a spare to fill it (p110).
+// p111: how a roster is ordered. 'en' and sensitivity 'base' are given explicitly so the order does not depend on
+// the machine's locale, and so case and accents do not split a name away from where a reader expects to find it.
+function byName(a,b){return String((a&&a.name)||'').localeCompare(String((b&&b.name)||''),'en',{sensitivity:'base'})||(((a&&a.id)||0)-((b&&b.id)||0));}
 function isRegularMember(p){return !!p&&p.approved&&!p.waitlisted&&p.membershipType!=='spare';}
 function isSpareMember(p){return !!p&&p.approved&&p.membershipType==='spare';}
 // p69: spares play only when fewer than 24 regulars are coming. The seats (24 minus the regulars coming, counted as the
@@ -1476,7 +1479,7 @@ function renderRSVPInto(el,compact){
 function renderVoteTable(seats){
   const up=upcomingSessionNumber(),n=voteTableSession(),live=n===up;
   const ans=voteAnswersFor(n);
-  const people=[...S.players.filter(isRegularMember),...S.players.filter(isSpareMember)];
+  const people=[...S.players.filter(isRegularMember).sort(byName),...S.players.filter(isSpareMember).sort(byName)]; // p111
   const respOf=p=>(ans[p.id]||{}).response||'';
   const groups=[{k:'coming',t:'✅ Coming',c:'var(--green2)'},{k:'notcoming',t:'❌ Not coming',c:'var(--red2)'},{k:'',t:'⏳ No answer',c:'var(--muted)'}]
     .map(g=>({...g,rows:people.filter(p=>respOf(p)===g.k)}));
@@ -2043,7 +2046,7 @@ function renderPastPlayers(typing){
   const el=document.getElementById('sec-a-past');if(!el)return;
   const all=S.pastPlayers||[],q=(g('past-q')||'').trim().toLowerCase();
   const invited=new Set((S.invitations||[]).map(i=>i.email)),current=new Set(S.players.map(p=>(p.email||'').toLowerCase()).filter(Boolean));
-  const list=all.filter(p=>!q||[p.name,p.email,p.phone].some(v=>String(v||'').toLowerCase().includes(q)));
+  const list=all.filter(p=>!q||[p.name,p.email,p.phone].some(v=>String(v||'').toLowerCase().includes(q))).sort(byName); // p111
   el.innerHTML=`<div class="card"><div class="card-title">📇 Past Players (${all.length})</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Everyone on file before the current season’s fresh start, with their details. Only you can see this list. “Allow registration” makes their email eligible. Share the site link with them; this action does not send email.</div>
     <input class="inp" id="past-q" placeholder="Search name, email or phone" autocomplete="off" value="${esc(q)}" oninput="renderPastPlayers(true)">
@@ -2692,9 +2695,9 @@ function renderAdminPlayers(){
   const spares=S.players.filter(p=>p.membershipType==='spare');
   // Only show players with court assignments (admin-added), not registered-but-unassigned
   const activePlayers=S.players.filter(p=>p.currentCourt>0);
-  const unassigned=S.players.filter(p=>p.currentCourt===0||!p.currentCourt);
+  const unassigned=S.players.filter(p=>p.currentCourt===0||!p.currentCourt).sort(byName); // p111
   let html=`<div class="card"><div class="card-title">Active Players — ${activePlayers.length} on Courts (${regulars.length} Regular · ${spares.length} Spare)${unassigned.length?` · ${unassigned.length} Unassigned`:''}</div>`;
-  const sortedPlayers=[...activePlayers].sort((a,b)=>a.currentCourt-b.currentCourt);
+  const sortedPlayers=[...activePlayers].sort((a,b)=>a.currentCourt-b.currentCourt||byName(a,b)); // p111
   sortedPlayers.forEach((p,i)=>{
     const noteIcon=p.adminNote?'📝':'📋';
     const attStatus=S.current?.attendance?.[p.id]||S.preAttendance?.[p.id]||'';
@@ -2750,8 +2753,8 @@ function renderRegPlayers(){
   const selfReg=S.players.filter(p=>p.sig&&p.sig!=='admin');
   const adminAdded=S.players.filter(p=>p.sig==='admin');
   const waitlisted=selfReg.filter(p=>p.waitlisted);
-  const pending=selfReg.filter(p=>!p.approved&&!p.waitlisted);
-  const approved=selfReg.filter(p=>p.approved&&!p.waitlisted);
+  const pending=selfReg.filter(p=>!p.approved&&!p.waitlisted).sort(byName);          // p111
+  const approved=selfReg.filter(p=>p.approved&&!p.waitlisted).sort(byName);          // p111
   const regularCount=regularPlacesTaken();
   const spareCount=S.players.filter(p=>p.membershipType==='spare').length;
   const waiverSigned=S.players.filter(p=>p.waiverSigned).length;
@@ -2759,7 +2762,7 @@ function renderRegPlayers(){
   const paidCount=S.players.filter(p=>p.paid).length;
   const unpaidCount=S.players.filter(p=>!p.paid&&(p.currentCourt>0||p.sig!=='admin')).length;
   // Another person's similar name never satisfies this player's waiver.
-  const notRegistered=adminAdded.filter(p=>!p.waiverSigned);
+  const notRegistered=adminAdded.filter(p=>!p.waiverSigned).sort(byName); // p111
   const regRegular=selfReg.filter(p=>p.membershipType!=='spare');
   const regSpare=selfReg.filter(p=>p.membershipType==='spare');
   const totalPlayers=S.players.length;
@@ -3777,8 +3780,8 @@ function renderAssignUI(){
   const assignedSet=new Set();
   for(let c=1;c<=NC;c++)(a[c]||[]).forEach(id=>assignedSet.add(id));
   // p93: before a session, the pool is everyone approved who is not in tonight's line-up.
-  const unassigned=S.current?S.players.filter(p=>!assignedSet.has(p.id))
-    :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id));
+  const unassigned=(S.current?S.players.filter(p=>!assignedSet.has(p.id))
+    :S.players.filter(p=>p.approved&&!p.waitlisted&&!assignedSet.has(p.id))).sort(byName); // p111
   const _rec=seasonRecord(); // p93
   // p107: the two numbers the decision is made on.
   const _chip=(p,c)=>{const r=_rec[p.id]||{w:0,l:0,pts:0};
@@ -6534,7 +6537,7 @@ function renderAttendanceTab(){
   const att=S.current?.attendance||S.preAttendance||{};
   const sessionNum=S.current?.number||S.sessions.length+1;
   // Get spare pool (unassigned players)
-  const sparePool=S.players.filter(p=>(!p.currentCourt||p.currentCourt===0)&&p.id>0);
+  const sparePool=S.players.filter(p=>(!p.currentCourt||p.currentCourt===0)&&p.id>0).sort(byName); // p111
   // Build attendance by court
   let html=renderAdjustBar()+`<div class="card"><div class="card-title">📋 Session ${sessionNum} Attendance</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Votes fill this in: “coming” players start as present, “not coming” players are excused for the night. Mark a no-show absent (one court down next week). Confirmed spares are seated when the night starts.</div>`;
@@ -6727,7 +6730,7 @@ function renderAttendanceList(){
   // Show all players assigned to this session
   const assignedIds=new Set();
   for(let c=1;c<=NC;c++)(S.current.assignments[c]||[]).forEach(id=>assignedIds.add(id));
-  const attendees=S.players.filter(p=>assignedIds.has(p.id)||att[p.id]);
+  const attendees=S.players.filter(p=>assignedIds.has(p.id)||att[p.id]).sort(byName); // p111
   if(!attendees.length)return '<div style="color:var(--muted);font-size:12px;">No players assigned to this session yet</div>';
   return attendees.map(p=>{
     const status=att[p.id]||'unmarked';

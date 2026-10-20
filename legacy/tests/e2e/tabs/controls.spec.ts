@@ -3,7 +3,7 @@
 // cascade, share links, clipboard summaries, the season PDF, views, sign-in steps, reminders and notifications.
 import { test, expect, type Page, type Browser } from "@playwright/test";
 import fs from "node:fs";
-import { openAs, closeCtx, load, type Ctx } from "./harness";
+import { openAs, closeCtx, load, byName, type Ctx } from "./harness";
 import { genLeague, variety, type League, type LiveState } from "./gen";
 import { courtOf } from "./oracle";
 import { installMock, freshState } from "../mock-supabase";
@@ -201,7 +201,7 @@ test.describe("controls · organizer", () => {
   test("Controls · rebalancePlayerCourts: every player is re-seated four to a court by current court", async () => {
     const L = league(51019, "none"); await load(ctx, L);
     await ctx.page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
-    const act = ctx.state.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court);
+    const act = ctx.state.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court || byName(a, b));
     await ctx.page.locator('button[onclick="rebalancePlayerCourts()"]').first().click();
     const fa = fillCourts(act.map((p) => p.id)), used = fa.slice(1).filter((x) => x.length).length;
     await expect(toast()).toHaveText(`Courts re-sorted — ${act.length} players across ${used} courts`);

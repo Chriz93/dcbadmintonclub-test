@@ -4,7 +4,7 @@
 import {manualMoveExpected} from "./manual-move-oracle";
 import {courtOf} from "./oracle";
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, type Player } from "./gen";
 import { COURT_LOCK } from "./pool";
 
@@ -24,7 +24,8 @@ for (let i = 0; i < 100; i++) {
     await page.evaluate(() => nav("admin"));
     await page.getByRole("button", { name: /^📋 Registered/ }).click();
     const P = L.players, selfReg = P.filter((p) => p.sig && p.sig !== "admin"), adminAdded = P.filter((p) => p.sig === "admin");
-    const waitlisted = selfReg.filter((p) => p.waitlisted), pending = selfReg.filter((p) => !p.approved && !p.waitlisted), approved = selfReg.filter((p) => p.approved && !p.waitlisted);
+    // p111: pending and approved are rosters and are alphabetical; the waitlist is a QUEUE and keeps its order.
+    const waitlisted = selfReg.filter((p) => p.waitlisted), pending = selfReg.filter((p) => !p.approved && !p.waitlisted).sort(byName), approved = selfReg.filter((p) => p.approved && !p.waitlisted).sort(byName);
     const waiver = (p: Player) => !!p.waiver_signed, notReg = adminAdded.filter((p) => !waiver(p));
     const taken = (except?: number) => P.filter((x) => x.membership_type !== "spare" && !x.waitlisted && x.approved && x.id !== except).length;
     expect(await sec.locator("div[style*='repeat(4,1fr)'] > div > div:first-child").allTextContents(), "overview").toEqual([P.length, selfReg.length, selfReg.filter((p) => p.membership_type !== "spare").length, selfReg.filter((p) => p.membership_type === "spare").length,

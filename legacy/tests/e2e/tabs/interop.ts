@@ -2,7 +2,7 @@
 // league afterwards, each tab re-derived from the database by the independent oracles. Ten journeys, repeated over
 // generated leagues; the five interop-*.spec.ts files each run 100 of the 500 cases.
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, refresh, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, refresh, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type GenOpts, type League, type Player } from "./gen";
 import { upcoming } from "./oracle";
 import { fromDb, kvOf, checkAllTabs, checkCourts } from "./checks";
@@ -131,7 +131,7 @@ export function defineInterop(from: number, to: number) {
         expect((await page.locator("#sec-a-reg div[style*='repeat(4,1fr)'] > div > div:first-child").allTextContents()).slice(5, 6), "Registered: paid count").toEqual([String(P.filter((p) => p.paid).length)]);
         if (who.current_court > 0) {
           await adminTab("👥 Players");
-          const active = P.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court);
+          const active = P.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court || byName(a, b));
           await expect(page.locator("#a-pl-list .card > div:has(> .pl-num)").nth(active.findIndex((p) => p.id === who.id)).locator("span[title='Toggle paid']")).toHaveText(L2.players.find((p) => p.id === who.id)!.paid ? "💰" : "⏳");
         }
         await checkAllTabs(admin, L2);

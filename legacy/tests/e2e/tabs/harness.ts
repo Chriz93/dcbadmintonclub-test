@@ -126,6 +126,12 @@ export async function load(ctx: Ctx, L: League) {
 
 /** Text of an element with whitespace collapsed, for stable comparisons. */
 export const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+/** p111: how the app orders a ROSTER -- a list you search for a name in. Mirrors index.html's own byName(), down to
+ *  the locale and the id tiebreak, so a suite expects the order the page actually renders. Deliberately NOT used for
+ *  a list whose order carries meaning: the waitlist is a queue, the courts are wins-then-points, the standings are
+ *  the rating. Those are unsorted here because they are unsorted there. */
+export const byName = (a: { name?: string; id?: number }, b: { name?: string; id?: number }) =>
+  String(a?.name ?? "").localeCompare(String(b?.name ?? ""), "en", { sensitivity: "base" }) || ((a?.id ?? 0) - (b?.id ?? 0));
 export async function text(page: Page, sel: string) { return norm(await page.locator(sel).first().innerText()); }
 export function inOrder(hay: string, needles: string[], label: string) {
   let at = 0;

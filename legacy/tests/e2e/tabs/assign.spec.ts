@@ -2,7 +2,7 @@
 // warning, dragging a player onto another court or off the courts, and refusing a full court (Court 6 holds five).
 import {manualMoveExpected} from "./manual-move-oracle";
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, type LiveState } from "./gen";
 import { upcoming } from "./oracle";
 
@@ -49,7 +49,7 @@ for (let i = 0; i < 100; i++) {
     const under = [1, 2, 3, 4, 5, 6].filter((c) => (a[c] || []).length===1||(a[c]||[]).length>5);
     if (under.length) await expect(ui.locator(".alert-error")).toHaveText(`⚠️ Court${under.length > 1 ? "s" : ""} ${under.map((c) => "C" + c).join(", ")} ${under.length > 1 ? "are" : "is"} invalid — a court needs zero or 2–5 players. Use Adjust courts to review the changes.`);
     else await expect(ui.locator(".alert-error")).toHaveCount(0);
-    const seated = new Set(Object.values(a).flat()), un = L.players.filter((p) => !seated.has(p.id));
+    const seated = new Set(Object.values(a).flat()), un = L.players.filter((p) => !seated.has(p.id)).sort(byName); // p111
     const zone0 = ui.locator(".dnd-court[data-court='0']");
     await expect(zone0).toHaveCount(un.length ? 1 : 0);
     if (un.length) expect(await zone0.locator(".dnd-player").evaluateAll(es=>es.map(e=>e.childNodes[0].textContent)), "unassigned").toEqual(un.map((p) => p.name));

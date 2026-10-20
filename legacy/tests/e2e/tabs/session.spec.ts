@@ -1,7 +1,7 @@
 // Admin → Session: start, next round, end, reset, cancel, late arrivals, absences and spares, rebalance, cascade and
 // attendance — each checked against the database afterwards, on 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC, gamesNeeded, type GenOpts, type League, type SessionRec } from "./gen";
 import { expectAdjust, lateStaySentence, REFUSAL } from "./adjust-oracle";
 import { upcoming, courtOf } from "./oracle";
@@ -179,7 +179,7 @@ for (let i = 0; i < 100; i++) {
       if(await apply.isVisible()&&await apply.isEnabled()){await apply.click();await expect(toast).toContainText('Courts adjusted');expect(kv('current_session').assignments).toEqual(ref.lineup);}
       else expect(kv('current_session').assignments).toEqual(a);
     } else if (k === "attendance") {
-      const list = L.players.filter((p) => assigned.includes(p.id) || cur.attendance[p.id]);
+      const list = L.players.filter((p) => assigned.includes(p.id) || cur.attendance[p.id]).sort(byName); // p111
       const rows = page.locator("#attendance-list .att-row");
       await expect(rows).toHaveCount(list.length);
       for (let n = 0; n < list.length; n++) expect(norm(await rows.nth(n).locator("div").first().innerText())).toBe(`${list[n].name}(${list[n].no_show_count} absences)`);

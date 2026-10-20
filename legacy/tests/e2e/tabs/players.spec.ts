@@ -2,7 +2,7 @@
 // benching them, marking absent, removing, calling in, adding (new, duplicate, blank, registered, capacity) and
 // re-sorting. With and without a session running. 100 leagues.
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, norm, type Ctx } from "./harness";
+import { openAs, closeCtx, load, norm, byName, type Ctx } from "./harness";
 import { genLeague, variety, rng, NC } from "./gen";
 import { courtOf } from "./oracle";
 import { fillCourts } from "../rules-model";
@@ -32,7 +32,7 @@ for (let i = 0; i < 100; i++) {
     if (!cur && L.sessions.length) { const fa = L.sessions.at(-1)!.finalAssignments!; for (let c = 1; c <= NC; c++) for (const id of fa[c] || []) { const p = P.find((x) => x.id === id); if (p && p.current_court !== c) mism++; } }
     await expect(page.locator("#a-pl-court-summary .alert"), "sync banner when courts differ from the last final standings").toHaveCount(mism ? 1 : 0);
     if (mism) await expect(page.locator("#a-pl-court-summary .alert")).toContainText(`${mism} player${mism > 1 ? "s" : ""} need updating`);
-    const regs = P.filter((p) => p.membership_type !== "spare").length, active = P.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court), bench = P.filter((p) => !p.current_court);
+    const regs = P.filter((p) => p.membership_type !== "spare").length, active = P.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court || byName(a, b)), bench = P.filter((p) => !p.current_court).sort(byName);
     await expect(list.locator(".card-title").first()).toHaveText(`Active Players — ${active.length} on Courts (${regs} Regular · ${P.length - regs} Spare)${bench.length ? ` · ${bench.length} Unassigned` : ""}`);
     const rows = list.locator(".card > div:has(> .pl-num)");
     await expect(rows).toHaveCount(active.length);
@@ -123,7 +123,11 @@ for (let i = 0; i < 100; i++) {
     } else if (act === 6) {
       await page.locator("#a-pl-court-summary").getByRole("button", { name: /Re-sort/ }).click();
       if(cur){const ref=expectAdjust(cur),apply=page.locator('#adj-apply');if(await apply.isVisible()&&await apply.isEnabled()){await apply.click();await expect(toast).toContainText('Courts adjusted');expect(kv('current_session').assignments).toEqual(ref.lineup);}else expect(kv('current_session').assignments).toEqual(cur.assignments);return;}
-      const filled = fillCourts(active.map((x) => x.id)), want = (id: number) => filled.findIndex((ids) => ids.includes(id));
+      // p111: the DISPLAYED list is alphabetical within each court, but re-sort is a court operation --
+      // rebalancePlayerCourts orders by current court alone, deliberately untouched. So the model gets its own list
+      // here rather than reusing the one the rows are checked against; they are two different orderings now.
+      const byCourtOnly = P.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court);
+      const filled = fillCourts(byCourtOnly.map((x) => x.id)), want = (id: number) => filled.findIndex((ids) => ids.includes(id));
       await expect(toast).toHaveText(`Courts re-sorted — ${active.length} players across ${filled.slice(1).filter((x) => x.length).length} courts`);
       active.forEach((x) => expect(db(x.id)!.current_court, `${x.name} after re-sort`).toBe(want(x.id)));
       if (cur) { const a = kv("current_session").assignments; active.forEach((x) => expect(courtOf(a, x.id)).toBe(want(x.id))); }

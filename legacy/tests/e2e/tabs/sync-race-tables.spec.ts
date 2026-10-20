@@ -3,7 +3,7 @@
 // Found by Admin extras 061: a saved private note vanished from the Players row until the next refresh. Each case fails
 // on the page without p58 (the late, older reply replaces the saved rows); with p59 the overtaken load is repeated.
 import { test, expect } from "@playwright/test";
-import { openAs, closeCtx, load, type Ctx } from "./harness";
+import { openAs, closeCtx, load, byName, type Ctx } from "./harness";
 import { genLeague, variety } from "./gen";
 
 let ctx: Ctx;
@@ -24,7 +24,7 @@ for (const [i, live] of [[0, "none"], [1, "r1-partial"]] as const) {
   test(`Sync race (tables) · private note · ${live === "none" ? "before a session" : "during a session"}`, async () => {
     const L = genLeague(48000 + i, { ...variety(48000 + i), regulars: 12, spares: 1, pending: 0, live, sessions: 2 });
     await load(ctx, L);
-    const page = ctx.page, active = L.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court);
+    const page = ctx.page, active = L.players.filter((p) => p.current_court > 0).sort((a, b) => a.current_court - b.current_court || byName(a, b));
     const k = 3, p = active[k], text = `Race note ${i + 1}`;
     await page.evaluate(() => { nav("admin"); showSec("admin", "a-pl"); });
     const row = page.locator("#a-pl-list .card > div:has(> .pl-num)").nth(k);
